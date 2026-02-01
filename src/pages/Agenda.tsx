@@ -23,12 +23,13 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, ChevronLeft, ChevronRight, Clock, Loader2, CalendarDays } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { AppointmentCard } from "@/components/agenda/AppointmentCard";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
+import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import type { Appointment, Client, Service, Profile, AppointmentStatus } from "@/types/database";
 
 export default function Agenda() {
@@ -36,6 +37,7 @@ export default function Agenda() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]); // Para validação de conflitos
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
@@ -119,6 +121,49 @@ export default function Agenda() {
     }
   };
 
+  // Buscar todos agendamentos do dia selecionado para validação de conflitos
+  const fetchAppointmentsForConflictCheck = async (date: string) => {
+    if (!profile?.tenant_id || !date) return;
+
+    const dayStart = startOfDay(new Date(date));
+    const dayEnd = endOfDay(new Date(date));
+
+    const { data } = await supabase
+      .from("appointments")
+      .select(`
+        *,
+        professional:profiles(id, full_name)
+      `)
+      .eq("tenant_id", profile.tenant_id)
+      .gte("scheduled_at", dayStart.toISOString())
+      .lte("scheduled_at", dayEnd.toISOString())
+      .neq("status", "cancelled");
+
+    setAllAppointments((data as Appointment[]) || []);
+  };
+
+  // Quando a data do formulário muda, buscar agendamentos para verificação de conflitos
+  useEffect(() => {
+    if (formData.scheduled_at) {
+      fetchAppointmentsForConflictCheck(formData.scheduled_at);
+    }
+  }, [formData.scheduled_at, profile?.tenant_id]);
+
+  // Verificar conflito de horário
+  const checkConflict = (professionalId: string, scheduledAt: Date, durationMinutes: number) => {
+    const endTime = new Date(scheduledAt.getTime() + durationMinutes * 60000);
+
+    return allAppointments.some((apt) => {
+      if (apt.professional_id !== professionalId) return false;
+      if (apt.status === "cancelled") return false;
+
+      const aptStart = new Date(apt.scheduled_at);
+      const aptEnd = new Date(aptStart.getTime() + apt.duration_minutes * 60000);
+
+      return scheduledAt < aptEnd && endTime > aptStart;
+    });
+  };
+
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.tenant_id) return;
@@ -128,6 +173,14 @@ export default function Agenda() {
     try {
       const selectedService = services.find((s) => s.id === formData.service_id);
       const scheduledAt = new Date(`${formData.scheduled_at}T${formData.scheduled_time}`);
+      const durationMinutes = selectedService?.duration_minutes || 45;
+
+      // Verificar conflito antes de criar
+      if (formData.professional_id && checkConflict(formData.professional_id, scheduledAt, durationMinutes)) {
+        toast.error("Conflito de horário! Este profissional já tem agendamento neste período.");
+        setIsSaving(false);
+        return;
+      }
 
       const { error } = await supabase.from("appointments").insert({
         tenant_id: profile.tenant_id,
@@ -135,7 +188,7 @@ export default function Agenda() {
         service_id: formData.service_id || null,
         professional_id: formData.professional_id || null,
         scheduled_at: scheduledAt.toISOString(),
-        duration_minutes: selectedService?.duration_minutes || 30,
+        duration_minutes: durationMinutes,
         price: selectedService?.price || 0,
         status: formData.status,
         notes: formData.notes || null,
@@ -154,6 +207,7 @@ export default function Agenda() {
         notes: "",
         status: "pending",
       });
+      setAllAppointments([]);
       fetchData();
     } catch (error) {
       toast.error("Erro ao criar agendamento");
@@ -323,30 +377,29 @@ export default function Agenda() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Data</Label>
-                      <Input
-                        type="date"
-                        value={formData.scheduled_at}
-                        onChange={(e) =>
-                          setFormData({ ...formData, scheduled_at: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Horário</Label>
-                      <Input
-                        type="time"
-                        value={formData.scheduled_time}
-                        onChange={(e) =>
-                          setFormData({ ...formData, scheduled_time: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Data</Label>
+                    <Input
+                      type="date"
+                      value={formData.scheduled_at}
+                      onChange={(e) =>
+                        setFormData({ ...formData, scheduled_at: e.target.value, scheduled_time: "" })
+                      }
+                      required
+                    />
                   </div>
+                  
+                  {formData.scheduled_at && (
+                    <TimeSlotPicker
+                      selectedTime={formData.scheduled_time}
+                      onTimeChange={(time) => setFormData({ ...formData, scheduled_time: time })}
+                      selectedDate={formData.scheduled_at}
+                      selectedProfessional={formData.professional_id}
+                      professionals={professionals}
+                      existingAppointments={allAppointments}
+                      onProfessionalChange={(profId) => setFormData({ ...formData, professional_id: profId })}
+                    />
+                  )}
                   <div className="space-y-2">
                     <Label>Observações</Label>
                     <Textarea
