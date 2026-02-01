@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -33,10 +34,23 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, TrendingUp, TrendingDown, Plus, Loader2, Calendar } from "lucide-react";
+import { 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  Plus, 
+  Loader2, 
+  Calendar, 
+  BarChart3, 
+  List, 
+  ArrowRightLeft,
+  Link as LinkIcon
+} from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
+import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
@@ -51,6 +65,7 @@ export default function Financeiro() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [activeTab, setActiveTab] = useState("overview");
 
   const [formData, setFormData] = useState({
     type: "income" as TransactionType,
@@ -69,6 +84,9 @@ export default function Financeiro() {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
+  // Count linked transactions (from appointments)
+  const linkedTransactions = transactions.filter((t) => t.appointment_id).length;
+
   useEffect(() => {
     if (profile?.tenant_id && isAdmin) {
       fetchTransactions();
@@ -78,6 +96,7 @@ export default function Financeiro() {
   const fetchTransactions = async () => {
     if (!profile?.tenant_id) return;
 
+    setIsLoading(true);
     const [year, month] = filterMonth.split("-").map(Number);
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
@@ -161,7 +180,7 @@ export default function Financeiro() {
   return (
     <MainLayout
       title="Financeiro"
-      subtitle="Controle de receitas e despesas"
+      subtitle="Controle completo de receitas e despesas"
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -266,7 +285,7 @@ export default function Financeiro() {
     >
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <StatCard
             title="Saldo do Período"
             value={formatCurrency(balance)}
@@ -285,6 +304,12 @@ export default function Financeiro() {
             icon={TrendingDown}
             variant="danger"
           />
+          <StatCard
+            title="Vinculados a Agenda"
+            value={linkedTransactions}
+            icon={LinkIcon}
+            description="Transações automáticas de agendamentos concluídos"
+          />
         </div>
 
         {/* Filter */}
@@ -301,63 +326,135 @@ export default function Financeiro() {
           />
         </div>
 
-        {/* Transactions Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Transações</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {transactions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <p className="text-muted-foreground">Nenhuma transação neste período</p>
-              </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="overview" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Gráficos
+            </TabsTrigger>
+            <TabsTrigger value="cashflow" className="gap-2">
+              <ArrowRightLeft className="h-4 w-4" />
+              Fluxo de Caixa
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2">
+              <List className="h-4 w-4" />
+              Transações
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Charts Tab */}
+          <TabsContent value="overview" className="mt-6">
+            {isLoading ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </CardContent>
+              </Card>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        {format(new Date(transaction.transaction_date), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            transaction.type === "income"
-                              ? "bg-success/20 text-success border-success/30"
-                              : "bg-destructive/20 text-destructive border-destructive/30"
-                          }
-                        >
-                          {transaction.type === "income" ? "Entrada" : "Saída"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{transaction.category}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {transaction.description || "—"}
-                      </TableCell>
-                      <TableCell
-                        className={`text-right font-semibold ${
-                          transaction.type === "income" ? "text-success" : "text-destructive"
-                        }`}
-                      >
-                        {transaction.type === "income" ? "+" : "-"}
-                        {formatCurrency(transaction.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <FinanceCharts transactions={transactions} filterMonth={filterMonth} />
             )}
+          </TabsContent>
+
+          {/* Cash Flow Tab */}
+          <TabsContent value="cashflow" className="mt-6">
+            {isLoading ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </CardContent>
+              </Card>
+            ) : (
+              <CashFlowTable transactions={transactions} filterMonth={filterMonth} />
+            )}
+          </TabsContent>
+
+          {/* Transactions Tab */}
+          <TabsContent value="transactions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Todas as Transações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transactions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma transação neste período</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Origem</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell>
+                            {format(new Date(transaction.transaction_date), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                transaction.type === "income"
+                                  ? "bg-success/20 text-success border-success/30"
+                                  : "bg-destructive/20 text-destructive border-destructive/30"
+                              }
+                            >
+                              {transaction.type === "income" ? "Entrada" : "Saída"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{transaction.category}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {transaction.description || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {transaction.appointment_id ? (
+                              <Badge variant="secondary" className="gap-1">
+                                <LinkIcon className="h-3 w-3" />
+                                Agenda
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">Manual</span>
+                            )}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right font-semibold ${
+                              transaction.type === "income" ? "text-success" : "text-destructive"
+                            }`}
+                          >
+                            {transaction.type === "income" ? "+" : "-"}
+                            {formatCurrency(transaction.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Info about automatic transactions */}
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
+              <LinkIcon className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="font-medium">Integração com Agenda</p>
+              <p className="text-sm text-muted-foreground">
+                Receitas são geradas automaticamente quando um agendamento é marcado como "Concluído"
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
