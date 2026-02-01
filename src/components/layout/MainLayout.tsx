@@ -13,21 +13,28 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
-      <main className="pl-64 transition-all duration-300">
-        <div className="p-8">
-          {(title || actions) && (
-            <header className="mb-8 flex items-center justify-between">
-              <div>
+      <main className="ml-72 min-h-screen transition-all duration-300">
+        {/* Header */}
+        {(title || actions) && (
+          <header className="sticky top-0 z-30 glass border-b border-white/20">
+            <div className="flex h-20 items-center justify-between px-8">
+              <div className="space-y-1">
                 {title && (
-                  <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                  <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">
+                    {title}
+                  </h1>
                 )}
                 {subtitle && (
-                  <p className="mt-1 text-muted-foreground">{subtitle}</p>
+                  <p className="text-sm text-muted-foreground">{subtitle}</p>
                 )}
               </div>
               {actions && <div className="flex items-center gap-3">{actions}</div>}
-            </header>
-          )}
+            </div>
+          </header>
+        )}
+
+        {/* Content */}
+        <div className="p-8">
           <div className="animate-fade-in">{children}</div>
         </div>
       </main>
