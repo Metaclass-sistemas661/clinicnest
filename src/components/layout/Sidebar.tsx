@@ -14,6 +14,7 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -49,38 +50,51 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
+        "glass-sidebar border-r border-white/20 shadow-xl",
+        isCollapsed ? "w-20" : "w-72"
       )}
     >
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+      <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
         {!isCollapsed && (
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-              <Scissors className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="font-display text-lg font-semibold text-sidebar-foreground">
-              {tenant?.name || "BeautySalon"}
-            </span>
+            <div>
+              <span className="font-display text-lg font-bold text-foreground">
+                {tenant?.name || "BeautySalon"}
+              </span>
+              <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
+            </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
+        {isCollapsed && (
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
+            <Sparkles className="h-5 w-5 text-white" />
+          </div>
+        )}
       </div>
 
+      {/* Collapse Toggle */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={cn(
+          "absolute -right-4 top-24 z-50 h-8 w-8 rounded-full border bg-card shadow-lg hover:bg-primary hover:text-primary-foreground transition-all",
+        )}
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4" />
+        ) : (
+          <ChevronLeft className="h-4 w-4" />
+        )}
+      </Button>
+
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+      <nav className="flex-1 space-y-1.5 overflow-y-auto p-4">
         {filteredNavItems.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -88,15 +102,19 @@ export function Sidebar() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                isCollapsed && "justify-center px-2"
+                  ? "gradient-primary text-white shadow-glow"
+                  : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
+                isCollapsed && "justify-center px-3"
               )}
               title={isCollapsed ? item.title : undefined}
             >
-              <item.icon className={cn("h-5 w-5 shrink-0", isActive && "animate-scale-in")} />
+              <item.icon className={cn(
+                "h-5 w-5 shrink-0 transition-transform duration-200",
+                isActive && "scale-110",
+                !isActive && "group-hover:scale-110"
+              )} />
               {!isCollapsed && <span>{item.title}</span>}
             </Link>
           );
@@ -104,22 +122,29 @@ export function Sidebar() {
       </nav>
 
       {/* User section */}
-      <div className="border-t border-sidebar-border p-3">
+      <div className="border-t border-white/10 p-4">
         {!isCollapsed && (
-          <div className="mb-3 rounded-lg bg-sidebar-accent p-3">
-            <p className="text-sm font-medium text-sidebar-foreground">
-              {profile?.full_name || "Usuário"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Administrador" : "Profissional"}
-            </p>
+          <div className="mb-4 rounded-xl border-gradient bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent text-white font-bold">
+                {profile?.full_name?.charAt(0) || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {profile?.full_name || "Usuário"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isAdmin ? "Administrador" : "Profissional"}
+                </p>
+              </div>
+            </div>
           </div>
         )}
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive",
-            isCollapsed && "justify-center px-2"
+            "w-full justify-start gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+            isCollapsed && "justify-center px-3"
           )}
           onClick={signOut}
           title={isCollapsed ? "Sair" : undefined}
