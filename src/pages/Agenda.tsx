@@ -23,13 +23,13 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { AppointmentCard } from "@/components/agenda/AppointmentCard";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
+import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import type { Appointment, Client, Service, Profile, AppointmentStatus } from "@/types/database";
 
 export default function Agenda() {
@@ -37,7 +37,7 @@ export default function Agenda() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]); // Para validação de conflitos
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
@@ -111,6 +111,7 @@ export default function Agenda() {
       ]);
 
       setAppointments((appointmentsRes.data as Appointment[]) || []);
+      setAllAppointments((appointmentsRes.data as Appointment[]) || []);
       setClients((clientsRes.data as Client[]) || []);
       setServices((servicesRes.data as Service[]) || []);
       setProfessionals((professionalsRes.data as Profile[]) || []);
@@ -207,7 +208,6 @@ export default function Agenda() {
         notes: "",
         status: "pending",
       });
-      setAllAppointments([]);
       fetchData();
     } catch (error) {
       toast.error("Erro ao criar agendamento");
@@ -237,6 +237,50 @@ export default function Agenda() {
       fetchData();
     } catch (error) {
       toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const editAppointment = async (id: string, data: EditAppointmentData) => {
+    try {
+      const selectedService = services.find((s) => s.id === data.service_id);
+      
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          client_id: data.client_id,
+          service_id: data.service_id,
+          professional_id: data.professional_id,
+          scheduled_at: data.scheduled_at,
+          notes: data.notes,
+          price: selectedService?.price || 0,
+          duration_minutes: selectedService?.duration_minutes || 45,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Agendamento atualizado com sucesso!");
+      fetchData();
+    } catch (error) {
+      toast.error("Erro ao atualizar agendamento");
+      console.error(error);
+    }
+  };
+
+  const deleteAppointment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Agendamento excluído com sucesso!");
+      fetchData();
+    } catch (error) {
+      toast.error("Erro ao excluir agendamento");
+      console.error(error);
     }
   };
 
@@ -270,10 +314,10 @@ export default function Agenda() {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   };
 
-  const getAppointmentsForDay = (date: Date) => {
+  const getAppointmentsCountForDay = (date: Date) => {
     return filteredAppointments.filter((apt) =>
       isSameDay(new Date(apt.scheduled_at), date)
-    );
+    ).length;
   };
 
   const formatCurrency = (value: number) => {
@@ -450,6 +494,43 @@ export default function Agenda() {
         </Button>
       </div>
 
+      {/* Week Overview - Mini Calendar */}
+      {viewMode === "week" && (
+        <div className="mb-6 grid grid-cols-7 gap-2">
+          {getWeekDays().map((day) => {
+            const count = getAppointmentsCountForDay(day);
+            const isToday = isSameDay(day, new Date());
+            const isSelected = isSameDay(day, currentDate);
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => {
+                  setCurrentDate(day);
+                  setViewMode("day");
+                }}
+                className={`
+                  flex flex-col items-center rounded-lg border p-3 transition-all hover:border-primary/50 hover:bg-accent
+                  ${isToday ? "ring-2 ring-primary" : ""}
+                  ${isSelected ? "bg-primary/10 border-primary" : "bg-card"}
+                `}
+              >
+                <span className="text-xs text-muted-foreground capitalize">
+                  {format(day, "EEE", { locale: ptBR })}
+                </span>
+                <span className={`text-xl font-bold ${isToday ? "text-primary" : ""}`}>
+                  {format(day, "d")}
+                </span>
+                {count > 0 && (
+                  <span className="mt-1 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
+                    {count} {count === 1 ? "agend." : "agend."}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Filters */}
       <div className="mb-6">
         <AgendaFilters
@@ -462,81 +543,32 @@ export default function Agenda() {
         />
       </div>
 
-      {/* Loading state */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <>
-          {/* Week View */}
-          {viewMode === "week" ? (
-            <div className="grid gap-4 md:grid-cols-7">
-              {getWeekDays().map((day) => {
-                const dayAppointments = getAppointmentsForDay(day);
-                const isToday = isSameDay(day, new Date());
-                return (
-                  <Card key={day.toISOString()} className={isToday ? "ring-2 ring-primary" : ""}>
-                    <CardHeader className="p-3">
-                      <CardTitle className="text-center text-sm">
-                        <span className="block text-muted-foreground capitalize">
-                          {format(day, "EEE", { locale: ptBR })}
-                        </span>
-                        <span className={`text-2xl ${isToday ? "text-primary font-bold" : ""}`}>
-                          {format(day, "d")}
-                        </span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="max-h-[400px] space-y-2 overflow-y-auto p-2">
-                      {dayAppointments.length === 0 ? (
-                        <p className="py-4 text-center text-xs text-muted-foreground">
-                          Sem agendamentos
-                        </p>
-                      ) : (
-                        dayAppointments.map((apt) => (
-                          <AppointmentCard
-                            key={apt.id}
-                            appointment={apt}
-                            onStatusChange={updateAppointmentStatus}
-                            compact
-                          />
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            /* Day View */
-            <div className="space-y-4">
-              {filteredAppointments.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <CalendarDays className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-lg font-medium text-muted-foreground">
-                      Nenhum agendamento encontrado
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {statusFilter !== "all"
-                        ? "Tente ajustar os filtros ou crie um novo agendamento"
-                        : "Clique em 'Novo Agendamento' para começar"}
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                filteredAppointments.map((apt) => (
-                  <AppointmentCard
-                    key={apt.id}
-                    appointment={apt}
-                    onStatusChange={updateAppointmentStatus}
-                  />
-                ))
-              )}
-            </div>
-          )}
-        </>
-      )}
+      {/* Appointments Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">
+            Agendamentos
+            {viewMode === "day" && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                {format(currentDate, "dd 'de' MMMM", { locale: ptBR })}
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <AppointmentsTable
+            appointments={filteredAppointments}
+            clients={clients}
+            services={services}
+            professionals={professionals}
+            allAppointments={allAppointments}
+            onStatusChange={updateAppointmentStatus}
+            onEdit={editAppointment}
+            onDelete={deleteAppointment}
+            isLoading={isLoading}
+          />
+        </CardContent>
+      </Card>
     </MainLayout>
   );
 }
