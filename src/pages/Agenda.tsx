@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,10 +23,12 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, ChevronLeft, ChevronRight, Clock, User, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, Loader2, CalendarDays } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { AppointmentCard } from "@/components/agenda/AppointmentCard";
+import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import type { Appointment, Client, Service, Profile, AppointmentStatus } from "@/types/database";
 
 export default function Agenda() {
@@ -41,6 +42,10 @@ export default function Agenda() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
+  const [professionalFilter, setProfessionalFilter] = useState<string>("all");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -167,32 +172,44 @@ export default function Agenda() {
 
       if (error) throw error;
 
-      toast.success("Status atualizado!");
+      const statusMessages = {
+        pending: "Agendamento marcado como pendente",
+        confirmed: "Agendamento confirmado!",
+        completed: "Agendamento concluído! Receita registrada.",
+        cancelled: "Agendamento cancelado",
+      };
+
+      toast.success(statusMessages[status]);
       fetchData();
     } catch (error) {
       toast.error("Erro ao atualizar status");
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      pending: "bg-warning/20 text-warning border-warning/30",
-      confirmed: "bg-info/20 text-info border-info/30",
-      completed: "bg-success/20 text-success border-success/30",
-      cancelled: "bg-destructive/20 text-destructive border-destructive/30",
+  // Memoized filtered appointments
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((apt) => {
+      const matchesStatus = statusFilter === "all" || apt.status === statusFilter;
+      const matchesProfessional =
+        professionalFilter === "all" || apt.professional_id === professionalFilter;
+      return matchesStatus && matchesProfessional;
+    });
+  }, [appointments, statusFilter, professionalFilter]);
+
+  // Appointment counts for filter badges
+  const appointmentCounts = useMemo(() => {
+    const counts = {
+      total: appointments.length,
+      pending: 0,
+      confirmed: 0,
+      completed: 0,
+      cancelled: 0,
     };
-    const labels = {
-      pending: "Pendente",
-      confirmed: "Confirmado",
-      completed: "Concluído",
-      cancelled: "Cancelado",
-    };
-    return (
-      <Badge variant="outline" className={styles[status as keyof typeof styles]}>
-        {labels[status as keyof typeof labels]}
-      </Badge>
-    );
-  };
+    appointments.forEach((apt) => {
+      counts[apt.status as keyof typeof counts]++;
+    });
+    return counts;
+  }, [appointments]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -200,7 +217,7 @@ export default function Agenda() {
   };
 
   const getAppointmentsForDay = (date: Date) => {
-    return appointments.filter((apt) =>
+    return filteredAppointments.filter((apt) =>
       isSameDay(new Date(apt.scheduled_at), date)
     );
   };
@@ -361,7 +378,7 @@ export default function Agenda() {
       }
     >
       {/* Navigation */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}>
             <ChevronLeft className="h-4 w-4" />
@@ -380,104 +397,92 @@ export default function Agenda() {
         </Button>
       </div>
 
-      {/* Calendar View */}
-      {viewMode === "week" ? (
-        <div className="grid gap-4 md:grid-cols-7">
-          {getWeekDays().map((day) => {
-            const dayAppointments = getAppointmentsForDay(day);
-            const isToday = isSameDay(day, new Date());
-            return (
-              <Card key={day.toISOString()} className={isToday ? "ring-2 ring-primary" : ""}>
-                <CardHeader className="p-3">
-                  <CardTitle className="text-center text-sm">
-                    <span className="block text-muted-foreground">
-                      {format(day, "EEE", { locale: ptBR })}
-                    </span>
-                    <span className={`text-2xl ${isToday ? "text-primary" : ""}`}>
-                      {format(day, "d")}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="max-h-96 space-y-2 overflow-y-auto p-2">
-                  {dayAppointments.length === 0 ? (
-                    <p className="py-4 text-center text-xs text-muted-foreground">
-                      Sem agendamentos
-                    </p>
-                  ) : (
-                    dayAppointments.map((apt) => (
-                      <div
-                        key={apt.id}
-                        className="rounded-lg border bg-card p-2 text-xs transition-colors hover:bg-muted/50"
-                      >
-                        <div className="mb-1 flex items-center gap-1 font-medium">
-                          <Clock className="h-3 w-3" />
-                          {format(new Date(apt.scheduled_at), "HH:mm")}
-                        </div>
-                        <p className="truncate font-medium">{apt.client?.name || "—"}</p>
-                        <p className="truncate text-muted-foreground">
-                          {apt.service?.name || "—"}
-                        </p>
-                        <div className="mt-2">{getStatusBadge(apt.status)}</div>
-                      </div>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+      {/* Filters */}
+      <div className="mb-6">
+        <AgendaFilters
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          professionalFilter={professionalFilter}
+          onProfessionalFilterChange={setProfessionalFilter}
+          professionals={professionals}
+          appointmentCounts={appointmentCounts}
+        />
+      </div>
+
+      {/* Loading state */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="space-y-4">
-          {appointments.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Clock className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
-              </CardContent>
-            </Card>
+        <>
+          {/* Week View */}
+          {viewMode === "week" ? (
+            <div className="grid gap-4 md:grid-cols-7">
+              {getWeekDays().map((day) => {
+                const dayAppointments = getAppointmentsForDay(day);
+                const isToday = isSameDay(day, new Date());
+                return (
+                  <Card key={day.toISOString()} className={isToday ? "ring-2 ring-primary" : ""}>
+                    <CardHeader className="p-3">
+                      <CardTitle className="text-center text-sm">
+                        <span className="block text-muted-foreground capitalize">
+                          {format(day, "EEE", { locale: ptBR })}
+                        </span>
+                        <span className={`text-2xl ${isToday ? "text-primary font-bold" : ""}`}>
+                          {format(day, "d")}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="max-h-[400px] space-y-2 overflow-y-auto p-2">
+                      {dayAppointments.length === 0 ? (
+                        <p className="py-4 text-center text-xs text-muted-foreground">
+                          Sem agendamentos
+                        </p>
+                      ) : (
+                        dayAppointments.map((apt) => (
+                          <AppointmentCard
+                            key={apt.id}
+                            appointment={apt}
+                            onStatusChange={updateAppointmentStatus}
+                            compact
+                          />
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
-            appointments.map((apt) => (
-              <Card key={apt.id}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-14 w-14 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <span className="text-lg font-bold">
-                        {format(new Date(apt.scheduled_at), "HH:mm")}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-semibold">{apt.client?.name || "Cliente não informado"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {apt.service?.name} • {apt.service?.duration_minutes || apt.duration_minutes} min
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        <User className="mr-1 inline h-3 w-3" />
-                        {apt.professional?.full_name || "Profissional não informado"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <p className="font-semibold">{formatCurrency(apt.price)}</p>
-                    <Select
-                      value={apt.status}
-                      onValueChange={(v) => updateAppointmentStatus(apt.id, v as AppointmentStatus)}
-                    >
-                      <SelectTrigger className="w-36">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="confirmed">Confirmado</SelectItem>
-                        <SelectItem value="completed">Concluído</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            /* Day View */
+            <div className="space-y-4">
+              {filteredAppointments.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <CalendarDays className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-lg font-medium text-muted-foreground">
+                      Nenhum agendamento encontrado
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {statusFilter !== "all"
+                        ? "Tente ajustar os filtros ou crie um novo agendamento"
+                        : "Clique em 'Novo Agendamento' para começar"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredAppointments.map((apt) => (
+                  <AppointmentCard
+                    key={apt.id}
+                    appointment={apt}
+                    onStatusChange={updateAppointmentStatus}
+                  />
+                ))
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </MainLayout>
   );
