@@ -44,14 +44,14 @@ import {
   BarChart3, 
   List, 
   ArrowRightLeft,
-  Link as LinkIcon,
-  FileDown
+  Link as LinkIcon
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
+import { ExportPdfDialog } from "@/components/financeiro/ExportPdfDialog";
 import { generateFinancialReport } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
@@ -89,16 +89,48 @@ export default function Financeiro() {
   // Count linked transactions (from appointments)
   const linkedTransactions = transactions.filter((t) => t.appointment_id).length;
 
-  // Handle PDF export
-  const handleExportPdf = () => {
-    generateFinancialReport({
-      transactions,
-      filterMonth,
-      tenantName: profile?.full_name ? `Relatório de ${profile.full_name}` : undefined,
-      totalIncome,
-      totalExpense,
-      balance,
-    });
+  // Handle PDF export with custom date range
+  const handleExportPdf = async (startDate: Date, endDate: Date) => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      // Fetch transactions for the selected date range
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
+        .lte("transaction_date", format(endDate, "yyyy-MM-dd"))
+        .order("transaction_date", { ascending: false });
+
+      if (error) throw error;
+
+      const reportTransactions = (data as FinancialTransaction[]) || [];
+
+      // Calculate totals for the report
+      const reportIncome = reportTransactions
+        .filter((t) => t.type === "income")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const reportExpense = reportTransactions
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const reportBalance = reportIncome - reportExpense;
+
+      await generateFinancialReport({
+        transactions: reportTransactions,
+        startDate,
+        endDate,
+        tenantName: profile?.full_name ? `Relatório de ${profile.full_name}` : undefined,
+        totalIncome: reportIncome,
+        totalExpense: reportExpense,
+        balance: reportBalance,
+      });
+
+      toast.success("PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erro ao gerar o PDF");
+    }
   };
 
   useEffect(() => {
@@ -197,14 +229,7 @@ export default function Financeiro() {
       subtitle="Controle completo de receitas e despesas"
       actions={
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExportPdf}
-            disabled={transactions.length === 0 || isLoading}
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            Exportar PDF
-          </Button>
+          <ExportPdfDialog onExport={handleExportPdf} isLoading={isLoading} />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gradient-primary text-primary-foreground">

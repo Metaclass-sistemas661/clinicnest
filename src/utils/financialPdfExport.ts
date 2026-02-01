@@ -1,12 +1,13 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { FinancialTransaction } from "@/types/database";
 
 interface ExportOptions {
   transactions: FinancialTransaction[];
-  filterMonth: string;
+  startDate: Date;
+  endDate: Date;
   tenantName?: string;
   totalIncome: number;
   totalExpense: number;
@@ -21,11 +22,9 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Get month name in Portuguese
-const getMonthName = (filterMonth: string): string => {
-  const [year, month] = filterMonth.split("-").map(Number);
-  const date = new Date(year, month - 1, 1);
-  return format(date, "MMMM 'de' yyyy", { locale: ptBR });
+// Format period string
+const formatPeriod = (startDate: Date, endDate: Date): string => {
+  return `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`;
 };
 
 // Group transactions by category
@@ -46,8 +45,226 @@ const groupByCategory = (transactions: FinancialTransaction[], type: "income" | 
     .sort((a, b) => b.total - a.total);
 };
 
-export function generateFinancialReport(options: ExportOptions): void {
-  const { transactions, filterMonth, tenantName, totalIncome, totalExpense, balance } = options;
+// Generate evolution data based on period
+interface EvolutionPoint {
+  label: string;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
+const generateEvolutionData = (
+  transactions: FinancialTransaction[],
+  startDate: Date,
+  endDate: Date
+): EvolutionPoint[] => {
+  const daysDiff = differenceInDays(endDate, startDate);
+  let intervals: { start: Date; end: Date; label: string }[] = [];
+
+  if (daysDiff <= 31) {
+    // Daily grouping for up to 1 month
+    intervals = eachDayOfInterval({ start: startDate, end: endDate }).map((date) => ({
+      start: date,
+      end: date,
+      label: format(date, "dd/MM"),
+    }));
+  } else if (daysDiff <= 90) {
+    // Weekly grouping for 1-3 months
+    intervals = eachWeekOfInterval({ start: startDate, end: endDate }, { locale: ptBR }).map((weekStart) => {
+      const weekEnd = endOfWeek(weekStart, { locale: ptBR });
+      return {
+        start: weekStart,
+        end: weekEnd > endDate ? endDate : weekEnd,
+        label: `${format(weekStart, "dd/MM")}`,
+      };
+    });
+  } else {
+    // Monthly grouping for longer periods
+    intervals = eachMonthOfInterval({ start: startDate, end: endDate }).map((monthStart) => {
+      const monthEnd = endOfMonth(monthStart);
+      return {
+        start: monthStart,
+        end: monthEnd > endDate ? endDate : monthEnd,
+        label: format(monthStart, "MMM/yy", { locale: ptBR }),
+      };
+    });
+  }
+
+  let cumulativeBalance = 0;
+
+  return intervals.map((interval) => {
+    const periodTransactions = transactions.filter((t) => {
+      const tDate = parseISO(t.transaction_date);
+      return isWithinInterval(tDate, { start: interval.start, end: interval.end });
+    });
+
+    const income = periodTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const expense = periodTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    cumulativeBalance += income - expense;
+
+    return {
+      label: interval.label,
+      income,
+      expense,
+      balance: cumulativeBalance,
+    };
+  });
+};
+
+// Draw a simple bar chart
+const drawBarChart = (
+  doc: jsPDF,
+  data: EvolutionPoint[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  title: string,
+  colors: { income: [number, number, number]; expense: [number, number, number] }
+) => {
+  const margin = 10;
+  const chartWidth = width - margin * 2;
+  const chartHeight = height - 40;
+  const barGroupWidth = chartWidth / data.length;
+  const barWidth = barGroupWidth * 0.35;
+
+  // Title
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text(title, x + width / 2, y + 8, { align: "center" });
+
+  // Find max value
+  const maxValue = Math.max(
+    ...data.map((d) => Math.max(d.income, d.expense)),
+    1
+  );
+
+  const chartX = x + margin;
+  const chartY = y + 20;
+  const chartBottom = chartY + chartHeight;
+
+  // Draw bars
+  data.forEach((point, i) => {
+    const groupX = chartX + i * barGroupWidth;
+
+    // Income bar
+    const incomeHeight = (point.income / maxValue) * chartHeight;
+    doc.setFillColor(...colors.income);
+    doc.rect(groupX + 2, chartBottom - incomeHeight, barWidth, incomeHeight, "F");
+
+    // Expense bar
+    const expenseHeight = (point.expense / maxValue) * chartHeight;
+    doc.setFillColor(...colors.expense);
+    doc.rect(groupX + barWidth + 4, chartBottom - expenseHeight, barWidth, expenseHeight, "F");
+
+    // Label
+    doc.setFontSize(6);
+    doc.setTextColor(107, 114, 128);
+    doc.text(point.label, groupX + barGroupWidth / 2, chartBottom + 8, { align: "center" });
+  });
+
+  // Legend
+  const legendY = y + height - 8;
+  doc.setFillColor(...colors.income);
+  doc.rect(x + width / 2 - 50, legendY - 3, 8, 4, "F");
+  doc.setFontSize(7);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Receitas", x + width / 2 - 40, legendY);
+
+  doc.setFillColor(...colors.expense);
+  doc.rect(x + width / 2 + 10, legendY - 3, 8, 4, "F");
+  doc.text("Despesas", x + width / 2 + 20, legendY);
+};
+
+// Draw a line chart for balance evolution
+const drawLineChart = (
+  doc: jsPDF,
+  data: EvolutionPoint[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  title: string,
+  lineColor: [number, number, number]
+) => {
+  const margin = 10;
+  const chartWidth = width - margin * 2;
+  const chartHeight = height - 40;
+
+  // Title
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text(title, x + width / 2, y + 8, { align: "center" });
+
+  const values = data.map((d) => d.balance);
+  const minValue = Math.min(...values, 0);
+  const maxValue = Math.max(...values, 1);
+  const range = maxValue - minValue || 1;
+
+  const chartX = x + margin;
+  const chartY = y + 20;
+  const chartBottom = chartY + chartHeight;
+
+  // Draw zero line if applicable
+  if (minValue < 0 && maxValue > 0) {
+    const zeroY = chartBottom - ((0 - minValue) / range) * chartHeight;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.2);
+    doc.line(chartX, zeroY, chartX + chartWidth, zeroY);
+    doc.setFontSize(6);
+    doc.setTextColor(150, 150, 150);
+    doc.text("R$ 0", chartX - 2, zeroY, { align: "right" });
+  }
+
+  // Draw line
+  doc.setDrawColor(...lineColor);
+  doc.setLineWidth(1.5);
+
+  const pointSpacing = chartWidth / (data.length - 1 || 1);
+
+  data.forEach((point, i) => {
+    const px = chartX + i * pointSpacing;
+    const py = chartBottom - ((point.balance - minValue) / range) * chartHeight;
+
+    // Draw point
+    doc.setFillColor(...lineColor);
+    doc.circle(px, py, 2, "F");
+
+    // Draw line to next point
+    if (i < data.length - 1) {
+      const nextPx = chartX + (i + 1) * pointSpacing;
+      const nextPy = chartBottom - ((data[i + 1].balance - minValue) / range) * chartHeight;
+      doc.line(px, py, nextPx, nextPy);
+    }
+
+    // Label
+    doc.setFontSize(6);
+    doc.setTextColor(107, 114, 128);
+    doc.text(point.label, px, chartBottom + 8, { align: "center" });
+  });
+
+  // Show final value
+  if (data.length > 0) {
+    const lastPoint = data[data.length - 1];
+    const lastPx = chartX + (data.length - 1) * pointSpacing;
+    const lastPy = chartBottom - ((lastPoint.balance - minValue) / range) * chartHeight;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...lineColor);
+    doc.text(formatCurrency(lastPoint.balance), lastPx, lastPy - 6, { align: "center" });
+  }
+};
+
+export async function generateFinancialReport(options: ExportOptions): Promise<void> {
+  const { transactions, startDate, endDate, tenantName, totalIncome, totalExpense, balance } = options;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -63,24 +280,21 @@ export function generateFinancialReport(options: ExportOptions): void {
   const lightGray: [number, number, number] = [243, 244, 246];
 
   // ==================== HEADER ====================
-  // Background header bar
   doc.setFillColor(...primaryColor);
   doc.rect(0, 0, pageWidth, 45, "F");
 
-  // Company name
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont("helvetica", "bold");
   doc.text(tenantName || "Relatório Financeiro", margin, 22);
 
-  // Subtitle
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.text("Relatório Financeiro Detalhado", margin, 32);
 
   // Period badge
-  const periodText = getMonthName(filterMonth).toUpperCase();
-  doc.setFontSize(10);
+  const periodText = formatPeriod(startDate, endDate);
+  doc.setFontSize(9);
   const periodWidth = doc.getTextWidth(periodText) + 16;
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(pageWidth - margin - periodWidth, 15, periodWidth, 18, 4, 4, "F");
@@ -146,11 +360,50 @@ export function generateFinancialReport(options: ExportOptions): void {
 
   yPos = cardY + cardHeight + 20;
 
+  // ==================== EVOLUTION CHARTS ====================
+  const evolutionData = generateEvolutionData(transactions, startDate, endDate);
+
+  if (evolutionData.length > 1) {
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Evolução Financeira", margin, yPos);
+    yPos += 8;
+
+    const chartWidth = (pageWidth - margin * 2 - 10) / 2;
+    const chartHeight = 70;
+
+    // Bar chart - Income vs Expenses
+    drawBarChart(
+      doc,
+      evolutionData.slice(-12), // Last 12 points max for readability
+      margin,
+      yPos,
+      chartWidth,
+      chartHeight,
+      "Receitas vs Despesas",
+      { income: successColor, expense: dangerColor }
+    );
+
+    // Line chart - Balance evolution
+    drawLineChart(
+      doc,
+      evolutionData.slice(-12),
+      margin + chartWidth + 10,
+      yPos,
+      chartWidth,
+      chartHeight,
+      "Evolução do Saldo",
+      primaryColor
+    );
+
+    yPos += chartHeight + 15;
+  }
+
   // ==================== CATEGORY BREAKDOWN ====================
   const incomeByCategory = groupByCategory(transactions, "income");
   const expenseByCategory = groupByCategory(transactions, "expense");
 
-  // Income by Category
   if (incomeByCategory.length > 0) {
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
@@ -177,7 +430,7 @@ export function generateFinancialReport(options: ExportOptions): void {
         fontSize: 9,
       },
       alternateRowStyles: {
-        fillColor: [240, 253, 244], // Light green
+        fillColor: [240, 253, 244],
       },
       columnStyles: {
         0: { cellWidth: 80 },
@@ -191,7 +444,12 @@ export function generateFinancialReport(options: ExportOptions): void {
     yPos = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // Expense by Category
+  // Check if we need a new page
+  if (yPos > pageHeight - 80 && expenseByCategory.length > 0) {
+    doc.addPage();
+    yPos = margin;
+  }
+
   if (expenseByCategory.length > 0) {
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
@@ -218,7 +476,7 @@ export function generateFinancialReport(options: ExportOptions): void {
         fontSize: 9,
       },
       alternateRowStyles: {
-        fillColor: [254, 242, 242], // Light red
+        fillColor: [254, 242, 242],
       },
       columnStyles: {
         0: { cellWidth: 80 },
@@ -237,7 +495,6 @@ export function generateFinancialReport(options: ExportOptions): void {
     doc.addPage();
     yPos = margin;
 
-    // Page header
     doc.setFillColor(...primaryColor);
     doc.rect(0, 0, pageWidth, 30, "F");
     doc.setTextColor(255, 255, 255);
@@ -247,7 +504,6 @@ export function generateFinancialReport(options: ExportOptions): void {
 
     yPos = 45;
 
-    // Transactions table
     autoTable(doc, {
       startY: yPos,
       head: [["Data", "Tipo", "Categoria", "Descrição", "Origem", "Valor"]],
@@ -279,7 +535,6 @@ export function generateFinancialReport(options: ExportOptions): void {
       },
       margin: { left: margin, right: margin },
       didParseCell: (data) => {
-        // Color the value column based on type
         if (data.section === "body" && data.column.index === 5) {
           const value = String(data.cell.raw);
           if (value.startsWith("+")) {
@@ -288,7 +543,6 @@ export function generateFinancialReport(options: ExportOptions): void {
             data.cell.styles.textColor = dangerColor;
           }
         }
-        // Color the type column
         if (data.section === "body" && data.column.index === 1) {
           const type = String(data.cell.raw);
           if (type === "Entrada") {
@@ -306,12 +560,10 @@ export function generateFinancialReport(options: ExportOptions): void {
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    // Footer line
     doc.setDrawColor(...lightGray);
     doc.setLineWidth(0.5);
     doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
 
-    // Footer text
     doc.setFontSize(8);
     doc.setTextColor(...grayColor);
     doc.setFont("helvetica", "normal");
@@ -324,6 +576,6 @@ export function generateFinancialReport(options: ExportOptions): void {
   }
 
   // Save the PDF
-  const fileName = `relatorio-financeiro-${filterMonth}.pdf`;
+  const fileName = `relatorio-financeiro-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.pdf`;
   doc.save(fileName);
 }
