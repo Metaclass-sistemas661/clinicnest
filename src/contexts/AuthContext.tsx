@@ -136,18 +136,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // If signup successful and we have a user, create tenant, profile, and role
-    if (authData.user) {
+    if (authData.user && authData.session) {
       try {
-        // Create tenant
+        // Create tenant - the user is now authenticated
         const { data: tenantData, error: tenantError } = await supabase
           .from('tenants')
           .insert({
             name: salonName,
           })
-          .select()
+          .select('id')
           .single();
 
-        if (tenantError) throw tenantError;
+        if (tenantError) {
+          console.error('Tenant creation error:', tenantError);
+          throw tenantError;
+        }
 
         // Create profile
         const { error: profileError } = await supabase
@@ -159,7 +162,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: email,
           });
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw profileError;
+        }
 
         // Create admin role
         const { error: roleError } = await supabase
@@ -170,10 +176,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: 'admin' as AppRole,
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error('Role creation error:', roleError);
+          throw roleError;
+        }
 
         return { error: null };
       } catch (error) {
+        console.error('Signup process error:', error);
         return { error: error as Error };
       }
     }
