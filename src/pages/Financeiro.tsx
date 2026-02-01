@@ -44,13 +44,15 @@ import {
   BarChart3, 
   List, 
   ArrowRightLeft,
-  Link as LinkIcon
+  Link as LinkIcon,
+  FileDown
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
+import { generateFinancialReport } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
@@ -86,6 +88,18 @@ export default function Financeiro() {
 
   // Count linked transactions (from appointments)
   const linkedTransactions = transactions.filter((t) => t.appointment_id).length;
+
+  // Handle PDF export
+  const handleExportPdf = () => {
+    generateFinancialReport({
+      transactions,
+      filterMonth,
+      tenantName: profile?.full_name ? `Relatório de ${profile.full_name}` : undefined,
+      totalIncome,
+      totalExpense,
+      balance,
+    });
+  };
 
   useEffect(() => {
     if (profile?.tenant_id && isAdmin) {
@@ -182,13 +196,22 @@ export default function Financeiro() {
       title="Financeiro"
       subtitle="Controle completo de receitas e despesas"
       actions={
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Transação
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportPdf}
+            disabled={transactions.length === 0 || isLoading}
+          >
+            <FileDown className="mr-2 h-4 w-4" />
+            Exportar PDF
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary text-primary-foreground">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Transação
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nova Transação</DialogTitle>
@@ -281,6 +304,7 @@ export default function Financeiro() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       }
     >
       <div className="space-y-6">
