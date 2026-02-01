@@ -1,0 +1,314 @@
+import { useState, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import type { Client } from "@/types/database";
+
+export default function Clientes() {
+  const { profile } = useAuth();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    if (profile?.tenant_id) {
+      fetchClients();
+    }
+  }, [profile?.tenant_id]);
+
+  useEffect(() => {
+    const filtered = clients.filter(
+      (client) =>
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.phone?.includes(searchQuery) ||
+        client.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredClients(filtered);
+  }, [clients, searchQuery]);
+
+  const fetchClients = async () => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .order("name");
+
+      if (error) throw error;
+      setClients((data as Client[]) || []);
+      setFilteredClients((data as Client[]) || []);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenDialog = (client?: Client) => {
+    if (client) {
+      setEditingClient(client);
+      setFormData({
+        name: client.name,
+        phone: client.phone || "",
+        email: client.email || "",
+        notes: client.notes || "",
+      });
+    } else {
+      setEditingClient(null);
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        notes: "",
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.tenant_id) return;
+
+    setIsSaving(true);
+
+    try {
+      const clientData = {
+        tenant_id: profile.tenant_id,
+        name: formData.name,
+        phone: formData.phone || null,
+        email: formData.email || null,
+        notes: formData.notes || null,
+      };
+
+      if (editingClient) {
+        const { error } = await supabase
+          .from("clients")
+          .update(clientData)
+          .eq("id", editingClient.id);
+
+        if (error) throw error;
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("clients").insert(clientData);
+
+        if (error) throw error;
+        toast.success("Cliente cadastrado com sucesso!");
+      }
+
+      setIsDialogOpen(false);
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        notes: "",
+      });
+      setEditingClient(null);
+      fetchClients();
+    } catch (error) {
+      toast.error(editingClient ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <MainLayout
+      title="Clientes"
+      subtitle="Gerencie seus clientes"
+      actions={
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+              <DialogDescription>
+                {editingClient ? "Atualize os dados do cliente" : "Cadastre um novo cliente"}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nome</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Anotações sobre o cliente, preferências, alergias..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : editingClient ? (
+                    "Atualizar"
+                  ) : (
+                    "Cadastrar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por nome, telefone ou email..."
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Clientes Cadastrados ({filteredClients.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredClients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
+              <p className="text-muted-foreground">
+                {searchQuery ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+              </p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Observações</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>
+                      {client.phone ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          {client.phone}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {client.email ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          {client.email}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {client.notes || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleOpenDialog(client)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </MainLayout>
+  );
+}
