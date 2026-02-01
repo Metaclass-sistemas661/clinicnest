@@ -1,0 +1,366 @@
+import { useState, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { StatCard } from "@/components/ui/stat-card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { DollarSign, TrendingUp, TrendingDown, Plus, Loader2, Calendar } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import type { FinancialTransaction, TransactionType } from "@/types/database";
+
+const categories = {
+  income: ["Serviço", "Venda de Produto", "Outros"],
+  expense: ["Fornecedores", "Aluguel", "Funcionários", "Materiais", "Manutenção", "Outros"],
+};
+
+export default function Financeiro() {
+  const { profile, isAdmin } = useAuth();
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
+
+  const [formData, setFormData] = useState({
+    type: "income" as TransactionType,
+    category: "",
+    amount: "",
+    description: "",
+    transaction_date: format(new Date(), "yyyy-MM-dd"),
+  });
+
+  // Calculate stats
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalExpense = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const balance = totalIncome - totalExpense;
+
+  useEffect(() => {
+    if (profile?.tenant_id && isAdmin) {
+      fetchTransactions();
+    }
+  }, [profile?.tenant_id, isAdmin, filterMonth]);
+
+  const fetchTransactions = async () => {
+    if (!profile?.tenant_id) return;
+
+    const [year, month] = filterMonth.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    const end = endOfMonth(new Date(year, month - 1));
+
+    try {
+      const { data, error } = await supabase
+        .from("financial_transactions")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .gte("transaction_date", format(start, "yyyy-MM-dd"))
+        .lte("transaction_date", format(end, "yyyy-MM-dd"))
+        .order("transaction_date", { ascending: false });
+
+      if (error) throw error;
+      setTransactions((data as FinancialTransaction[]) || []);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.tenant_id) return;
+
+    setIsSaving(true);
+
+    try {
+      const { error } = await supabase.from("financial_transactions").insert({
+        tenant_id: profile.tenant_id,
+        type: formData.type,
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        description: formData.description || null,
+        transaction_date: formData.transaction_date,
+      });
+
+      if (error) throw error;
+
+      toast.success("Transação registrada com sucesso!");
+      setIsDialogOpen(false);
+      setFormData({
+        type: "income",
+        category: "",
+        amount: "",
+        description: "",
+        transaction_date: format(new Date(), "yyyy-MM-dd"),
+      });
+      fetchTransactions();
+    } catch (error) {
+      toast.error("Erro ao registrar transação");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  if (!isAdmin) {
+    return (
+      <MainLayout title="Financeiro" subtitle="Acesso restrito">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <p className="text-muted-foreground">
+              Apenas administradores podem acessar o financeiro
+            </p>
+          </CardContent>
+        </Card>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout
+      title="Financeiro"
+      subtitle="Controle de receitas e despesas"
+      actions={
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gradient-primary text-primary-foreground">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Transação
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Transação</DialogTitle>
+              <DialogDescription>Registre uma entrada ou saída</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreate}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, type: v as TransactionType, category: "" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">Entrada</SelectItem>
+                      <SelectItem value="expense">Saída</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(v) => setFormData({ ...formData, category: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories[formData.type].map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input
+                    type="date"
+                    value={formData.transaction_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, transaction_date: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Descrição opcional..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    "Registrar"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+      <div className="space-y-6">
+        {/* Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            title="Saldo do Período"
+            value={formatCurrency(balance)}
+            icon={DollarSign}
+            variant={balance >= 0 ? "success" : "danger"}
+          />
+          <StatCard
+            title="Receitas"
+            value={formatCurrency(totalIncome)}
+            icon={TrendingUp}
+            variant="success"
+          />
+          <StatCard
+            title="Despesas"
+            value={formatCurrency(totalExpense)}
+            icon={TrendingDown}
+            variant="danger"
+          />
+        </div>
+
+        {/* Filter */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Label>Período:</Label>
+          </div>
+          <Input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="w-48"
+          />
+        </div>
+
+        {/* Transactions Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Transações</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                <p className="text-muted-foreground">Nenhuma transação neste período</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        {format(new Date(transaction.transaction_date), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            transaction.type === "income"
+                              ? "bg-success/20 text-success border-success/30"
+                              : "bg-destructive/20 text-destructive border-destructive/30"
+                          }
+                        >
+                          {transaction.type === "income" ? "Entrada" : "Saída"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{transaction.category}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {transaction.description || "—"}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-semibold ${
+                          transaction.type === "income" ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        {transaction.type === "income" ? "+" : "-"}
+                        {formatCurrency(transaction.amount)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+}
