@@ -58,7 +58,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-6 transition-all duration-300",
+        "group relative rounded-2xl border p-4 sm:p-6 transition-all duration-300",
         "hover:shadow-lg hover:-translate-y-1",
         style.card,
         className
@@ -67,38 +67,38 @@ export function StatCard({
       {/* Decorative gradient */}
       <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-accent/5 blur-2xl transition-all duration-500 group-hover:scale-150" />
       
-      <div className="relative flex items-start justify-between">
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold tracking-tight text-foreground">
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             {value}
           </p>
           {(description || subtitle) && (
-            <p className="text-sm text-muted-foreground">{description || subtitle}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{description || subtitle}</p>
           )}
           {trend && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <span
                 className={cn(
-                  "text-sm font-medium",
+                  "text-xs sm:text-sm font-medium",
                   trend.isPositive ? "text-success" : "text-destructive"
                 )}
               >
                 {trend.isPositive ? "+" : "-"}{Math.abs(trend.value)}%
               </span>
-              <span className="text-sm text-muted-foreground">vs mês anterior</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">vs mês anterior</span>
             </div>
           )}
         </div>
         <div
           className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-2xl ring-4 transition-all duration-300",
+            "flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl ring-2 sm:ring-4 transition-all duration-300 flex-shrink-0",
             "group-hover:scale-110 group-hover:rotate-3",
             style.icon,
             style.iconRing
           )}
         >
-          <Icon className="h-7 w-7" />
+          <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
         </div>
       </div>
     </div>
