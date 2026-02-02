@@ -58,47 +58,47 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border p-4 sm:p-6 transition-all duration-300",
+        "group relative rounded-2xl border p-3 sm:p-4 lg:p-6 transition-all duration-300",
         "hover:shadow-lg hover:-translate-y-1",
         style.card,
         className
       )}
     >
-      {/* Decorative gradient */}
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-accent/5 blur-2xl transition-all duration-500 group-hover:scale-150" />
+      {/* Decorative gradient - hidden on mobile for cleaner look */}
+      <div className="hidden sm:block absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-accent/5 blur-2xl transition-all duration-500 group-hover:scale-150" />
       
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="space-y-2 sm:space-y-3 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+      <div className="relative flex items-start justify-between gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2 lg:space-y-3 min-w-0 flex-1">
+          <p className="text-[10px] sm:text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className="text-lg sm:text-xl lg:text-3xl font-bold tracking-tight text-foreground">
             {value}
           </p>
           {(description || subtitle) && (
-            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{description || subtitle}</p>
+            <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground line-clamp-2">{description || subtitle}</p>
           )}
           {trend && (
             <div className="flex items-center gap-1 flex-wrap">
               <span
                 className={cn(
-                  "text-xs sm:text-sm font-medium",
+                  "text-[10px] sm:text-xs lg:text-sm font-medium",
                   trend.isPositive ? "text-success" : "text-destructive"
                 )}
               >
                 {trend.isPositive ? "+" : "-"}{Math.abs(trend.value)}%
               </span>
-              <span className="text-xs sm:text-sm text-muted-foreground">vs mês anterior</span>
+              <span className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground">vs mês anterior</span>
             </div>
           )}
         </div>
         <div
           className={cn(
-            "flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl sm:rounded-2xl ring-2 sm:ring-4 transition-all duration-300 flex-shrink-0",
+            "flex h-8 w-8 sm:h-10 sm:w-10 lg:h-14 lg:w-14 items-center justify-center rounded-lg sm:rounded-xl lg:rounded-2xl ring-1 sm:ring-2 lg:ring-4 transition-all duration-300 flex-shrink-0",
             "group-hover:scale-110 group-hover:rotate-3",
             style.icon,
             style.iconRing
           )}
         >
-          <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-7 lg:w-7" />
         </div>
       </div>
     </div>
