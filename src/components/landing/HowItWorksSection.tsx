@@ -78,7 +78,7 @@ export function HowItWorksSection() {
                   key={step.step}
                   className="relative group"
                 >
-                  <div className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
+                  <div className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col">
                     {/* Step Number Badge */}
                     <div className={cn(
                       "absolute -top-3 -right-3 h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border-2 bg-white shadow-md",
@@ -90,19 +90,21 @@ export function HowItWorksSection() {
                     
                     {/* Icon */}
                     <div className={cn(
-                      "inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110",
+                      "inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110 flex-shrink-0",
                       colors.bg
                     )}>
                       <Icon className={cn("h-8 w-8", colors.text)} />
                     </div>
                     
                     {/* Content */}
-                    <h3 className="font-display text-xl font-semibold mb-3">
-                      {step.title}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {step.description}
-                    </p>
+                    <div className="flex-1 flex flex-col">
+                      <h3 className="font-display text-xl font-semibold mb-3">
+                        {step.title}
+                      </h3>
+                      <p className="text-muted-foreground flex-1">
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
                   
                   {/* Arrow - Desktop only, not after last item */}

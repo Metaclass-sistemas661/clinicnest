@@ -66,10 +66,10 @@ export function GuaranteeSection() {
             return (
               <div
                 key={guarantee.title}
-                className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 text-center group hover:-translate-y-2"
+                className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 text-center group hover:-translate-y-2 h-full flex flex-col"
               >
                 {/* Badge Icon */}
-                <div className="mx-auto mb-6 relative">
+                <div className="mx-auto mb-6 relative flex-shrink-0">
                   <div className={cn(
                     "h-20 w-20 rounded-full flex items-center justify-center mx-auto transition-all duration-300 group-hover:scale-110",
                     colors.bg
@@ -84,12 +84,14 @@ export function GuaranteeSection() {
                   </div>
                 </div>
                 
-                <h3 className="font-display text-xl font-semibold mb-2">
-                  {guarantee.title}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {guarantee.description}
-                </p>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="font-display text-xl font-semibold mb-2">
+                    {guarantee.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm flex-1">
+                    {guarantee.description}
+                  </p>
+                </div>
               </div>
             );
           })}

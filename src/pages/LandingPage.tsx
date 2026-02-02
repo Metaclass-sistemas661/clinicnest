@@ -376,20 +376,22 @@ function FeaturesSection() {
             return (
               <div
                 key={feature.title}
-                className="group relative p-6 sm:p-8 rounded-2xl border bg-card hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:border-violet-200"
+                className="group relative p-6 sm:p-8 rounded-2xl border bg-card hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:border-violet-200 h-full flex flex-col"
               >
                 <div className={cn(
-                  "inline-flex h-14 w-14 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110",
+                  "inline-flex h-14 w-14 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110 flex-shrink-0",
                   colors.bg
                 )}>
                   <Icon className={cn("h-7 w-7", colors.text)} />
                 </div>
-                <h3 className="font-display text-xl font-semibold mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground">
-                  {feature.description}
-                </p>
+                <div className="flex-1 flex flex-col">
+                  <h3 className="font-display text-xl font-semibold mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground flex-1">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
             );
           })}
@@ -448,7 +450,7 @@ function TestimonialsSection() {
           {testimonials.map((testimonial) => (
             <div
               key={testimonial.name}
-              className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-lg hover:shadow-xl transition-all duration-300"
+              className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col"
             >
               {/* Quote */}
               <div className="absolute -top-4 -left-2 text-6xl text-violet-200 font-serif">
@@ -456,18 +458,18 @@ function TestimonialsSection() {
               </div>
 
               {/* Stars */}
-              <div className="flex gap-1 mb-4">
+              <div className="flex gap-1 mb-4 flex-shrink-0">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                 ))}
               </div>
 
-              <p className="text-foreground mb-6 relative z-10">
+              <p className="text-foreground mb-6 relative z-10 flex-1">
                 "{testimonial.content}"
               </p>
 
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 flex items-center justify-center text-white font-semibold">
+              <div className="flex items-center gap-4 flex-shrink-0 mt-auto">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
                   {testimonial.avatar}
                 </div>
                 <div>
