@@ -131,33 +131,27 @@ function FloatingCard({
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Vibrant Gradient Background */}
-      <div className="absolute inset-0 -z-10">
-        {/* Base gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
+      {/* BOLD Gradient Background */}
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[hsl(262,83%,20%)] via-[hsl(262,60%,12%)] to-[hsl(24,80%,15%)]">
+        {/* Colorful gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-transparent to-accent/40" />
         
-        {/* Animated gradient orbs - more vibrant */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-          <div className="absolute -top-1/4 -left-1/4 w-[700px] h-[700px] bg-primary/40 rounded-full blur-[100px] animate-pulse" />
-          <div className="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-accent/50 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
-          <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-primary/30 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "2s" }} />
-          <div className="absolute bottom-1/3 left-1/3 w-[300px] h-[300px] bg-accent/40 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: "1.5s" }} />
-        </div>
-
-        {/* Gradient mesh overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
+        {/* Large animated orbs */}
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-primary/50 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-accent/60 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px]" />
         
-        {/* Grid pattern overlay */}
+        {/* Grid pattern */}
         <div 
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-10"
           style={{
-            backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
           }}
         />
 
-        {/* Radial gradient spotlight */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_hsl(var(--primary)/0.15)_0%,_transparent_70%)]" />
+        {/* Bottom fade to content */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       {/* Floating 3D Elements - Hidden on mobile */}
@@ -236,19 +230,19 @@ function HeroSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 mb-8 animate-fade-in shadow-lg">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-8 animate-fade-in shadow-lg">
             <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium text-white">
               Sistema #1 para Salões de Beleza
             </span>
-            <Zap className="h-4 w-4 text-primary" />
+            <Zap className="h-4 w-4 text-accent" />
           </div>
 
           {/* Headline */}
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-slide-up">
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-slide-up text-white">
             Transforme seu salão com{" "}
             <span className="relative">
-              <span className="text-gradient">gestão inteligente</span>
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">gestão inteligente</span>
               <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
                 <path 
                   d="M2 10C50 4 100 2 150 6C200 10 250 8 298 4" 
@@ -269,10 +263,11 @@ function HeroSection() {
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mb-10 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <p className="text-lg sm:text-xl text-white/70 max-w-2xl mb-10 animate-slide-up" style={{ animationDelay: "0.1s" }}>
             Agende, gerencie clientes, controle finanças e aumente seu faturamento. 
             Tudo em uma plataforma simples e poderosa.
           </p>
+
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
@@ -286,25 +281,25 @@ function HeroSection() {
               </Button>
             </Link>
             <a href="#features">
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto glass border-white/30 hover:bg-white/20">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto bg-white/10 border-white/30 text-white hover:bg-white/20">
                 Ver Recursos
               </Button>
             </a>
           </div>
 
           {/* Trust Badges */}
-          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-12 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 mt-12 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
               <Shield className="h-5 w-5 text-success" />
-              <span className="text-sm font-medium">100% Seguro</span>
+              <span className="text-sm font-medium text-white">100% Seguro</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
               <Clock className="h-5 w-5 text-info" />
-              <span className="text-sm font-medium">Setup em 5 min</span>
+              <span className="text-sm font-medium text-white">Setup em 5 min</span>
             </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
-              <Heart className="h-5 w-5 text-destructive" />
-              <span className="text-sm font-medium">+500 salões</span>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+              <Heart className="h-5 w-5 text-accent" />
+              <span className="text-sm font-medium text-white">+500 salões</span>
             </div>
           </div>
         </div>
@@ -312,8 +307,8 @@ function HeroSection() {
 
       {/* Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full glass border border-white/30 flex items-start justify-center p-2">
-          <div className="w-1 h-2 bg-primary rounded-full animate-pulse" />
+        <div className="w-6 h-10 rounded-full bg-white/10 border border-white/30 flex items-start justify-center p-2">
+          <div className="w-1 h-2 bg-white rounded-full animate-pulse" />
         </div>
       </div>
     </section>
