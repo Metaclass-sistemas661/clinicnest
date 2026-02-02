@@ -557,7 +557,7 @@ function PricingSection() {
                     🏆 Mais Popular
                   </div>
                   {plan.savings && (
-                    <div className="px-3 py-1.5 rounded-full bg-green-500 text-white text-sm font-semibold shadow-md whitespace-nowrap">
+                    <div className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-md whitespace-nowrap">
                       {plan.savings}
                     </div>
                   )}
