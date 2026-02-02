@@ -560,8 +560,15 @@ function PricingSection() {
               )}
 
               {/* Savings Badge */}
-              {plan.savings && (
+              {plan.savings && !plan.popular && (
                 <div className="absolute -top-3 -right-3">
+                  <div className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-md">
+                    {plan.savings}
+                  </div>
+                </div>
+              )}
+              {plan.savings && plan.popular && (
+                <div className="absolute top-3 right-3">
                   <div className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-md">
                     {plan.savings}
                   </div>
