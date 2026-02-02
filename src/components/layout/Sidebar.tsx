@@ -64,9 +64,9 @@ export function Sidebar() {
             </div>
             <div>
               <span className="font-display text-lg font-bold text-foreground">
-                {tenant?.name || "BeautySalon"}
+                {tenant?.name || "ProBeleza"}
               </span>
-              <p className="text-xs text-muted-foreground">Gestão Inteligente</p>
+              <p className="text-xs text-muted-foreground">Gestão Profissional</p>
             </div>
           </div>
         )}
