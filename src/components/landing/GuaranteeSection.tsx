@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 const guarantees = [
   {
     icon: Clock,
-    title: "14 Dias Grátis",
+    title: "5 Dias Grátis",
     description: "Teste todas as funcionalidades sem compromisso",
     color: "violet"
   },

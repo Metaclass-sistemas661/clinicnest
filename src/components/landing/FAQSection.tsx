@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     question: "Como funciona o período de teste?",
-    answer: "Você tem 14 dias grátis para testar todas as funcionalidades sem precisar informar cartão de crédito. Se gostar, escolhe o plano que melhor atende suas necessidades."
+    answer: "Você tem 5 dias grátis para testar todas as funcionalidades sem precisar informar cartão de crédito. Se gostar, escolhe o plano que melhor atende suas necessidades."
   },
   {
     question: "Como cancelo minha assinatura?",

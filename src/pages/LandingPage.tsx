@@ -262,7 +262,7 @@ function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <Link to="/cadastro">
               <Button size="lg" className="bg-white text-violet-700 hover:bg-white/90 text-lg px-8 py-6 h-auto shadow-xl group font-semibold">
-                Começar Grátis por 14 dias
+                Começar Grátis por 5 dias
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -635,7 +635,7 @@ function PricingSection() {
               </Link>
 
               <p className="text-center text-xs text-muted-foreground mt-3">
-                14 dias grátis • Sem cartão
+                5 dias grátis • Sem cartão
               </p>
             </div>
           ))}
@@ -643,7 +643,7 @@ function PricingSection() {
 
         {/* Trust Note */}
         <p className="text-center text-sm text-muted-foreground mt-10">
-          Todos os planos incluem 14 dias grátis. Cancele quando quiser, sem burocracia.
+          Todos os planos incluem 5 dias grátis. Cancele quando quiser, sem burocracia.
         </p>
       </div>
     </section>
