@@ -67,10 +67,10 @@ export function StatCard({
       {/* Decorative gradient - hidden on mobile for cleaner look */}
       <div className="hidden sm:block absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-accent/5 blur-2xl transition-all duration-500 group-hover:scale-150" />
       
-      <div className="relative flex items-start justify-between gap-2 sm:gap-3">
-        <div className="space-y-1 sm:space-y-2 lg:space-y-3 min-w-0 flex-1">
+      <div className="relative flex items-start justify-between gap-3 sm:gap-4">
+        <div className="space-y-1 sm:space-y-2 lg:space-y-3 min-w-0 flex-1 overflow-hidden">
           <p className="text-[10px] sm:text-xs lg:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="text-lg sm:text-xl lg:text-3xl font-bold tracking-tight text-foreground">
+          <p className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-foreground truncate">
             {value}
           </p>
           {(description || subtitle) && (
@@ -92,13 +92,13 @@ export function StatCard({
         </div>
         <div
           className={cn(
-            "flex h-8 w-8 sm:h-10 sm:w-10 lg:h-14 lg:w-14 items-center justify-center rounded-lg sm:rounded-xl lg:rounded-2xl ring-1 sm:ring-2 lg:ring-4 transition-all duration-300 flex-shrink-0",
+            "flex h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 items-center justify-center rounded-lg sm:rounded-xl lg:rounded-2xl ring-1 sm:ring-2 lg:ring-4 transition-all duration-300 flex-shrink-0",
             "group-hover:scale-110 group-hover:rotate-3",
             style.icon,
             style.iconRing
           )}
         >
-          <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-7 lg:w-7" />
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
         </div>
       </div>
     </div>
