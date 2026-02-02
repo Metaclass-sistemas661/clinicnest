@@ -52,14 +52,14 @@ export function BeforeAfterSection() {
         {/* Before/After Comparison */}
         <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {/* Before Card */}
-          <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-red-200 shadow-lg">
+          <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-red-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
               <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 font-semibold text-sm border border-red-200">
                 ❌ Sem ProBeleza
               </span>
             </div>
             
-            <div className="pt-4 space-y-4">
+            <div className="pt-4 space-y-4 flex-1">
               {beforeItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -67,8 +67,8 @@ export function BeforeAfterSection() {
                     <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
                       <Icon className="h-5 w-5 text-red-500" />
                     </div>
-                    <span className="text-foreground">{item.text}</span>
-                    <X className="h-5 w-5 text-red-400 ml-auto flex-shrink-0" />
+                    <span className="text-foreground flex-1">{item.text}</span>
+                    <X className="h-5 w-5 text-red-400 flex-shrink-0" />
                   </div>
                 );
               })}
@@ -81,14 +81,14 @@ export function BeforeAfterSection() {
           </div>
 
           {/* After Card */}
-          <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-green-200 shadow-lg">
+          <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-green-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
               <span className="px-4 py-2 rounded-full bg-green-100 text-green-600 font-semibold text-sm border border-green-200">
                 ✅ Com ProBeleza
               </span>
             </div>
             
-            <div className="pt-4 space-y-4">
+            <div className="pt-4 space-y-4 flex-1">
               {afterItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -96,8 +96,8 @@ export function BeforeAfterSection() {
                     <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
                       <Icon className="h-5 w-5 text-green-600" />
                     </div>
-                    <span className="text-foreground">{item.text}</span>
-                    <Check className="h-5 w-5 text-green-500 ml-auto flex-shrink-0" />
+                    <span className="text-foreground flex-1">{item.text}</span>
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                   </div>
                 );
               })}

@@ -56,9 +56,9 @@ export function DevicesSection() {
                   key={device.name}
                   className="relative group"
                 >
-                  <div className="flex flex-col items-center p-8 rounded-3xl bg-white border-2 border-violet-100 shadow-lg hover:shadow-2xl hover:border-violet-300 transition-all duration-300 hover:-translate-y-2">
+                  <div className="flex flex-col items-center p-8 rounded-3xl bg-white border-2 border-violet-100 shadow-lg hover:shadow-2xl hover:border-violet-300 transition-all duration-300 hover:-translate-y-2 h-full">
                     {/* Device Frame */}
-                    <div className="relative mb-6">
+                    <div className="relative mb-6 flex-shrink-0">
                       {/* Outer glow */}
                       <div className="absolute inset-0 bg-gradient-to-br from-violet-400 to-fuchsia-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
                       
@@ -73,12 +73,14 @@ export function DevicesSection() {
                       </div>
                     </div>
                     
-                    <h3 className="font-display text-xl font-semibold mb-2">
-                      {device.name}
-                    </h3>
-                    <p className="text-muted-foreground text-center">
-                      {device.description}
-                    </p>
+                    <div className="flex-1 flex flex-col items-center text-center">
+                      <h3 className="font-display text-xl font-semibold mb-2">
+                        {device.name}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {device.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
               );
