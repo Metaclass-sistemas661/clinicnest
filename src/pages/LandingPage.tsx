@@ -131,23 +131,33 @@ function FloatingCard({
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Animated Gradient Background */}
+      {/* Vibrant Gradient Background */}
       <div className="absolute inset-0 -z-10">
-        {/* Main gradient orbs */}
-        <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/30 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/30 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: "1s" }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-[150px]" />
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
+        
+        {/* Animated gradient orbs - more vibrant */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute -top-1/4 -left-1/4 w-[700px] h-[700px] bg-primary/40 rounded-full blur-[100px] animate-pulse" />
+          <div className="absolute -bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-accent/50 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
+          <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-primary/30 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "2s" }} />
+          <div className="absolute bottom-1/3 left-1/3 w-[300px] h-[300px] bg-accent/40 rounded-full blur-[60px] animate-pulse" style={{ animationDelay: "1.5s" }} />
         </div>
+
+        {/* Gradient mesh overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50" />
         
         {/* Grid pattern overlay */}
         <div 
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
+            backgroundSize: '50px 50px'
           }}
         />
+
+        {/* Radial gradient spotlight */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_hsl(var(--primary)/0.15)_0%,_transparent_70%)]" />
       </div>
 
       {/* Floating 3D Elements - Hidden on mobile */}
