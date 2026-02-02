@@ -72,7 +72,7 @@ function SidebarContent({
             </div>
             <div>
               <span className="font-display text-base md:text-lg font-bold text-foreground">
-                {tenant?.name || "ProBeleza"}
+                {tenant?.name || "VynloBella"}
               </span>
               <p className="text-xs text-muted-foreground">Gestão Profissional</p>
             </div>
@@ -171,7 +171,7 @@ export function Sidebar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-vibrant shadow-glow">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-foreground">ProBeleza</span>
+            <span className="font-display text-lg font-bold text-foreground">VynloBella</span>
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>

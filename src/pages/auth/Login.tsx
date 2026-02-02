@@ -51,7 +51,7 @@ export default function Login() {
             </div>
             <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
           </div>
-          <h1 className="font-display text-4xl font-bold text-gradient">ProBeleza</h1>
+          <h1 className="font-display text-4xl font-bold text-gradient">VynloBella</h1>
           <p className="mt-2 text-muted-foreground">Gestão profissional para seu salão</p>
         </div>
 

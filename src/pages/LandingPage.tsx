@@ -47,7 +47,7 @@ function Navbar() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <span className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-              ProBeleza
+              VynloBella
             </span>
           </div>
 
@@ -407,7 +407,7 @@ const testimonials = [
     name: "Carla Santos",
     role: "Proprietária do Studio Carla",
     location: "São Paulo, SP",
-    content: "O ProBeleza transformou a forma como gerencio meu salão. Reduzi 80% do tempo com agendamentos e meus clientes adoram a praticidade!",
+    content: "O VynloBella transformou a forma como gerencio meu salão. Reduzi 80% do tempo com agendamentos e meus clientes adoram a praticidade!",
     avatar: "CS"
   },
   {
@@ -421,7 +421,7 @@ const testimonials = [
     name: "Amanda Oliveira",
     role: "Espaço Beauty Amanda",
     location: "Belo Horizonte, MG",
-    content: "A melhor decisão que tomei foi adotar o ProBeleza. Minha equipe ficou mais organizada e meus clientes mais satisfeitos.",
+    content: "A melhor decisão que tomei foi adotar o VynloBella. Minha equipe ficou mais organizada e meus clientes mais satisfeitos.",
     avatar: "AO"
   }
 ];
@@ -660,7 +660,7 @@ function Footer() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="font-display text-xl font-bold">ProBeleza</span>
+            <span className="font-display text-xl font-bold">VynloBella</span>
           </div>
 
           <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
@@ -670,7 +670,7 @@ function Footer() {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            © 2025 ProBeleza. Todos os direitos reservados.
+            © 2025 VynloBella. Todos os direitos reservados.
           </p>
         </div>
       </div>
