@@ -181,6 +181,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw roleError;
         }
 
+        // Create subscription with 5-day trial
+        const { error: subscriptionError } = await supabase
+          .from('subscriptions')
+          .insert({
+            tenant_id: tenantData.id,
+            status: 'trialing',
+          });
+
+        if (subscriptionError) {
+          console.error('Subscription creation error:', subscriptionError);
+          // Don't throw - subscription is not critical for signup
+        }
+
         return { error: null };
       } catch (error) {
         console.error('Signup process error:', error);
