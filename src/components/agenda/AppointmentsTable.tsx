@@ -223,7 +223,124 @@ export function AppointmentsTable({
 
   return (
     <>
-      <div className="rounded-lg border bg-card">
+      {/* Mobile: Card Layout */}
+      <div className="block md:hidden space-y-3">
+        {appointments.map((appointment) => {
+          const status = statusConfig[appointment.status];
+          const StatusIcon = status.icon;
+          const isUpdating = updatingId === appointment.id;
+
+          return (
+            <div key={appointment.id} className="rounded-lg border bg-card p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center rounded-lg bg-primary/10 px-3 py-1.5 text-primary">
+                    <span className="text-lg font-bold">
+                      {format(new Date(appointment.scheduled_at), "HH:mm")}
+                    </span>
+                    <span className="text-[10px]">
+                      {format(new Date(appointment.scheduled_at), "dd/MM")}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {appointment.client?.name || "Cliente não informado"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {appointment.service?.name || "Serviço não informado"}
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="outline" className={`${status.className} text-xs`}>
+                  <StatusIcon className="mr-1 h-3 w-3" />
+                  {status.label}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {appointment.professional?.full_name || "Sem profissional"}
+                </span>
+                <span className="font-bold text-primary">
+                  {formatCurrency(appointment.price)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t">
+                {isUpdating ? (
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                ) : (
+                  <>
+                    {appointment.status === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-success border-success/30 hover:bg-success/10"
+                        onClick={() => handleStatusChange(appointment, "confirmed")}
+                      >
+                        <CheckCircle2 className="mr-1 h-4 w-4" />
+                        Confirmar
+                      </Button>
+                    )}
+                    {appointment.status === "confirmed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-primary border-primary/30 hover:bg-primary/10"
+                        onClick={() => handleStatusChange(appointment, "completed")}
+                      >
+                        <CheckCircle2 className="mr-1 h-4 w-4" />
+                        Concluir
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditDialog(appointment)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleStatusChange(appointment, "pending")}
+                          disabled={appointment.status === "pending"}
+                        >
+                          <Clock className="mr-2 h-4 w-4 text-warning" />
+                          Pendente
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleStatusChange(appointment, "cancelled")}
+                          disabled={appointment.status === "cancelled"}
+                        >
+                          <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                          Cancelar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => openDeleteDialog(appointment)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="hidden md:block rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

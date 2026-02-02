@@ -334,7 +334,7 @@ export default function Financeiro() {
     >
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Saldo do Período"
             value={formatCurrency(balance)}
@@ -362,7 +362,7 @@ export default function Financeiro() {
         </div>
 
         {/* Filter */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <Label>Período:</Label>
@@ -371,24 +371,27 @@ export default function Financeiro() {
             type="month"
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
-            className="w-48"
+            className="w-full sm:w-48"
           />
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="overview" className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Gráficos
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Gráficos</span>
+              <span className="sm:hidden">Gráf.</span>
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="gap-2">
-              <ArrowRightLeft className="h-4 w-4" />
-              Fluxo de Caixa
+            <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Fluxo de Caixa</span>
+              <span className="sm:hidden">Fluxo</span>
             </TabsTrigger>
-            <TabsTrigger value="transactions" className="gap-2">
-              <List className="h-4 w-4" />
-              Transações
+            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <List className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Transações</span>
+              <span className="sm:hidden">Trans.</span>
             </TabsTrigger>
           </TabsList>
 

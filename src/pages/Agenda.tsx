@@ -332,7 +332,7 @@ export default function Agenda() {
       title="Agenda"
       subtitle="Gerencie os agendamentos do salão"
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center sm:justify-end">
           <div className="flex items-center rounded-lg border bg-card">
             <Button
               variant={viewMode === "day" ? "default" : "ghost"}
@@ -353,9 +353,10 @@ export default function Agenda() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Agendamento
+              <Button className="gradient-primary text-primary-foreground text-sm">
+                <Plus className="mr-1 md:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Novo Agendamento</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
@@ -475,28 +476,28 @@ export default function Agenda() {
       }
     >
       {/* Navigation */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}>
+      <div className="mb-4 md:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-sm md:text-lg font-semibold text-center min-w-0">
             {viewMode === "day"
-              ? format(currentDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
-              : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM yyyy", { locale: ptBR })}`}
+              ? format(currentDate, "EEE, d 'de' MMM", { locale: ptBR })
+              : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })}`}
           </h2>
-          <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}>
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+        <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
           Hoje
         </Button>
       </div>
 
       {/* Week Overview - Mini Calendar */}
       {viewMode === "week" && (
-        <div className="mb-6 grid grid-cols-7 gap-2">
+        <div className="mb-4 md:mb-6 grid grid-cols-7 gap-1 md:gap-2">
           {getWeekDays().map((day) => {
             const count = getAppointmentsCountForDay(day);
             const isToday = isSameDay(day, new Date());
@@ -509,20 +510,20 @@ export default function Agenda() {
                   setViewMode("day");
                 }}
                 className={`
-                  flex flex-col items-center rounded-lg border p-3 transition-all hover:border-primary/50 hover:bg-accent
+                  flex flex-col items-center rounded-lg border p-1.5 md:p-3 transition-all hover:border-primary/50 hover:bg-accent
                   ${isToday ? "ring-2 ring-primary" : ""}
                   ${isSelected ? "bg-primary/10 border-primary" : "bg-card"}
                 `}
               >
-                <span className="text-xs text-muted-foreground capitalize">
-                  {format(day, "EEE", { locale: ptBR })}
+                <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
+                  {format(day, "EEE", { locale: ptBR }).slice(0, 3)}
                 </span>
-                <span className={`text-xl font-bold ${isToday ? "text-primary" : ""}`}>
+                <span className={`text-sm md:text-xl font-bold ${isToday ? "text-primary" : ""}`}>
                   {format(day, "d")}
                 </span>
                 {count > 0 && (
-                  <span className="mt-1 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-                    {count} {count === 1 ? "agend." : "agend."}
+                  <span className="mt-0.5 md:mt-1 rounded-full bg-primary/20 px-1 md:px-2 py-0.5 text-[10px] md:text-xs font-medium text-primary">
+                    {count}
                   </span>
                 )}
               </button>
