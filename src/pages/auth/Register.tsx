@@ -65,7 +65,7 @@ export default function Register() {
             </div>
             <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-accent/20 to-primary/20 blur-xl -z-10" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-gradient">BeautySalon</h1>
+          <h1 className="font-display text-3xl font-bold text-gradient">VynloBella</h1>
           <p className="mt-1 text-muted-foreground text-sm">Gestão inteligente para seu salão</p>
         </div>
 
