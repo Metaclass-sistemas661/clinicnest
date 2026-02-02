@@ -269,6 +269,15 @@
     from { box-shadow: 0 0 20px hsl(262 83% 58% / 0.2); }
     to { box-shadow: 0 0 40px hsl(262 83% 58% / 0.4); }
   }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(var(--tw-rotate, 0deg)); }
+    50% { transform: translateY(-20px) rotate(var(--tw-rotate, 0deg)); }
+  }
+
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
 }
 
 /* Custom scrollbar */

@@ -101,31 +101,161 @@ function Navbar() {
   );
 }
 
+// Floating 3D Card Component
+function FloatingCard({ 
+  children, 
+  className, 
+  delay = 0 
+}: { 
+  children: React.ReactNode; 
+  className?: string; 
+  delay?: number;
+}) {
+  return (
+    <div 
+      className={cn(
+        "absolute glass rounded-2xl p-4 shadow-xl border border-white/30",
+        "animate-[float_6s_ease-in-out_infinite]",
+        className
+      )}
+      style={{ 
+        animationDelay: `${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // Hero Section
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Background Elements */}
+      {/* Animated Gradient Background */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/10 to-accent/10 rounded-full blur-3xl" />
+        {/* Main gradient orbs */}
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/30 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/30 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: "1s" }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-[150px]" />
+        </div>
+        
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px'
+          }}
+        />
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Floating 3D Elements - Hidden on mobile */}
+      <div className="hidden lg:block">
+        {/* Calendar Card */}
+        <FloatingCard className="top-32 left-[8%] rotate-[-8deg]" delay={0}>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Hoje</p>
+              <p className="font-semibold">12 agendamentos</p>
+            </div>
+          </div>
+        </FloatingCard>
+
+        {/* Revenue Card */}
+        <FloatingCard className="top-48 right-[6%] rotate-[6deg]" delay={1}>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-success/20 flex items-center justify-center">
+              <TrendingUp className="h-6 w-6 text-success" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Faturamento</p>
+              <p className="font-semibold text-success">+42% este mês</p>
+            </div>
+          </div>
+        </FloatingCard>
+
+        {/* Clients Card */}
+        <FloatingCard className="bottom-48 left-[10%] rotate-[5deg]" delay={2}>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-info/20 flex items-center justify-center">
+              <Users className="h-6 w-6 text-info" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Clientes</p>
+              <p className="font-semibold">+28 novos</p>
+            </div>
+          </div>
+        </FloatingCard>
+
+        {/* Rating Card */}
+        <FloatingCard className="bottom-36 right-[12%] rotate-[-4deg]" delay={1.5}>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-5 w-5 fill-warning text-warning" />
+              ))}
+            </div>
+            <span className="font-semibold">4.9/5</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">+500 avaliações</p>
+        </FloatingCard>
+
+        {/* Services Card */}
+        <FloatingCard className="top-[60%] left-[5%] rotate-[-3deg]" delay={2.5}>
+          <div className="flex items-center gap-2">
+            <Scissors className="h-5 w-5 text-accent" />
+            <span className="text-sm font-medium">Corte finalizado</span>
+            <Check className="h-4 w-4 text-success" />
+          </div>
+        </FloatingCard>
+
+        {/* Money Card */}
+        <FloatingCard className="top-[35%] right-[4%] rotate-[8deg]" delay={0.5}>
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-success" />
+            <span className="text-sm font-medium">R$ 2.450</span>
+            <span className="text-xs text-muted-foreground">hoje</span>
+          </div>
+        </FloatingCard>
+      </div>
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 animate-fade-in">
-            <Zap className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 mb-8 animate-fade-in shadow-lg">
+            <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+            <span className="text-sm font-medium">
               Sistema #1 para Salões de Beleza
             </span>
+            <Zap className="h-4 w-4 text-primary" />
           </div>
 
           {/* Headline */}
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-slide-up">
             Transforme seu salão com{" "}
-            <span className="text-gradient">gestão inteligente</span>
+            <span className="relative">
+              <span className="text-gradient">gestão inteligente</span>
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
+                <path 
+                  d="M2 10C50 4 100 2 150 6C200 10 250 8 298 4" 
+                  stroke="url(#underline-gradient)" 
+                  strokeWidth="4" 
+                  strokeLinecap="round"
+                  className="animate-[draw_1s_ease-out_forwards]"
+                  style={{ strokeDasharray: 300, strokeDashoffset: 300 }}
+                />
+                <defs>
+                  <linearGradient id="underline-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="hsl(262, 83%, 58%)" />
+                    <stop offset="100%" stopColor="hsl(24, 95%, 53%)" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
           </h1>
 
           {/* Subheadline */}
@@ -137,31 +267,34 @@ function HeroSection() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <Link to="/cadastro">
-              <Button size="lg" className="gradient-primary shadow-glow text-lg px-8 py-6 h-auto group">
-                Começar Grátis por 14 dias
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <Button size="lg" className="gradient-primary shadow-glow text-lg px-8 py-6 h-auto group relative overflow-hidden">
+                <span className="relative z-10 flex items-center">
+                  Começar Grátis por 14 dias
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Button>
             </Link>
             <a href="#features">
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 h-auto glass border-white/30 hover:bg-white/20">
                 Ver Recursos
               </Button>
             </a>
           </div>
 
           {/* Trust Badges */}
-          <div className="flex flex-wrap justify-center items-center gap-6 mt-12 text-muted-foreground animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-8 mt-12 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
               <Shield className="h-5 w-5 text-success" />
-              <span className="text-sm">100% Seguro</span>
+              <span className="text-sm font-medium">100% Seguro</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
               <Clock className="h-5 w-5 text-info" />
-              <span className="text-sm">Configuração em 5 min</span>
+              <span className="text-sm font-medium">Setup em 5 min</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-white/20">
               <Heart className="h-5 w-5 text-destructive" />
-              <span className="text-sm">+500 salões confiam</span>
+              <span className="text-sm font-medium">+500 salões</span>
             </div>
           </div>
         </div>
@@ -169,8 +302,8 @@ function HeroSection() {
 
       {/* Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2">
-          <div className="w-1 h-2 bg-muted-foreground/50 rounded-full" />
+        <div className="w-6 h-10 rounded-full glass border border-white/30 flex items-start justify-center p-2">
+          <div className="w-1 h-2 bg-primary rounded-full animate-pulse" />
         </div>
       </div>
     </section>
