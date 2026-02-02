@@ -17,10 +17,22 @@ import {
   TrendingUp,
   Heart,
   Menu,
-  X
+  X,
+  MapPin
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+
+// Import new sections
+import {
+  StatsSection,
+  HowItWorksSection,
+  BeforeAfterSection,
+  FAQSection,
+  GuaranteeSection,
+  DevicesSection,
+  UrgentCTASection,
+} from "@/components/landing";
 
 // Navbar Component
 function Navbar() {
@@ -46,6 +58,9 @@ function Navbar() {
             </a>
             <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">
               Depoimentos
+            </a>
+            <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
+              FAQ
             </a>
             <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
               Preços
@@ -81,6 +96,9 @@ function Navbar() {
               </a>
               <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
                 Depoimentos
+              </a>
+              <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
+                FAQ
               </a>
               <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
                 Preços
@@ -386,18 +404,21 @@ const testimonials = [
   {
     name: "Carla Santos",
     role: "Proprietária do Studio Carla",
+    location: "São Paulo, SP",
     content: "O ProBeleza transformou a forma como gerencio meu salão. Reduzi 80% do tempo com agendamentos e meus clientes adoram a praticidade!",
     avatar: "CS"
   },
   {
     name: "Roberto Lima",
     role: "Barbearia Vintage",
+    location: "Rio de Janeiro, RJ",
     content: "Antes eu perdia dinheiro sem saber onde. Agora tenho controle total das finanças e aumentei meu lucro em 40% em apenas 3 meses.",
     avatar: "RL"
   },
   {
     name: "Amanda Oliveira",
     role: "Espaço Beauty Amanda",
+    location: "Belo Horizonte, MG",
     content: "A melhor decisão que tomei foi adotar o ProBeleza. Minha equipe ficou mais organizada e meus clientes mais satisfeitos.",
     avatar: "AO"
   }
@@ -452,6 +473,10 @@ function TestimonialsSection() {
                 <div>
                   <p className="font-semibold">{testimonial.name}</p>
                   <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">{testimonial.location}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -488,7 +513,7 @@ function PricingSection() {
             {/* Popular Badge */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
               <div className="px-6 py-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white text-sm font-medium shadow-lg">
-                Mais Popular
+                🏆 Melhor Custo-Benefício
               </div>
             </div>
 
@@ -503,7 +528,7 @@ function PricingSection() {
                 <span className="text-muted-foreground">/mês</span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                ou R$970/ano (2 meses grátis)
+                ou R$970/ano <span className="text-green-600 font-semibold">(economize R$194!)</span>
               </p>
             </div>
 
@@ -546,49 +571,6 @@ function PricingSection() {
   );
 }
 
-// CTA Section
-function CTASection() {
-  return (
-    <section className="py-20 sm:py-32 relative overflow-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative rounded-3xl overflow-hidden">
-          {/* Background */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
-            }}
-          />
-          
-          {/* Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" style={{
-              backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-              backgroundSize: "32px 32px"
-            }} />
-          </div>
-
-          <div className="relative z-10 py-16 sm:py-24 px-6 sm:px-12 text-center">
-            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
-              Pronto para transformar seu salão?
-            </h2>
-            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10">
-              Junte-se a centenas de profissionais que já estão crescendo com o ProBeleza. 
-              Comece seu teste gratuito hoje.
-            </p>
-            <Link to="/cadastro">
-              <Button size="lg" className="bg-white text-violet-700 hover:bg-white/90 text-lg px-8 py-6 h-auto shadow-xl group font-semibold">
-                Começar Agora — É Grátis
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // Footer
 function Footer() {
   return (
@@ -617,16 +599,22 @@ function Footer() {
   );
 }
 
-// Main Landing Page
+// Main Landing Page - COMPLETE STRUCTURE
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <HeroSection />
+      <StatsSection />
+      <HowItWorksSection />
       <FeaturesSection />
+      <BeforeAfterSection />
       <TestimonialsSection />
+      <FAQSection />
       <PricingSection />
-      <CTASection />
+      <GuaranteeSection />
+      <DevicesSection />
+      <UrgentCTASection />
       <Footer />
     </div>
   );
