@@ -552,23 +552,21 @@ function PricingSection() {
             >
               {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
                   <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white text-sm font-medium shadow-lg whitespace-nowrap">
                     🏆 Mais Popular
                   </div>
+                  {plan.savings && (
+                    <div className="px-3 py-1.5 rounded-full bg-green-500 text-white text-sm font-semibold shadow-md whitespace-nowrap">
+                      {plan.savings}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Savings Badge */}
+              {/* Savings Badge - Only for non-popular plans */}
               {plan.savings && !plan.popular && (
                 <div className="absolute -top-3 -right-3">
-                  <div className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-md">
-                    {plan.savings}
-                  </div>
-                </div>
-              )}
-              {plan.savings && plan.popular && (
-                <div className="absolute top-3 right-3">
                   <div className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold shadow-md">
                     {plan.savings}
                   </div>
