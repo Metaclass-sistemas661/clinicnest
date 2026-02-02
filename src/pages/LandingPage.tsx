@@ -131,27 +131,35 @@ function FloatingCard({
 function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* BOLD Gradient Background */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[hsl(262,83%,20%)] via-[hsl(262,60%,12%)] to-[hsl(24,80%,15%)]">
-        {/* Colorful gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-transparent to-accent/40" />
+      {/* Purple + Pink/Orange Gradient Background */}
+      <div className="absolute inset-0 -z-10">
+        {/* Main solid gradient - purple to pink/coral */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#4c1d95] via-[#7c3aed] to-[#c026d3]" />
         
-        {/* Large animated orbs */}
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] bg-primary/50 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-accent/60 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "1s" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px]" />
+        {/* Secondary gradient overlay for depth */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#1e1b4b]/80 via-transparent to-[#f97316]/30" />
+        
+        {/* Animated color blobs */}
+        <div className="absolute -top-20 -left-20 w-[500px] h-[500px] bg-[#8b5cf6] rounded-full blur-[120px] opacity-60 animate-pulse" />
+        <div className="absolute -bottom-20 -right-20 w-[500px] h-[500px] bg-[#f97316] rounded-full blur-[120px] opacity-50 animate-pulse" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#a855f7] rounded-full blur-[150px] opacity-40" />
+        
+        {/* Subtle noise/grain texture */}
+        <div className="absolute inset-0 opacity-20 mix-blend-overlay" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+        }} />
         
         {/* Grid pattern */}
         <div 
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-[0.08]"
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)`,
             backgroundSize: '40px 40px'
           }}
         />
 
         {/* Bottom fade to content */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background via-background/80 to-transparent" />
       </div>
 
       {/* Floating 3D Elements - Hidden on mobile */}
