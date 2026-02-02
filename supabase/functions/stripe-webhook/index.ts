@@ -143,12 +143,14 @@ async function handleCheckoutCompleted(
     logStep("Criando novo usuário", { email });
 
     // 1. Criar usuário no Supabase Auth
+    // source: 'stripe' evita que o trigger handle_new_user() duplique tenant/profile/role
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
       email: email,
       email_confirm: true, // Confirma e-mail automaticamente
       user_metadata: {
         full_name: customerName,
         salon_name: `Salão ${customerName}`,
+        source: "stripe",
       },
     });
 

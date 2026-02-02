@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import type { Profile, UserRole, Tenant, AppRole } from '@/types/database';
+import type { Profile, UserRole, Tenant } from '@/types/database';
 
 interface AuthContextType {
   user: User | null;
@@ -118,8 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string, salonName: string) => {
-    // First create the user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
+    // tenant, profile, user_roles (admin) e subscription - garantindo admin sempre
+    const { error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -133,72 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (authError) {
       return { error: authError };
-    }
-
-    // If signup successful and we have a user, create tenant, profile, and role
-    if (authData.user && authData.session) {
-      try {
-        // Create tenant - the user is now authenticated
-        const { data: tenantData, error: tenantError } = await supabase
-          .from('tenants')
-          .insert({
-            name: salonName,
-          })
-          .select('id')
-          .single();
-
-        if (tenantError) {
-          console.error('Tenant creation error:', tenantError);
-          throw tenantError;
-        }
-
-        // Create profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: authData.user.id,
-            tenant_id: tenantData.id,
-            full_name: fullName,
-            email: email,
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw profileError;
-        }
-
-        // Create admin role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            tenant_id: tenantData.id,
-            role: 'admin' as AppRole,
-          });
-
-        if (roleError) {
-          console.error('Role creation error:', roleError);
-          throw roleError;
-        }
-
-        // Create subscription with 5-day trial
-        const { error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .insert({
-            tenant_id: tenantData.id,
-            status: 'trialing',
-          });
-
-        if (subscriptionError) {
-          console.error('Subscription creation error:', subscriptionError);
-          // Don't throw - subscription is not critical for signup
-        }
-
-        return { error: null };
-      } catch (error) {
-        console.error('Signup process error:', error);
-        return { error: error as Error };
-      }
     }
 
     return { error: null };
