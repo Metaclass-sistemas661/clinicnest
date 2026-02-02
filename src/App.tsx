@@ -23,6 +23,9 @@ const Equipe = lazy(() => import("@/pages/Equipe"));
 const Configuracoes = lazy(() => import("@/pages/Configuracoes"));
 const Assinatura = lazy(() => import("@/pages/Assinatura"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const TermosDeUso = lazy(() => import("@/pages/TermosDeUso"));
+const PoliticaPrivacidade = lazy(() => import("@/pages/PoliticaPrivacidade"));
+const Contato = lazy(() => import("@/pages/Contato"));
 
 const queryClient = new QueryClient();
 
@@ -40,6 +43,9 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/cadastro" element={<Register />} />
+                <Route path="/termos-de-uso" element={<TermosDeUso />} />
+                <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                <Route path="/contato" element={<Contato />} />
 
                 {/* Protected routes */}
                 <Route
