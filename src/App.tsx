@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
+// Public pages
+import LandingPage from "@/pages/LandingPage";
+
 // Auth pages
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
@@ -33,6 +36,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Register />} />
             
@@ -110,9 +114,7 @@ const App = () => (
               }
             />
 
-            {/* Redirects */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
+            {/* Catch all */}
             {/* Catch all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
