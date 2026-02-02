@@ -160,17 +160,18 @@ export default function Dashboard() {
       title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
       subtitle={`Bem-vindo ao ${tenant?.name || "seu salão"}`}
       actions={
-        <Button asChild className="gradient-primary text-primary-foreground">
+        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base">
           <Link to="/agenda">
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Agendamento
+            <Plus className="mr-1 md:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Novo Agendamento</span>
+            <span className="sm:hidden">Agendar</span>
           </Link>
         </Button>
       }
     >
       <div className="space-y-8">
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {isAdmin && (
             <>
               <StatCard
@@ -214,7 +215,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           {/* Today's Appointments */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -240,27 +241,29 @@ export default function Dashboard() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {todayAppointments.slice(0, 5).map((appointment) => (
                     <div
                       key={appointment.id}
-                      className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50 gap-2 sm:gap-4"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Clock className="h-5 w-5" />
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+                          <Clock className="h-4 w-4 md:h-5 md:w-5" />
                         </div>
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base truncate">
                             {appointment.client?.name || "Cliente não informado"}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs md:text-sm text-muted-foreground truncate">
                             {appointment.service?.name} •{" "}
                             {format(new Date(appointment.scheduled_at), "HH:mm")}
                           </p>
                         </div>
                       </div>
-                      {getStatusBadge(appointment.status)}
+                      <div className="self-end sm:self-auto">
+                        {getStatusBadge(appointment.status)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -291,25 +294,25 @@ export default function Dashboard() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 md:space-y-3">
                     {lowStockProducts.slice(0, 5).map((product) => (
                       <div
                         key={product.id}
-                        className="flex items-center justify-between rounded-lg border border-warning/30 bg-warning/5 p-4"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-warning/30 bg-warning/5 p-3 md:p-4 gap-2"
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20 text-warning">
-                            <AlertTriangle className="h-5 w-5" />
+                        <div className="flex items-center gap-3 md:gap-4">
+                          <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-warning/20 text-warning shrink-0">
+                            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5" />
                           </div>
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm md:text-base truncate">{product.name}</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">
                               Mínimo: {product.min_quantity} unid.
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-warning">
+                        <div className="text-right self-end sm:self-auto">
+                          <p className="text-base md:text-lg font-bold text-warning">
                             {product.quantity}
                           </p>
                           <p className="text-xs text-muted-foreground">em estoque</p>

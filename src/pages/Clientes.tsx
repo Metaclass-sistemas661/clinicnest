@@ -229,8 +229,8 @@ export default function Clientes() {
       }
     >
       {/* Search */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
+      <div className="mb-4 md:mb-6">
+        <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
@@ -256,44 +256,16 @@ export default function Clientes() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Observações</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-3">
                 {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell>
-                      {client.phone ? (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          {client.phone}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {client.email ? (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          {client.email}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate text-muted-foreground">
-                      {client.notes || "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
+                  <div
+                    key={client.id}
+                    className="rounded-lg border p-4 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{client.name}</p>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -301,11 +273,82 @@ export default function Clientes() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    {client.phone && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                        {client.phone}
+                      </div>
+                    )}
+                    {client.email && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <span className="truncate">{client.email}</span>
+                      </div>
+                    )}
+                    {client.notes && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {client.notes}
+                      </p>
+                    )}
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Observações</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map((client) => (
+                      <TableRow key={client.id}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>
+                          {client.phone ? (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              {client.phone}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {client.email ? (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Mail className="h-4 w-4" />
+                              {client.email}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-muted-foreground">
+                          {client.notes || "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(client)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
