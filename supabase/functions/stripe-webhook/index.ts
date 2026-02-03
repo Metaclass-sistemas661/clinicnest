@@ -338,7 +338,11 @@ async function sendWelcomeEmail(email: string, name: string, supabaseAdmin: any)
       type: "magiclink",
       email: email,
       options: {
-        redirectTo: `${Deno.env.get("SITE_URL") || "https://vynlobella.vercel.app"}/dashboard`,
+        redirectTo: (() => {
+          const siteUrl = Deno.env.get("SITE_URL") || "https://vynlobella.com";
+          // Sempre usar vynlobella.com, nunca vercel.app
+          return siteUrl.includes("vercel.app") ? "https://vynlobella.com/dashboard" : `${siteUrl}/dashboard`;
+        })(),
       },
     });
 

@@ -364,9 +364,12 @@ serve(async (req) => {
     // Enviar email de boas-vindas ao profissional (não bloqueia se falhar)
     log("Iniciando processo de envio de email", { email: emailTrim });
     try {
+      // Sempre usar vynlobella.com como domínio principal
       const siteUrl = Deno.env.get("SITE_URL") || "https://vynlobella.com";
-      const loginUrl = `${siteUrl}/login`;
-      log("URLs configuradas", { siteUrl, loginUrl });
+      // Garantir que não use domínio vercel.app
+      const finalSiteUrl = siteUrl.includes("vercel.app") ? "https://vynlobella.com" : siteUrl;
+      const loginUrl = `${finalSiteUrl}/login`;
+      log("URLs configuradas", { siteUrl, finalSiteUrl, loginUrl });
       
       const emailHtml = getTeamMemberWelcomeEmailHtml(fullNameTrim, emailTrim, loginUrl, role);
       const emailText = getTeamMemberWelcomeEmailText(fullNameTrim, emailTrim, loginUrl, role);
