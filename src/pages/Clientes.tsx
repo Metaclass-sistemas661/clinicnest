@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,16 +23,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import type { Client } from "@/types/database";
+import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
 
 export default function Clientes() {
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [clientSpending, setClientSpending] = useState<ClientSpendingRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -49,8 +52,11 @@ export default function Clientes() {
   useEffect(() => {
     if (profile?.tenant_id) {
       fetchClients();
+      if (isAdmin) {
+        fetchClientSpending();
+      }
     }
-  }, [profile?.tenant_id]);
+  }, [profile?.tenant_id, isAdmin]);
 
   useEffect(() => {
     const filtered = clients.filter(
@@ -61,6 +67,30 @@ export default function Clientes() {
     );
     setFilteredClients(filtered);
   }, [clients, searchQuery]);
+
+  const fetchClientSpending = async () => {
+    if (!profile?.tenant_id) return;
+    try {
+      const data = await fetchClientSpendingAllTime(profile.tenant_id);
+      setClientSpending(data);
+    } catch (err) {
+      console.error("Error fetching client spending:", err);
+      toast.error("Erro ao carregar consumo dos clientes.");
+    }
+  };
+
+  const getSpendingForClient = (clientId: string): ClientSpendingRow | undefined =>
+    clientSpending.find((s) => s.client_id === clientId);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+
+  const sortedAndFilteredClients = [...filteredClients].sort((a, b) => {
+    if (!isAdmin || clientSpending.length === 0) return 0;
+    const sa = getSpendingForClient(a.id)?.total_amount ?? 0;
+    const sb = getSpendingForClient(b.id)?.total_amount ?? 0;
+    return sb - sa;
+  });
 
   const fetchClients = async () => {
     if (!profile?.tenant_id) return;
@@ -247,6 +277,11 @@ export default function Clientes() {
           <CardTitle>
             {isLoading ? "Clientes Cadastrados" : `Clientes Cadastrados (${filteredClients.length})`}
           </CardTitle>
+          {isAdmin && clientSpending.length > 0 && (
+            <CardDescription>
+              Ordenado por consumo — clientes que mais consomem no topo
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -267,40 +302,70 @@ export default function Clientes() {
             <>
               {/* Mobile: Card Layout */}
               <div className="block md:hidden space-y-3">
-                {filteredClients.map((client) => (
-                  <div
-                    key={client.id}
-                    className="rounded-lg border p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium">{client.name}</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(client)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                {sortedAndFilteredClients.map((client, index) => {
+                  const spending = getSpendingForClient(client.id);
+                  return (
+                    <div
+                      key={client.id}
+                      className="rounded-lg border p-4 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {isAdmin && clientSpending.length > 0 && (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                              {index + 1}
+                            </span>
+                          )}
+                          <p className="font-medium">{client.name}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(client)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {client.phone && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          {client.phone}
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                      )}
+                      {isAdmin && spending && (spending.services_count > 0 || spending.products_count > 0) && (
+                        <div className="flex flex-wrap gap-1.5 pt-2">
+                          {spending.services_count > 0 && (
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              <Scissors className="h-3 w-3" />
+                              {spending.services_count} serviço{spending.services_count !== 1 ? "s" : ""}
+                            </Badge>
+                          )}
+                          {spending.products_count > 0 && (
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              <Package className="h-3 w-3" />
+                              {spending.products_count} produto{spending.products_count !== 1 ? "s" : ""}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <DollarSign className="h-3 w-3" />
+                            {formatCurrency(spending.total_amount)}
+                          </Badge>
+                        </div>
+                      )}
+                      {client.notes && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {client.notes}
+                        </p>
+                      )}
                     </div>
-                    {client.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        {client.phone}
-                      </div>
-                    )}
-                    {client.email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        <span className="truncate">{client.email}</span>
-                      </div>
-                    )}
-                    {client.notes && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {client.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Desktop: Table Layout */}
@@ -308,51 +373,90 @@ export default function Clientes() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {isAdmin && clientSpending.length > 0 && (
+                        <TableHead className="w-10">#</TableHead>
+                      )}
                       <TableHead>Nome</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead>Email</TableHead>
+                      {isAdmin && clientSpending.length > 0 && (
+                        <TableHead>Consumo</TableHead>
+                      )}
                       <TableHead>Observações</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredClients.map((client) => (
-                      <TableRow key={client.id}>
-                        <TableCell className="font-medium">{client.name}</TableCell>
-                        <TableCell>
-                          {client.phone ? (
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Phone className="h-4 w-4" />
-                              {client.phone}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                    {sortedAndFilteredClients.map((client, index) => {
+                      const spending = getSpendingForClient(client.id);
+                      return (
+                        <TableRow key={client.id}>
+                          {isAdmin && clientSpending.length > 0 && (
+                            <TableCell className="font-bold text-primary">
+                              {index + 1}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          {client.email ? (
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Mail className="h-4 w-4" />
-                              {client.email}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                          <TableCell className="font-medium">{client.name}</TableCell>
+                          <TableCell>
+                            {client.phone ? (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Phone className="h-4 w-4" />
+                                {client.phone}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {client.email ? (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Mail className="h-4 w-4" />
+                                {client.email}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          {isAdmin && clientSpending.length > 0 && (
+                            <TableCell>
+                              {spending ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {spending.services_count > 0 && (
+                                    <Badge variant="outline" className="gap-1 text-xs">
+                                      <Scissors className="h-3 w-3" />
+                                      {spending.services_count} serv.
+                                    </Badge>
+                                  )}
+                                  {spending.products_count > 0 && (
+                                    <Badge variant="outline" className="gap-1 text-xs">
+                                      <Package className="h-3 w-3" />
+                                      {spending.products_count} prod.
+                                    </Badge>
+                                  )}
+                                  <Badge variant="secondary" className="text-xs">
+                                    {formatCurrency(spending.total_amount)}
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              )}
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate text-muted-foreground">
-                          {client.notes || "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDialog(client)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell className="max-w-xs truncate text-muted-foreground">
+                            {client.notes || "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(client)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

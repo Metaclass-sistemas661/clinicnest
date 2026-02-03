@@ -23,6 +23,7 @@ import {
 import { Link } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { fetchClientSpendingByPeriod } from "@/lib/clientSpending";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 
 export default function Dashboard() {
@@ -45,6 +46,9 @@ export default function Dashboard() {
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
   const [clientsCount, setClientsCount] = useState(0);
+  const [clientRanking, setClientRanking] = useState<
+    { client_id: string; client_name: string; today_total: number; month_total: number }[]
+  >([]);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -246,6 +250,15 @@ export default function Dashboard() {
 
       setTodayAppointments((appointmentsData as Appointment[]) || []);
       setLowStockProducts(lowStockData);
+
+      if (isAdmin) {
+        try {
+          const ranking = await fetchClientSpendingByPeriod(profile.tenant_id);
+          setClientRanking(ranking);
+        } catch (err) {
+          console.error("Error fetching client ranking:", err);
+        }
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -410,6 +423,62 @@ export default function Dashboard() {
             </>
           )}
         </div>
+
+        {/* Top Clientes - Admin only */}
+        {isAdmin && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Ranking – Clientes que mais consomem</CardTitle>
+                <CardDescription>
+                  Gastos de hoje e do mês (atualiza automaticamente)
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/clientes">Ver todos</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {clientRanking.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">
+                    Nenhum consumo registrado neste mês
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 md:space-y-3">
+                  {clientRanking.slice(0, 10).map((item, index) => (
+                    <div
+                      key={item.client_id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4"
+                    >
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base truncate">
+                            {item.client_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Hoje: {formatCurrency(item.today_total)} · Mês: {formatCurrency(item.month_total)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right self-end sm:self-auto">
+                        <p className="text-base md:text-lg font-bold text-primary">
+                          {formatCurrency(item.month_total)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">total no mês</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           {/* Today's Appointments */}
