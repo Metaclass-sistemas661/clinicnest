@@ -104,6 +104,8 @@ export interface FinancialTransaction {
   updated_at: string;
 }
 
+export type StockOutReasonType = 'sale' | 'damaged';
+
 export interface StockMovement {
   id: string;
   tenant_id: string;
@@ -112,6 +114,7 @@ export interface StockMovement {
   movement_type: 'in' | 'out';
   reason: string | null;
   created_by: string | null;
+  out_reason_type: StockOutReasonType | null;
   created_at: string;
 }
 

@@ -47,6 +47,8 @@ export default function Produtos() {
   const [isEditPriceDialogOpen, setIsEditPriceDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [damagedMovements, setDamagedMovements] = useState<StockMovement[]>([]);
+  const [isDamagedLoading, setIsDamagedLoading] = useState(true);
 
   const [productForm, setProductForm] = useState({
     name: "",
@@ -75,6 +77,7 @@ export default function Produtos() {
   useEffect(() => {
     if (profile?.tenant_id) {
       fetchProducts();
+      fetchDamagedMovements();
     }
   }, [profile?.tenant_id]);
 
@@ -94,6 +97,29 @@ export default function Produtos() {
       console.error("Error fetching products:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchDamagedMovements = async () => {
+    if (!profile?.tenant_id) return;
+
+    setIsDamagedLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select("id, tenant_id, product_id, quantity, movement_type, reason, created_by, created_at, out_reason_type")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("movement_type", "out")
+        .eq("out_reason_type", "damaged")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setDamagedMovements((data as StockMovement[]) || []);
+    } catch (error) {
+      console.error("Error fetching damaged movements:", error);
+      toast.error("Não foi possível carregar o histórico de baixas danificadas.");
+    } finally {
+      setIsDamagedLoading(false);
     }
   };
 
@@ -267,6 +293,7 @@ export default function Produtos() {
         reason: "",
       });
       fetchProducts();
+      fetchDamagedMovements();
     } catch (error) {
       toast.error("Erro ao registrar movimentação");
       console.error(error);
@@ -639,6 +666,7 @@ export default function Produtos() {
               setIsEditPriceDialogOpen(open);
               if (!open) {
                 setSelectedProduct(null);
+                setEditPriceForm({ cost: "", sale_price: "" });
               }
             }}
           >
@@ -815,6 +843,55 @@ export default function Produtos() {
                           Editar preços
                         </Button>
                       </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Damaged Products History */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Histórico de Baixas (danificados)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isDamagedLoading ? (
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-10 w-full" />
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : damagedMovements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma baixa de produto danificado registrada até o momento.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead className="text-center">Quantidade</TableHead>
+                  <TableHead>Motivo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {damagedMovements.map((movement) => {
+                  const product = products.find((p) => p.id === movement.product_id);
+                  const productName = product?.name ?? "Produto removido";
+                  const quantity = Math.abs(movement.quantity);
+                  return (
+                    <TableRow key={movement.id}>
+                      <TableCell>
+                        {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell>{productName}</TableCell>
+                      <TableCell className="text-center">{quantity}</TableCell>
+                      <TableCell>{movement.reason || "—"}</TableCell>
                     </TableRow>
                   );
                 })}
