@@ -16,7 +16,7 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar se há um token válido na URL
+    // Verificar se há um token válido na URL e estabelecer sessão
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -28,7 +28,26 @@ export default function ResetPassword() {
         const type = hashParams.get("type");
 
         if (accessToken && type === "recovery") {
-          setIsValid(true);
+          // Estabelecer sessão com o token do link
+          try {
+            const { data: { session: newSession }, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: hashParams.get("refresh_token") || "",
+            });
+            
+            if (sessionError || !newSession) {
+              console.error("[ResetPassword] Erro ao estabelecer sessão:", sessionError);
+              toast.error("Link inválido ou expirado");
+              setTimeout(() => navigate("/forgot-password"), 2000);
+              return;
+            }
+            
+            setIsValid(true);
+          } catch (err) {
+            console.error("[ResetPassword] Exceção ao estabelecer sessão:", err);
+            toast.error("Link inválido ou expirado");
+            setTimeout(() => navigate("/forgot-password"), 2000);
+          }
         } else {
           toast.error("Link inválido ou expirado");
           setTimeout(() => navigate("/forgot-password"), 2000);
@@ -58,7 +77,18 @@ export default function ResetPassword() {
     // A Edge Function atualiza a senha usando admin.updateUserById (não envia email automático)
     // e então envia nosso email customizado
     try {
-      console.log("[ResetPassword] Chamando Edge Function update-password");
+      console.log("[ResetPassword] Iniciando atualização de senha");
+      console.log("[ResetPassword] Verificando sessão antes de chamar Edge Function");
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("[ResetPassword] Nenhuma sessão encontrada!");
+        toast.error("Sessão expirada. Por favor, solicite um novo link de recuperação.");
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log("[ResetPassword] Sessão encontrada, chamando Edge Function update-password");
       const { data, error } = await supabase.functions.invoke("update-password", {
         body: {
           password: password,
