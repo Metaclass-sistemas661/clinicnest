@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 const log = (message: string, data?: unknown) => {
   console.log(`[update-password] ${message}`, data ? JSON.stringify(data) : "");
@@ -192,11 +193,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const authResult = await getAuthenticatedUser(req, corsHeaders);
+  if (authResult.error) {
+    log("ERROR: Autenticação falhou");
+    return authResult.error;
+  }
+  const user = authResult.user;
+  log("Usuário autenticado", { userId: user.id });
 
-  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
@@ -204,35 +211,11 @@ serve(async (req) => {
     );
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    log("ERROR: Sem Authorization header");
-    return new Response(
-      JSON.stringify({ error: "Não autorizado. Faça login." }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  // Cliente com chave anon + JWT do usuário para validar a sessão (evita 401 com service_role)
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
-    auth: { persistSession: false },
-  });
-
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 
   try {
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      log("ERROR: Token inválido", { error: userError?.message });
-      return new Response(
-        JSON.stringify({ error: "Sessão inválida ou expirada" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    log("Usuário autenticado", { userId: user.id });
 
     let body: UpdatePasswordBody;
     try {
