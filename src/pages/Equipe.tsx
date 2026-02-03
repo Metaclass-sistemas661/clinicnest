@@ -127,14 +127,24 @@ export default function Equipe() {
 
       if (error) {
         toast.error(error.message || "Erro ao cadastrar membro");
+        console.error("Erro ao cadastrar membro:", error);
         return;
       }
+      
+      // Edge Function sempre retorna status 200, mas pode ter campo 'error'
       if (data?.error) {
         toast.error(data.error);
+        console.error("Erro retornado pela função:", data.error);
         return;
       }
 
-      toast.success(data?.message ?? "Membro cadastrado. Ele já pode acessar o sistema com o e-mail e a senha definidos.");
+      if (!data?.success) {
+        toast.error("Resposta inesperada do servidor");
+        console.error("Resposta inesperada:", data);
+        return;
+      }
+
+      toast.success(data.message ?? "Membro cadastrado. Ele já pode acessar o sistema com o e-mail e a senha definidos.");
       setIsDialogOpen(false);
       setFormData({
         email: "",
@@ -146,8 +156,9 @@ export default function Equipe() {
       });
       fetchTeam();
     } catch (error) {
-      toast.error("Erro ao cadastrar membro");
-      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao cadastrar membro";
+      toast.error(errorMessage);
+      console.error("Erro ao cadastrar membro:", error);
     } finally {
       setIsSaving(false);
     }

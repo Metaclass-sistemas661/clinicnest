@@ -26,7 +26,7 @@ serve(async (req) => {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
@@ -39,7 +39,7 @@ serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Não autorizado. Faça login." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -48,7 +48,7 @@ serve(async (req) => {
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: "Sessão inválida ou expirada" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -58,7 +58,7 @@ serve(async (req) => {
     } catch {
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -101,7 +101,7 @@ serve(async (req) => {
     if (!profile?.tenant_id) {
       return new Response(
         JSON.stringify({ error: "Perfil ou tenant não encontrado" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -116,7 +116,7 @@ serve(async (req) => {
     if (!roleRow) {
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem convidar membros" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -155,9 +155,10 @@ serve(async (req) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error("[invite-team-member] Erro:", message, err);
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
