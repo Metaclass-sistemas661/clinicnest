@@ -222,6 +222,10 @@
     background: linear-gradient(180deg, hsl(0 0% 100% / 0.92), hsl(262 30% 98% / 0.88));
   }
 
+  .dark .glass-sidebar {
+    background: linear-gradient(180deg, hsl(250 25% 10% / 0.95), hsl(250 25% 8% / 0.92));
+  }
+
   .text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-hero);
