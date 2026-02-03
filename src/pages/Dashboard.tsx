@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Wallet,
   CreditCard,
+  Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
@@ -41,6 +42,9 @@ export default function Dashboard() {
   const [commissionsPending, setCommissionsPending] = useState(0);
   const [commissionsReceived, setCommissionsReceived] = useState(0);
   const [commissionsToReceive, setCommissionsToReceive] = useState(0);
+  const [dailyBalance, setDailyBalance] = useState(0);
+  const [productLossTotal, setProductLossTotal] = useState(0);
+  const [clientsCount, setClientsCount] = useState(0);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -67,17 +71,21 @@ export default function Dashboard() {
     const dayEnd = endOfDay(today).toISOString();
     const monthStartDate = monthStart.split("T")[0];
     const monthEndDate = monthEnd.split("T")[0];
+    const todayDateStr = formatInAppTz(today, "yyyy-MM-dd");
 
     try {
       // Disparar todas as buscas em paralelo (em vez de uma após a outra)
       const [
         financialResult,
+        dailyFinancialResult,
         appointmentsResult,
         pendingResult,
         productsResult,
         commissionsResult,
+        productLossesResult,
+        clientsResult,
       ] = await Promise.all([
-        // 1. Financeiro (admin)
+        // 1. Financeiro do mês (admin)
         isAdmin
           ? supabase
               .from("financial_transactions")
@@ -86,7 +94,15 @@ export default function Dashboard() {
               .gte("transaction_date", monthStartDate)
               .lte("transaction_date", monthEndDate)
           : Promise.resolve({ data: null }),
-        // 2. Agendamentos de hoje
+        // 2. Financeiro do dia (admin) - só transações de hoje; zera à meia-noite
+        isAdmin
+          ? supabase
+              .from("financial_transactions")
+              .select("type, amount")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("transaction_date", todayDateStr)
+          : Promise.resolve({ data: null }),
+        // 3. Agendamentos de hoje
         supabase
           .from("appointments")
           .select(`
@@ -99,13 +115,13 @@ export default function Dashboard() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        // 3. Contagem de pendentes
+        // 4. Contagem de pendentes
         supabase
           .from("appointments")
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pending"),
-        // 4. Produtos (admin) para estoque baixo
+        // 5. Produtos (admin) para estoque baixo
         isAdmin
           ? supabase
               .from("products")
@@ -113,7 +129,7 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 5. Comissões (admin: todas; staff: só do usuário)
+        // 6. Comissões (admin: todas; staff: só do usuário)
         isAdmin
           ? supabase
               .from("commission_payments")
@@ -128,13 +144,32 @@ export default function Dashboard() {
               .eq("professional_id", profile.user_id)
               .gte("created_at", monthStart)
               .lte("created_at", monthEnd),
+        // 7. Perdas de produtos danificados (admin) - mês atual
+        isAdmin
+          ? supabase
+              .from("stock_movements")
+              .select("quantity, product:products(cost)")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("movement_type", "out")
+              .eq("out_reason_type", "damaged")
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+          : Promise.resolve({ data: null }),
+        // 8. Total de clientes
+        supabase
+          .from("clients")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", profile.tenant_id),
       ]);
 
       const financialData = financialResult.data;
+      const dailyFinancialData = dailyFinancialResult.data;
       const appointmentsData = appointmentsResult.data;
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data;
+      const productLossesData = productLossesResult.data;
+      const clientsCountResult = clientsResult.count ?? 0;
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
@@ -146,6 +181,30 @@ export default function Dashboard() {
           .filter((t) => t.type === "expense")
           .reduce((sum, t) => sum + Number(t.amount), 0);
       }
+
+      let dailyIncome = 0;
+      let dailyExpenses = 0;
+      if (dailyFinancialData) {
+        dailyIncome = dailyFinancialData
+          .filter((t) => t.type === "income")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        dailyExpenses = dailyFinancialData
+          .filter((t) => t.type === "expense")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+      }
+      setDailyBalance(dailyIncome - dailyExpenses);
+
+      let productLoss = 0;
+      if (productLossesData) {
+        productLoss = productLossesData.reduce((sum: number, m: any) => {
+          const qty = Math.abs(Number(m.quantity) || 0);
+          const cost = Number(m.product?.cost) || 0;
+          return sum + qty * cost;
+        }, 0);
+      }
+      setProductLossTotal(productLoss);
+
+      setClientsCount(clientsCountResult);
 
       let lowStockData: Product[] = [];
       if (productsData) {
@@ -239,7 +298,7 @@ export default function Dashboard() {
         {/* Stats Grid - skeleton enquanto carrega para layout aparecer na hora */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {isLoading ? (
-            Array.from({ length: isAdmin ? 8 : 4 }).map((_, i) => (
+            Array.from({ length: isAdmin ? 11 : 5 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3"
@@ -255,6 +314,13 @@ export default function Dashboard() {
             <>
               {isAdmin && (
                 <>
+                  <StatCard
+                    title="Saldo do Dia"
+                    value={formatCurrency(dailyBalance)}
+                    icon={DollarSign}
+                    variant={dailyBalance >= 0 ? "success" : "danger"}
+                    description="Só transações de hoje (zera à meia-noite)"
+                  />
                   <StatCard
                     title="Saldo do Mês"
                     value={formatCurrency(stats.monthlyBalance)}
@@ -272,6 +338,19 @@ export default function Dashboard() {
                     value={formatCurrency(stats.monthlyExpenses)}
                     icon={TrendingDown}
                     variant="danger"
+                  />
+                  <StatCard
+                    title="Perdas de Produtos"
+                    value={formatCurrency(productLossTotal)}
+                    icon={AlertTriangle}
+                    variant="danger"
+                    description="Baixas danificadas no mês"
+                  />
+                  <StatCard
+                    title="Total de Clientes"
+                    value={clientsCount}
+                    icon={Users}
+                    description="Clientes cadastrados"
                   />
                   <StatCard
                     title="Comissões Pagas"
@@ -300,6 +379,12 @@ export default function Dashboard() {
                     value={formatCurrency(commissionsToReceive)}
                     icon={CreditCard}
                     variant="warning"
+                  />
+                  <StatCard
+                    title="Total de Clientes"
+                    value={clientsCount}
+                    icon={Users}
+                    description="Clientes cadastrados"
                   />
                 </>
               )}
