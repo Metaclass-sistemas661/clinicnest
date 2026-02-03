@@ -364,12 +364,10 @@ serve(async (req) => {
     // Enviar email de boas-vindas ao profissional (não bloqueia se falhar)
     log("Iniciando processo de envio de email", { email: emailTrim });
     try {
-      // Sempre usar vynlobella.com como domínio principal
-      const siteUrl = Deno.env.get("SITE_URL") || "https://vynlobella.com";
-      // Garantir que não use domínio vercel.app
-      const finalSiteUrl = siteUrl.includes("vercel.app") ? "https://vynlobella.com" : siteUrl;
-      const loginUrl = `${finalSiteUrl}/login`;
-      log("URLs configuradas", { siteUrl, finalSiteUrl, loginUrl });
+      // URL fixa de produção: o link no email deve sempre apontar para vynlobella.com
+      // (não usar SITE_URL aqui para evitar redirecionamento para vercel.app)
+      const loginUrl = "https://vynlobella.com/login";
+      log("URL do link no email (fixa)", { loginUrl });
       
       const emailHtml = getTeamMemberWelcomeEmailHtml(fullNameTrim, emailTrim, loginUrl, role);
       const emailText = getTeamMemberWelcomeEmailText(fullNameTrim, emailTrim, loginUrl, role);
