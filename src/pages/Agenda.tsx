@@ -33,7 +33,7 @@ import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda
 import type { Appointment, Client, Service, Profile, AppointmentStatus } from "@/types/database";
 
 export default function Agenda() {
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -199,9 +199,9 @@ export default function Agenda() {
         return;
       }
 
-      // Calcular comissão se profissional e serviço foram selecionados
+      // Calcular comissão se profissional e serviço foram selecionados (apenas para admins)
       let commissionAmount: number | null = null;
-      if (formData.professional_id && selectedService && formData.commission_amount) {
+      if (isAdmin && formData.professional_id && selectedService && formData.commission_amount) {
         const commissionValue = parseFloat(formData.commission_amount);
         if (!isNaN(commissionValue) && commissionValue >= 0) {
           commissionAmount = commissionValue;
@@ -466,14 +466,18 @@ export default function Agenda() {
                       value={formData.professional_id}
                       onValueChange={(v) => {
                         const selectedService = services.find((s) => s.id === formData.service_id);
-                        const commission = professionalCommissions[v];
                         let calculatedCommission = "";
                         
-                        if (commission && selectedService) {
-                          if (commission.type === "percentage") {
-                            calculatedCommission = String((selectedService.price * commission.value) / 100);
-                          } else {
-                            calculatedCommission = String(commission.value);
+                        // Apenas admins podem definir comissão manualmente
+                        if (isAdmin) {
+                          const commission = professionalCommissions[v];
+                          
+                          if (commission && selectedService) {
+                            if (commission.type === "percentage") {
+                              calculatedCommission = String((selectedService.price * commission.value) / 100);
+                            } else {
+                              calculatedCommission = String(commission.value);
+                            }
                           }
                         }
                         
@@ -496,7 +500,7 @@ export default function Agenda() {
                       </SelectContent>
                     </Select>
                   </div>
-                  {formData.professional_id && formData.service_id && (
+                  {isAdmin && formData.professional_id && formData.service_id && (
                     <div className="space-y-2">
                       <Label>Comissão do Profissional (R$)</Label>
                       <Input
@@ -669,6 +673,7 @@ export default function Agenda() {
             onEdit={editAppointment}
             onDelete={deleteAppointment}
             isLoading={isLoading}
+            isAdmin={isAdmin}
           />
         </CardContent>
       </Card>

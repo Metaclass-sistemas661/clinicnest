@@ -72,6 +72,7 @@ interface AppointmentsTableProps {
   onEdit: (id: string, data: EditAppointmentData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   isLoading?: boolean;
+  isAdmin?: boolean;
 }
 
 export interface EditAppointmentData {
@@ -116,6 +117,7 @@ export function AppointmentsTable({
   onEdit,
   onDelete,
   isLoading,
+  isAdmin = false,
 }: AppointmentsTableProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -189,9 +191,14 @@ export function AppointmentsTable({
     setIsSaving(true);
     try {
       const scheduledAt = new Date(`${editFormData.scheduled_at}T${editFormData.scheduled_time}`);
-      const commissionAmount = editFormData.commission_amount 
-        ? parseFloat(editFormData.commission_amount) 
-        : null;
+      // Apenas admins podem definir commission_amount
+      let commissionAmount: number | null = null;
+      if (isAdmin && editFormData.commission_amount) {
+        const parsed = parseFloat(editFormData.commission_amount);
+        if (!isNaN(parsed) && parsed >= 0) {
+          commissionAmount = parsed;
+        }
+      }
       
       await onEdit(appointmentToEdit.id, {
         client_id: editFormData.client_id || null,
@@ -199,7 +206,7 @@ export function AppointmentsTable({
         professional_id: editFormData.professional_id || null,
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
-        commission_amount: !isNaN(commissionAmount || 0) && commissionAmount !== null ? commissionAmount : null,
+        commission_amount: commissionAmount,
       });
       setEditDialogOpen(false);
       setAppointmentToEdit(null);
@@ -610,7 +617,7 @@ export function AppointmentsTable({
                   </SelectContent>
                 </Select>
               </div>
-              {editFormData.professional_id && editFormData.service_id && (
+              {isAdmin && editFormData.professional_id && editFormData.service_id && (
                 <div className="space-y-2">
                   <Label>Comissão do Profissional (R$)</Label>
                   <Input
