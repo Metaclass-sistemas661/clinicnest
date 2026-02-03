@@ -212,6 +212,11 @@
     background: linear-gradient(135deg, hsl(0 0% 100% / 0.85), hsl(0 0% 100% / 0.65));
   }
 
+  .dark .glass {
+    @apply border-white/10;
+    background: linear-gradient(135deg, hsl(250 25% 12% / 0.92), hsl(250 25% 8% / 0.85));
+  }
+
   .glass-dark {
     @apply backdrop-blur-xl border border-white/10;
     background: linear-gradient(135deg, hsl(250 25% 12% / 0.85), hsl(250 25% 8% / 0.65));
@@ -220,6 +225,11 @@
   .glass-sidebar {
     @apply backdrop-blur-2xl;
     background: linear-gradient(180deg, hsl(0 0% 100% / 0.92), hsl(262 30% 98% / 0.88));
+  }
+
+  .dark .glass-sidebar {
+    background: linear-gradient(180deg, hsl(250 25% 12% / 0.95), hsl(250 25% 8% / 0.92));
+    @apply border-border;
   }
 
   .text-gradient {

@@ -44,7 +44,7 @@ function FloatingCard({
   return (
     <div 
       className={cn(
-        "absolute bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-white/50",
+        "absolute bg-card/95 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-border",
         "animate-[float_6s_ease-in-out_infinite]",
         className
       )}

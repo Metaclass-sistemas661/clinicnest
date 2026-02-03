@@ -27,5 +27,5 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <>{children}</>;
+  return <div className="dark min-h-screen">{children}</div>;
 }

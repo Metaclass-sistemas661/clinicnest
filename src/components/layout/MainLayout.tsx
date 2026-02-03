@@ -25,7 +25,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           {/* Header */}
           {(title || actions) && (
             <header className={cn(
-              "sticky top-0 z-30 glass border-b border-white/20",
+              "sticky top-0 z-30 glass border-b border-border",
               isMobile && "top-14" // Account for mobile header
             )}>
               <div className={cn(
