@@ -30,16 +30,36 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Agenda", href: "/agenda", icon: Calendar },
-  { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-  { title: "Produtos", href: "/produtos", icon: Package, adminOnly: true },
-  { title: "Serviços", href: "/servicos", icon: Scissors },
-  { title: "Clientes", href: "/clientes", icon: Users },
-  { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
-  { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
-  { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
+interface NavCategory {
+  label: string;
+  items: NavItem[];
+}
+
+const navCategories: NavCategory[] = [
+  {
+    label: "Operacional",
+    items: [
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Agenda", href: "/agenda", icon: Calendar },
+      { title: "Serviços", href: "/servicos", icon: Scissors },
+      { title: "Clientes", href: "/clientes", icon: Users },
+    ],
+  },
+  {
+    label: "Financeiro",
+    items: [
+      { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
+      { title: "Produtos", href: "/produtos", icon: Package, adminOnly: true },
+    ],
+  },
+  {
+    label: "Administrativo",
+    items: [
+      { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
+      { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
+    ],
+  },
 ];
 
 function SidebarContent({ 
@@ -51,10 +71,6 @@ function SidebarContent({
 }) {
   const location = useLocation();
   const { profile, tenant, isAdmin, signOut } = useAuth();
-
-  const filteredNavItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
 
   const handleSignOut = () => {
     onNavigate?.();
@@ -86,30 +102,47 @@ function SidebarContent({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1.5 overflow-y-auto p-3 md:p-4">
-        {filteredNavItems.map((item) => {
-          const isActive = location.pathname === item.href;
+      <nav className="flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
+        {navCategories.map((category) => {
+          const filteredItems = category.items.filter(
+            (item) => !item.adminOnly || isAdmin
+          );
+          if (filteredItems.length === 0) return null;
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "gradient-primary text-white shadow-glow"
-                  : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
-                isCollapsed && "justify-center px-3"
+            <div key={category.label} className="space-y-1.5">
+              {!isCollapsed && (
+                <p className="px-3 md:px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {category.label}
+                </p>
               )}
-              title={isCollapsed ? item.title : undefined}
-            >
-              <item.icon className={cn(
-                "h-5 w-5 shrink-0 transition-transform duration-200",
-                isActive && "scale-110",
-                !isActive && "group-hover:scale-110"
-              )} />
-              {!isCollapsed && <span>{item.title}</span>}
-            </Link>
+              <div className="space-y-1">
+                {filteredItems.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={onNavigate}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "gradient-primary text-white shadow-glow"
+                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
+                        isCollapsed && "justify-center px-3"
+                      )}
+                      title={isCollapsed ? item.title : undefined}
+                    >
+                      <item.icon className={cn(
+                        "h-5 w-5 shrink-0 transition-transform duration-200",
+                        isActive && "scale-110",
+                        !isActive && "group-hover:scale-110"
+                      )} />
+                      {!isCollapsed && <span>{item.title}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
