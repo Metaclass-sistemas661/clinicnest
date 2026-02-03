@@ -124,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        // Sempre usar vynlobella.com para evitar redirect para vercel.app no mobile
+        emailRedirectTo: "https://vynlobella.com/login",
         data: {
           full_name: fullName,
           salon_name: salonName,
