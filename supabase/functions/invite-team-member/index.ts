@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
+const log = (message: string, data?: unknown) => {
+  console.log(`[invite-team-member] ${message}`, data ? JSON.stringify(data) : "");
+};
+
 /**
  * Envia e-mail via Resend
  */
@@ -12,11 +16,14 @@ async function sendEmailViaResend(
 ): Promise<boolean> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) {
-    console.log("[EMAIL] RESEND_API_KEY não configurada. E-mail não enviado.");
+    log("EMAIL: RESEND_API_KEY não configurada. E-mail não enviado.");
     return false;
   }
 
+  log("EMAIL: Tentando enviar email via Resend", { to, subject });
+  
   try {
+    const emailFrom = "VynloBella <noreply@vynlobella.com>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -24,7 +31,7 @@ async function sendEmailViaResend(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "VynloBella <reply@vynlobella.com>",
+        from: emailFrom,
         to: to,
         subject: subject,
         html: html,
@@ -33,16 +40,26 @@ async function sendEmailViaResend(
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("[EMAIL] Erro ao enviar via Resend:", error);
+      const errorText = await response.text();
+      log("EMAIL: Erro ao enviar via Resend", { 
+        status: response.status, 
+        statusText: response.statusText,
+        error: errorText 
+      });
       return false;
     }
 
     const result = await response.json();
-    console.log("[EMAIL] E-mail enviado via Resend:", result.id);
+    log("EMAIL: E-mail enviado com sucesso via Resend", { 
+      emailId: result.id,
+      to: to 
+    });
     return true;
   } catch (error) {
-    console.error("[EMAIL] Exceção ao enviar e-mail:", error);
+    log("EMAIL: Exceção ao enviar e-mail", { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return false;
   }
 }
@@ -60,10 +77,6 @@ interface InviteBody {
   phone?: string;
   role?: "staff" | "admin";
 }
-
-const log = (message: string, data?: unknown) => {
-  console.log(`[invite-team-member] ${message}`, data ? JSON.stringify(data) : "");
-};
 
 function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: string, role: string): string {
   const roleLabel = role === "admin" ? "Administrador" : "Profissional";
@@ -349,12 +362,15 @@ serve(async (req) => {
     log("Usuário criado com sucesso", { user_id: newUser.user?.id });
 
     // Enviar email de boas-vindas ao profissional (não bloqueia se falhar)
+    log("Iniciando processo de envio de email", { email: emailTrim });
     try {
       const siteUrl = Deno.env.get("SITE_URL") || "https://vynlobella.com";
       const loginUrl = `${siteUrl}/login`;
+      log("URLs configuradas", { siteUrl, loginUrl });
       
       const emailHtml = getTeamMemberWelcomeEmailHtml(fullNameTrim, emailTrim, loginUrl, role);
       const emailText = getTeamMemberWelcomeEmailText(fullNameTrim, emailTrim, loginUrl, role);
+      log("Templates de email gerados", { htmlLength: emailHtml.length, textLength: emailText.length });
       
       const emailSent = await sendEmailViaResend(
         emailTrim,
@@ -364,12 +380,18 @@ serve(async (req) => {
       );
       
       if (emailSent) {
-        log("Email de boas-vindas enviado", { email: emailTrim });
+        log("SUCCESS: Email de boas-vindas enviado com sucesso", { email: emailTrim });
       } else {
-        log("Email não enviado (Resend não configurado ou erro)", { email: emailTrim });
+        log("WARNING: Email não foi enviado", { 
+          email: emailTrim,
+          reason: "Resend não configurado ou erro na API"
+        });
       }
     } catch (emailError) {
-      log("Erro ao enviar email (não crítico)", { error: emailError });
+      log("ERROR: Exceção ao tentar enviar email (não crítico)", { 
+        error: emailError instanceof Error ? emailError.message : String(emailError),
+        stack: emailError instanceof Error ? emailError.stack : undefined
+      });
       // Não falha o cadastro se o email não for enviado
     }
 
