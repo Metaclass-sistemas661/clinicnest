@@ -50,24 +50,7 @@ export function useSubscription() {
     };
 
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-
-      if (!error && data) {
-        applyResult({
-          subscribed: data.subscribed || false,
-          trialing: data.trialing || false,
-          trial_expired: data.trial_expired || false,
-          days_remaining: data.days_remaining || 0,
-          plan: data.plan || null,
-          subscription_end: data.subscription_end || null,
-          has_access: data.has_access || false,
-          error: null,
-        });
-        return;
-      }
-
+      // Consulta direto no banco (evita depender da Edge Function check-subscription)
       const { data: profile } = await supabase
         .from('profiles')
         .select('tenant_id')

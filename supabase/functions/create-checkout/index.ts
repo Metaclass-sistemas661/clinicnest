@@ -41,7 +41,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -86,6 +87,7 @@ serve(async (req) => {
     const tenantId = profileData?.tenant_id;
     logStep("Got tenant", { tenantId });
 
+    const baseUrl = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "https://vynlobella.com";
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -96,8 +98,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/dashboard?subscription=success`,
-      cancel_url: `${req.headers.get("origin")}/assinatura?subscription=cancelled`,
+      success_url: `${baseUrl}/dashboard?subscription=success`,
+      cancel_url: `${baseUrl}/assinatura?subscription=cancelled`,
       metadata: {
         user_id: user.id,
         tenant_id: tenantId || "",

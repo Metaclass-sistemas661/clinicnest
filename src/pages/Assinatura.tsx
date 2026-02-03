@@ -85,9 +85,8 @@ export default function Assinatura() {
       setLoadingPlan(planKey);
       await createCheckout(planKey);
       toast.success("Redirecionando para o checkout...");
-    } catch (error) {
-      console.error("Error creating checkout:", error);
-      toast.error("Erro ao iniciar checkout. Tente novamente.");
+    } catch {
+      toast.error("Erro ao iniciar checkout. Verifique se a assinatura está configurada e tente novamente.");
     } finally {
       setLoadingPlan(null);
     }
@@ -98,8 +97,7 @@ export default function Assinatura() {
       setLoadingPortal(true);
       await openCustomerPortal();
       toast.success("Abrindo portal de gerenciamento...");
-    } catch (error) {
-      console.error("Error opening portal:", error);
+    } catch {
       toast.error("Erro ao abrir portal. Tente novamente.");
     } finally {
       setLoadingPortal(false);
