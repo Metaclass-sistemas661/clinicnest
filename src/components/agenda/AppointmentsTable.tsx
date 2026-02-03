@@ -60,8 +60,10 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
-import type { Appointment, AppointmentStatus, Client, Service, Profile } from "@/types/database";
+import type { Appointment, AppointmentStatus, Client, Service, Profile, Product } from "@/types/database";
 import { TimeSlotPicker } from "./TimeSlotPicker";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
@@ -70,10 +72,15 @@ interface AppointmentsTableProps {
   professionals: Profile[];
   allAppointments: Appointment[];
   onStatusChange: (id: string, status: AppointmentStatus) => Promise<void>;
+  onComplete: (
+    appointment: Appointment,
+    sale?: { productId: string; quantity: number }
+  ) => Promise<void>;
   onEdit: (id: string, data: EditAppointmentData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   isLoading?: boolean;
   isAdmin?: boolean;
+  products: Product[];
 }
 
 export interface EditAppointmentData {
@@ -115,10 +122,12 @@ export function AppointmentsTable({
   professionals,
   allAppointments,
   onStatusChange,
+  onComplete,
   onEdit,
   onDelete,
   isLoading,
   isAdmin = false,
+  products,
 }: AppointmentsTableProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -134,6 +143,12 @@ export function AppointmentsTable({
     notes: "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<Appointment | null>(null);
+  const [saleOption, setSaleOption] = useState<"no" | "yes">("no");
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [saleQuantity, setSaleQuantity] = useState("1");
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -142,7 +157,31 @@ export function AppointmentsTable({
     }).format(value);
   };
 
+  const availableProducts = products.filter((product) => product.quantity > 0);
+
+  const resetCompleteDialog = () => {
+    setCompleteDialogOpen(false);
+    setAppointmentToComplete(null);
+    setSaleOption("no");
+    setSelectedProductId("");
+    setSaleQuantity("1");
+  };
+
+  const openCompleteDialog = (appointment: Appointment) => {
+    const defaultProductId = availableProducts[0]?.id ?? "";
+    setAppointmentToComplete(appointment);
+    setSaleOption("no");
+    setSelectedProductId(defaultProductId);
+    setSaleQuantity("1");
+    setCompleteDialogOpen(true);
+  };
+
   const handleStatusChange = async (appointment: Appointment, status: AppointmentStatus) => {
+    if (status === "completed") {
+      openCompleteDialog(appointment);
+      return;
+    }
+
     setUpdatingId(appointment.id);
     try {
       await onStatusChange(appointment.id, status);
@@ -213,6 +252,56 @@ export function AppointmentsTable({
       setAppointmentToEdit(null);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCompleteConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appointmentToComplete) return;
+
+    let salePayload: { productId: string; quantity: number } | undefined;
+
+    if (saleOption === "yes") {
+      if (availableProducts.length === 0) {
+        toast.error("Não há produtos com estoque disponível.");
+        return;
+      }
+
+      if (!selectedProductId) {
+        toast.error("Selecione o produto vendido.");
+        return;
+      }
+
+      const quantity = parseInt(saleQuantity, 10);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        toast.error("Informe uma quantidade válida.");
+        return;
+      }
+
+      const product = products.find((p) => p.id === selectedProductId);
+      if (!product) {
+        toast.error("Produto selecionado não encontrado.");
+        return;
+      }
+
+      if (product.quantity < quantity) {
+        toast.error("Estoque insuficiente para o produto selecionado.");
+        return;
+      }
+
+      salePayload = { productId: selectedProductId, quantity };
+    }
+
+    setUpdatingId(appointmentToComplete.id);
+    setIsCompleting(true);
+    try {
+      await onComplete(appointmentToComplete, salePayload);
+      resetCompleteDialog();
+    } catch (error) {
+      console.error("Error completing appointment:", error);
+    } finally {
+      setIsCompleting(false);
+      setUpdatingId(null);
     }
   };
 
@@ -498,7 +587,7 @@ export function AppointmentsTable({
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "completed")}
-                                disabled={appointment.status === "completed"}
+                                disabled={appointment.status !== "confirmed"}
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
                                 Concluir
@@ -530,6 +619,136 @@ export function AppointmentsTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Complete Appointment Dialog */}
+      <Dialog
+        open={completeDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            resetCompleteDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Concluir agendamento</DialogTitle>
+            <DialogDescription>
+              Confirme a conclusão e registre possíveis vendas de produtos.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCompleteConfirm} className="space-y-4">
+            {appointmentToComplete && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground space-y-1">
+                <p>
+                  <span className="font-medium text-foreground">Cliente:</span>{" "}
+                  {(appointmentToComplete as any)?.client?.name || "Não informado"}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Serviço:</span>{" "}
+                  {(appointmentToComplete as any)?.service?.name || "Não informado"}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Valor do serviço:</span>{" "}
+                  {formatCurrency(appointmentToComplete.price)}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label>O cliente comprou algum produto?</Label>
+              <RadioGroup
+                value={saleOption}
+                onValueChange={(value) => {
+                  const option = value as "no" | "yes";
+                  setSaleOption(option);
+                  if (
+                    option === "yes" &&
+                    !selectedProductId &&
+                    availableProducts.length > 0
+                  ) {
+                    setSelectedProductId(availableProducts[0].id);
+                  }
+                }}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="complete-sale-no" />
+                  <Label htmlFor="complete-sale-no" className="font-normal cursor-pointer">
+                    Não
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="yes"
+                    id="complete-sale-yes"
+                    disabled={availableProducts.length === 0}
+                  />
+                  <Label
+                    htmlFor="complete-sale-yes"
+                    className={`font-normal cursor-pointer ${availableProducts.length === 0 ? "text-muted-foreground/60 cursor-not-allowed" : ""}`}
+                  >
+                    Sim
+                  </Label>
+                </div>
+              </RadioGroup>
+              {availableProducts.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum produto com estoque disponível para venda.
+                </p>
+              )}
+            </div>
+
+            {saleOption === "yes" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Produto</Label>
+                  <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableProducts.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name} — {formatCurrency(product.sale_price)} (estoque: {product.quantity})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={saleQuantity}
+                    onChange={(e) => setSaleQuantity(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={resetCompleteDialog}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="gradient-primary text-primary-foreground"
+                disabled={isCompleting}
+              >
+                {isCompleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  "Concluir"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

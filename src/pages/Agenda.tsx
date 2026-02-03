@@ -30,7 +30,7 @@ import { toast } from "sonner";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
-import type { Appointment, Client, Service, Profile, AppointmentStatus } from "@/types/database";
+import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
 
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
@@ -41,6 +41,7 @@ export default function Agenda() {
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,7 +82,7 @@ export default function Agenda() {
     }
 
     try {
-      const [commissionsRes, appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
+      const [commissionsRes, appointmentsRes, clientsRes, servicesRes, professionalsRes, productsRes] = await Promise.all([
         supabase
           .from("professional_commissions")
           .select("user_id, type, value")
@@ -114,6 +115,12 @@ export default function Agenda() {
           .select("*")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name"),
+        supabase
+          .from("products")
+          .select("id, name, sale_price, quantity, is_active")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("is_active", true)
+          .order("name"),
       ]);
 
       const professionals = (professionalsRes.data as Profile[]) || [];
@@ -134,6 +141,7 @@ export default function Agenda() {
       setClients((clientsRes.data as Client[]) || []);
       setServices((servicesRes.data as Service[]) || []);
       setProfessionals(professionals);
+      setProducts(((productsRes.data as Product[]) || []).filter((product) => product.is_active));
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -327,6 +335,101 @@ export default function Agenda() {
     } catch (error) {
       toast.error("Erro ao excluir agendamento");
       console.error(error);
+    }
+  };
+
+  const handleCompleteAppointment = async (
+    appointment: Appointment,
+    sale?: { productId: string; quantity: number }
+  ) => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      if (sale) {
+        const product = products.find((p) => p.id === sale.productId);
+        if (!product) {
+          toast.error("Produto selecionado não encontrado.");
+          throw new Error("Produto não encontrado");
+        }
+
+        if (product.quantity < sale.quantity) {
+          toast.error("Estoque insuficiente para o produto selecionado.");
+          throw new Error("Estoque insuficiente");
+        }
+
+        const saleAmount = Number(product.sale_price || 0) * sale.quantity;
+        const transactionDate = formatInAppTz(new Date(), "yyyy-MM-dd");
+        const appointmentData: any = appointment;
+        const serviceName: string | undefined = appointmentData?.service?.name;
+        const clientName: string | undefined = appointmentData?.client?.name;
+
+        const { error: stockError } = await supabase.from("stock_movements").insert({
+          tenant_id: profile.tenant_id,
+          product_id: sale.productId,
+          quantity: -sale.quantity,
+          movement_type: "out",
+          reason: serviceName
+            ? `Venda durante o serviço ${serviceName}`
+            : "Venda durante atendimento",
+          out_reason_type: "sale",
+          created_by: profile.id,
+        });
+        if (stockError) throw stockError;
+
+        const { error: updateProductError } = await supabase
+          .from("products")
+          .update({ quantity: product.quantity - sale.quantity })
+          .eq("id", sale.productId);
+        if (updateProductError) throw updateProductError;
+
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === product.id
+              ? { ...p, quantity: Math.max(0, p.quantity - sale.quantity) }
+              : p
+          )
+        );
+
+        const descriptionParts: string[] = [
+          `Venda de ${product.name}`,
+          `(${sale.quantity} un.)`,
+        ];
+        if (serviceName) {
+          descriptionParts.push(`Serviço: ${serviceName}`);
+        }
+        if (clientName) {
+          descriptionParts.push(`Cliente: ${clientName}`);
+        }
+
+        const { error: financialError } = await supabase.from("financial_transactions").insert({
+          tenant_id: profile.tenant_id,
+          type: "income",
+          category: "Venda de Produto",
+          amount: saleAmount,
+          description: descriptionParts.join(" · "),
+          transaction_date: transactionDate,
+          product_id: sale.productId,
+          appointment_id: appointment.id,
+        });
+        if (financialError) throw financialError;
+      }
+
+      const { error: appointmentError } = await supabase
+        .from("appointments")
+        .update({ status: "completed" })
+        .eq("id", appointment.id);
+      if (appointmentError) throw appointmentError;
+
+      toast.success(
+        sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
+      );
+      fetchData();
+    } catch (error: any) {
+      console.error("Error completing appointment:", error);
+      if (!error?.message?.includes("Estoque insuficiente") && !error?.message?.includes("Produto não encontrado")) {
+        toast.error("Erro ao concluir agendamento.");
+      }
+      throw error;
     }
   };
 
@@ -673,10 +776,12 @@ export default function Agenda() {
             professionals={professionals}
             allAppointments={allAppointments}
             onStatusChange={updateAppointmentStatus}
+            onComplete={handleCompleteAppointment}
             onEdit={editAppointment}
             onDelete={deleteAppointment}
             isLoading={isLoading}
             isAdmin={isAdmin}
+            products={products}
           />
         </CardContent>
       </Card>
