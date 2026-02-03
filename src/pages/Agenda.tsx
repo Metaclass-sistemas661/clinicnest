@@ -25,7 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
@@ -592,8 +592,8 @@ export default function Agenda() {
           </Button>
           <h2 className="text-sm md:text-lg font-semibold text-center min-w-0 text-foreground">
             {viewMode === "day"
-              ? format(currentDate, "EEE, d 'de' MMM", { locale: ptBR })
-              : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })}`}
+              ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
+              : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
           </h2>
           <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}>
             <ChevronRight className="h-4 w-4" />
@@ -660,7 +660,7 @@ export default function Agenda() {
             Agendamentos
             {viewMode === "day" && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {format(currentDate, "dd 'de' MMMM", { locale: ptBR })}
+                {formatInAppTz(currentDate, "dd 'de' MMMM")}
               </span>
             )}
           </CardTitle>

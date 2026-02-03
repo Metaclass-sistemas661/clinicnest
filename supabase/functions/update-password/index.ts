@@ -47,7 +47,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
 
               <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 4px;">
                 <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">
-                  ✓ Alteração realizada em ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
+                  ✓ Alteração realizada em ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" })}
                 </p>
               </div>
 
@@ -104,7 +104,7 @@ Olá${name ? `, ${name}` : ""}!
 
 Sua senha foi alterada com sucesso. Sua conta está segura e protegida.
 
-Alteração realizada em: ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
+Alteração realizada em: ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" })}
 
 Agora você pode fazer login com sua nova senha:
 ${loginUrl}

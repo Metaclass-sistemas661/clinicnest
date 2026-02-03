@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, FileDown, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 interface ExportPdfDialogProps {
@@ -128,7 +129,7 @@ export function ExportPdfDialog({ onExport, isLoading }: ExportPdfDialogProps) {
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {startDate ? (
-                      format(startDate, "dd/MM/yyyy", { locale: ptBR })
+                      formatInAppTz(startDate, "dd/MM/yyyy")
                     ) : (
                       <span>Selecione...</span>
                     )}
@@ -160,7 +161,7 @@ export function ExportPdfDialog({ onExport, isLoading }: ExportPdfDialogProps) {
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {endDate ? (
-                      format(endDate, "dd/MM/yyyy", { locale: ptBR })
+                      formatInAppTz(endDate, "dd/MM/yyyy")
                     ) : (
                       <span>Selecione...</span>
                     )}
@@ -185,7 +186,7 @@ export function ExportPdfDialog({ onExport, isLoading }: ExportPdfDialogProps) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Período selecionado:</span>
               <span className="font-medium">
-                {format(startDate, "dd/MM/yyyy")} até {format(endDate, "dd/MM/yyyy")}
+                {formatInAppTz(startDate, "dd/MM/yyyy")} até {formatInAppTz(endDate, "dd/MM/yyyy")}
               </span>
             </div>
           </div>

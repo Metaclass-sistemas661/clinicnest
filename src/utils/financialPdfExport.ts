@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import type { FinancialTransaction } from "@/types/database";
 
 interface CommissionPayment {
@@ -37,7 +37,7 @@ const formatCurrency = (value: number): string => {
 
 // Format period string
 const formatPeriod = (startDate: Date, endDate: Date): string => {
-  return `${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`;
+  return `${formatInAppTz(startDate, "dd/MM/yyyy")} a ${formatInAppTz(endDate, "dd/MM/yyyy")}`;
 };
 
 // Group transactions by category
@@ -88,7 +88,7 @@ const generateEvolutionData = (
       return {
         start: weekStart,
         end: weekEnd > endDate ? endDate : weekEnd,
-        label: `${format(weekStart, "dd/MM")}`,
+        label: formatInAppTz(weekStart, "dd/MM"),
       };
     });
   } else {
@@ -98,7 +98,7 @@ const generateEvolutionData = (
       return {
         start: monthStart,
         end: monthEnd > endDate ? endDate : monthEnd,
-        label: format(monthStart, "MMM/yy", { locale: ptBR }),
+        label: formatInAppTz(monthStart, "MMM/yy"),
       };
     });
   }
@@ -521,7 +521,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       startY: yPos,
       head: [["Data", "Tipo", "Categoria", "Descrição", "Origem", "Valor"]],
       body: transactions.map((t) => [
-        format(new Date(t.transaction_date), "dd/MM/yyyy"),
+        formatInAppTz(t.transaction_date, "dd/MM/yyyy"),
         t.type === "income" ? "Entrada" : "Saída",
         t.category,
         t.description || "—",
@@ -608,7 +608,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       startY: yPos,
       head: [["Data", "Profissional", "Tipo", "Valor Serviço", "Comissão", "Status"]],
       body: commissions.map((c) => [
-        format(new Date(c.created_at), "dd/MM/yyyy"),
+        formatInAppTz(c.created_at, "dd/MM/yyyy"),
         c.professional?.full_name || "—",
         c.commission_type === "percentage" ? "Percentual" : "Fixo",
         formatCurrency(Number(c.service_price)),
@@ -660,7 +660,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
     doc.setTextColor(...grayColor);
     doc.setFont("helvetica", "normal");
     doc.text(
-      `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+      `Gerado em ${formatInAppTz(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
       margin,
       pageHeight - 8
     );

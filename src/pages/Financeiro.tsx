@@ -49,7 +49,6 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
@@ -68,7 +67,7 @@ export default function Financeiro() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [filterMonth, setFilterMonth] = useState(formatInAppTz(new Date(), "yyyy-MM"));
   const [activeTab, setActiveTab] = useState("overview");
   const [commissions, setCommissions] = useState<any[]>([]);
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
@@ -79,7 +78,7 @@ export default function Financeiro() {
     category: "",
     amount: "",
     description: "",
-    transaction_date: format(new Date(), "yyyy-MM-dd"),
+    transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
   });
 
   // Calculate stats
@@ -210,7 +209,7 @@ export default function Financeiro() {
         category: "",
         amount: "",
         description: "",
-        transaction_date: format(new Date(), "yyyy-MM-dd"),
+        transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
       });
       fetchTransactions();
     } catch (error) {
@@ -273,7 +272,7 @@ export default function Financeiro() {
         .from("commission_payments")
         .update({
           status: "paid",
-          payment_date: format(new Date(), "yyyy-MM-dd"),
+          payment_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
           paid_by: profile.user_id,
         })
         .eq("id", commissionId);
@@ -551,7 +550,7 @@ export default function Financeiro() {
                       {commissions.map((commission) => (
                         <TableRow key={commission.id}>
                           <TableCell>
-                            {format(new Date(commission.created_at), "dd/MM/yyyy")}
+                            {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell className="font-medium">
                             {commission.professional?.full_name || "—"}
@@ -591,7 +590,7 @@ export default function Financeiro() {
                             )}
                             {commission.status === "paid" && commission.payment_date && (
                               <span className="text-xs text-muted-foreground">
-                                Paga em {format(new Date(commission.payment_date), "dd/MM/yyyy")}
+                                Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
                               </span>
                             )}
                           </TableCell>
@@ -637,7 +636,7 @@ export default function Financeiro() {
                       {commissions.map((commission) => (
                         <TableRow key={commission.id}>
                           <TableCell>
-                            {format(new Date(commission.created_at), "dd/MM/yyyy")}
+                            {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell className="font-medium">
                             {commission.professional?.full_name || "—"}
@@ -677,7 +676,7 @@ export default function Financeiro() {
                             )}
                             {commission.status === "paid" && commission.payment_date && (
                               <span className="text-xs text-muted-foreground">
-                                Paga em {format(new Date(commission.payment_date), "dd/MM/yyyy")}
+                                Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
                               </span>
                             )}
                           </TableCell>
@@ -718,7 +717,7 @@ export default function Financeiro() {
                       {transactions.map((transaction) => (
                         <TableRow key={transaction.id}>
                           <TableCell>
-                            {format(new Date(transaction.transaction_date), "dd/MM/yyyy")}
+                            {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell>
                             <Badge

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 
 export default function Dashboard() {
@@ -357,7 +357,7 @@ export default function Dashboard() {
                           </p>
                           <p className="text-xs md:text-sm text-muted-foreground truncate">
                             {appointment.service?.name} •{" "}
-                            {format(new Date(appointment.scheduled_at), "HH:mm")}
+                            {formatInAppTz(appointment.scheduled_at, "HH:mm")}
                           </p>
                         </div>
                       </div>

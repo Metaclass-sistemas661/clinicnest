@@ -7,8 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { CreditCard, Check, Sparkles, Crown, Loader2, Calendar, RefreshCw, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 
 const plans = [
   {
@@ -151,7 +150,7 @@ export default function Assinatura() {
                     {subscription_end && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        Renova em {format(new Date(subscription_end), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        Renova em {formatInAppTz(subscription_end, "dd 'de' MMMM 'de' yyyy")}
                       </p>
                     )}
                   </>

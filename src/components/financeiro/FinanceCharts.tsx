@@ -16,7 +16,7 @@ import {
   Cell
 } from "recharts";
 import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import type { FinancialTransaction } from "@/types/database";
 
 interface FinanceChartsProps {
@@ -53,8 +53,8 @@ export function FinanceCharts({ transactions, filterMonth }: FinanceChartsProps)
       cumulativeBalance += income - expense;
 
       return {
-        date: format(day, "dd", { locale: ptBR }),
-        fullDate: format(day, "dd/MM", { locale: ptBR }),
+        date: formatInAppTz(day, "dd"),
+        fullDate: formatInAppTz(day, "dd/MM"),
         receita: income,
         despesa: expense,
         saldo: cumulativeBalance,

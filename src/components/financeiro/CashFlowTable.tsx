@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { FinancialTransaction } from "@/types/database";
 
@@ -47,7 +47,7 @@ export function CashFlowTable({ transactions, filterMonth }: CashFlowTableProps)
 
       return {
         date: day,
-        dateFormatted: format(day, "dd/MM (EEE)", { locale: ptBR }),
+        dateFormatted: formatInAppTz(day, "dd/MM (EEE)"),
         income,
         expense,
         dailyBalance,

@@ -31,8 +31,7 @@ import {
   MessageSquare,
   Loader2,
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import type { Appointment, AppointmentStatus } from "@/types/database";
 
 interface AppointmentCardProps {
@@ -105,7 +104,7 @@ export function AppointmentCard({
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
             <Clock className="h-3 w-3" />
-            {format(new Date(appointment.scheduled_at), "HH:mm")}
+            {formatInAppTz(appointment.scheduled_at, "HH:mm")}
           </div>
           <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${status.className}`}>
             {status.label}
@@ -333,9 +332,7 @@ export function AppointmentCard({
               Tem certeza que deseja cancelar o agendamento de{" "}
               <strong>{appointment.client?.name}</strong> para{" "}
               <strong>
-                {format(new Date(appointment.scheduled_at), "dd/MM/yyyy 'às' HH:mm", {
-                  locale: ptBR,
-                })}
+                {formatInAppTz(appointment.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}
               </strong>
               ? Esta ação não pode ser desfeita.
             </AlertDialogDescription>

@@ -58,7 +58,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInAppTz } from "@/lib/date";
 import type { Appointment, AppointmentStatus, Client, Service, Profile } from "@/types/database";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 
@@ -380,10 +380,10 @@ export function AppointmentsTable({
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-semibold text-primary">
-                        {format(new Date(appointment.scheduled_at), "HH:mm")}
+                        {formatInAppTz(appointment.scheduled_at, "HH:mm")}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(appointment.scheduled_at), "dd/MM/yyyy", { locale: ptBR })}
+                        {formatInAppTz(appointment.scheduled_at, "dd/MM/yyyy")}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {appointment.duration_minutes} min
@@ -533,9 +533,7 @@ export function AppointmentsTable({
               <strong>{appointmentToDelete?.client?.name || "Cliente"}</strong> para{" "}
               <strong>
                 {appointmentToDelete &&
-                  format(new Date(appointmentToDelete.scheduled_at), "dd/MM/yyyy 'às' HH:mm", {
-                    locale: ptBR,
-                  })}
+                  formatInAppTz(appointmentToDelete.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}
               </strong>
               ? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
