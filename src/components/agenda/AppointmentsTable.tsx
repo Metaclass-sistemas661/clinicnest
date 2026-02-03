@@ -779,7 +779,7 @@ export function AppointmentsTable({
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>
@@ -843,7 +843,7 @@ export function AppointmentsTable({
                 </Select>
               </div>
               {isAdmin && editFormData.professional_id && editFormData.service_id && (
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Comissão do Profissional (R$)</Label>
                   <Input
                     type="number"
@@ -858,7 +858,7 @@ export function AppointmentsTable({
                   </p>
                 </div>
               )}
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label>Data</Label>
                 <Input
                   type="date"
@@ -871,6 +871,7 @@ export function AppointmentsTable({
               </div>
 
               {editFormData.scheduled_at && (
+                <div className="sm:col-span-2">
                 <TimeSlotPicker
                   selectedTime={editFormData.scheduled_time}
                   onTimeChange={(time) => setEditFormData({ ...editFormData, scheduled_time: time })}
@@ -884,9 +885,10 @@ export function AppointmentsTable({
                     setEditFormData({ ...editFormData, professional_id: profId })
                   }
                 />
+                </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label>Observações</Label>
                 <Textarea
                   value={editFormData.notes}

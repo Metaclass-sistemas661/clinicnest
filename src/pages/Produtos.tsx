@@ -504,7 +504,7 @@ export default function Produtos() {
                 Nova Categoria
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Nova Categoria de Produto</DialogTitle>
                 <DialogDescription>Organize seus produtos por categorias.</DialogDescription>
@@ -551,7 +551,7 @@ export default function Produtos() {
                 Entrada/Saída
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Movimentação de Estoque</DialogTitle>
                 <DialogDescription>Registre entrada ou saída de produtos</DialogDescription>
@@ -699,13 +699,13 @@ export default function Produtos() {
                 Novo Produto
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Novo Produto</DialogTitle>
                 <DialogDescription>Cadastre um novo produto no estoque</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateProduct}>
-                <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
                     <Label>Nome</Label>
                     <Input
@@ -723,7 +723,7 @@ export default function Produtos() {
                       placeholder="Descrição opcional..."
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:col-span-2">
                     <Label>Categoria</Label>
                     <Select
                       value={productForm.category_id}
@@ -750,7 +750,7 @@ export default function Produtos() {
                       Criar nova categoria
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 sm:col-span-2">
                     <div className="space-y-2">
                       <Label>Custo (R$)</Label>
                       <Input
@@ -782,7 +782,7 @@ export default function Produtos() {
                     const profitPercent = cost > 0 ? (profit / cost) * 100 : 0;
                     if (cost > 0 || salePrice > 0) {
                       return (
-                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm sm:col-span-2">
                           <p className="font-medium text-muted-foreground">Margem de lucro</p>
                           <div className="mt-1 flex flex-wrap gap-4">
                             <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>
@@ -794,7 +794,7 @@ export default function Produtos() {
                     }
                     return null;
                   })()}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 sm:col-span-2">
                     <div className="space-y-2">
                       <Label>Quantidade Inicial</Label>
                       <Input
@@ -816,10 +816,10 @@ export default function Produtos() {
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground sm:col-span-2">
                     Alerta será exibido quando estoque atingir a quantidade mínima
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-3 sm:col-span-2">
                     <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
                     <RadioGroup
                       value={productForm.purchased_with_company_cash}
@@ -871,7 +871,7 @@ export default function Produtos() {
               }
             }}
           >
-            <DialogContent>
+            <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>Atualizar Preços</DialogTitle>
                 <DialogDescription>
@@ -936,7 +936,7 @@ export default function Produtos() {
                     const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
                     if (cost > 0 || salePrice > 0) {
                       return (
-                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm sm:col-span-2">
                           <p className="font-medium text-muted-foreground">Margem de lucro</p>
                           <div className="mt-1 flex flex-wrap gap-4">
                             <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>

@@ -194,7 +194,7 @@ export default function Clientes() {
               Novo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
               <DialogDescription>
@@ -229,7 +229,7 @@ export default function Clientes() {
                     placeholder="email@exemplo.com"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Observações</Label>
                   <Textarea
                     value={formData.notes}

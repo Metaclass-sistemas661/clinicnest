@@ -178,7 +178,7 @@ export default function Servicos() {
               Novo Serviço
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingService ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
               <DialogDescription>
@@ -233,7 +233,7 @@ export default function Servicos() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center justify-between rounded-lg border p-4 sm:col-span-2">
                   <div>
                     <Label>Serviço Ativo</Label>
                     <p className="text-sm text-muted-foreground">

@@ -355,7 +355,7 @@ export default function Equipe() {
               Cadastrar profissional
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar profissional</DialogTitle>
               <DialogDescription>
@@ -422,7 +422,7 @@ export default function Equipe() {
                     placeholder="(11) 99999-9999"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label>Função</Label>
                   <Select
                     value={formData.role}
@@ -463,7 +463,7 @@ export default function Equipe() {
     >
       {/* Dialog de Configuração de Comissão */}
       <Dialog open={isCommissionDialogOpen} onOpenChange={setIsCommissionDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Configurar Comissão</DialogTitle>
             <DialogDescription>

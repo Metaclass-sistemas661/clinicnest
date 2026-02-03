@@ -426,13 +426,13 @@ export default function Financeiro() {
                 Nova Transação
               </Button>
             </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Nova Transação</DialogTitle>
               <DialogDescription>Registre uma entrada ou saída</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreate}>
-              <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                 <div className="space-y-2">
                   <Label>Tipo</Label>
                   <Select

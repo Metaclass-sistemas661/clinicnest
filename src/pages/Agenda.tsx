@@ -501,7 +501,7 @@ export default function Agenda() {
                 <span className="sm:hidden">Novo</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Novo Agendamento</DialogTitle>
                 <DialogDescription>
@@ -509,7 +509,7 @@ export default function Agenda() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateAppointment}>
-                <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
                     <Label>Cliente</Label>
                     <Select
@@ -603,7 +603,7 @@ export default function Agenda() {
                     </Select>
                   </div>
                   {isAdmin && formData.professional_id && formData.service_id && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 sm:col-span-2">
                       <Label>Comissão do Profissional (R$)</Label>
                       <Input
                         type="number"
@@ -647,6 +647,7 @@ export default function Agenda() {
                   </div>
                   
                   {formData.scheduled_at && (
+                    <div className="sm:col-span-2">
                     <TimeSlotPicker
                       selectedTime={formData.scheduled_time}
                       onTimeChange={(time) => setFormData({ ...formData, scheduled_time: time })}
@@ -656,8 +657,9 @@ export default function Agenda() {
                       existingAppointments={allAppointments}
                       onProfessionalChange={(profId) => setFormData({ ...formData, professional_id: profId })}
                     />
+                    </div>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-2 sm:col-span-2">
                     <Label>Observações</Label>
                     <Textarea
                       value={formData.notes}
