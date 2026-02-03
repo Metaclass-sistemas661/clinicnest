@@ -193,37 +193,43 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) {
+    log("ERROR: Sem Authorization header");
+    return new Response(
+      JSON.stringify({ error: "Não autorizado. Faça login." }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Cliente com chave anon + JWT do usuário para validar a sessão (evita 401 com service_role)
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  });
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: { persistSession: false },
   });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      log("ERROR: Sem Authorization header");
-      return new Response(
-        JSON.stringify({ error: "Não autorizado. Faça login." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       log("ERROR: Token inválido", { error: userError?.message });
       return new Response(
         JSON.stringify({ error: "Sessão inválida ou expirada" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     log("Usuário autenticado", { userId: user.id });
