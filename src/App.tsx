@@ -10,19 +10,20 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
-// Lazy load com retry (evita erro "Failed to fetch dynamically imported module" após deploys)
+import Dashboard from "@/pages/Dashboard";
+import Agenda from "@/pages/Agenda";
+import Financeiro from "@/pages/Financeiro";
+import Produtos from "@/pages/Produtos";
+import Servicos from "@/pages/Servicos";
+import Clientes from "@/pages/Clientes";
+import Equipe from "@/pages/Equipe";
+import Configuracoes from "@/pages/Configuracoes";
+import Assinatura from "@/pages/Assinatura";
+
+// Lazy apenas para páginas públicas (evita flash ao navegar no dashboard)
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
 const Login = lazyWithRetry(() => import("@/pages/auth/Login"));
 const Register = lazyWithRetry(() => import("@/pages/auth/Register"));
-const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
-const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
-const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
-const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
-const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
-const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
-const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
-const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
-const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
 const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));
