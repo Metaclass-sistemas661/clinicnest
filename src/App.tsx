@@ -26,6 +26,8 @@ import Assinatura from "@/pages/Assinatura";
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
 const Login = lazyWithRetry(() => import("@/pages/auth/Login"));
 const Register = lazyWithRetry(() => import("@/pages/auth/Register"));
+const ForgotPassword = lazyWithRetry(() => import("@/pages/auth/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("@/pages/auth/ResetPassword"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
 const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));

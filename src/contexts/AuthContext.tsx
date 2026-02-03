@@ -141,6 +141,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      // Chamar Edge Function para enviar email customizado
+      // A Edge Function buscará o nome do usuário internamente
+      // Não precisa de autenticação para reset de senha
+      const { data, error } = await supabase.functions.invoke("send-custom-auth-email", {
+        body: {
+          email,
+          type: "password_reset",
+        },
+      });
+
+      if (error) {
+        // Fallback para método padrão do Supabase se Edge Function falhar
+        const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: "https://vynlobella.com/reset-password",
+        });
+        return { error: fallbackError || error };
+      }
+
+      if (!data?.success) {
+        // Fallback para método padrão
+        const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: "https://vynlobella.com/reset-password",
+        });
+        return { error: fallbackError || new Error(data?.message || "Erro ao enviar email") };
+      }
+
+      return { error: null };
+    } catch (err) {
+      // Fallback para método padrão em caso de erro
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://vynlobella.com/reset-password",
+      });
+      return { error: error || (err instanceof Error ? err : new Error("Erro ao solicitar recuperação de senha")) };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
