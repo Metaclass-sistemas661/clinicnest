@@ -115,6 +115,12 @@ export default function Equipe() {
     setIsSaving(true);
 
     try {
+      console.log("[Equipe] Chamando invite-team-member com:", {
+        email: formData.email.trim(),
+        full_name: formData.full_name.trim(),
+        role: formData.role,
+      });
+
       const { data, error } = await supabase.functions.invoke("invite-team-member", {
         body: {
           email: formData.email.trim(),
@@ -125,22 +131,38 @@ export default function Equipe() {
         },
       });
 
+      console.log("[Equipe] Resposta recebida:", { data, error });
+
       if (error) {
-        toast.error(error.message || "Erro ao cadastrar membro");
-        console.error("Erro ao cadastrar membro:", error);
+        // Tentar extrair mensagem de erro do contexto
+        let errorMessage = error.message || "Erro ao cadastrar membro";
+        if (error.context) {
+          try {
+            const errorBody = typeof error.context.body === 'string' 
+              ? JSON.parse(error.context.body) 
+              : error.context.body;
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch {
+            // Ignora erro de parse
+          }
+        }
+        toast.error(errorMessage);
+        console.error("[Equipe] Erro completo:", error);
         return;
       }
       
       // Edge Function sempre retorna status 200, mas pode ter campo 'error'
       if (data?.error) {
         toast.error(data.error);
-        console.error("Erro retornado pela função:", data.error);
+        console.error("[Equipe] Erro retornado pela função:", data.error);
         return;
       }
 
       if (!data?.success) {
         toast.error("Resposta inesperada do servidor");
-        console.error("Resposta inesperada:", data);
+        console.error("[Equipe] Resposta inesperada:", data);
         return;
       }
 
@@ -158,7 +180,7 @@ export default function Equipe() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro ao cadastrar membro";
       toast.error(errorMessage);
-      console.error("Erro ao cadastrar membro:", error);
+      console.error("[Equipe] Exceção não tratada:", error);
     } finally {
       setIsSaving(false);
     }

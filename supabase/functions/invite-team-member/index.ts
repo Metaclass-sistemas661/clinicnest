@@ -15,7 +15,13 @@ interface InviteBody {
   role?: "staff" | "admin";
 }
 
+const log = (message: string, data?: unknown) => {
+  console.log(`[invite-team-member] ${message}`, data ? JSON.stringify(data) : "");
+};
+
 serve(async (req) => {
+  log("Request recebido", { method: req.method });
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -24,6 +30,7 @@ serve(async (req) => {
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {
+    log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -35,6 +42,7 @@ serve(async (req) => {
   });
 
   try {
+    log("Iniciando processamento");
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -55,7 +63,9 @@ serve(async (req) => {
     let body: InviteBody;
     try {
       body = await req.json();
-    } catch {
+      log("Body recebido", { email: body.email, full_name: body.full_name });
+    } catch (err) {
+      log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -92,20 +102,32 @@ serve(async (req) => {
       );
     }
 
-    const { data: profile } = await supabaseAdmin
+    log("Buscando profile do usuário");
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("tenant_id")
       .eq("user_id", user.id)
       .single();
 
+    if (profileError) {
+      log("ERROR: Erro ao buscar profile", { error: profileError.message });
+      return new Response(
+        JSON.stringify({ error: `Erro ao buscar perfil: ${profileError.message}` }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!profile?.tenant_id) {
+      log("ERROR: Profile ou tenant não encontrado");
       return new Response(
         JSON.stringify({ error: "Perfil ou tenant não encontrado" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    log("Tenant encontrado", { tenant_id: profile.tenant_id });
 
-    const { data: roleRow } = await supabaseAdmin
+    log("Verificando se usuário é admin");
+    const { data: roleRow, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -113,13 +135,24 @@ serve(async (req) => {
       .eq("role", "admin")
       .single();
 
+    if (roleError) {
+      log("ERROR: Erro ao buscar role", { error: roleError.message });
+      return new Response(
+        JSON.stringify({ error: `Erro ao verificar permissões: ${roleError.message}` }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!roleRow) {
+      log("ERROR: Usuário não é admin");
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem convidar membros" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    log("Usuário confirmado como admin");
 
+    log("Criando novo usuário", { email: emailTrim, tenant_id: profile.tenant_id });
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: emailTrim,
       password: passwordStr,
@@ -139,13 +172,14 @@ serve(async (req) => {
         createError.message?.toLowerCase().includes("registered")
           ? "Já existe uma conta com este e-mail"
           : createError.message || "Erro ao criar usuário";
-      console.error("[invite-team-member] Erro ao criar usuário:", createError);
+      log("ERROR: Erro ao criar usuário", { error: createError.message, code: createError.status });
       return new Response(
         JSON.stringify({ error: msg }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    log("Usuário criado com sucesso", { user_id: newUser.user?.id });
     return new Response(
       JSON.stringify({
         success: true,
@@ -156,7 +190,8 @@ serve(async (req) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[invite-team-member] Erro:", message, err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
