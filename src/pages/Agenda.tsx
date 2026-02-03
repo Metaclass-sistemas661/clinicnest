@@ -71,20 +71,6 @@ export default function Agenda() {
   const fetchData = async () => {
     if (!profile?.tenant_id) return;
 
-    // Fetch professional commissions
-    const { data: commissionsData } = await supabase
-      .from("professional_commissions")
-      .select("user_id, type, value")
-      .eq("tenant_id", profile.tenant_id);
-
-    if (commissionsData) {
-      const commissionsMap: Record<string, { type: "percentage" | "fixed"; value: number }> = {};
-      commissionsData.forEach((c) => {
-        commissionsMap[c.user_id] = { type: c.type, value: Number(c.value) };
-      });
-      setProfessionalCommissions(commissionsMap);
-    }
-
     let start: Date, end: Date;
     if (viewMode === "day") {
       start = startOfDay(currentDate);
@@ -95,7 +81,11 @@ export default function Agenda() {
     }
 
     try {
-      const [appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
+      const [commissionsRes, appointmentsRes, clientsRes, servicesRes, professionalsRes] = await Promise.all([
+        supabase
+          .from("professional_commissions")
+          .select("user_id, type, value")
+          .eq("tenant_id", profile.tenant_id),
         supabase
           .from("appointments")
           .select(`
@@ -126,11 +116,24 @@ export default function Agenda() {
           .order("full_name"),
       ]);
 
+      const professionals = (professionalsRes.data as Profile[]) || [];
+      const commissionsData = commissionsRes.data || [];
+
+      // Mapa por profile.id (id do profissional no select) para reconhecer comissão definida na Equipe
+      const commissionsMap: Record<string, { type: "percentage" | "fixed"; value: number }> = {};
+      professionals.forEach((prof) => {
+        const commission = commissionsData.find((c: { user_id: string }) => c.user_id === prof.user_id);
+        if (commission) {
+          commissionsMap[prof.id] = { type: commission.type, value: Number(commission.value) };
+        }
+      });
+      setProfessionalCommissions(commissionsMap);
+
       setAppointments((appointmentsRes.data as Appointment[]) || []);
       setAllAppointments((appointmentsRes.data as Appointment[]) || []);
       setClients((clientsRes.data as Client[]) || []);
       setServices((servicesRes.data as Service[]) || []);
-      setProfessionals((professionalsRes.data as Profile[]) || []);
+      setProfessionals(professionals);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -428,11 +431,9 @@ export default function Agenda() {
                       value={formData.service_id}
                       onValueChange={(v) => {
                         const selectedService = services.find((s) => s.id === v);
-                        const commission = formData.professional_id 
-                          ? professionalCommissions[formData.professional_id] 
-                          : null;
                         let calculatedCommission = "";
-                        
+                        // Reconhecer valor da Equipe: se profissional tem comissão definida, preencher; senão deixar em branco
+                        const commission = formData.professional_id ? professionalCommissions[formData.professional_id] : undefined;
                         if (commission && selectedService) {
                           if (commission.type === "percentage") {
                             calculatedCommission = String((selectedService.price * commission.value) / 100);
@@ -440,7 +441,6 @@ export default function Agenda() {
                             calculatedCommission = String(commission.value);
                           }
                         }
-                        
                         setFormData({ 
                           ...formData, 
                           service_id: v,
@@ -468,10 +468,9 @@ export default function Agenda() {
                         const selectedService = services.find((s) => s.id === formData.service_id);
                         let calculatedCommission = "";
                         
-                        // Apenas admins podem definir comissão manualmente
+                        // Reconhecer valor da Equipe: se profissional tem comissão/valor fixo definido, preencher; senão deixar em branco
                         if (isAdmin) {
                           const commission = professionalCommissions[v];
-                          
                           if (commission && selectedService) {
                             if (commission.type === "percentage") {
                               calculatedCommission = String((selectedService.price * commission.value) / 100);
@@ -509,7 +508,11 @@ export default function Agenda() {
                         min="0"
                         value={formData.commission_amount}
                         onChange={(e) => setFormData({ ...formData, commission_amount: e.target.value })}
-                        placeholder="Valor da comissão"
+                        placeholder={
+                          professionalCommissions[formData.professional_id]
+                            ? "Valor em R$ (edite se necessário)"
+                            : "Informe o valor em R$ para este agendamento"
+                        }
                       />
                       <p className="text-xs text-muted-foreground">
                         {(() => {
@@ -518,12 +521,12 @@ export default function Agenda() {
                           if (commission && selectedService) {
                             if (commission.type === "percentage") {
                               const calculated = (selectedService.price * commission.value) / 100;
-                              return `Comissão padrão: ${formatCurrency(calculated)} (${commission.value}% de ${formatCurrency(selectedService.price)})`;
+                              return `Padrão da Equipe: comissão de ${commission.value}% do serviço = ${formatCurrency(calculated)}. Pode editar o valor acima.`;
                             } else {
-                              return `Comissão padrão: ${formatCurrency(commission.value)} (valor fixo)`;
+                              return `Padrão da Equipe: valor fixo ${formatCurrency(commission.value)}. Pode editar o valor acima.`;
                             }
                           }
-                          return "Defina o valor da comissão para este serviço";
+                          return "Este profissional ainda não tem comissão definida na Equipe. Informe o valor em R$ para este agendamento.";
                         })()}
                       </p>
                     </div>
