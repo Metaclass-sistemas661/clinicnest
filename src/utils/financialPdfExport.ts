@@ -4,6 +4,18 @@ import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, dif
 import { ptBR } from "date-fns/locale";
 import type { FinancialTransaction } from "@/types/database";
 
+interface CommissionPayment {
+  id: string;
+  professional_id: string;
+  professional?: { full_name: string };
+  amount: number;
+  service_price: number;
+  commission_type: "percentage" | "fixed";
+  status: "pending" | "paid" | "cancelled";
+  created_at: string;
+  payment_date?: string;
+}
+
 interface ExportOptions {
   transactions: FinancialTransaction[];
   startDate: Date;
@@ -12,6 +24,7 @@ interface ExportOptions {
   totalIncome: number;
   totalExpense: number;
   balance: number;
+  commissions?: CommissionPayment[];
 }
 
 // Utility to format currency
@@ -264,7 +277,7 @@ const drawLineChart = (
 };
 
 export async function generateFinancialReport(options: ExportOptions): Promise<void> {
-  const { transactions, startDate, endDate, tenantName, totalIncome, totalExpense, balance } = options;
+  const { transactions, startDate, endDate, tenantName, totalIncome, totalExpense, balance, commissions = [] } = options;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -546,6 +559,85 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         if (data.section === "body" && data.column.index === 1) {
           const type = String(data.cell.raw);
           if (type === "Entrada") {
+            data.cell.styles.textColor = successColor;
+          } else {
+            data.cell.styles.textColor = dangerColor;
+          }
+        }
+      },
+    });
+  }
+
+  // ==================== COMMISSIONS TABLE (NEW PAGE IF NEEDED) ====================
+  if (commissions.length > 0) {
+    doc.addPage();
+    yPos = margin;
+
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 30, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Comissões de Profissionais", margin, 20);
+
+    yPos = 45;
+
+    const paidCommissions = commissions.filter((c) => c.status === "paid");
+    const pendingCommissions = commissions.filter((c) => c.status === "pending");
+    const totalPaid = paidCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalPending = pendingCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
+
+    // Summary
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Resumo de Comissões", margin, yPos);
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...successColor);
+    doc.text(`Comissões Pagas: ${formatCurrency(totalPaid)}`, margin, yPos);
+    yPos += 7;
+    doc.setTextColor(...dangerColor);
+    doc.text(`Comissões Pendentes: ${formatCurrency(totalPending)}`, margin, yPos);
+    yPos += 15;
+
+    // Commissions table
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Data", "Profissional", "Tipo", "Valor Serviço", "Comissão", "Status"]],
+      body: commissions.map((c) => [
+        format(new Date(c.created_at), "dd/MM/yyyy"),
+        c.professional?.full_name || "—",
+        c.commission_type === "percentage" ? "Percentual" : "Fixo",
+        formatCurrency(Number(c.service_price)),
+        formatCurrency(Number(c.amount)),
+        c.status === "paid" ? "Paga" : "Pendente",
+      ]),
+      theme: "striped",
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+      },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 30, halign: "right" },
+        4: { cellWidth: 30, halign: "right", fontStyle: "bold" },
+        5: { cellWidth: 25, halign: "center" },
+      },
+      margin: { left: margin, right: margin },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 5) {
+          const status = data.cell.text[0];
+          if (status === "Paga") {
             data.cell.styles.textColor = successColor;
           } else {
             data.cell.styles.textColor = dangerColor;

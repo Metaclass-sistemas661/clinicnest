@@ -44,7 +44,9 @@ import {
   BarChart3, 
   List, 
   ArrowRightLeft,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Wallet,
+  CheckCircle2
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -68,6 +70,9 @@ export default function Financeiro() {
   const [isSaving, setIsSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
   const [activeTab, setActiveTab] = useState("overview");
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
+  const [professionals, setProfessionals] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     type: "income" as TransactionType,
@@ -116,6 +121,18 @@ export default function Financeiro() {
         .reduce((sum, t) => sum + Number(t.amount), 0);
       const reportBalance = reportIncome - reportExpense;
 
+      // Fetch commissions for the selected date range
+      const { data: commissionsData } = await supabase
+        .from("commission_payments")
+        .select(`
+          *,
+          professional:profiles!commission_payments_professional_id_fkey(full_name, email)
+        `)
+        .eq("tenant_id", profile.tenant_id)
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString())
+        .order("created_at", { ascending: false });
+
       await generateFinancialReport({
         transactions: reportTransactions,
         startDate,
@@ -124,6 +141,7 @@ export default function Financeiro() {
         totalIncome: reportIncome,
         totalExpense: reportExpense,
         balance: reportBalance,
+        commissions: (commissionsData || []) as any[],
       });
 
       toast.success("PDF gerado com sucesso!");
@@ -136,6 +154,8 @@ export default function Financeiro() {
   useEffect(() => {
     if (profile?.tenant_id && isAdmin) {
       fetchTransactions();
+      fetchCommissions();
+      fetchProfessionals();
     }
   }, [profile?.tenant_id, isAdmin, filterMonth]);
 
@@ -198,6 +218,74 @@ export default function Financeiro() {
       console.error(error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const fetchCommissions = async () => {
+    if (!profile?.tenant_id) return;
+
+    setIsLoadingCommissions(true);
+    const [year, month] = filterMonth.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    const end = endOfMonth(new Date(year, month - 1));
+
+    try {
+      const { data, error } = await supabase
+        .from("commission_payments")
+        .select(`
+          *,
+          professional:profiles!commission_payments_professional_id_fkey(full_name, email)
+        `)
+        .eq("tenant_id", profile.tenant_id)
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setCommissions((data || []) as any[]);
+    } catch (error) {
+      console.error("Error fetching commissions:", error);
+    } finally {
+      setIsLoadingCommissions(false);
+    }
+  };
+
+  const fetchProfessionals = async () => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .eq("tenant_id", profile.tenant_id)
+        .order("full_name");
+      setProfessionals((data || []) as any[]);
+    } catch (error) {
+      console.error("Error fetching professionals:", error);
+    }
+  };
+
+  const handleMarkAsPaid = async (commissionId: string) => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      const { error } = await supabase
+        .from("commission_payments")
+        .update({
+          status: "paid",
+          payment_date: format(new Date(), "yyyy-MM-dd"),
+          paid_by: profile.user_id,
+        })
+        .eq("id", commissionId);
+
+      if (error) throw error;
+
+      toast.success("Comissão marcada como paga!");
+      fetchCommissions();
+      fetchTransactions(); // Refresh to update totals
+    } catch (error) {
+      console.error("Error marking commission as paid:", error);
+      toast.error("Erro ao marcar comissão como paga");
     }
   };
 
@@ -377,7 +465,7 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsList className="grid w-full grid-cols-4 h-auto">
             <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
@@ -392,6 +480,11 @@ export default function Financeiro() {
               <List className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Transações</span>
               <span className="sm:hidden">Trans.</span>
+            </TabsTrigger>
+            <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <Wallet className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Comissões</span>
+              <span className="sm:hidden">Com.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -419,6 +512,178 @@ export default function Financeiro() {
             ) : (
               <CashFlowTable transactions={transactions} filterMonth={filterMonth} />
             )}
+          </TabsContent>
+
+          {/* Commissions Tab */}
+          <TabsContent value="commissions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerenciar Comissões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCommissions ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : commissions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Wallet className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma comissão neste período</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Profissional</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Valor do Serviço</TableHead>
+                        <TableHead>Comissão</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {commissions.map((commission) => (
+                        <TableRow key={commission.id}>
+                          <TableCell>
+                            {format(new Date(commission.created_at), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {commission.professional?.full_name || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatCurrency(Number(commission.service_price))}</TableCell>
+                          <TableCell className="font-semibold text-primary">
+                            {formatCurrency(Number(commission.amount))}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                commission.status === "paid"
+                                  ? "bg-success/20 text-success border-success/30"
+                                  : "bg-warning/20 text-warning border-warning/30"
+                              }
+                            >
+                              {commission.status === "paid" ? "Paga" : "Pendente"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {commission.status === "pending" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAsPaid(commission.id)}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Marcar como Paga
+                              </Button>
+                            )}
+                            {commission.status === "paid" && commission.payment_date && (
+                              <span className="text-xs text-muted-foreground">
+                                Paga em {format(new Date(commission.payment_date), "dd/MM/yyyy")}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Commissions Tab */}
+          <TabsContent value="commissions" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerenciar Comissões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCommissions ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : commissions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Wallet className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma comissão neste período</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Profissional</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Valor do Serviço</TableHead>
+                        <TableHead>Comissão</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {commissions.map((commission) => (
+                        <TableRow key={commission.id}>
+                          <TableCell>
+                            {format(new Date(commission.created_at), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {commission.professional?.full_name || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatCurrency(Number(commission.service_price))}</TableCell>
+                          <TableCell className="font-semibold text-primary">
+                            {formatCurrency(Number(commission.amount))}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                commission.status === "paid"
+                                  ? "bg-success/20 text-success border-success/30"
+                                  : "bg-warning/20 text-warning border-warning/30"
+                              }
+                            >
+                              {commission.status === "paid" ? "Paga" : "Pendente"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {commission.status === "pending" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkAsPaid(commission.id)}
+                                className="gap-1"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Marcar como Paga
+                              </Button>
+                            )}
+                            {commission.status === "paid" && commission.payment_date && (
+                              <span className="text-xs text-muted-foreground">
+                                Paga em {format(new Date(commission.payment_date), "dd/MM/yyyy")}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Transactions Tab */}

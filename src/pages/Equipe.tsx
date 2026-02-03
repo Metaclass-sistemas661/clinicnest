@@ -31,12 +31,22 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck } from "lucide-react";
+import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import type { Profile, UserRole, AppRole } from "@/types/database";
 
 interface TeamMember extends Profile {
   user_roles: UserRole[];
+  commission?: {
+    id: string;
+    type: "percentage" | "fixed";
+    value: number;
+  } | null;
+}
+
+interface CommissionFormData {
+  type: "percentage" | "fixed";
+  value: string;
 }
 
 export default function Equipe() {
@@ -45,6 +55,13 @@ export default function Equipe() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [commissionData, setCommissionData] = useState<CommissionFormData>({
+    type: "percentage",
+    value: "",
+  });
+  const [isSavingCommission, setIsSavingCommission] = useState(false);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -66,8 +83,8 @@ export default function Equipe() {
     if (!profile?.tenant_id) return;
 
     try {
-      // Fetch profiles and roles separately
-      const [profilesRes, rolesRes] = await Promise.all([
+      // Fetch profiles, roles, and commissions
+      const [profilesRes, rolesRes, commissionsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("*")
@@ -77,18 +94,32 @@ export default function Equipe() {
           .from("user_roles")
           .select("*")
           .eq("tenant_id", profile.tenant_id),
+        supabase
+          .from("professional_commissions")
+          .select("id, user_id, type, value")
+          .eq("tenant_id", profile.tenant_id),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
 
       const profiles = (profilesRes.data as Profile[]) || [];
       const roles = (rolesRes.data as UserRole[]) || [];
+      const commissions = (commissionsRes.data || []) as Array<{
+        id: string;
+        user_id: string;
+        type: "percentage" | "fixed";
+        value: number;
+      }>;
 
-      // Merge profiles with their roles
-      const teamData: TeamMember[] = profiles.map((p) => ({
-        ...p,
-        user_roles: roles.filter((r) => r.user_id === p.user_id),
-      }));
+      // Merge profiles with their roles and commissions
+      const teamData: TeamMember[] = profiles.map((p) => {
+        const memberCommission = commissions.find((c) => c.user_id === p.user_id);
+        return {
+          ...p,
+          user_roles: roles.filter((r) => r.user_id === p.user_id),
+          commission: memberCommission || null,
+        };
+      });
 
       setTeam(teamData);
     } catch (error) {
@@ -218,6 +249,82 @@ export default function Equipe() {
         Profissional
       </Badge>
     );
+  };
+
+  const formatCommission = (commission: TeamMember["commission"]) => {
+    if (!commission) return "—";
+    if (commission.type === "percentage") {
+      return `${commission.value}%`;
+    }
+    return `R$ ${Number(commission.value).toFixed(2)}`;
+  };
+
+  const handleOpenCommissionDialog = (member: TeamMember) => {
+    setSelectedMember(member);
+    if (member.commission) {
+      setCommissionData({
+        type: member.commission.type,
+        value: String(member.commission.value),
+      });
+    } else {
+      setCommissionData({ type: "percentage", value: "" });
+    }
+    setIsCommissionDialogOpen(true);
+  };
+
+  const handleSaveCommission = async () => {
+    if (!selectedMember || !profile?.tenant_id) return;
+
+    const value = parseFloat(commissionData.value);
+    if (isNaN(value) || value < 0) {
+      toast.error("Valor inválido");
+      return;
+    }
+
+    if (commissionData.type === "percentage" && (value < 0 || value > 100)) {
+      toast.error("Percentual deve estar entre 0 e 100");
+      return;
+    }
+
+    setIsSavingCommission(true);
+
+    try {
+      const commissionPayload = {
+        user_id: selectedMember.user_id,
+        tenant_id: profile.tenant_id,
+        type: commissionData.type,
+        value: value,
+      };
+
+      if (selectedMember.commission) {
+        // Update existing commission
+        const { error } = await supabase
+          .from("professional_commissions")
+          .update(commissionPayload)
+          .eq("id", selectedMember.commission.id);
+
+        if (error) throw error;
+        toast.success("Comissão atualizada com sucesso!");
+      } else {
+        // Create new commission
+        const { error } = await supabase
+          .from("professional_commissions")
+          .insert(commissionPayload);
+
+        if (error) throw error;
+        toast.success("Comissão configurada com sucesso!");
+      }
+
+      setIsCommissionDialogOpen(false);
+      setSelectedMember(null);
+      setCommissionData({ type: "percentage", value: "" });
+      fetchTeam();
+    } catch (error: any) {
+      console.error("Error saving commission:", error);
+      toast.error(error.message || "Erro ao salvar comissão");
+    } finally {
+      setIsSavingCommission(false);
+    }
   };
 
   if (!isAdmin) {
@@ -353,6 +460,84 @@ export default function Equipe() {
         </Dialog>
       }
     >
+      {/* Dialog de Configuração de Comissão */}
+      <Dialog open={isCommissionDialogOpen} onOpenChange={setIsCommissionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurar Comissão</DialogTitle>
+            <DialogDescription>
+              Configure a comissão para {selectedMember?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de Comissão</Label>
+              <Select
+                value={commissionData.type}
+                onValueChange={(v) =>
+                  setCommissionData({ ...commissionData, type: v as "percentage" | "fixed" })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentual (%)</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                {commissionData.type === "percentage" ? "Percentual (%)" : "Valor Fixo (R$)"}
+              </Label>
+              <Input
+                type="number"
+                step={commissionData.type === "percentage" ? "0.01" : "0.01"}
+                min="0"
+                max={commissionData.type === "percentage" ? "100" : undefined}
+                value={commissionData.value}
+                onChange={(e) =>
+                  setCommissionData({ ...commissionData, value: e.target.value })
+                }
+                placeholder={
+                  commissionData.type === "percentage" ? "Ex: 30" : "Ex: 50.00"
+                }
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                {commissionData.type === "percentage"
+                  ? "Digite o percentual (ex: 30 para 30%)"
+                  : "Digite o valor fixo em reais"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCommissionDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveCommission}
+              disabled={isSavingCommission}
+              className="gradient-primary text-primary-foreground"
+            >
+              {isSavingCommission ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Card>
         <CardHeader>
           <CardTitle>Membros da Equipe ({team.length})</CardTitle>
@@ -371,7 +556,8 @@ export default function Equipe() {
                   <TableHead>Email</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Função</TableHead>
-                  <TableHead className="text-right">Alterar Função</TableHead>
+                  <TableHead>Comissão</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -397,21 +583,39 @@ export default function Equipe() {
                         {member.phone || "—"}
                       </TableCell>
                       <TableCell>{getRoleBadge(currentRole)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-normal">
+                          {formatCommission(member.commission)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
-                        {!isCurrentUser && (
-                          <Select
-                            value={currentRole}
-                            onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
-                          >
-                            <SelectTrigger className="w-40">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="staff">Profissional</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {!isCurrentUser && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenCommissionDialog(member)}
+                                className="gap-1"
+                              >
+                                <DollarSign className="h-3 w-3" />
+                                Comissão
+                              </Button>
+                              <Select
+                                value={currentRole}
+                                onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
+                              >
+                                <SelectTrigger className="w-40">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="staff">Profissional</SelectItem>
+                                  <SelectItem value="admin">Administrador</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

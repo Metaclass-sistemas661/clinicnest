@@ -15,6 +15,8 @@ import {
   Clock,
   Plus,
   AlertTriangle,
+  Wallet,
+  CreditCard,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
@@ -34,6 +36,10 @@ export default function Dashboard() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [commissionsPaid, setCommissionsPaid] = useState(0);
+  const [commissionsPending, setCommissionsPending] = useState(0);
+  const [commissionsReceived, setCommissionsReceived] = useState(0);
+  const [commissionsToReceive, setCommissionsToReceive] = useState(0);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -107,6 +113,45 @@ export default function Dashboard() {
           lowStockData = (data as Product[]).filter(
             (p) => p.quantity <= p.min_quantity
           );
+        }
+
+        // Fetch commissions for admin (all professionals in tenant)
+        const { data: commissionsData } = await supabase
+          .from("commission_payments")
+          .select("amount, status")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd);
+
+        if (commissionsData) {
+          const paid = commissionsData
+            .filter((c) => c.status === "paid")
+            .reduce((sum, c) => sum + Number(c.amount), 0);
+          const pending = commissionsData
+            .filter((c) => c.status === "pending")
+            .reduce((sum, c) => sum + Number(c.amount), 0);
+          setCommissionsPaid(paid);
+          setCommissionsPending(pending);
+        }
+      } else {
+        // Fetch commissions for staff (only their own)
+        const { data: commissionsData } = await supabase
+          .from("commission_payments")
+          .select("amount, status")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("professional_id", profile.user_id)
+          .gte("created_at", monthStart)
+          .lte("created_at", monthEnd);
+
+        if (commissionsData) {
+          const received = commissionsData
+            .filter((c) => c.status === "paid")
+            .reduce((sum, c) => sum + Number(c.amount), 0);
+          const toReceive = commissionsData
+            .filter((c) => c.status === "pending")
+            .reduce((sum, c) => sum + Number(c.amount), 0);
+          setCommissionsReceived(received);
+          setCommissionsToReceive(toReceive);
         }
       }
 
@@ -191,6 +236,34 @@ export default function Dashboard() {
                 value={formatCurrency(stats.monthlyExpenses)}
                 icon={TrendingDown}
                 variant="danger"
+              />
+              <StatCard
+                title="Comissões Pagas"
+                value={formatCurrency(commissionsPaid)}
+                icon={Wallet}
+                variant="success"
+              />
+              <StatCard
+                title="Comissões a Pagar"
+                value={formatCurrency(commissionsPending)}
+                icon={CreditCard}
+                variant="warning"
+              />
+            </>
+          )}
+          {!isAdmin && (
+            <>
+              <StatCard
+                title="Comissões Recebidas"
+                value={formatCurrency(commissionsReceived)}
+                icon={Wallet}
+                variant="success"
+              />
+              <StatCard
+                title="Comissões a Receber"
+                value={formatCurrency(commissionsToReceive)}
+                icon={CreditCard}
+                variant="warning"
               />
             </>
           )}
