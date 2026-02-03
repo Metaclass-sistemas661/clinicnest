@@ -17,6 +17,16 @@ interface CommissionPayment {
   payment_date?: string;
 }
 
+export interface DamagedProductLoss {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  totalLoss: number;
+  reason?: string | null;
+  created_at: string;
+}
+
 interface ExportOptions {
   transactions: FinancialTransaction[];
   startDate: Date;
@@ -26,6 +36,8 @@ interface ExportOptions {
   totalExpense: number;
   balance: number;
   commissions?: CommissionPayment[];
+  damagedLosses?: DamagedProductLoss[];
+  totalProductLoss?: number;
 }
 
 // Utility to format currency
@@ -278,7 +290,18 @@ const drawLineChart = (
 };
 
 export async function generateFinancialReport(options: ExportOptions): Promise<void> {
-  const { transactions, startDate, endDate, tenantName, totalIncome, totalExpense, balance, commissions = [] } = options;
+  const {
+    transactions,
+    startDate,
+    endDate,
+    tenantName,
+    totalIncome,
+    totalExpense,
+    balance,
+    commissions = [],
+    damagedLosses = [],
+    totalProductLoss,
+  } = options;
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -373,6 +396,59 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   doc.text(formatCurrency(totalExpense), margin + (cardWidth + 10) * 2 + 10, cardY + 26);
 
   yPos = cardY + cardHeight + 20;
+
+  const hasDamagedLosses = damagedLosses.length > 0;
+  const productLossTotal = totalProductLoss ?? damagedLosses.reduce((sum, item) => sum + item.totalLoss, 0);
+
+  if (hasDamagedLosses) {
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Perdas por Produtos Danificados", margin, yPos);
+    yPos += 6;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dangerColor);
+    doc.text(`Total de perdas: ${formatCurrency(productLossTotal)}`, margin, yPos);
+
+    yPos += 8;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Data", "Produto", "Qtd", "Custo Unit.", "Total Perda", "Motivo"]],
+      body: damagedLosses.map((loss) => [
+        formatInAppTz(loss.created_at, "dd/MM/yyyy"),
+        loss.productName,
+        loss.quantity.toString(),
+        formatCurrency(loss.unitCost),
+        formatCurrency(loss.totalLoss),
+        loss.reason || "—",
+      ]),
+      theme: "striped",
+      headStyles: {
+        fillColor: dangerColor,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+      },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 15, halign: "center" },
+        3: { cellWidth: 25, halign: "right" },
+        4: { cellWidth: 28, halign: "right", fontStyle: "bold" },
+        5: { cellWidth: 40 },
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: pageWidth - margin * 2,
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+  }
 
   // ==================== EVOLUTION CHARTS ====================
   const evolutionData = generateEvolutionData(transactions, startDate, endDate);

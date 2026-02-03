@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,20 +33,26 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Plus, Loader2, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
+import { Package, Plus, Loader2, AlertTriangle, ArrowUp, ArrowDown, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
-import type { Product, StockMovement, StockOutReasonType } from "@/types/database";
+import type { Product, ProductCategory, StockMovement, StockOutReasonType } from "@/types/database";
+
+type ProductWithCategory = Product & { category?: ProductCategory | null };
+type ProductGroup = { category: ProductCategory | null; products: ProductWithCategory[] };
 
 export default function Produtos() {
   const { profile, isAdmin } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithCategory[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [isEditPriceDialogOpen, setIsEditPriceDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithCategory | null>(null);
   const [damagedMovements, setDamagedMovements] = useState<StockMovement[]>([]);
   const [isDamagedLoading, setIsDamagedLoading] = useState(true);
 
@@ -58,6 +64,7 @@ export default function Produtos() {
     quantity: "",
     min_quantity: "5",
     purchased_with_company_cash: "no" as "yes" | "no",
+    category_id: "",
   });
 
   const [movementForm, setMovementForm] = useState({
@@ -69,17 +76,41 @@ export default function Produtos() {
     reason: "",
   });
 
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+  });
+
   const [editPriceForm, setEditPriceForm] = useState({
     cost: "",
     sale_price: "",
+    category_id: "",
   });
 
   useEffect(() => {
     if (profile?.tenant_id) {
+      fetchCategories();
       fetchProducts();
       fetchDamagedMovements();
     }
   }, [profile?.tenant_id]);
+
+  const fetchCategories = async () => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .select("*")
+        .eq("tenant_id", profile.tenant_id)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setCategories((data as ProductCategory[]) || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Erro ao carregar categorias de produto.");
+    }
+  };
 
   const fetchProducts = async () => {
     if (!profile?.tenant_id) return;
@@ -87,12 +118,12 @@ export default function Produtos() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("*, category:product_categories(id, name)")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
       if (error) throw error;
-      setProducts((data as Product[]) || []);
+      setProducts((data as ProductWithCategory[]) || []);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -123,6 +154,53 @@ export default function Produtos() {
     }
   };
 
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.tenant_id || !isAdmin) return;
+
+    const name = categoryForm.name.trim();
+    if (!name) {
+      toast.error("Informe um nome para a categoria.");
+      return;
+    }
+
+    setIsSavingCategory(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .insert({
+          tenant_id: profile.tenant_id,
+          name,
+        })
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      toast.success("Categoria criada com sucesso!");
+      setCategoryForm({ name: "" });
+      setIsCategoryDialogOpen(false);
+      await fetchCategories();
+
+      if (data?.id) {
+        setProductForm((current) => ({
+          ...current,
+          category_id: current.category_id || data.id,
+        }));
+        setEditPriceForm((current) => ({
+          ...current,
+          category_id: current.category_id || data.id,
+        }));
+      }
+    } catch (error) {
+      console.error("Error creating category:", error);
+      toast.error("Erro ao criar categoria");
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.tenant_id || !isAdmin) return;
@@ -144,6 +222,7 @@ export default function Produtos() {
           sale_price: salePrice,
           quantity,
           min_quantity: parseInt(productForm.min_quantity) || 5,
+          category_id: productForm.category_id || null,
         })
         .select("id")
         .single();
@@ -178,6 +257,7 @@ export default function Produtos() {
         quantity: "",
         min_quantity: "5",
         purchased_with_company_cash: "no",
+        category_id: "",
       });
       fetchProducts();
     } catch (error) {
@@ -309,11 +389,48 @@ export default function Produtos() {
     }).format(value);
   };
 
-  const openEditPriceDialog = (product: Product) => {
+  const groupedProducts = useMemo<ProductGroup[]>(() => {
+    const sortedCategories = [...categories].sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" })
+    );
+
+    const categoryGroups = sortedCategories.map<ProductGroup>((category) => ({
+      category,
+      products: [],
+    }));
+
+    const categoryMap = new Map<string, ProductGroup>(
+      categoryGroups.map((group) => [group.category!.id, group])
+    );
+
+    const uncategorized: ProductWithCategory[] = [];
+
+    products.forEach((product) => {
+      if (product.category_id && categoryMap.has(product.category_id)) {
+        categoryMap.get(product.category_id)!.products.push(product);
+      } else {
+        uncategorized.push(product);
+      }
+    });
+
+    const result: ProductGroup[] = [...categoryGroups];
+
+    if (uncategorized.length > 0 || result.length === 0) {
+      result.unshift({
+        category: null,
+        products: uncategorized,
+      });
+    }
+
+    return result;
+  }, [products, categories]);
+
+  const openEditPriceDialog = (product: ProductWithCategory) => {
     setSelectedProduct(product);
     setEditPriceForm({
       cost: product.cost?.toString() ?? "",
       sale_price: product.sale_price?.toString() ?? "",
+      category_id: product.category_id ?? "",
     });
     setIsEditPriceDialogOpen(true);
   };
@@ -326,10 +443,11 @@ export default function Produtos() {
     try {
       const cost = parseFloat(editPriceForm.cost) || 0;
       const salePrice = parseFloat(editPriceForm.sale_price) || 0;
+      const categoryId = editPriceForm.category_id || null;
 
       const { error } = await supabase
         .from("products")
-        .update({ cost, sale_price: salePrice })
+        .update({ cost, sale_price: salePrice, category_id: categoryId })
         .eq("id", selectedProduct.id);
 
       if (error) throw error;
@@ -337,7 +455,7 @@ export default function Produtos() {
       toast.success("Preços atualizados com sucesso!");
       setIsEditPriceDialogOpen(false);
       setSelectedProduct(null);
-      setEditPriceForm({ cost: "", sale_price: "" });
+      setEditPriceForm({ cost: "", sale_price: "", category_id: "" });
       fetchProducts();
     } catch (error) {
       toast.error("Erro ao atualizar preços");
@@ -370,6 +488,61 @@ export default function Produtos() {
       subtitle="Gerencie o estoque do salão"
       actions={
         <div className="flex gap-3">
+          <Dialog
+            open={isCategoryDialogOpen}
+            onOpenChange={(open) => {
+              setIsCategoryDialogOpen(open);
+              if (!open) {
+                setCategoryForm({ name: "" });
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Tag className="mr-2 h-4 w-4" />
+                Nova Categoria
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nova Categoria de Produto</DialogTitle>
+                <DialogDescription>Organize seus produtos por categorias.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateCategory}>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nome da Categoria</Label>
+                    <Input
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ name: e.target.value })}
+                      placeholder="Ex: Hair Care"
+                      required
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSavingCategory}
+                    className="gradient-primary text-primary-foreground"
+                  >
+                    {isSavingCategory ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      "Criar"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -549,6 +722,33 @@ export default function Produtos() {
                       placeholder="Descrição opcional..."
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={productForm.category_id}
+                      onValueChange={(value) => setProductForm({ ...productForm, category_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem categoria</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="px-0 text-sm"
+                      onClick={() => setIsCategoryDialogOpen(true)}
+                    >
+                      Criar nova categoria
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Custo (R$)</Label>
@@ -666,7 +866,7 @@ export default function Produtos() {
               setIsEditPriceDialogOpen(open);
               if (!open) {
                 setSelectedProduct(null);
-                setEditPriceForm({ cost: "", sale_price: "" });
+                setEditPriceForm({ cost: "", sale_price: "", category_id: "" });
               }
             }}
           >
@@ -682,6 +882,25 @@ export default function Produtos() {
                   <div className="space-y-2">
                     <Label>Produto</Label>
                     <Input value={selectedProduct?.name || ""} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={editPriceForm.category_id}
+                      onValueChange={(value) => setEditPriceForm({ ...editPriceForm, category_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem categoria</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -800,52 +1019,72 @@ export default function Produtos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => {
-                  const isLowStock = product.quantity <= product.min_quantity;
-                  const salePrice = product.sale_price ?? 0;
-                  const cost = product.cost ?? 0;
-                  const profit = salePrice - cost;
-                  const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-                  return (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          {product.description && (
-                            <p className="text-sm text-muted-foreground">{product.description}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatCurrency(product.cost)}</TableCell>
-                      <TableCell>{formatCurrency(salePrice)}</TableCell>
-                      <TableCell className="text-center">{marginPercent.toFixed(1)}%</TableCell>
-                      <TableCell>{formatCurrency(profit)}</TableCell>
-                      <TableCell className="text-center">
-                        <span className={isLowStock ? "font-bold text-warning" : ""}>
-                          {product.quantity}
+                {groupedProducts.map((group) => (
+                  <Fragment key={group.category?.id ?? "uncategorized"}>
+                    <TableRow className="bg-muted/40">
+                      <TableCell colSpan={9} className="font-semibold">
+                        {group.category ? group.category.name : "Sem categoria"}{" "}
+                        <span className="text-sm text-muted-foreground">
+                          ({group.products.length} produto{group.products.length === 1 ? "" : "s"})
                         </span>
                       </TableCell>
-                      <TableCell className="text-center">{product.min_quantity}</TableCell>
-                      <TableCell>
-                        {isLowStock ? (
-                          <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
-                            <AlertTriangle className="mr-1 h-3 w-3" />
-                            Baixo
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-                            Normal
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
-                          Editar preços
-                        </Button>
-                      </TableCell>
                     </TableRow>
-                  );
-                })}
+                    {group.products.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center text-muted-foreground">
+                          Nenhum produto nesta categoria
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      group.products.map((product) => {
+                        const isLowStock = product.quantity <= product.min_quantity;
+                        const salePrice = product.sale_price ?? 0;
+                        const cost = product.cost ?? 0;
+                        const profit = salePrice - cost;
+                        const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+                        return (
+                          <TableRow key={product.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <p className="font-medium">{product.name}</p>
+                                {product.description && (
+                                  <p className="text-sm text-muted-foreground">{product.description}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{formatCurrency(product.cost)}</TableCell>
+                            <TableCell>{formatCurrency(salePrice)}</TableCell>
+                            <TableCell className="text-center">{marginPercent.toFixed(1)}%</TableCell>
+                            <TableCell>{formatCurrency(profit)}</TableCell>
+                            <TableCell className="text-center">
+                              <span className={isLowStock ? "font-bold text-warning" : ""}>
+                                {product.quantity}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">{product.min_quantity}</TableCell>
+                            <TableCell>
+                              {isLowStock ? (
+                                <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
+                                  <AlertTriangle className="mr-1 h-3 w-3" />
+                                  Baixo
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-success/20 text-success border-success/30">
+                                  Normal
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
+                                Editar detalhes
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </Fragment>
+                ))}
               </TableBody>
             </Table>
           )}

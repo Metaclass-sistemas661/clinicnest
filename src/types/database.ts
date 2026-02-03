@@ -57,6 +57,13 @@ export interface Service {
   updated_at: string;
 }
 
+export interface ProductCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Product {
   id: string;
   tenant_id: string;
@@ -66,9 +73,11 @@ export interface Product {
   sale_price: number;
   quantity: number;
   min_quantity: number;
+  category_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  category?: ProductCategory | null;
 }
 
 export interface Appointment {

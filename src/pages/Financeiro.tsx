@@ -47,7 +47,8 @@ import {
   ArrowRightLeft,
   Link as LinkIcon,
   Wallet,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
@@ -55,7 +56,7 @@ import { toast } from "sonner";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
 import { ExportPdfDialog } from "@/components/financeiro/ExportPdfDialog";
-import { generateFinancialReport } from "@/utils/financialPdfExport";
+import { generateFinancialReport, DamagedProductLoss } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
@@ -74,6 +75,8 @@ export default function Financeiro() {
   const [commissions, setCommissions] = useState<any[]>([]);
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
   const [professionals, setProfessionals] = useState<any[]>([]);
+  const [productLosses, setProductLosses] = useState<DamagedProductLoss[]>([]);
+  const [isLoadingProductLosses, setIsLoadingProductLosses] = useState(true);
 
   const [formData, setFormData] = useState({
     type: "income" as TransactionType,
@@ -91,6 +94,7 @@ export default function Financeiro() {
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
+  const totalProductLoss = productLosses.reduce((sum, loss) => sum + Number(loss.totalLoss), 0);
 
   // Count linked transactions (from appointments)
   const linkedTransactions = transactions.filter((t) => t.appointment_id).length;
@@ -122,6 +126,44 @@ export default function Financeiro() {
         .reduce((sum, t) => sum + Number(t.amount), 0);
       const reportBalance = reportIncome - reportExpense;
 
+      const { data: damagedData, error: damagedError } = await supabase
+        .from("stock_movements")
+        .select(
+          `
+            id,
+            product_id,
+            quantity,
+            reason,
+            created_at,
+            movement_type,
+            out_reason_type,
+            product:products(name, cost)
+          `
+        )
+        .eq("tenant_id", profile.tenant_id)
+        .eq("movement_type", "out")
+        .eq("out_reason_type", "damaged")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (damagedError) throw damagedError;
+
+      const damagedLosses: DamagedProductLoss[] = (damagedData || []).map((movement: any) => {
+        const quantity = Math.abs(Number(movement.quantity) || 0);
+        const unitCost = Number(movement.product?.cost) || 0;
+        return {
+          id: movement.id,
+          productName: movement.product?.name || "Produto removido",
+          quantity,
+          unitCost,
+          totalLoss: unitCost * quantity,
+          reason: movement.reason,
+          created_at: movement.created_at,
+        };
+      });
+      const totalProductLoss = damagedLosses.reduce((sum, loss) => sum + loss.totalLoss, 0);
+
       // Fetch commissions for the selected date range
       const { data: commissionsData } = await supabase
         .from("commission_payments")
@@ -143,6 +185,8 @@ export default function Financeiro() {
         totalExpense: reportExpense,
         balance: reportBalance,
         commissions: (commissionsData || []) as any[],
+        damagedLosses,
+        totalProductLoss,
       });
 
       toast.success("PDF gerado com sucesso!");
@@ -157,6 +201,7 @@ export default function Financeiro() {
       fetchTransactions();
       fetchCommissions();
       fetchProfessionals();
+      fetchProductLosses();
     }
   }, [profile?.tenant_id, isAdmin, filterMonth]);
 
@@ -263,6 +308,57 @@ export default function Financeiro() {
       setProfessionals((data || []) as any[]);
     } catch (error) {
       console.error("Error fetching professionals:", error);
+    }
+  };
+
+  const fetchProductLosses = async () => {
+    if (!profile?.tenant_id) return;
+
+    setIsLoadingProductLosses(true);
+    const [year, month] = filterMonth.split("-").map(Number);
+    const start = startOfMonth(new Date(year, month - 1));
+    const end = endOfMonth(new Date(year, month - 1));
+
+    try {
+      const { data, error } = await supabase
+        .from("stock_movements")
+        .select(`
+          id,
+          product_id,
+          quantity,
+          reason,
+          created_at,
+          product:products(name, cost)
+        `)
+        .eq("tenant_id", profile.tenant_id)
+        .eq("movement_type", "out")
+        .eq("out_reason_type", "damaged")
+        .gte("created_at", start.toISOString())
+        .lte("created_at", end.toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: DamagedProductLoss[] = (data || []).map((movement: any) => {
+        const quantity = Math.abs(Number(movement.quantity) || 0);
+        const unitCost = Number(movement.product?.cost) || 0;
+        return {
+          id: movement.id,
+          productName: movement.product?.name || "Produto removido",
+          quantity,
+          unitCost,
+          totalLoss: unitCost * quantity,
+          reason: movement.reason,
+          created_at: movement.created_at,
+        };
+      });
+
+      setProductLosses(mapped);
+    } catch (error) {
+      console.error("Error fetching product losses:", error);
+      toast.error("Erro ao carregar perdas de produtos.");
+    } finally {
+      setIsLoadingProductLosses(false);
     }
   };
 
@@ -427,9 +523,9 @@ export default function Financeiro() {
     >
       <div className="space-y-6">
         {/* Stats - skeleton enquanto carrega */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3">
                 <div className="space-y-2 flex-1 min-w-0">
                   <Skeleton className="h-3 w-24" />
@@ -459,6 +555,13 @@ export default function Financeiro() {
                 variant="danger"
               />
               <StatCard
+                title="Perdas de Produtos"
+                value={formatCurrency(totalProductLoss)}
+                icon={AlertTriangle}
+                variant="danger"
+                description="Baixas registradas como danificadas"
+              />
+              <StatCard
                 title="Vinculados a Agenda"
                 value={linkedTransactions}
                 icon={LinkIcon}
@@ -481,6 +584,64 @@ export default function Financeiro() {
             className="w-full sm:w-48"
           />
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Perdas de Produtos (danificados)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Itens retirados do estoque como baixa danificada no período selecionado.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {isLoadingProductLosses ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : productLosses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma perda registrada neste período.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm text-muted-foreground pb-3">
+                  <span>Perda total</span>
+                  <span className="font-semibold text-destructive">
+                    {formatCurrency(totalProductLoss)}
+                  </span>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-center">Qtd</TableHead>
+                      <TableHead>Custo Unit.</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Motivo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productLosses.map((loss) => (
+                      <TableRow key={loss.id}>
+                        <TableCell>{formatInAppTz(loss.created_at, "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{loss.productName}</TableCell>
+                        <TableCell className="text-center">{loss.quantity}</TableCell>
+                        <TableCell>{formatCurrency(loss.unitCost)}</TableCell>
+                        <TableCell className="font-semibold text-destructive">
+                          {formatCurrency(loss.totalLoss)}
+                        </TableCell>
+                        <TableCell>{loss.reason || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
