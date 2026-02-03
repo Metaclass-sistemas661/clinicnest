@@ -47,6 +47,15 @@ export default function Dashboard() {
     }
   }, [profile?.tenant_id]);
 
+  // Refetch quando o usuário volta para a página (ex.: após marcar comissão como paga no Financeiro)
+  useEffect(() => {
+    const onFocus = () => {
+      if (profile?.tenant_id) fetchDashboardData();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [profile?.tenant_id]);
+
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
 
@@ -162,18 +171,14 @@ export default function Dashboard() {
         }
 
         if (commissionsData) {
-          console.log("[Dashboard] Comissões do profissional encontradas:", commissionsData.length);
           const received = commissionsData
             .filter((c) => c.status === "paid")
             .reduce((sum, c) => sum + Number(c.amount), 0);
           const toReceive = commissionsData
             .filter((c) => c.status === "pending")
             .reduce((sum, c) => sum + Number(c.amount), 0);
-          console.log("[Dashboard] Comissões recebidas:", received, "A receber:", toReceive);
           setCommissionsReceived(received);
           setCommissionsToReceive(toReceive);
-        } else {
-          console.log("[Dashboard] Nenhuma comissão encontrada para o profissional");
         }
       }
 
