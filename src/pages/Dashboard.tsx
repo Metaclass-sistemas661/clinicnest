@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -235,76 +236,93 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-8">
-        {/* Stats Grid */}
+        {/* Stats Grid - skeleton enquanto carrega para layout aparecer na hora */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {isAdmin && (
+          {isLoading ? (
+            Array.from({ length: isAdmin ? 8 : 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3"
+              >
+                <div className="space-y-2 flex-1 min-w-0">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-7 w-24 sm:h-8 lg:h-9" />
+                </div>
+                <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
+              </div>
+            ))
+          ) : (
             <>
+              {isAdmin && (
+                <>
+                  <StatCard
+                    title="Saldo do Mês"
+                    value={formatCurrency(stats.monthlyBalance)}
+                    icon={DollarSign}
+                    variant={stats.monthlyBalance >= 0 ? "success" : "danger"}
+                  />
+                  <StatCard
+                    title="Receitas"
+                    value={formatCurrency(stats.monthlyIncome)}
+                    icon={TrendingUp}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="Despesas"
+                    value={formatCurrency(stats.monthlyExpenses)}
+                    icon={TrendingDown}
+                    variant="danger"
+                  />
+                  <StatCard
+                    title="Comissões Pagas"
+                    value={formatCurrency(commissionsPaid)}
+                    icon={Wallet}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="Comissões a Pagar"
+                    value={formatCurrency(commissionsPending)}
+                    icon={CreditCard}
+                    variant="warning"
+                  />
+                </>
+              )}
+              {!isAdmin && (
+                <>
+                  <StatCard
+                    title="Comissões Recebidas"
+                    value={formatCurrency(commissionsReceived)}
+                    icon={Wallet}
+                    variant="success"
+                  />
+                  <StatCard
+                    title="Comissões a Receber"
+                    value={formatCurrency(commissionsToReceive)}
+                    icon={CreditCard}
+                    variant="warning"
+                  />
+                </>
+              )}
               <StatCard
-                title="Saldo do Mês"
-                value={formatCurrency(stats.monthlyBalance)}
-                icon={DollarSign}
-                variant={stats.monthlyBalance >= 0 ? "success" : "danger"}
+                title="Agendamentos Hoje"
+                value={stats.todayAppointments}
+                icon={Calendar}
               />
               <StatCard
-                title="Receitas"
-                value={formatCurrency(stats.monthlyIncome)}
-                icon={TrendingUp}
-                variant="success"
+                title="Pendentes"
+                value={stats.pendingAppointments}
+                icon={Clock}
+                variant={stats.pendingAppointments > 0 ? "warning" : "default"}
               />
-              <StatCard
-                title="Despesas"
-                value={formatCurrency(stats.monthlyExpenses)}
-                icon={TrendingDown}
-                variant="danger"
-              />
-              <StatCard
-                title="Comissões Pagas"
-                value={formatCurrency(commissionsPaid)}
-                icon={Wallet}
-                variant="success"
-              />
-              <StatCard
-                title="Comissões a Pagar"
-                value={formatCurrency(commissionsPending)}
-                icon={CreditCard}
-                variant="warning"
-              />
+              {isAdmin && (
+                <StatCard
+                  title="Estoque Baixo"
+                  value={stats.lowStockProducts}
+                  icon={Package}
+                  variant={stats.lowStockProducts > 0 ? "warning" : "default"}
+                />
+              )}
             </>
-          )}
-          {!isAdmin && (
-            <>
-              <StatCard
-                title="Comissões Recebidas"
-                value={formatCurrency(commissionsReceived)}
-                icon={Wallet}
-                variant="success"
-              />
-              <StatCard
-                title="Comissões a Receber"
-                value={formatCurrency(commissionsToReceive)}
-                icon={CreditCard}
-                variant="warning"
-              />
-            </>
-          )}
-          <StatCard
-            title="Agendamentos Hoje"
-            value={stats.todayAppointments}
-            icon={Calendar}
-          />
-          <StatCard
-            title="Pendentes"
-            value={stats.pendingAppointments}
-            icon={Clock}
-            variant={stats.pendingAppointments > 0 ? "warning" : "default"}
-          />
-          {isAdmin && (
-            <StatCard
-              title="Estoque Baixo"
-              value={stats.lowStockProducts}
-              icon={Package}
-              variant={stats.lowStockProducts > 0 ? "warning" : "default"}
-            />
           )}
         </div>
 
