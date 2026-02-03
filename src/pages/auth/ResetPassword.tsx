@@ -58,35 +58,76 @@ export default function ResetPassword() {
     // A Edge Function atualiza a senha usando admin.updateUserById (não envia email automático)
     // e então envia nosso email customizado
     try {
+      console.log("[ResetPassword] Chamando Edge Function update-password");
       const { data, error } = await supabase.functions.invoke("update-password", {
         body: {
           password: password,
         },
       });
 
+      console.log("[ResetPassword] Resposta da Edge Function:", { data, error });
+
       if (error) {
-        toast.error("Erro ao atualizar senha", {
-          description: error.message,
+        console.error("[ResetPassword] Erro na Edge Function:", error);
+        // Fallback: usar método padrão se Edge Function falhar
+        const { error: fallbackError } = await supabase.auth.updateUser({
+          password: password,
         });
-        setIsLoading(false);
+        if (fallbackError) {
+          toast.error("Erro ao atualizar senha", {
+            description: fallbackError.message,
+          });
+          setIsLoading(false);
+          return;
+        }
+        toast.success("Senha atualizada com sucesso!");
+        setTimeout(() => navigate("/login"), 2000);
         return;
       }
 
       if (!data?.success) {
-        toast.error("Erro ao atualizar senha", {
-          description: data?.error || "Erro desconhecido",
+        console.error("[ResetPassword] Edge Function retornou erro:", data);
+        // Fallback: usar método padrão
+        const { error: fallbackError } = await supabase.auth.updateUser({
+          password: password,
         });
-        setIsLoading(false);
+        if (fallbackError) {
+          toast.error("Erro ao atualizar senha", {
+            description: fallbackError.message,
+          });
+          setIsLoading(false);
+          return;
+        }
+        toast.success("Senha atualizada com sucesso!");
+        setTimeout(() => navigate("/login"), 2000);
         return;
       }
 
+      console.log("[ResetPassword] Senha atualizada com sucesso via Edge Function");
       toast.success("Senha atualizada com sucesso!");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      toast.error("Erro ao atualizar senha", {
-        description: err instanceof Error ? err.message : "Erro desconhecido",
-      });
-      setIsLoading(false);
+      console.error("[ResetPassword] Exceção ao atualizar senha:", err);
+      // Fallback: usar método padrão
+      try {
+        const { error: fallbackError } = await supabase.auth.updateUser({
+          password: password,
+        });
+        if (fallbackError) {
+          toast.error("Erro ao atualizar senha", {
+            description: fallbackError.message,
+          });
+          setIsLoading(false);
+          return;
+        }
+        toast.success("Senha atualizada com sucesso!");
+        setTimeout(() => navigate("/login"), 2000);
+      } catch (fallbackErr) {
+        toast.error("Erro ao atualizar senha", {
+          description: fallbackErr instanceof Error ? fallbackErr.message : "Erro desconhecido",
+        });
+        setIsLoading(false);
+      }
     }
   };
 
