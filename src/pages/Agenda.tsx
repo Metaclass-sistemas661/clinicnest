@@ -58,7 +58,9 @@ export default function Agenda() {
     scheduled_time: "",
     notes: "",
     status: "pending" as AppointmentStatus,
+    commission_amount: "",
   });
+  const [professionalCommissions, setProfessionalCommissions] = useState<Record<string, { type: "percentage" | "fixed"; value: number }>>({});
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -68,6 +70,20 @@ export default function Agenda() {
 
   const fetchData = async () => {
     if (!profile?.tenant_id) return;
+
+    // Fetch professional commissions
+    const { data: commissionsData } = await supabase
+      .from("professional_commissions")
+      .select("user_id, type, value")
+      .eq("tenant_id", profile.tenant_id);
+
+    if (commissionsData) {
+      const commissionsMap: Record<string, { type: "percentage" | "fixed"; value: number }> = {};
+      commissionsData.forEach((c) => {
+        commissionsMap[c.user_id] = { type: c.type, value: Number(c.value) };
+      });
+      setProfessionalCommissions(commissionsMap);
+    }
 
     let start: Date, end: Date;
     if (viewMode === "day") {
@@ -183,6 +199,15 @@ export default function Agenda() {
         return;
       }
 
+      // Calcular comissão se profissional e serviço foram selecionados
+      let commissionAmount: number | null = null;
+      if (formData.professional_id && selectedService && formData.commission_amount) {
+        const commissionValue = parseFloat(formData.commission_amount);
+        if (!isNaN(commissionValue) && commissionValue >= 0) {
+          commissionAmount = commissionValue;
+        }
+      }
+
       const { error } = await supabase.from("appointments").insert({
         tenant_id: profile.tenant_id,
         client_id: formData.client_id || null,
@@ -191,6 +216,7 @@ export default function Agenda() {
         scheduled_at: scheduledAt.toISOString(),
         duration_minutes: durationMinutes,
         price: selectedService?.price || 0,
+        commission_amount: commissionAmount,
         status: formData.status,
         notes: formData.notes || null,
       });
@@ -207,6 +233,7 @@ export default function Agenda() {
         scheduled_time: "",
         notes: "",
         status: "pending",
+        commission_amount: "",
       });
       fetchData();
     } catch (error) {
@@ -240,6 +267,13 @@ export default function Agenda() {
     }
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
   const editAppointment = async (id: string, data: EditAppointmentData) => {
     try {
       const selectedService = services.find((s) => s.id === data.service_id);
@@ -254,6 +288,9 @@ export default function Agenda() {
           notes: data.notes,
           price: selectedService?.price || 0,
           duration_minutes: selectedService?.duration_minutes || 45,
+          commission_amount: data.commission_amount !== undefined && data.commission_amount !== null 
+            ? (typeof data.commission_amount === "string" ? parseFloat(data.commission_amount) : data.commission_amount)
+            : null,
         })
         .eq("id", id);
 
@@ -390,7 +427,27 @@ export default function Agenda() {
                     <Label>Serviço</Label>
                     <Select
                       value={formData.service_id}
-                      onValueChange={(v) => setFormData({ ...formData, service_id: v })}
+                      onValueChange={(v) => {
+                        const selectedService = services.find((s) => s.id === v);
+                        const commission = formData.professional_id 
+                          ? professionalCommissions[formData.professional_id] 
+                          : null;
+                        let calculatedCommission = "";
+                        
+                        if (commission && selectedService) {
+                          if (commission.type === "percentage") {
+                            calculatedCommission = String((selectedService.price * commission.value) / 100);
+                          } else {
+                            calculatedCommission = String(commission.value);
+                          }
+                        }
+                        
+                        setFormData({ 
+                          ...formData, 
+                          service_id: v,
+                          commission_amount: calculatedCommission
+                        });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o serviço" />
@@ -408,7 +465,25 @@ export default function Agenda() {
                     <Label>Profissional</Label>
                     <Select
                       value={formData.professional_id}
-                      onValueChange={(v) => setFormData({ ...formData, professional_id: v })}
+                      onValueChange={(v) => {
+                        const selectedService = services.find((s) => s.id === formData.service_id);
+                        const commission = professionalCommissions[v];
+                        let calculatedCommission = "";
+                        
+                        if (commission && selectedService) {
+                          if (commission.type === "percentage") {
+                            calculatedCommission = String((selectedService.price * commission.value) / 100);
+                          } else {
+                            calculatedCommission = String(commission.value);
+                          }
+                        }
+                        
+                        setFormData({ 
+                          ...formData, 
+                          professional_id: v,
+                          commission_amount: calculatedCommission
+                        });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o profissional" />
@@ -422,6 +497,34 @@ export default function Agenda() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {formData.professional_id && formData.service_id && (
+                    <div className="space-y-2">
+                      <Label>Comissão do Profissional (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.commission_amount}
+                        onChange={(e) => setFormData({ ...formData, commission_amount: e.target.value })}
+                        placeholder="Valor da comissão"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const selectedService = services.find((s) => s.id === formData.service_id);
+                          const commission = professionalCommissions[formData.professional_id];
+                          if (commission && selectedService) {
+                            if (commission.type === "percentage") {
+                              const calculated = (selectedService.price * commission.value) / 100;
+                              return `Comissão padrão: ${formatCurrency(calculated)} (${commission.value}% de ${formatCurrency(selectedService.price)})`;
+                            } else {
+                              return `Comissão padrão: ${formatCurrency(commission.value)} (valor fixo)`;
+                            }
+                          }
+                          return "Defina o valor da comissão para este serviço";
+                        })()}
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Data</Label>
                     <Input

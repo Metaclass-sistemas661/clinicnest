@@ -80,6 +80,7 @@ export interface EditAppointmentData {
   professional_id: string | null;
   scheduled_at: string;
   notes: string | null;
+  commission_amount?: number | null;
 }
 
 const statusConfig = {
@@ -174,6 +175,9 @@ export function AppointmentsTable({
       scheduled_at: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: format(scheduledDate, "HH:mm"),
       notes: appointment.notes || "",
+      commission_amount: (appointment as any).commission_amount 
+        ? String((appointment as any).commission_amount) 
+        : "",
     });
     setEditDialogOpen(true);
   };
@@ -185,12 +189,17 @@ export function AppointmentsTable({
     setIsSaving(true);
     try {
       const scheduledAt = new Date(`${editFormData.scheduled_at}T${editFormData.scheduled_time}`);
+      const commissionAmount = editFormData.commission_amount 
+        ? parseFloat(editFormData.commission_amount) 
+        : null;
+      
       await onEdit(appointmentToEdit.id, {
         client_id: editFormData.client_id || null,
         service_id: editFormData.service_id || null,
         professional_id: editFormData.professional_id || null,
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
+        commission_amount: !isNaN(commissionAmount || 0) && commissionAmount !== null ? commissionAmount : null,
       });
       setEditDialogOpen(false);
       setAppointmentToEdit(null);
@@ -601,6 +610,22 @@ export function AppointmentsTable({
                   </SelectContent>
                 </Select>
               </div>
+              {editFormData.professional_id && editFormData.service_id && (
+                <div className="space-y-2">
+                  <Label>Comissão do Profissional (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editFormData.commission_amount}
+                    onChange={(e) => setEditFormData({ ...editFormData, commission_amount: e.target.value })}
+                    placeholder="Valor da comissão"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Valor que o profissional receberá por este serviço específico
+                  </p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Data</Label>
                 <Input
