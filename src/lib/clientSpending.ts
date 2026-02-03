@@ -8,6 +8,12 @@ export interface ClientSpendingRow {
   services_count: number;
   products_count: number;
   total_amount: number;
+  /** Ticket médio = total / visitas (serviços realizados). Se 0 visitas, usa total. */
+  ticket_medio: number;
+  /** Serviços realizados (nome, valor, data) */
+  services_detail: { name: string; amount: number; date: string }[];
+  /** Produtos comprados (nome, valor, data) */
+  products_detail: { name: string; amount: number; date: string }[];
 }
 
 export interface ClientSpendingByPeriod {
@@ -30,7 +36,9 @@ export async function fetchClientSpendingAllTime(
       `
       amount,
       category,
-      appointments(client_id, clients(id, name))
+      transaction_date,
+      appointments(client_id, clients(id, name), service_id, services(name)),
+      products(name)
     `
     )
     .eq("tenant_id", tenantId)
@@ -39,36 +47,76 @@ export async function fetchClientSpendingAllTime(
 
   if (error) throw error;
 
-  const byClient = new Map<
-    string,
-    { name: string; services: number; products: number; total: number }
-  >();
+  type Acc = {
+    name: string;
+    services: number;
+    products: number;
+    total: number;
+    services_detail: { name: string; amount: number; date: string }[];
+    products_detail: { name: string; amount: number; date: string }[];
+  };
+
+  const byClient = new Map<string, Acc>();
 
   for (const row of data || []) {
-    const apt = row.appointments as { client_id: string | null; clients?: { id: string; name: string } | null } | null;
+    const apt = row.appointments as {
+      client_id: string | null;
+      clients?: { id: string; name: string } | null;
+      services?: { name: string } | null;
+    } | null;
     if (!apt?.client_id || !apt?.clients) continue;
 
     const id = apt.client_id;
     const name = apt.clients.name;
     const amount = Number(row.amount) || 0;
+    const date = String(row.transaction_date || "");
 
     if (!byClient.has(id)) {
-      byClient.set(id, { name, services: 0, products: 0, total: 0 });
+      byClient.set(id, {
+        name,
+        services: 0,
+        products: 0,
+        total: 0,
+        services_detail: [],
+        products_detail: [],
+      });
     }
     const cur = byClient.get(id)!;
     cur.total += amount;
-    if (row.category === "Serviço") cur.services += 1;
-    else if (row.category === "Venda de Produto") cur.products += 1;
+
+    if (row.category === "Serviço") {
+      cur.services += 1;
+      cur.services_detail.push({
+        name: apt.services?.name ?? "Serviço",
+        amount,
+        date,
+      });
+    } else if (row.category === "Venda de Produto") {
+      cur.products += 1;
+      const prod = row.products as { name: string } | null;
+      cur.products_detail.push({
+        name: prod?.name ?? "Produto",
+        amount,
+        date,
+      });
+    }
   }
 
   return Array.from(byClient.entries())
-    .map(([client_id, v]) => ({
-      client_id,
-      client_name: v.name,
-      services_count: v.services,
-      products_count: v.products,
-      total_amount: v.total,
-    }))
+    .map(([client_id, v]) => {
+      const visits = v.services;
+      const ticketMedio = visits > 0 ? v.total / visits : v.total;
+      return {
+        client_id,
+        client_name: v.name,
+        services_count: v.services,
+        products_count: v.products,
+        total_amount: v.total,
+        ticket_medio: Math.round(ticketMedio * 100) / 100,
+        services_detail: v.services_detail,
+        products_detail: v.products_detail,
+      };
+    })
     .sort((a, b) => b.total_amount - a.total_amount);
 }
 

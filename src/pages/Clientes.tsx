@@ -26,7 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
 import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
@@ -41,6 +41,8 @@ export default function Clientes() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [detailClient, setDetailClient] = useState<Client | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -356,6 +358,21 @@ export default function Clientes() {
                             <DollarSign className="h-3 w-3" />
                             {formatCurrency(spending.total_amount)}
                           </Badge>
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            Ticket médio: {formatCurrency(spending.ticket_medio)}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs"
+                            onClick={() => {
+                              setDetailClient(client);
+                              setIsDetailOpen(true);
+                            }}
+                          >
+                            <Info className="h-3 w-3 mr-1" />
+                            Detalhes
+                          </Button>
                         </div>
                       )}
                       {client.notes && (
@@ -420,7 +437,7 @@ export default function Clientes() {
                           {isAdmin && clientSpending.length > 0 && (
                             <TableCell>
                               {spending ? (
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   {spending.services_count > 0 && (
                                     <Badge variant="outline" className="gap-1 text-xs">
                                       <Scissors className="h-3 w-3" />
@@ -436,6 +453,20 @@ export default function Clientes() {
                                   <Badge variant="secondary" className="text-xs">
                                     {formatCurrency(spending.total_amount)}
                                   </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Ticket: {formatCurrency(spending.ticket_medio)}
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-xs px-1"
+                                    onClick={() => {
+                                      setDetailClient(client);
+                                      setIsDetailOpen(true);
+                                    }}
+                                  >
+                                    <Info className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground text-sm">—</span>
@@ -464,6 +495,95 @@ export default function Clientes() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de detalhes do cliente (consumo) */}
+      {detailClient && (
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{detailClient.name}</DialogTitle>
+              <DialogDescription>
+                Consumo e ticket médio
+              </DialogDescription>
+            </DialogHeader>
+            {(() => {
+              const spending = getSpendingForClient(detailClient.id);
+              if (!spending) {
+                return (
+                  <p className="text-muted-foreground text-sm py-4">
+                    Nenhum consumo registrado.
+                  </p>
+                );
+              }
+              const formatDate = (d: string) => {
+                try {
+                  return new Date(d + "T12:00:00").toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  });
+                } catch {
+                  return d;
+                }
+              };
+              return (
+                <div className="space-y-4 py-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-sm">
+                      Total: {formatCurrency(spending.total_amount)}
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      Ticket médio: {formatCurrency(spending.ticket_medio)}
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {spending.services_count} serviço{spending.services_count !== 1 ? "s" : ""}
+                    </Badge>
+                    <Badge variant="outline" className="text-sm">
+                      {spending.products_count} produto{spending.products_count !== 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+
+                  {spending.services_detail.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                        <Scissors className="h-4 w-4" />
+                        Serviços realizados
+                      </h4>
+                      <div className="rounded-lg border divide-y text-sm">
+                        {spending.services_detail.map((s, i) => (
+                          <div key={i} className="flex justify-between items-center px-3 py-2">
+                            <span>{s.name}</span>
+                            <span className="text-muted-foreground">{formatDate(s.date)}</span>
+                            <span className="font-medium">{formatCurrency(s.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {spending.products_detail.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Produtos comprados
+                      </h4>
+                      <div className="rounded-lg border divide-y text-sm">
+                        {spending.products_detail.map((p, i) => (
+                          <div key={i} className="flex justify-between items-center px-3 py-2">
+                            <span>{p.name}</span>
+                            <span className="text-muted-foreground">{formatDate(p.date)}</span>
+                            <span className="font-medium">{formatCurrency(p.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
+      )}
     </MainLayout>
   );
 }
