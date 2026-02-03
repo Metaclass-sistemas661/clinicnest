@@ -48,10 +48,13 @@ export default function Equipe() {
 
   const [formData, setFormData] = useState({
     email: "",
+    password: "",
+    confirm_password: "",
     full_name: "",
     phone: "",
     role: "staff" as AppRole,
   });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.tenant_id && isAdmin) {
@@ -99,24 +102,51 @@ export default function Equipe() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
+    setPasswordError(null);
+    if (formData.password.length < 6) {
+      setPasswordError("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    if (formData.password !== formData.confirm_password) {
+      setPasswordError("As senhas não coincidem");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // For MVP, we'll show a message that email invitation isn't implemented yet
-      // In a real app, you would send an email invitation
-      toast.info("Funcionalidade de convite por email", {
-        description: "No MVP, peça ao usuário para criar uma conta manualmente e depois associe-o ao salão.",
+      const { data, error } = await supabase.functions.invoke("invite-team-member", {
+        body: {
+          email: formData.email.trim(),
+          password: formData.password,
+          full_name: formData.full_name.trim(),
+          phone: formData.phone.trim() || undefined,
+          role: formData.role,
+        },
       });
 
+      if (error) {
+        toast.error(error.message || "Erro ao cadastrar membro");
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success(data?.message ?? "Membro cadastrado. Ele já pode acessar o sistema com o e-mail e a senha definidos.");
       setIsDialogOpen(false);
       setFormData({
         email: "",
+        password: "",
+        confirm_password: "",
         full_name: "",
         phone: "",
         role: "staff",
       });
+      fetchTeam();
     } catch (error) {
-      toast.error("Erro ao convidar membro");
+      toast.error("Erro ao cadastrar membro");
       console.error(error);
     } finally {
       setIsSaving(false);
@@ -181,14 +211,14 @@ export default function Equipe() {
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground">
               <Plus className="mr-2 h-4 w-4" />
-              Convidar Membro
+              Cadastrar profissional
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Convidar Novo Membro</DialogTitle>
+              <DialogTitle>Cadastrar profissional</DialogTitle>
               <DialogDescription>
-                Adicione um novo profissional à equipe
+                O profissional poderá acessar o sistema com o e-mail e a senha definidos abaixo.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleInvite}>
@@ -211,6 +241,37 @@ export default function Equipe() {
                     placeholder="email@exemplo.com"
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Senha</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      setPasswordError(null);
+                    }}
+                    placeholder="Mínimo 6 caracteres"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirmar senha</Label>
+                  <Input
+                    type="password"
+                    value={formData.confirm_password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, confirm_password: e.target.value });
+                      setPasswordError(null);
+                    }}
+                    placeholder="Repita a senha"
+                    minLength={6}
+                    required
+                  />
+                  {passwordError && (
+                    <p className="text-sm text-destructive">{passwordError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Telefone</Label>
@@ -247,10 +308,10 @@ export default function Equipe() {
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
+                      Cadastrando...
                     </>
                   ) : (
-                    "Enviar Convite"
+                    "Cadastrar profissional"
                   )}
                 </Button>
               </DialogFooter>
