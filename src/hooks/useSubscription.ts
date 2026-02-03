@@ -120,12 +120,23 @@ export function useSubscription() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (!error && data?.url) {
+      if (data?.url) {
         window.open(data.url, '_blank');
         return;
       }
-    } catch {
-      // Edge Function falhou, tenta Payment Link como fallback
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (error) {
+        throw error;
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== 'Checkout indisponível. Configure a Edge Function create-checkout ou as variáveis VITE_STRIPE_LINK_* no Vercel.') {
+        throw err;
+      }
+      // Edge Function falhou sem mensagem útil, tenta Payment Link
     }
 
     const paymentLinks: Record<string, string> = {

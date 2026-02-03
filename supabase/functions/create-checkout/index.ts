@@ -65,9 +65,12 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
-    });
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey || !stripeKey.startsWith("sk_")) {
+      throw new Error("STRIPE_SECRET_KEY não configurada ou inválida");
+    }
+
+    const stripe = new Stripe(stripeKey);
 
     // Check for existing customer
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -115,10 +118,13 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    logStep("ERROR", { message: errorMessage, stack: error instanceof Error ? error.stack : undefined });
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   }
 });
