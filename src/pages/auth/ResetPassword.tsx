@@ -1,37 +1,91 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, ArrowLeft, Lock } from "lucide-react";
 import { toast } from "sonner";
 
-export default function Login() {
-  const [email, setEmail] = useState("");
+export default function ResetPassword() {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [isValid, setIsValid] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Verificar se há um token válido na URL
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsValid(true);
+      } else {
+        // Tentar recuperar sessão do hash da URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const type = hashParams.get("type");
+
+        if (accessToken && type === "recovery") {
+          setIsValid(true);
+        } else {
+          toast.error("Link inválido ou expirado");
+          setTimeout(() => navigate("/forgot-password"), 2000);
+        }
+      }
+    };
+
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
     setIsLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error } = await supabase.auth.updateUser({
+      password: password,
+    });
 
     if (error) {
-      toast.error("Erro ao fazer login", {
+      toast.error("Erro ao atualizar senha", {
         description: error.message,
       });
       setIsLoading(false);
       return;
     }
 
-    toast.success("Login realizado com sucesso!");
-    navigate("/dashboard");
+    toast.success("Senha atualizada com sucesso!");
+    setTimeout(() => navigate("/login"), 2000);
   };
+
+  if (!isValid) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+        <div className="relative z-10 w-full max-w-md">
+          <Card className="glass border-white/20 shadow-2xl">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">Verificando link...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
@@ -57,27 +111,15 @@ export default function Login() {
 
         <Card className="glass border-white/20 shadow-2xl">
           <CardHeader className="space-y-2 text-center pb-2">
-            <CardTitle className="text-2xl font-display">Bem-vindo de volta</CardTitle>
+            <CardTitle className="text-2xl font-display">Nova Senha</CardTitle>
             <CardDescription>
-              Entre com suas credenciais para acessar
+              Digite sua nova senha abaixo
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-5 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-12 rounded-xl border-white/20 bg-white/50 backdrop-blur-sm focus:border-primary focus:ring-primary"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                <Label htmlFor="password" className="text-sm font-medium">Nova Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -85,6 +127,21 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
+                  className="h-12 rounded-xl border-white/20 bg-white/50 backdrop-blur-sm focus:border-primary focus:ring-primary"
+                />
+                <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
                   className="h-12 rounded-xl border-white/20 bg-white/50 backdrop-blur-sm focus:border-primary focus:ring-primary"
                 />
               </div>
@@ -98,32 +155,22 @@ export default function Login() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Entrando...
+                    Atualizando...
                   </>
                 ) : (
                   <>
-                    Entrar
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <Lock className="mr-2 h-5 w-5" />
+                    Atualizar Senha
                   </>
                 )}
               </Button>
-              <div className="space-y-2 text-center">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium text-primary hover:text-accent transition-colors"
-                >
-                  Esqueci minha senha
-                </Link>
-                <p className="text-sm text-muted-foreground">
-                  Não tem uma conta?{" "}
-                  <Link
-                    to="/cadastro"
-                    className="font-semibold text-primary hover:text-accent transition-colors"
-                  >
-                    Cadastre-se gratuitamente
-                  </Link>
-                </p>
-              </div>
+              <Link
+                to="/login"
+                className="flex items-center justify-center text-sm font-medium text-primary hover:text-accent transition-colors"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar para o login
+              </Link>
             </CardFooter>
           </form>
         </Card>
