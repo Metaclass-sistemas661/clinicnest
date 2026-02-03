@@ -64,113 +64,106 @@ export default function Dashboard() {
     const monthEnd = endOfMonth(today).toISOString();
     const dayStart = startOfDay(today).toISOString();
     const dayEnd = endOfDay(today).toISOString();
+    const monthStartDate = monthStart.split("T")[0];
+    const monthEndDate = monthEnd.split("T")[0];
 
     try {
-      // Fetch financial data (admin only)
+      // Disparar todas as buscas em paralelo (em vez de uma após a outra)
+      const [
+        financialResult,
+        appointmentsResult,
+        pendingResult,
+        productsResult,
+        commissionsResult,
+      ] = await Promise.all([
+        // 1. Financeiro (admin)
+        isAdmin
+          ? supabase
+              .from("financial_transactions")
+              .select("type, amount")
+              .eq("tenant_id", profile.tenant_id)
+              .gte("transaction_date", monthStartDate)
+              .lte("transaction_date", monthEndDate)
+          : Promise.resolve({ data: null }),
+        // 2. Agendamentos de hoje
+        supabase
+          .from("appointments")
+          .select(`
+            *,
+            client:clients(name, phone),
+            service:services(name, duration_minutes),
+            professional:profiles(full_name)
+          `)
+          .eq("tenant_id", profile.tenant_id)
+          .gte("scheduled_at", dayStart)
+          .lte("scheduled_at", dayEnd)
+          .order("scheduled_at", { ascending: true }),
+        // 3. Contagem de pendentes
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", profile.tenant_id)
+          .eq("status", "pending"),
+        // 4. Produtos (admin) para estoque baixo
+        isAdmin
+          ? supabase
+              .from("products")
+              .select("*")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("is_active", true)
+          : Promise.resolve({ data: null }),
+        // 5. Comissões (admin: todas; staff: só do usuário)
+        isAdmin
+          ? supabase
+              .from("commission_payments")
+              .select("amount, status, created_at, professional_id")
+              .eq("tenant_id", profile.tenant_id)
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+          : supabase
+              .from("commission_payments")
+              .select("amount, status, created_at")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.user_id)
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd),
+      ]);
+
+      const financialData = financialResult.data;
+      const appointmentsData = appointmentsResult.data;
+      const pendingCount = pendingResult.count ?? 0;
+      const productsData = productsResult.data;
+      const commissionsData = commissionsResult.data;
+
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
-
-      if (isAdmin) {
-        const { data: financialData } = await supabase
-          .from("financial_transactions")
-          .select("type, amount")
-          .eq("tenant_id", profile.tenant_id)
-          .gte("transaction_date", monthStart.split("T")[0])
-          .lte("transaction_date", monthEnd.split("T")[0]);
-
-        if (financialData) {
-          monthlyIncome = financialData
-            .filter((t) => t.type === "income")
-            .reduce((sum, t) => sum + Number(t.amount), 0);
-          monthlyExpenses = financialData
-            .filter((t) => t.type === "expense")
-            .reduce((sum, t) => sum + Number(t.amount), 0);
-        }
+      if (financialData) {
+        monthlyIncome = financialData
+          .filter((t) => t.type === "income")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        monthlyExpenses = financialData
+          .filter((t) => t.type === "expense")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
       }
 
-      // Fetch today's appointments
-      const { data: appointmentsData } = await supabase
-        .from("appointments")
-        .select(`
-          *,
-          client:clients(name, phone),
-          service:services(name, duration_minutes),
-          professional:profiles(full_name)
-        `)
-        .eq("tenant_id", profile.tenant_id)
-        .gte("scheduled_at", dayStart)
-        .lte("scheduled_at", dayEnd)
-        .order("scheduled_at", { ascending: true });
-
-      // Fetch pending appointments count
-      const { count: pendingCount } = await supabase
-        .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("tenant_id", profile.tenant_id)
-        .eq("status", "pending");
-
-      // Fetch low stock products (admin only)
       let lowStockData: Product[] = [];
-      if (isAdmin) {
-        const { data } = await supabase
-          .from("products")
-          .select("*")
-          .eq("tenant_id", profile.tenant_id)
-          .eq("is_active", true);
+      if (productsData) {
+        lowStockData = (productsData as Product[]).filter(
+          (p) => p.quantity <= p.min_quantity
+        );
+      }
 
-        if (data) {
-          lowStockData = (data as Product[]).filter(
-            (p) => p.quantity <= p.min_quantity
-          );
-        }
-
-        // Fetch commissions for admin (all professionals in tenant)
-        console.log("[Dashboard] Buscando comissões para admin", {
-          tenant_id: profile.tenant_id,
-          monthStart: monthStart.split("T")[0],
-          monthEnd: monthEnd.split("T")[0]
-        });
-        
-        const { data: commissionsData, error: commissionsError } = await supabase
-          .from("commission_payments")
-          .select("amount, status, created_at, professional_id")
-          .eq("tenant_id", profile.tenant_id)
-          .gte("created_at", monthStart)
-          .lte("created_at", monthEnd);
-        
-        if (commissionsError) {
-          console.error("[Dashboard] Erro ao buscar comissões:", commissionsError);
-        }
-
-        if (commissionsData) {
-          console.log("[Dashboard] Comissões encontradas:", commissionsData.length, commissionsData);
+      if (commissionsData) {
+        if (isAdmin) {
           const paid = commissionsData
             .filter((c) => c.status === "paid")
             .reduce((sum, c) => sum + Number(c.amount), 0);
           const pending = commissionsData
             .filter((c) => c.status === "pending")
             .reduce((sum, c) => sum + Number(c.amount), 0);
-          console.log("[Dashboard] Comissões pagas:", paid, "Pendentes:", pending);
           setCommissionsPaid(paid);
           setCommissionsPending(pending);
         } else {
-          console.log("[Dashboard] Nenhuma comissão encontrada (data é null)");
-        }
-      } else {
-        // Fetch commissions for staff (only their own)
-        const { data: commissionsData, error: commissionsError } = await supabase
-          .from("commission_payments")
-          .select("amount, status, created_at")
-          .eq("tenant_id", profile.tenant_id)
-          .eq("professional_id", profile.user_id)
-          .gte("created_at", monthStart)
-          .lte("created_at", monthEnd);
-        
-        if (commissionsError) {
-          console.error("Error fetching commissions:", commissionsError);
-        }
-
-        if (commissionsData) {
           const received = commissionsData
             .filter((c) => c.status === "paid")
             .reduce((sum, c) => sum + Number(c.amount), 0);
@@ -188,7 +181,7 @@ export default function Dashboard() {
         monthlyExpenses,
         todayAppointments: appointmentsData?.length || 0,
         lowStockProducts: lowStockData.length,
-        pendingAppointments: pendingCount || 0,
+        pendingAppointments: pendingCount,
       });
 
       setTodayAppointments((appointmentsData as Appointment[]) || []);
@@ -322,7 +315,7 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-lg">Agenda de Hoje</CardTitle>
                 <CardDescription>
-                  {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
+                  {formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" asChild>
