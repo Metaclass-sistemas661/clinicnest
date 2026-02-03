@@ -280,9 +280,13 @@ export default function Financeiro() {
 
       if (error) throw error;
 
-      toast.success("Comissão marcada como paga!");
+      toast.success("Comissão marcada como paga! Despesa registrada automaticamente.");
+      
+      // Aguardar um pouco para o trigger criar a transação financeira
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       fetchCommissions();
-      fetchTransactions(); // Refresh to update totals
+      fetchTransactions(); // Refresh to update totals (inclui a nova despesa)
     } catch (error) {
       console.error("Error marking commission as paid:", error);
       toast.error("Erro ao marcar comissão como paga");

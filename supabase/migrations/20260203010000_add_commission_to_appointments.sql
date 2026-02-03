@@ -71,10 +71,10 @@ BEGIN
                     status
                 ) VALUES (
                     NEW.tenant_id,
-                    NEW.professional_id,
+                    v_professional_user_id,
                     NEW.id,
                     COALESCE((SELECT id FROM public.professional_commissions 
-                             WHERE user_id = NEW.professional_id 
+                             WHERE user_id = v_professional_user_id 
                              AND tenant_id = NEW.tenant_id LIMIT 1), NULL),
                     v_commission_amount,
                     NEW.price,
@@ -111,9 +111,20 @@ AS $$
 DECLARE
     v_commission_amount DECIMAL(10,2);
     v_commission_config RECORD;
+    v_professional_user_id UUID;
 BEGIN
     -- Validar que profissional e tenant estão presentes
     IF NEW.professional_id IS NULL OR NEW.tenant_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    
+    -- Converter professional_id (profiles.id) para user_id (profiles.user_id)
+    SELECT user_id INTO v_professional_user_id
+    FROM public.profiles
+    WHERE id = NEW.professional_id
+    LIMIT 1;
+    
+    IF v_professional_user_id IS NULL THEN
         RETURN NEW;
     END IF;
     
@@ -135,7 +146,7 @@ BEGIN
             -- Caso contrário, buscar configuração de comissão do profissional
             SELECT * INTO v_commission_config
             FROM public.professional_commissions
-            WHERE user_id = NEW.professional_id
+            WHERE user_id = v_professional_user_id
             AND tenant_id = NEW.tenant_id
             LIMIT 1;
 
@@ -167,10 +178,10 @@ BEGIN
                     status
                 ) VALUES (
                     NEW.tenant_id,
-                    NEW.professional_id,
+                    v_professional_user_id,
                     NEW.id,
                     COALESCE((SELECT id FROM public.professional_commissions 
-                             WHERE user_id = NEW.professional_id 
+                             WHERE user_id = v_professional_user_id 
                              AND tenant_id = NEW.tenant_id LIMIT 1), NULL),
                     v_commission_amount,
                     NEW.price,

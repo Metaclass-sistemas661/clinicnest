@@ -116,22 +116,36 @@ export default function Dashboard() {
         }
 
         // Fetch commissions for admin (all professionals in tenant)
-        const { data: commissionsData } = await supabase
+        console.log("[Dashboard] Buscando comissões para admin", {
+          tenant_id: profile.tenant_id,
+          monthStart: monthStart.split("T")[0],
+          monthEnd: monthEnd.split("T")[0]
+        });
+        
+        const { data: commissionsData, error: commissionsError } = await supabase
           .from("commission_payments")
-          .select("amount, status")
+          .select("amount, status, created_at, professional_id")
           .eq("tenant_id", profile.tenant_id)
           .gte("created_at", monthStart)
           .lte("created_at", monthEnd);
+        
+        if (commissionsError) {
+          console.error("[Dashboard] Erro ao buscar comissões:", commissionsError);
+        }
 
         if (commissionsData) {
+          console.log("[Dashboard] Comissões encontradas:", commissionsData.length, commissionsData);
           const paid = commissionsData
             .filter((c) => c.status === "paid")
             .reduce((sum, c) => sum + Number(c.amount), 0);
           const pending = commissionsData
             .filter((c) => c.status === "pending")
             .reduce((sum, c) => sum + Number(c.amount), 0);
+          console.log("[Dashboard] Comissões pagas:", paid, "Pendentes:", pending);
           setCommissionsPaid(paid);
           setCommissionsPending(pending);
+        } else {
+          console.log("[Dashboard] Nenhuma comissão encontrada (data é null)");
         }
       } else {
         // Fetch commissions for staff (only their own)
