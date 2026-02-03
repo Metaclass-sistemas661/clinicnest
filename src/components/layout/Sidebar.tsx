@@ -16,12 +16,12 @@ import {
   ChevronRight,
   Sparkles,
   Menu,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface NavItem {
   title: string;
@@ -130,7 +130,13 @@ function SidebarContent({
                   {isAdmin ? "Administrador" : "Profissional"}
                 </p>
               </div>
+              <ThemeToggle />
             </div>
+          </div>
+        )}
+        {isCollapsed && (
+          <div className="mb-3 flex justify-center">
+            <ThemeToggle />
           </div>
         )}
         <Button
