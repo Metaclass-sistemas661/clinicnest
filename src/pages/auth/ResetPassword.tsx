@@ -54,47 +54,40 @@ export default function ResetPassword() {
 
     setIsLoading(true);
 
-    const { error } = await supabase.auth.updateUser({
-      password: password,
-    });
+    // Usar Edge Function para atualizar senha sem email automático do Supabase
+    // A Edge Function atualiza a senha usando admin.updateUserById (não envia email automático)
+    // e então envia nosso email customizado
+    try {
+      const { data, error } = await supabase.functions.invoke("update-password", {
+        body: {
+          password: password,
+        },
+      });
 
-    if (error) {
+      if (error) {
+        toast.error("Erro ao atualizar senha", {
+          description: error.message,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!data?.success) {
+        toast.error("Erro ao atualizar senha", {
+          description: data?.error || "Erro desconhecido",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success("Senha atualizada com sucesso!");
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
       toast.error("Erro ao atualizar senha", {
-        description: error.message,
+        description: err instanceof Error ? err.message : "Erro desconhecido",
       });
       setIsLoading(false);
-      return;
     }
-
-    // Enviar email customizado de confirmação de alteração de senha
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        // Buscar nome do usuário
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        const name = profileData?.full_name || "";
-
-        // Chamar Edge Function para enviar email customizado (não bloqueia se falhar)
-        await supabase.functions.invoke("send-custom-auth-email", {
-          body: {
-            email: user.email,
-            type: "password_changed",
-            name,
-          },
-        });
-      }
-    } catch (emailError) {
-      // Não bloquear o fluxo se o email falhar
-      console.error("Erro ao enviar email de confirmação:", emailError);
-    }
-
-    toast.success("Senha atualizada com sucesso!");
-    setTimeout(() => navigate("/login"), 2000);
   };
 
   if (!isValid) {
