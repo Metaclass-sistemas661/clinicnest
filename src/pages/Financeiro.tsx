@@ -49,6 +49,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
