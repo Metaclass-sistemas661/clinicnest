@@ -224,6 +224,117 @@ Precisa de ajuda? Entre em contato conosco.
 }
 
 /**
+ * Template HTML para email de confirmação de alteração de senha
+ */
+function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senha Alterada - VynloBella</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">VynloBella</h1>
+              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="margin: 0 0 20px; color: #1f2937; font-size: 24px;">Senha alterada com sucesso! ✅</h2>
+              
+              <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Olá${name ? `, ${name}` : ""}!
+              </p>
+              
+              <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Sua senha foi alterada com sucesso. Sua conta está segura e protegida.
+              </p>
+
+              <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">
+                  ✓ Alteração realizada em ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
+                </p>
+              </div>
+
+              <p style="margin: 24px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Agora você pode fazer login com sua nova senha:
+              </p>
+
+              <!-- Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+                      Fazer Login
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                <strong>Dica de segurança:</strong> Se você não realizou esta alteração, entre em contato conosco imediatamente.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
+                Precisa de ajuda? Entre em contato com o administrador do sistema.
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                © ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Template texto para email de confirmação de alteração de senha
+ */
+function getPasswordChangedEmailText(name: string, loginUrl: string): string {
+  return `
+Senha alterada com sucesso - VynloBella
+
+Olá${name ? `, ${name}` : ""}!
+
+Sua senha foi alterada com sucesso. Sua conta está segura e protegida.
+
+Alteração realizada em: ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}
+
+Agora você pode fazer login com sua nova senha:
+${loginUrl}
+
+Dica de segurança: Se você não realizou esta alteração, entre em contato conosco imediatamente.
+
+Precisa de ajuda? Entre em contato com o administrador do sistema.
+
+© ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+  `.trim();
+}
+
+/**
  * Envia email via Resend
  */
 async function sendEmailViaResend(
@@ -290,7 +401,7 @@ const corsHeaders = {
 
 interface EmailBody {
   email: string;
-  type: "password_reset" | "confirmation";
+  type: "password_reset" | "confirmation" | "password_changed";
   name?: string;
 }
 
@@ -318,6 +429,7 @@ serve(async (req) => {
 
   try {
     // Para password_reset, não exigir autenticação (usuário esqueceu senha)
+    // Para password_changed, exigir autenticação (usuário está logado)
     // Para confirmation, pode exigir autenticação se necessário
     const authHeader = req.headers.get("Authorization");
     let user = null;
@@ -354,9 +466,18 @@ serve(async (req) => {
       );
     }
 
-    if (type !== "password_reset" && type !== "confirmation") {
+    if (type !== "password_reset" && type !== "confirmation" && type !== "password_changed") {
       return new Response(
-        JSON.stringify({ error: "Tipo de email inválido. Use 'password_reset' ou 'confirmation'" }),
+        JSON.stringify({ error: "Tipo de email inválido. Use 'password_reset', 'confirmation' ou 'password_changed'" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Para password_changed, verificar se usuário está autenticado
+    if (type === "password_changed" && !user) {
+      log("ERROR: password_changed requer autenticação");
+      return new Response(
+        JSON.stringify({ error: "Autenticação necessária para este tipo de email" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -379,50 +500,58 @@ serve(async (req) => {
       }
     }
 
-    // Gerar link apropriado
-    let linkData;
-    if (type === "password_reset") {
-      linkData = await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email: emailTrim,
-        options: {
-          redirectTo: "https://vynlobella.com/reset-password",
-        },
-      });
-    } else {
-      linkData = await supabaseAdmin.auth.admin.generateLink({
-        type: "signup",
-        email: emailTrim,
-        options: {
-          redirectTo: "https://vynlobella.com/login",
-        },
-      });
-    }
-
-    if (linkData.error || !linkData.data) {
-      log("ERROR: Erro ao gerar link", { error: linkData.error?.message });
-      return new Response(
-        JSON.stringify({ error: linkData.error?.message || "Erro ao gerar link" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const actionLink = linkData.data.properties.action_link;
-    log("Link gerado", { link: actionLink.substring(0, 50) + "..." });
-
     // Preparar email
     let emailHtml: string;
     let emailText: string;
     let subject: string;
 
-    if (type === "password_reset") {
-      subject = "Redefinir sua senha - VynloBella";
-      emailHtml = getPasswordResetEmailHtml(nameTrim, actionLink);
-      emailText = getPasswordResetEmailText(nameTrim, actionLink);
+    if (type === "password_changed") {
+      // Para password_changed, não precisa gerar link, apenas usar login URL
+      const loginUrl = "https://vynlobella.com/login";
+      subject = "Senha alterada com sucesso - VynloBella";
+      emailHtml = getPasswordChangedEmailHtml(nameTrim, loginUrl);
+      emailText = getPasswordChangedEmailText(nameTrim, loginUrl);
     } else {
-      subject = "Confirme sua conta - VynloBella";
-      emailHtml = getConfirmationEmailHtml(nameTrim, actionLink);
-      emailText = getConfirmationEmailText(nameTrim, actionLink);
+      // Gerar link apropriado para password_reset ou confirmation
+      let linkData;
+      if (type === "password_reset") {
+        linkData = await supabaseAdmin.auth.admin.generateLink({
+          type: "recovery",
+          email: emailTrim,
+          options: {
+            redirectTo: "https://vynlobella.com/reset-password",
+          },
+        });
+      } else {
+        linkData = await supabaseAdmin.auth.admin.generateLink({
+          type: "signup",
+          email: emailTrim,
+          options: {
+            redirectTo: "https://vynlobella.com/login",
+          },
+        });
+      }
+
+      if (linkData.error || !linkData.data) {
+        log("ERROR: Erro ao gerar link", { error: linkData.error?.message });
+        return new Response(
+          JSON.stringify({ error: linkData.error?.message || "Erro ao gerar link" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const actionLink = linkData.data.properties.action_link;
+      log("Link gerado", { link: actionLink.substring(0, 50) + "..." });
+
+      if (type === "password_reset") {
+        subject = "Redefinir sua senha - VynloBella";
+        emailHtml = getPasswordResetEmailHtml(nameTrim, actionLink);
+        emailText = getPasswordResetEmailText(nameTrim, actionLink);
+      } else {
+        subject = "Confirme sua conta - VynloBella";
+        emailHtml = getConfirmationEmailHtml(nameTrim, actionLink);
+        emailText = getConfirmationEmailText(nameTrim, actionLink);
+      }
     }
 
     // Enviar email

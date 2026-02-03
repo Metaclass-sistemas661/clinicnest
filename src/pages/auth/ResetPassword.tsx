@@ -66,6 +66,33 @@ export default function ResetPassword() {
       return;
     }
 
+    // Enviar email customizado de confirmação de alteração de senha
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        // Buscar nome do usuário
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        const name = profileData?.full_name || "";
+
+        // Chamar Edge Function para enviar email customizado (não bloqueia se falhar)
+        await supabase.functions.invoke("send-custom-auth-email", {
+          body: {
+            email: user.email,
+            type: "password_changed",
+            name,
+          },
+        });
+      }
+    } catch (emailError) {
+      // Não bloquear o fluxo se o email falhar
+      console.error("Erro ao enviar email de confirmação:", emailError);
+    }
+
     toast.success("Senha atualizada com sucesso!");
     setTimeout(() => navigate("/login"), 2000);
   };
