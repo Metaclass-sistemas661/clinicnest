@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -16,6 +16,7 @@ export interface SubscriptionStatus {
 
 export function useSubscription() {
   const { session, user } = useAuth();
+  const hasLoadedOnce = useRef(false);
   const [status, setStatus] = useState<SubscriptionStatus>({
     subscribed: false,
     trialing: false,
@@ -23,7 +24,7 @@ export function useSubscription() {
     days_remaining: 0,
     plan: null,
     subscription_end: null,
-    has_access: false,
+    has_access: true,
     isLoading: true,
     error: null,
   });
@@ -34,36 +35,93 @@ export function useSubscription() {
       return;
     }
 
-    try {
+    const isBackgroundRefresh = hasLoadedOnce.current;
+    if (!isBackgroundRefresh) {
       setStatus(prev => ({ ...prev, isLoading: true, error: null }));
-      
+    }
+
+    const applyResult = (result: Partial<SubscriptionStatus>) => {
+      hasLoadedOnce.current = true;
+      setStatus(prev => ({
+        ...prev,
+        ...result,
+        isLoading: false,
+      }));
+    };
+
+    try {
       const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (error) {
-        throw error;
+      if (!error && data) {
+        applyResult({
+          subscribed: data.subscribed || false,
+          trialing: data.trialing || false,
+          trial_expired: data.trial_expired || false,
+          days_remaining: data.days_remaining || 0,
+          plan: data.plan || null,
+          subscription_end: data.subscription_end || null,
+          has_access: data.has_access || false,
+          error: null,
+        });
+        return;
       }
 
-      setStatus({
-        subscribed: data.subscribed || false,
-        trialing: data.trialing || false,
-        trial_expired: data.trial_expired || false,
-        days_remaining: data.days_remaining || 0,
-        plan: data.plan || null,
-        subscription_end: data.subscription_end || null,
-        has_access: data.has_access || false,
-        isLoading: false,
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile?.tenant_id) {
+        applyResult({
+          subscribed: false,
+          trialing: false,
+          trial_expired: false,
+          days_remaining: 0,
+          plan: null,
+          subscription_end: null,
+          has_access: false,
+          error: null,
+        });
+        return;
+      }
+
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('tenant_id', profile.tenant_id)
+        .single();
+
+      const now = new Date();
+      const trialEnd = sub?.trial_end ? new Date(sub.trial_end) : null;
+      const periodEnd = sub?.current_period_end ? new Date(sub.current_period_end) : null;
+      const isTrialing = sub?.status === 'trialing';
+      const isActive = sub?.status === 'active';
+      const trialExpired = trialEnd ? now > trialEnd : false;
+      const daysRemaining = trialEnd
+        ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+      const hasAccess = isActive || (isTrialing && !trialExpired);
+
+      applyResult({
+        subscribed: isActive,
+        trialing: isTrialing && !trialExpired,
+        trial_expired: isTrialing && trialExpired,
+        days_remaining: daysRemaining,
+        plan: sub?.plan || null,
+        subscription_end: periodEnd?.toISOString() || null,
+        has_access: hasAccess,
         error: null,
       });
-    } catch (error) {
-      console.error('Error checking subscription:', error);
+    } catch {
+      hasLoadedOnce.current = true;
       setStatus(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        has_access: true,
+        error: null,
       }));
     }
   }, [session?.access_token, user]);

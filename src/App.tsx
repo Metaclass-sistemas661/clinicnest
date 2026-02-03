@@ -8,24 +8,25 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
-// Lazy load de páginas para code-split (melhor performance no carregamento inicial)
-const LandingPage = lazy(() => import("@/pages/LandingPage"));
-const Login = lazy(() => import("@/pages/auth/Login"));
-const Register = lazy(() => import("@/pages/auth/Register"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Agenda = lazy(() => import("@/pages/Agenda"));
-const Financeiro = lazy(() => import("@/pages/Financeiro"));
-const Produtos = lazy(() => import("@/pages/Produtos"));
-const Servicos = lazy(() => import("@/pages/Servicos"));
-const Clientes = lazy(() => import("@/pages/Clientes"));
-const Equipe = lazy(() => import("@/pages/Equipe"));
-const Configuracoes = lazy(() => import("@/pages/Configuracoes"));
-const Assinatura = lazy(() => import("@/pages/Assinatura"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
-const TermosDeUso = lazy(() => import("@/pages/TermosDeUso"));
-const PoliticaPrivacidade = lazy(() => import("@/pages/PoliticaPrivacidade"));
-const Contato = lazy(() => import("@/pages/Contato"));
+// Lazy load com retry (evita erro "Failed to fetch dynamically imported module" após deploys)
+const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
+const Login = lazyWithRetry(() => import("@/pages/auth/Login"));
+const Register = lazyWithRetry(() => import("@/pages/auth/Register"));
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
+const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
+const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
+const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
+const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
+const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
+const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
+const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
+const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
+const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
+const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));
+const Contato = lazyWithRetry(() => import("@/pages/Contato"));
 
 const queryClient = new QueryClient();
 

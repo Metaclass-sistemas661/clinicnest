@@ -28,6 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const isChunkError = this.state.error?.message?.includes("Failed to fetch dynamically imported module");
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-4">
           <div className="max-w-md text-center space-y-6">
@@ -41,7 +42,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 Algo deu errado
               </h1>
               <p className="text-muted-foreground">
-                Ocorreu um erro inesperado. Tente recarregar a página ou voltar ao início.
+                {isChunkError
+                  ? "O site foi atualizado. Pressione Ctrl+F5 (ou Cmd+Shift+R no Mac) para recarregar completamente."
+                  : "Ocorreu um erro inesperado. Tente recarregar a página ou voltar ao início."}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
