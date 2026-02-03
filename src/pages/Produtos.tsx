@@ -44,6 +44,7 @@ export default function Produtos() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
+  const [isEditPriceDialogOpen, setIsEditPriceDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -62,7 +63,13 @@ export default function Produtos() {
     quantity: "",
     movement_type: "in" as "in" | "out",
     out_reason_type: "" as "" | "sale" | "damaged",
+    purchased_with_company_cash: "no" as "yes" | "no",
     reason: "",
+  });
+
+  const [editPriceForm, setEditPriceForm] = useState({
+    cost: "",
+    sale_price: "",
   });
 
   useEffect(() => {
@@ -224,6 +231,25 @@ export default function Produtos() {
         }
       }
 
+      if (movementForm.movement_type === "in" && movementForm.purchased_with_company_cash === "yes") {
+        const expenseAmount = (product.cost || 0) * quantity;
+        if (expenseAmount > 0) {
+          const { error: txError } = await supabase.from("financial_transactions").insert({
+            tenant_id: profile.tenant_id,
+            type: "expense",
+            category: "Compra de Produto",
+            amount: expenseAmount,
+            description: `Compra de estoque: ${product.name} (${quantity} un.)`,
+            transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
+            product_id: product.id,
+          });
+          if (txError) {
+            console.error("Erro ao registrar despesa da compra:", txError);
+            toast.error("Entrada registrada, mas a despesa não foi lançada.");
+          }
+        }
+      }
+
       toast.success(
         movementForm.movement_type === "in"
           ? "Entrada registrada com sucesso!"
@@ -237,6 +263,7 @@ export default function Produtos() {
         quantity: "",
         movement_type: "in",
         out_reason_type: "",
+        purchased_with_company_cash: "no",
         reason: "",
       });
       fetchProducts();
@@ -253,6 +280,44 @@ export default function Produtos() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const openEditPriceDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setEditPriceForm({
+      cost: product.cost?.toString() ?? "",
+      sale_price: product.sale_price?.toString() ?? "",
+    });
+    setIsEditPriceDialogOpen(true);
+  };
+
+  const handleUpdateProductPrices = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.tenant_id || !selectedProduct) return;
+
+    setIsSaving(true);
+    try {
+      const cost = parseFloat(editPriceForm.cost) || 0;
+      const salePrice = parseFloat(editPriceForm.sale_price) || 0;
+
+      const { error } = await supabase
+        .from("products")
+        .update({ cost, sale_price: salePrice })
+        .eq("id", selectedProduct.id);
+
+      if (error) throw error;
+
+      toast.success("Preços atualizados com sucesso!");
+      setIsEditPriceDialogOpen(false);
+      setSelectedProduct(null);
+      setEditPriceForm({ cost: "", sale_price: "" });
+      fetchProducts();
+    } catch (error) {
+      toast.error("Erro ao atualizar preços");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const lowStockCount = products.filter((p) => p.quantity <= p.min_quantity).length;
@@ -319,6 +384,7 @@ export default function Produtos() {
                           ...movementForm,
                           movement_type: v as "in" | "out",
                           out_reason_type: v === "in" ? "" : movementForm.out_reason_type,
+                          purchased_with_company_cash: v === "out" ? "no" : movementForm.purchased_with_company_cash,
                         })
                       }
                     >
@@ -349,6 +415,30 @@ export default function Produtos() {
                       required
                     />
                   </div>
+                  {movementForm.movement_type === "in" && (
+                    <div className="space-y-3">
+                      <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
+                      <RadioGroup
+                        value={movementForm.purchased_with_company_cash}
+                        onValueChange={(v) =>
+                          setMovementForm({ ...movementForm, purchased_with_company_cash: v as "yes" | "no" })
+                        }
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="yes" id="movement-cash-yes" />
+                          <Label htmlFor="movement-cash-yes" className="font-normal cursor-pointer">Sim</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="no" id="movement-cash-no" />
+                          <Label htmlFor="movement-cash-no" className="font-normal cursor-pointer">Não</Label>
+                        </div>
+                      </RadioGroup>
+                      <p className="text-xs text-muted-foreground">
+                        Se sim, a entrada será registrada como despesa no financeiro.
+                      </p>
+                    </div>
+                  )}
                   {movementForm.movement_type === "out" && (
                     <div className="space-y-3">
                       <Label>Você está registrando essa saída como venda ou baixa danificado?</Label>
@@ -542,6 +632,92 @@ export default function Produtos() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <Dialog
+            open={isEditPriceDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditPriceDialogOpen(open);
+              if (!open) {
+                setSelectedProduct(null);
+              }
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Atualizar Preços</DialogTitle>
+                <DialogDescription>
+                  Ajuste o custo e o preço de venda do produto
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleUpdateProductPrices}>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Produto</Label>
+                    <Input value={selectedProduct?.name || ""} disabled />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Custo (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editPriceForm.cost}
+                        onChange={(e) => setEditPriceForm({ ...editPriceForm, cost: e.target.value })}
+                        placeholder="0,00"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Preço de Venda (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editPriceForm.sale_price}
+                        onChange={(e) => setEditPriceForm({ ...editPriceForm, sale_price: e.target.value })}
+                        placeholder="0,00"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {(() => {
+                    const cost = parseFloat(editPriceForm.cost) || 0;
+                    const salePrice = parseFloat(editPriceForm.sale_price) || 0;
+                    const profit = salePrice - cost;
+                    const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+                    if (cost > 0 || salePrice > 0) {
+                      return (
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                          <p className="font-medium text-muted-foreground">Margem de lucro</p>
+                          <div className="mt-1 flex flex-wrap gap-4">
+                            <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>
+                            <span><strong>Margem (%):</strong> {marginPercent.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditPriceDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Salvar"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       }
     >
@@ -592,6 +768,7 @@ export default function Produtos() {
                   <TableHead className="text-center">Estoque</TableHead>
                   <TableHead className="text-center">Mínimo</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -632,6 +809,11 @@ export default function Produtos() {
                             Normal
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
+                          Editar preços
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
