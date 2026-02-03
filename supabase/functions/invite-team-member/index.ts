@@ -70,25 +70,25 @@ serve(async (req) => {
     if (!emailTrim) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     if (!fullNameTrim) {
       return new Response(
         JSON.stringify({ error: "Nome completo é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     if (!passwordStr || passwordStr.length < 6) {
       return new Response(
         JSON.stringify({ error: "Senha deve ter no mínimo 6 caracteres" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     if (role !== "staff" && role !== "admin") {
       return new Response(
         JSON.stringify({ error: "Função deve ser staff ou admin" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -139,9 +139,10 @@ serve(async (req) => {
         createError.message?.toLowerCase().includes("registered")
           ? "Já existe uma conta com este e-mail"
           : createError.message || "Erro ao criar usuário";
+      console.error("[invite-team-member] Erro ao criar usuário:", createError);
       return new Response(
         JSON.stringify({ error: msg }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
