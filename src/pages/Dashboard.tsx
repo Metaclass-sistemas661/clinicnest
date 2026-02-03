@@ -135,23 +135,31 @@ export default function Dashboard() {
         }
       } else {
         // Fetch commissions for staff (only their own)
-        const { data: commissionsData } = await supabase
+        const { data: commissionsData, error: commissionsError } = await supabase
           .from("commission_payments")
-          .select("amount, status")
+          .select("amount, status, created_at")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.user_id)
           .gte("created_at", monthStart)
           .lte("created_at", monthEnd);
+        
+        if (commissionsError) {
+          console.error("Error fetching commissions:", commissionsError);
+        }
 
         if (commissionsData) {
+          console.log("[Dashboard] Comissões do profissional encontradas:", commissionsData.length);
           const received = commissionsData
             .filter((c) => c.status === "paid")
             .reduce((sum, c) => sum + Number(c.amount), 0);
           const toReceive = commissionsData
             .filter((c) => c.status === "pending")
             .reduce((sum, c) => sum + Number(c.amount), 0);
+          console.log("[Dashboard] Comissões recebidas:", received, "A receber:", toReceive);
           setCommissionsReceived(received);
           setCommissionsToReceive(toReceive);
+        } else {
+          console.log("[Dashboard] Nenhuma comissão encontrada para o profissional");
         }
       }
 

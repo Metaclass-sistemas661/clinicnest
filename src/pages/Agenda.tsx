@@ -246,12 +246,17 @@ export default function Agenda() {
 
   const updateAppointmentStatus = async (id: string, status: AppointmentStatus) => {
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from("appointments")
         .update({ status })
-        .eq("id", id);
+        .eq("id", id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating appointment status:", error);
+        toast.error(`Erro ao atualizar status: ${error.message}`);
+        return;
+      }
 
       const statusMessages = {
         pending: "Agendamento marcado como pendente",
@@ -262,8 +267,9 @@ export default function Agenda() {
 
       toast.success(statusMessages[status]);
       fetchData();
-    } catch (error) {
-      toast.error("Erro ao atualizar status");
+    } catch (error: any) {
+      console.error("Exception updating appointment status:", error);
+      toast.error(`Erro ao atualizar status: ${error?.message || "Erro desconhecido"}`);
     }
   };
 
