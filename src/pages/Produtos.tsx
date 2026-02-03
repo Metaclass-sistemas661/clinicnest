@@ -30,11 +30,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Plus, Loader2, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
-import type { Product, StockMovement } from "@/types/database";
+import { formatInAppTz } from "@/lib/date";
+import type { Product, StockMovement, StockOutReasonType } from "@/types/database";
 
 export default function Produtos() {
   const { profile, isAdmin } = useAuth();
@@ -49,14 +51,17 @@ export default function Produtos() {
     name: "",
     description: "",
     cost: "",
+    sale_price: "",
     quantity: "",
     min_quantity: "5",
+    purchased_with_company_cash: "no" as "yes" | "no",
   });
 
   const [movementForm, setMovementForm] = useState({
     product_id: "",
     quantity: "",
     movement_type: "in" as "in" | "out",
+    out_reason_type: "" as "" | "sale" | "damaged",
     reason: "",
   });
 
@@ -92,16 +97,43 @@ export default function Produtos() {
     setIsSaving(true);
 
     try {
-      const { error } = await supabase.from("products").insert({
-        tenant_id: profile.tenant_id,
-        name: productForm.name,
-        description: productForm.description || null,
-        cost: parseFloat(productForm.cost) || 0,
-        quantity: parseInt(productForm.quantity) || 0,
-        min_quantity: parseInt(productForm.min_quantity) || 5,
-      });
+      const cost = parseFloat(productForm.cost) || 0;
+      const salePrice = parseFloat(productForm.sale_price) || 0;
+      const quantity = parseInt(productForm.quantity) || 0;
+
+      const { data: newProduct, error } = await supabase
+        .from("products")
+        .insert({
+          tenant_id: profile.tenant_id,
+          name: productForm.name,
+          description: productForm.description || null,
+          cost,
+          sale_price: salePrice,
+          quantity,
+          min_quantity: parseInt(productForm.min_quantity) || 5,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
+      if (!newProduct?.id) throw new Error("Produto não retornado");
+
+      if (productForm.purchased_with_company_cash === "yes" && quantity > 0 && cost > 0) {
+        const expenseAmount = cost * quantity;
+        const { error: txError } = await supabase.from("financial_transactions").insert({
+          tenant_id: profile.tenant_id,
+          type: "expense",
+          category: "Compra de Produto",
+          amount: expenseAmount,
+          description: `Compra de estoque: ${productForm.name} (${quantity} un.)`,
+          transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
+          product_id: newProduct.id,
+        });
+        if (txError) {
+          console.error("Erro ao registrar despesa da compra:", txError);
+          toast.error("Produto salvo, mas a despesa não foi registrada.");
+        }
+      }
 
       toast.success("Produto cadastrado com sucesso!");
       setIsProductDialogOpen(false);
@@ -109,8 +141,10 @@ export default function Produtos() {
         name: "",
         description: "",
         cost: "",
+        sale_price: "",
         quantity: "",
         min_quantity: "5",
+        purchased_with_company_cash: "no",
       });
       fetchProducts();
     } catch (error) {
@@ -124,6 +158,11 @@ export default function Produtos() {
   const handleStockMovement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.tenant_id) return;
+
+    if (movementForm.movement_type === "out" && !movementForm.out_reason_type) {
+      toast.error("Informe se a saída é venda ou baixa danificado.");
+      return;
+    }
 
     setIsSaving(true);
 
@@ -144,6 +183,9 @@ export default function Produtos() {
         return;
       }
 
+      const outReasonType: StockOutReasonType | null =
+        movementForm.movement_type === "out" ? (movementForm.out_reason_type as StockOutReasonType) : null;
+
       // Create stock movement record
       await supabase.from("stock_movements").insert({
         tenant_id: profile.tenant_id,
@@ -151,6 +193,7 @@ export default function Produtos() {
         quantity: movementForm.movement_type === "out" ? -quantity : quantity,
         movement_type: movementForm.movement_type,
         reason: movementForm.reason || null,
+        out_reason_type: outReasonType,
         created_by: profile.id,
       });
 
@@ -162,16 +205,38 @@ export default function Produtos() {
 
       if (error) throw error;
 
+      if (movementForm.movement_type === "out" && movementForm.out_reason_type === "sale") {
+        const saleAmount = (product.sale_price || 0) * quantity;
+        if (saleAmount > 0) {
+          const { error: txError } = await supabase.from("financial_transactions").insert({
+            tenant_id: profile.tenant_id,
+            type: "income",
+            category: "Venda de Produto",
+            amount: saleAmount,
+            description: `Venda: ${product.name} (${quantity} un.)`,
+            transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
+            product_id: product.id,
+          });
+          if (txError) {
+            console.error("Erro ao registrar receita da venda:", txError);
+            toast.error("Saída registrada, mas a receita não foi lançada.");
+          }
+        }
+      }
+
       toast.success(
         movementForm.movement_type === "in"
           ? "Entrada registrada com sucesso!"
-          : "Saída registrada com sucesso!"
+          : movementForm.out_reason_type === "sale"
+            ? "Saída (venda) e receita registradas!"
+            : "Baixa (danificado) registrada para histórico."
       );
       setIsMovementDialogOpen(false);
       setMovementForm({
         product_id: "",
         quantity: "",
         movement_type: "in",
+        out_reason_type: "",
         reason: "",
       });
       fetchProducts();
@@ -250,7 +315,11 @@ export default function Produtos() {
                     <Select
                       value={movementForm.movement_type}
                       onValueChange={(v) =>
-                        setMovementForm({ ...movementForm, movement_type: v as "in" | "out" })
+                        setMovementForm({
+                          ...movementForm,
+                          movement_type: v as "in" | "out",
+                          out_reason_type: v === "in" ? "" : movementForm.out_reason_type,
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -280,6 +349,30 @@ export default function Produtos() {
                       required
                     />
                   </div>
+                  {movementForm.movement_type === "out" && (
+                    <div className="space-y-3">
+                      <Label>Você está registrando essa saída como venda ou baixa danificado?</Label>
+                      <RadioGroup
+                        value={movementForm.out_reason_type}
+                        onValueChange={(v) =>
+                          setMovementForm({ ...movementForm, out_reason_type: v as "sale" | "damaged" })
+                        }
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="sale" id="out-sale" />
+                          <Label htmlFor="out-sale" className="font-normal cursor-pointer">Venda</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="damaged" id="out-damaged" />
+                          <Label htmlFor="out-damaged" className="font-normal cursor-pointer">Baixa danificado</Label>
+                        </div>
+                      </RadioGroup>
+                      <p className="text-xs text-muted-foreground">
+                        Venda gera receita no financeiro. Baixa danificado apenas registra histórico para conferência.
+                      </p>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Motivo</Label>
                     <Input
@@ -352,6 +445,39 @@ export default function Produtos() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label>Preço de Venda (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={productForm.sale_price}
+                        onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
+                        placeholder="0,00"
+                      />
+                    </div>
+                  </div>
+                  {(() => {
+                    const cost = parseFloat(productForm.cost) || 0;
+                    const salePrice = parseFloat(productForm.sale_price) || 0;
+                    const profit = salePrice - cost;
+                    const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+                    const profitPercent = cost > 0 ? (profit / cost) * 100 : 0;
+                    if (cost > 0 || salePrice > 0) {
+                      return (
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                          <p className="font-medium text-muted-foreground">Margem de lucro</p>
+                          <div className="mt-1 flex flex-wrap gap-4">
+                            <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>
+                            <span><strong>Margem (%):</strong> {marginPercent.toFixed(1)}%</span>
+                            <span><strong>Markup (%):</strong> {profitPercent.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
                       <Label>Quantidade Inicial</Label>
                       <Input
                         type="number"
@@ -361,18 +487,40 @@ export default function Produtos() {
                         placeholder="0"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Quantidade Mínima</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={productForm.min_quantity}
+                        onChange={(e) => setProductForm({ ...productForm, min_quantity: e.target.value })}
+                        placeholder="5"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Quantidade Mínima</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={productForm.min_quantity}
-                      onChange={(e) => setProductForm({ ...productForm, min_quantity: e.target.value })}
-                      placeholder="5"
-                    />
+                  <p className="text-xs text-muted-foreground">
+                    Alerta será exibido quando estoque atingir a quantidade mínima
+                  </p>
+                  <div className="space-y-3">
+                    <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
+                    <RadioGroup
+                      value={productForm.purchased_with_company_cash}
+                      onValueChange={(v) =>
+                        setProductForm({ ...productForm, purchased_with_company_cash: v as "yes" | "no" })
+                      }
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="yes" id="cash-yes" />
+                        <Label htmlFor="cash-yes" className="font-normal cursor-pointer">Sim</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="no" id="cash-no" />
+                        <Label htmlFor="cash-no" className="font-normal cursor-pointer">Não</Label>
+                      </div>
+                    </RadioGroup>
                     <p className="text-xs text-muted-foreground">
-                      Alerta será exibido quando estoque atingir este valor
+                      Se sim, a compra será registrada como despesa no financeiro.
                     </p>
                   </div>
                 </div>
@@ -438,6 +586,9 @@ export default function Produtos() {
                 <TableRow>
                   <TableHead>Produto</TableHead>
                   <TableHead>Custo</TableHead>
+                  <TableHead>Preço Venda</TableHead>
+                  <TableHead className="text-center">Margem %</TableHead>
+                  <TableHead>Lucro (R$)</TableHead>
                   <TableHead className="text-center">Estoque</TableHead>
                   <TableHead className="text-center">Mínimo</TableHead>
                   <TableHead>Status</TableHead>
@@ -446,6 +597,10 @@ export default function Produtos() {
               <TableBody>
                 {products.map((product) => {
                   const isLowStock = product.quantity <= product.min_quantity;
+                  const salePrice = product.sale_price ?? 0;
+                  const cost = product.cost ?? 0;
+                  const profit = salePrice - cost;
+                  const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
@@ -457,6 +612,9 @@ export default function Produtos() {
                         </div>
                       </TableCell>
                       <TableCell>{formatCurrency(product.cost)}</TableCell>
+                      <TableCell>{formatCurrency(salePrice)}</TableCell>
+                      <TableCell className="text-center">{marginPercent.toFixed(1)}%</TableCell>
+                      <TableCell>{formatCurrency(profit)}</TableCell>
                       <TableCell className="text-center">
                         <span className={isLowStock ? "font-bold text-warning" : ""}>
                           {product.quantity}

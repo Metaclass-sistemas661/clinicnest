@@ -60,7 +60,7 @@ import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
   income: ["Serviço", "Venda de Produto", "Outros"],
-  expense: ["Fornecedores", "Aluguel", "Funcionários", "Materiais", "Manutenção", "Outros"],
+  expense: ["Compra de Produto", "Fornecedores", "Aluguel", "Funcionários", "Materiais", "Manutenção", "Outros"],
 };
 
 export default function Financeiro() {

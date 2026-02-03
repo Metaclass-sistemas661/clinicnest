@@ -63,6 +63,7 @@ export interface Product {
   name: string;
   description: string | null;
   cost: number;
+  sale_price: number;
   quantity: number;
   min_quantity: number;
   is_active: boolean;
@@ -93,6 +94,7 @@ export interface FinancialTransaction {
   id: string;
   tenant_id: string;
   appointment_id: string | null;
+  product_id: string | null;
   type: TransactionType;
   category: string;
   amount: number;
