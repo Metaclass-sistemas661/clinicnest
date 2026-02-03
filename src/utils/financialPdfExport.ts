@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { formatInAppTz } from "@/lib/date";
 import type { FinancialTransaction } from "@/types/database";
 

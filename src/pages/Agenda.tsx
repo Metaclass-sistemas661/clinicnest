@@ -625,10 +625,10 @@ export default function Agenda() {
                 `}
               >
                 <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
-                  {format(day, "EEE", { locale: ptBR }).slice(0, 3)}
+                  {formatInAppTz(day, "EEE").slice(0, 3)}
                 </span>
                 <span className={`text-sm md:text-xl font-bold text-foreground ${isToday ? "text-primary" : ""}`}>
-                  {format(day, "d")}
+                  {formatInAppTz(day, "d")}
                 </span>
                 {count > 0 && (
                   <span className="mt-0.5 md:mt-1 rounded-full bg-primary/20 px-1 md:px-2 py-0.5 text-[10px] md:text-xs font-medium text-primary">
