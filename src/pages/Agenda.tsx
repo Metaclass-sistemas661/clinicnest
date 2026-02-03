@@ -333,7 +333,7 @@ export default function Agenda() {
       subtitle="Gerencie os agendamentos do salão"
       actions={
         <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center sm:justify-end">
-          <div className="flex items-center rounded-lg border bg-card">
+          <div className="flex items-center rounded-lg border border-border bg-card text-foreground">
             <Button
               variant={viewMode === "day" ? "default" : "ghost"}
               size="sm"
@@ -481,7 +481,7 @@ export default function Agenda() {
           <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-sm md:text-lg font-semibold text-center min-w-0">
+          <h2 className="text-sm md:text-lg font-semibold text-center min-w-0 text-foreground">
             {viewMode === "day"
               ? format(currentDate, "EEE, d 'de' MMM", { locale: ptBR })
               : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: ptBR })}`}
@@ -518,7 +518,7 @@ export default function Agenda() {
                 <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
                   {format(day, "EEE", { locale: ptBR }).slice(0, 3)}
                 </span>
-                <span className={`text-sm md:text-xl font-bold ${isToday ? "text-primary" : ""}`}>
+                <span className={`text-sm md:text-xl font-bold text-foreground ${isToday ? "text-primary" : ""}`}>
                   {format(day, "d")}
                 </span>
                 {count > 0 && (
@@ -545,7 +545,7 @@ export default function Agenda() {
       </div>
 
       {/* Appointments Table */}
-      <Card>
+      <Card className="border-border text-foreground">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">
             Agendamentos

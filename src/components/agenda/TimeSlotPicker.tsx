@@ -136,7 +136,7 @@ export function TimeSlotPicker({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <Clock className="h-4 w-4 text-muted-foreground" />
         <span>Horário (intervalos de 45 min)</span>
       </div>
@@ -172,7 +172,7 @@ export function TimeSlotPicker({
       )}
 
       {/* Grid de horários */}
-      <ScrollArea className="h-[200px] rounded-lg border bg-muted/30 p-2">
+      <ScrollArea className="h-[200px] rounded-lg border border-border bg-muted/30 p-2">
         <div className="grid grid-cols-4 gap-2">
           {TIME_SLOTS.map((slot) => {
             const slotInfo = slotAvailability[slot];

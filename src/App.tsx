@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
@@ -40,6 +41,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <InternalDarkMode />
             <ErrorBoundary>
               <Suspense fallback={<RouteFallback />}>
               <Routes>

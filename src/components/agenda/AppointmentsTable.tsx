@@ -209,7 +209,7 @@ export function AppointmentsTable({
 
   if (appointments.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border bg-card py-12">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-border bg-card py-12 text-foreground">
         <CalendarDays className="mb-4 h-12 w-12 text-muted-foreground/50" />
         <p className="text-lg font-medium text-muted-foreground">
           Nenhum agendamento encontrado
@@ -243,7 +243,7 @@ export function AppointmentsTable({
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium text-foreground">
                       {appointment.client?.name || "Cliente não informado"}
                     </p>
                     <p className="text-sm text-muted-foreground">
@@ -266,7 +266,7 @@ export function AppointmentsTable({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t">
+              <div className="flex items-center gap-2 pt-2 border-t border-border">
                 {isUpdating ? (
                   <Loader2 className="h-4 w-4 animate-spin mx-auto" />
                 ) : (
@@ -340,7 +340,7 @@ export function AppointmentsTable({
       </div>
 
       {/* Desktop: Table Layout */}
-      <div className="hidden md:block rounded-lg border bg-card">
+      <div className="hidden md:block rounded-lg border border-border bg-card text-foreground">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -378,7 +378,7 @@ export function AppointmentsTable({
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div className="flex flex-col">
-                        <span className="font-medium">
+                        <span className="font-medium text-foreground">
                           {appointment.client?.name || "Não informado"}
                         </span>
                         {appointment.client?.phone && (
@@ -396,7 +396,7 @@ export function AppointmentsTable({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Scissors className="h-4 w-4 text-muted-foreground" />
-                      <span>{appointment.service?.name || "Não informado"}</span>
+                      <span className="text-foreground">{appointment.service?.name || "Não informado"}</span>
                     </div>
                   </TableCell>
                   <TableCell>

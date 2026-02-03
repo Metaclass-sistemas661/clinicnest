@@ -72,7 +72,7 @@ export function AgendaFilters({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3 text-foreground">
       {/* Status filter pills */}
       <div className="flex flex-wrap gap-2">
         {statusOptions.map((option) => {
