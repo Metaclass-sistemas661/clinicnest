@@ -85,8 +85,9 @@ export default function Assinatura() {
       setLoadingPlan(planKey);
       await createCheckout(planKey);
       toast.success("Redirecionando para o checkout...");
-    } catch {
-      toast.error("Erro ao iniciar checkout. Verifique se a assinatura está configurada e tente novamente.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao iniciar checkout.";
+      toast.error(msg);
     } finally {
       setLoadingPlan(null);
     }

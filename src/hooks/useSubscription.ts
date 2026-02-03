@@ -114,20 +114,33 @@ export function useSubscription() {
       throw new Error('Not authenticated');
     }
 
-    const { data, error } = await supabase.functions.invoke('create-checkout', {
-      body: { planKey },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { planKey },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
 
-    if (error) {
-      throw error;
+      if (!error && data?.url) {
+        window.open(data.url, '_blank');
+        return;
+      }
+    } catch {
+      // Edge Function falhou, tenta Payment Link como fallback
     }
 
-    if (data?.url) {
-      window.open(data.url, '_blank');
+    const paymentLinks: Record<string, string> = {
+      monthly: import.meta.env.VITE_STRIPE_LINK_MONTHLY || '',
+      quarterly: import.meta.env.VITE_STRIPE_LINK_QUARTERLY || '',
+      annual: import.meta.env.VITE_STRIPE_LINK_ANNUAL || '',
+    };
+
+    const link = paymentLinks[planKey];
+    if (link) {
+      window.open(link, '_blank');
+      return;
     }
+
+    throw new Error('Checkout indisponível. Configure a Edge Function create-checkout ou as variáveis VITE_STRIPE_LINK_* no Vercel.');
   };
 
   const openCustomerPortal = async () => {
