@@ -40,6 +40,7 @@ import type { Product, ProductCategory, StockMovement, StockOutReasonType } from
 
 type ProductWithCategory = Product & { category?: ProductCategory | null };
 type ProductGroup = { category: ProductCategory | null; products: ProductWithCategory[] };
+const NO_CATEGORY_VALUE = "__none__";
 
 export default function Produtos() {
   const { profile, isAdmin } = useAuth();
@@ -64,7 +65,7 @@ export default function Produtos() {
     quantity: "",
     min_quantity: "5",
     purchased_with_company_cash: "no" as "yes" | "no",
-    category_id: "",
+    category_id: NO_CATEGORY_VALUE,
   });
 
   const [movementForm, setMovementForm] = useState({
@@ -83,7 +84,7 @@ export default function Produtos() {
   const [editPriceForm, setEditPriceForm] = useState({
     cost: "",
     sale_price: "",
-    category_id: "",
+    category_id: NO_CATEGORY_VALUE,
   });
 
   useEffect(() => {
@@ -186,11 +187,11 @@ export default function Produtos() {
       if (data?.id) {
         setProductForm((current) => ({
           ...current,
-          category_id: current.category_id || data.id,
+          category_id: current.category_id === NO_CATEGORY_VALUE ? data.id : current.category_id,
         }));
         setEditPriceForm((current) => ({
           ...current,
-          category_id: current.category_id || data.id,
+          category_id: current.category_id === NO_CATEGORY_VALUE ? data.id : current.category_id,
         }));
       }
     } catch (error) {
@@ -222,7 +223,7 @@ export default function Produtos() {
           sale_price: salePrice,
           quantity,
           min_quantity: parseInt(productForm.min_quantity) || 5,
-          category_id: productForm.category_id || null,
+          category_id: productForm.category_id === NO_CATEGORY_VALUE ? null : productForm.category_id,
         })
         .select("id")
         .single();
@@ -257,7 +258,7 @@ export default function Produtos() {
         quantity: "",
         min_quantity: "5",
         purchased_with_company_cash: "no",
-        category_id: "",
+        category_id: NO_CATEGORY_VALUE,
       });
       fetchProducts();
     } catch (error) {
@@ -430,7 +431,7 @@ export default function Produtos() {
     setEditPriceForm({
       cost: product.cost?.toString() ?? "",
       sale_price: product.sale_price?.toString() ?? "",
-      category_id: product.category_id ?? "",
+      category_id: product.category_id ?? NO_CATEGORY_VALUE,
     });
     setIsEditPriceDialogOpen(true);
   };
@@ -443,7 +444,7 @@ export default function Produtos() {
     try {
       const cost = parseFloat(editPriceForm.cost) || 0;
       const salePrice = parseFloat(editPriceForm.sale_price) || 0;
-      const categoryId = editPriceForm.category_id || null;
+      const categoryId = editPriceForm.category_id === NO_CATEGORY_VALUE ? null : editPriceForm.category_id;
 
       const { error } = await supabase
         .from("products")
@@ -455,7 +456,7 @@ export default function Produtos() {
       toast.success("Preços atualizados com sucesso!");
       setIsEditPriceDialogOpen(false);
       setSelectedProduct(null);
-      setEditPriceForm({ cost: "", sale_price: "", category_id: "" });
+      setEditPriceForm({ cost: "", sale_price: "", category_id: NO_CATEGORY_VALUE });
       fetchProducts();
     } catch (error) {
       toast.error("Erro ao atualizar preços");
@@ -732,7 +733,7 @@ export default function Produtos() {
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem categoria</SelectItem>
+                        <SelectItem value={NO_CATEGORY_VALUE}>Sem categoria</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
@@ -893,7 +894,7 @@ export default function Produtos() {
                         <SelectValue placeholder="Selecione a categoria" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem categoria</SelectItem>
+                        <SelectItem value={NO_CATEGORY_VALUE}>Sem categoria</SelectItem>
                         {categories.map((category) => (
                           <SelectItem key={category.id} value={category.id}>
                             {category.name}
