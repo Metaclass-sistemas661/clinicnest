@@ -3,6 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -425,32 +426,46 @@ export default function Financeiro() {
       }
     >
       <div className="space-y-6">
-        {/* Stats */}
+        {/* Stats - skeleton enquanto carrega */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Saldo do Período"
-            value={formatCurrency(balance)}
-            icon={DollarSign}
-            variant={balance >= 0 ? "success" : "danger"}
-          />
-          <StatCard
-            title="Receitas"
-            value={formatCurrency(totalIncome)}
-            icon={TrendingUp}
-            variant="success"
-          />
-          <StatCard
-            title="Despesas"
-            value={formatCurrency(totalExpense)}
-            icon={TrendingDown}
-            variant="danger"
-          />
-          <StatCard
-            title="Vinculados a Agenda"
-            value={linkedTransactions}
-            icon={LinkIcon}
-            description="Transações automáticas de agendamentos concluídos"
-          />
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3">
+                <div className="space-y-2 flex-1 min-w-0">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-7 w-28 sm:h-8" />
+                </div>
+                <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
+              </div>
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="Saldo do Período"
+                value={formatCurrency(balance)}
+                icon={DollarSign}
+                variant={balance >= 0 ? "success" : "danger"}
+              />
+              <StatCard
+                title="Receitas"
+                value={formatCurrency(totalIncome)}
+                icon={TrendingUp}
+                variant="success"
+              />
+              <StatCard
+                title="Despesas"
+                value={formatCurrency(totalExpense)}
+                icon={TrendingDown}
+                variant="danger"
+              />
+              <StatCard
+                title="Vinculados a Agenda"
+                value={linkedTransactions}
+                icon={LinkIcon}
+                description="Transações automáticas de agendamentos concluídos"
+              />
+            </>
+          )}
         </div>
 
         {/* Filter */}
@@ -496,8 +511,13 @@ export default function Financeiro() {
           <TabsContent value="overview" className="mt-6">
             {isLoading ? (
               <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <CardContent className="p-6 space-y-4">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-[280px] w-full" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-[200px]" />
+                    <Skeleton className="h-[200px]" />
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -509,8 +529,11 @@ export default function Financeiro() {
           <TabsContent value="cashflow" className="mt-6">
             {isLoading ? (
               <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <CardContent className="p-6 space-y-3">
+                  <Skeleton className="h-6 w-40" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </CardContent>
               </Card>
             ) : (
@@ -526,8 +549,11 @@ export default function Financeiro() {
               </CardHeader>
               <CardContent>
                 {isLoadingCommissions ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="space-y-3 p-4">
+                    <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
                   </div>
                 ) : commissions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12">
@@ -612,8 +638,11 @@ export default function Financeiro() {
               </CardHeader>
               <CardContent>
                 {isLoadingCommissions ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="space-y-3 p-4">
+                    <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
                   </div>
                 ) : commissions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12">
@@ -697,7 +726,14 @@ export default function Financeiro() {
                 <CardTitle>Todas as Transações</CardTitle>
               </CardHeader>
               <CardContent>
-                {transactions.length === 0 ? (
+                {isLoading ? (
+                  <div className="space-y-3 p-4">
+                    <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : transactions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12">
                     <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
                     <p className="text-muted-foreground">Nenhuma transação neste período</p>

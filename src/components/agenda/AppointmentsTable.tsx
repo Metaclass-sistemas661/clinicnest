@@ -34,6 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -217,8 +218,15 @@ export function AppointmentsTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="p-4 space-y-3">
+        <div className="flex gap-2 overflow-hidden">
+          <Skeleton className="h-10 flex-1 min-w-[120px]" />
+          <Skeleton className="h-10 flex-1 min-w-[80px]" />
+          <Skeleton className="h-10 flex-1 min-w-[100px]" />
+        </div>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
       </div>
     );
   }

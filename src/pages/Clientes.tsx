@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -244,11 +245,18 @@ export default function Clientes() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Clientes Cadastrados ({filteredClients.length})
+            {isLoading ? "Clientes Cadastrados" : `Clientes Cadastrados (${filteredClients.length})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredClients.length === 0 ? (
+          {isLoading ? (
+            <div className="space-y-3 p-4">
+              <Skeleton className="h-10 w-full" />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : filteredClients.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
               <p className="text-muted-foreground">
