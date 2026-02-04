@@ -417,7 +417,7 @@ export default function Financeiro() {
       title="Financeiro"
       subtitle="Controle completo de receitas e despesas"
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
           <ExportPdfDialog onExport={handleExportPdf} isLoading={isLoading} />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -612,32 +612,46 @@ export default function Financeiro() {
                     {formatCurrency(totalProductLoss)}
                   </span>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="text-center">Qtd</TableHead>
-                      <TableHead>Custo Unit.</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Motivo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {productLosses.map((loss) => (
-                      <TableRow key={loss.id}>
-                        <TableCell>{formatInAppTz(loss.created_at, "dd/MM/yyyy")}</TableCell>
-                        <TableCell>{loss.productName}</TableCell>
-                        <TableCell className="text-center">{loss.quantity}</TableCell>
-                        <TableCell>{formatCurrency(loss.unitCost)}</TableCell>
-                        <TableCell className="font-semibold text-destructive">
-                          {formatCurrency(loss.totalLoss)}
-                        </TableCell>
-                        <TableCell>{loss.reason || "—"}</TableCell>
+                <div className="block md:hidden space-y-3">
+                  {productLosses.map((loss) => (
+                    <div key={loss.id} className="rounded-lg border p-4 space-y-1">
+                      <p className="font-medium">{loss.productName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatInAppTz(loss.created_at, "dd/MM/yyyy")} · Qtd: {loss.quantity}
+                      </p>
+                      <p className="font-semibold text-destructive">{formatCurrency(loss.totalLoss)}</p>
+                      {loss.reason && <p className="text-sm">{loss.reason}</p>}
+                    </div>
+                  ))}
+                </div>
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead className="text-center">Qtd</TableHead>
+                        <TableHead>Custo Unit.</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Motivo</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {productLosses.map((loss) => (
+                        <TableRow key={loss.id}>
+                          <TableCell>{formatInAppTz(loss.created_at, "dd/MM/yyyy")}</TableCell>
+                          <TableCell>{loss.productName}</TableCell>
+                          <TableCell className="text-center">{loss.quantity}</TableCell>
+                          <TableCell>{formatCurrency(loss.unitCost)}</TableCell>
+                          <TableCell className="font-semibold text-destructive">
+                            {formatCurrency(loss.totalLoss)}
+                          </TableCell>
+                          <TableCell>{loss.reason || "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </>
             )}
           </CardContent>
@@ -645,7 +659,7 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
@@ -811,37 +825,12 @@ export default function Financeiro() {
                     <p className="text-muted-foreground">Nenhuma comissão neste período</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Profissional</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Valor do Serviço</TableHead>
-                        <TableHead>Comissão</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    <div className="block md:hidden space-y-3">
                       {commissions.map((commission) => (
-                        <TableRow key={commission.id}>
-                          <TableCell>
-                            {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {commission.professional?.full_name || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{formatCurrency(Number(commission.service_price))}</TableCell>
-                          <TableCell className="font-semibold text-primary">
-                            {formatCurrency(Number(commission.amount))}
-                          </TableCell>
-                          <TableCell>
+                        <div key={commission.id} className="rounded-lg border p-4 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium">{commission.professional?.full_name || "—"}</p>
                             <Badge
                               variant="outline"
                               className={
@@ -852,29 +841,103 @@ export default function Financeiro() {
                             >
                               {commission.status === "paid" ? "Paga" : "Pendente"}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {commission.status === "pending" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleMarkAsPaid(commission.id)}
-                                className="gap-1"
-                              >
-                                <CheckCircle2 className="h-3 w-3" />
-                                Marcar como Paga
-                              </Button>
-                            )}
-                            {commission.status === "paid" && commission.payment_date && (
-                              <span className="text-xs text-muted-foreground">
-                                Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
-                              </span>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {formatInAppTz(commission.created_at, "dd/MM/yyyy")} ·{" "}
+                            {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
+                          </p>
+                          <div className="flex justify-between text-sm">
+                            <span>Serviço: {formatCurrency(Number(commission.service_price))}</span>
+                            <span className="font-semibold text-primary">
+                              Comissão: {formatCurrency(Number(commission.amount))}
+                            </span>
+                          </div>
+                          {commission.status === "pending" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkAsPaid(commission.id)}
+                              className="w-full gap-1"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Marcar como Paga
+                            </Button>
+                          )}
+                          {commission.status === "paid" && commission.payment_date && (
+                            <p className="text-xs text-muted-foreground">
+                              Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
+                            </p>
+                          )}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Profissional</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Valor do Serviço</TableHead>
+                            <TableHead>Comissão</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {commissions.map((commission) => (
+                            <TableRow key={commission.id}>
+                              <TableCell>
+                                {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {commission.professional?.full_name || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatCurrency(Number(commission.service_price))}</TableCell>
+                              <TableCell className="font-semibold text-primary">
+                                {formatCurrency(Number(commission.amount))}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    commission.status === "paid"
+                                      ? "bg-success/20 text-success border-success/30"
+                                      : "bg-warning/20 text-warning border-warning/30"
+                                  }
+                                >
+                                  {commission.status === "paid" ? "Paga" : "Pendente"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {commission.status === "pending" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleMarkAsPaid(commission.id)}
+                                    className="gap-1"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Marcar como Paga
+                                  </Button>
+                                )}
+                                {commission.status === "paid" && commission.payment_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -900,24 +963,11 @@ export default function Financeiro() {
                     <p className="text-muted-foreground">Nenhuma transação neste período</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Origem</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    <div className="block md:hidden space-y-3">
                       {transactions.map((transaction) => (
-                        <TableRow key={transaction.id}>
-                          <TableCell>
-                            {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
-                          </TableCell>
-                          <TableCell>
+                        <div key={transaction.id} className="rounded-lg border p-4 space-y-2">
+                          <div className="flex justify-between items-start">
                             <Badge
                               variant="outline"
                               className={
@@ -928,33 +978,84 @@ export default function Financeiro() {
                             >
                               {transaction.type === "income" ? "Entrada" : "Saída"}
                             </Badge>
-                          </TableCell>
-                          <TableCell>{transaction.category}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {transaction.description || "—"}
-                          </TableCell>
-                          <TableCell>
-                            {transaction.appointment_id ? (
-                              <Badge variant="secondary" className="gap-1">
-                                <LinkIcon className="h-3 w-3" />
-                                Agenda
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">Manual</span>
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-semibold ${
-                              transaction.type === "income" ? "text-success" : "text-destructive"
-                            }`}
-                          >
-                            {transaction.type === "income" ? "+" : "-"}
-                            {formatCurrency(transaction.amount)}
-                          </TableCell>
-                        </TableRow>
+                            <span
+                              className={`font-semibold ${
+                                transaction.type === "income" ? "text-success" : "text-destructive"
+                              }`}
+                            >
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(transaction.amount)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium">{transaction.category}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
+                            {transaction.appointment_id && " · Agenda"}
+                          </p>
+                          {transaction.description && (
+                            <p className="text-sm text-muted-foreground truncate">{transaction.description}</p>
+                          )}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead>Descrição</TableHead>
+                            <TableHead>Origem</TableHead>
+                            <TableHead className="text-right">Valor</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {transactions.map((transaction) => (
+                            <TableRow key={transaction.id}>
+                              <TableCell>
+                                {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    transaction.type === "income"
+                                      ? "bg-success/20 text-success border-success/30"
+                                      : "bg-destructive/20 text-destructive border-destructive/30"
+                                  }
+                                >
+                                  {transaction.type === "income" ? "Entrada" : "Saída"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{transaction.category}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {transaction.description || "—"}
+                              </TableCell>
+                              <TableCell>
+                                {transaction.appointment_id ? (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <LinkIcon className="h-3 w-3" />
+                                    Agenda
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">Manual</span>
+                                )}
+                              </TableCell>
+                              <TableCell
+                                className={`text-right font-semibold ${
+                                  transaction.type === "income" ? "text-success" : "text-destructive"
+                                }`}
+                              >
+                                {transaction.type === "income" ? "+" : "-"}
+                                {formatCurrency(transaction.amount)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

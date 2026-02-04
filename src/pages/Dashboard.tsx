@@ -427,7 +427,7 @@ export default function Dashboard() {
         {/* Top Clientes - Admin only */}
         {isAdmin && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-lg">Ranking – Clientes que mais consomem</CardTitle>
                 <CardDescription>

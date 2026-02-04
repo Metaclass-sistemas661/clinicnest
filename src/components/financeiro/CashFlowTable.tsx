@@ -79,7 +79,47 @@ export function CashFlowTable({ transactions, filterMonth }: CashFlowTableProps)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[500px] overflow-auto">
+        {/* Mobile: Card Layout */}
+        <div className="block md:hidden space-y-3 max-h-[500px] overflow-auto">
+          {filteredData.map((day) => (
+            <div
+              key={day.dateFormatted}
+              className={`rounded-lg border p-4 space-y-2 ${day.hasTransactions ? "" : "opacity-50"}`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{day.dateFormatted}</span>
+                {day.transactionCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">{day.transactionCount}</Badge>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span className="text-muted-foreground">Entradas</span>
+                <span className="text-right font-medium text-success">
+                  {day.income > 0 ? `+${formatCurrency(day.income)}` : "—"}
+                </span>
+                <span className="text-muted-foreground">Saídas</span>
+                <span className="text-right font-medium text-destructive">
+                  {day.expense > 0 ? `-${formatCurrency(day.expense)}` : "—"}
+                </span>
+                <span className="text-muted-foreground">Saldo dia</span>
+                <span className={`text-right font-medium ${day.dailyBalance >= 0 ? "text-success" : "text-destructive"}`}>
+                  {formatCurrency(day.dailyBalance)}
+                </span>
+                <span className="text-muted-foreground col-span-2">Acumulado</span>
+                <span
+                  className={`col-span-2 text-right font-semibold ${
+                    day.cumulativeBalance >= 0 ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {formatCurrency(day.cumulativeBalance)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: Table */}
+        <div className="hidden md:block max-h-[500px] overflow-auto">
           <Table>
             <TableHeader className="sticky top-0 bg-card">
               <TableRow>

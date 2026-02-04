@@ -80,7 +80,7 @@ export default function Configuracoes() {
       title="Configurações"
       subtitle="Configure os dados do seu salão"
     >
-      <div className="max-w-2xl">
+      <div className="w-full max-w-2xl">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">

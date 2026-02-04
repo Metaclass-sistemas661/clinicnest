@@ -100,9 +100,9 @@ export function AgendaFilters({
       </div>
 
       {/* Professional filter */}
-      <div className="ml-auto">
+      <div className="w-full sm:w-auto sm:ml-auto">
         <Select value={professionalFilter} onValueChange={onProfessionalFilterChange}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Todos os profissionais" />
           </SelectTrigger>
           <SelectContent>

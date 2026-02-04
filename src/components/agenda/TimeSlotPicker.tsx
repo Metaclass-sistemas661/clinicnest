@@ -173,7 +173,7 @@ export function TimeSlotPicker({
 
       {/* Grid de horários */}
       <ScrollArea className="h-[200px] rounded-lg border border-border bg-muted/30 p-2">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {TIME_SLOTS.map((slot) => {
             const slotInfo = slotAvailability[slot];
             const isSelected = selectedTime === slot;

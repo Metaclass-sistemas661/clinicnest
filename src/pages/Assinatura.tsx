@@ -172,7 +172,7 @@ export default function Assinatura() {
                 )}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {subscribed ? (
                 <>
                   <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Ativo</Badge>

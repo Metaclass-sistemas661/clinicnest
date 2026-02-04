@@ -488,7 +488,7 @@ export default function Produtos() {
       title="Produtos"
       subtitle="Gerencie o estoque do salão"
       actions={
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-end">
           <Dialog
             open={isCategoryDialogOpen}
             onOpenChange={(open) => {
@@ -1005,6 +1005,64 @@ export default function Produtos() {
               <p className="text-muted-foreground">Nenhum produto cadastrado</p>
             </div>
           ) : (
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-4">
+                {groupedProducts.map((group) => (
+                  <div key={group.category?.id ?? "uncategorized"}>
+                    <p className="text-sm font-semibold text-muted-foreground mb-2">
+                      {group.category ? group.category.name : "Sem categoria"} ({group.products.length})
+                    </p>
+                    <div className="space-y-3">
+                      {group.products.map((product) => {
+                        const isLowStock = product.quantity <= product.min_quantity;
+                        const salePrice = product.sale_price ?? 0;
+                        const cost = product.cost ?? 0;
+                        const profit = salePrice - cost;
+                        const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+                        return (
+                          <div key={product.id} className="rounded-lg border p-4 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{product.name}</p>
+                                {product.description && (
+                                  <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
+                                )}
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  isLowStock
+                                    ? "bg-warning/20 text-warning border-warning/30"
+                                    : "bg-success/20 text-success border-success/30"
+                                }
+                              >
+                                {isLowStock ? "Baixo" : "Normal"}
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <span className="text-muted-foreground">Custo:</span>
+                              <span>{formatCurrency(product.cost)}</span>
+                              <span className="text-muted-foreground">Venda:</span>
+                              <span>{formatCurrency(salePrice)}</span>
+                              <span className="text-muted-foreground">Margem:</span>
+                              <span>{marginPercent.toFixed(1)}%</span>
+                              <span className="text-muted-foreground">Estoque:</span>
+                              <span className={isLowStock ? "font-bold text-warning" : ""}>{product.quantity}</span>
+                            </div>
+                            <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => openEditPriceDialog(product)}>
+                              Editar detalhes
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -1088,6 +1146,8 @@ export default function Produtos() {
                 ))}
               </TableBody>
             </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -1110,33 +1170,53 @@ export default function Produtos() {
               Nenhuma baixa de produto danificado registrada até o momento.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead className="text-center">Quantidade</TableHead>
-                  <TableHead>Motivo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="block md:hidden space-y-3">
                 {damagedMovements.map((movement) => {
                   const product = products.find((p) => p.id === movement.product_id);
                   const productName = product?.name ?? "Produto removido";
                   const quantity = Math.abs(movement.quantity);
                   return (
-                    <TableRow key={movement.id}>
-                      <TableCell>
-                        {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell>{productName}</TableCell>
-                      <TableCell className="text-center">{quantity}</TableCell>
-                      <TableCell>{movement.reason || "—"}</TableCell>
-                    </TableRow>
+                    <div key={movement.id} className="rounded-lg border p-4 space-y-1">
+                      <p className="font-medium">{productName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")} · Qtd: {quantity}
+                      </p>
+                      {movement.reason && <p className="text-sm">{movement.reason}</p>}
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-center">Quantidade</TableHead>
+                      <TableHead>Motivo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {damagedMovements.map((movement) => {
+                      const product = products.find((p) => p.id === movement.product_id);
+                      const productName = product?.name ?? "Produto removido";
+                      const quantity = Math.abs(movement.quantity);
+                      return (
+                        <TableRow key={movement.id}>
+                          <TableCell>
+                            {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>{productName}</TableCell>
+                          <TableCell className="text-center">{quantity}</TableCell>
+                          <TableCell>{movement.reason || "—"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

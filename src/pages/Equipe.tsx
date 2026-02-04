@@ -557,16 +557,79 @@ export default function Equipe() {
               <p className="text-muted-foreground">Nenhum membro na equipe</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Comissão</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-3">
+                {team.map((member) => {
+                  const currentRole = member.user_roles[0]?.role || "staff";
+                  const isCurrentUser = member.user_id === profile?.user_id;
+                  return (
+                    <div key={member.id} className="rounded-lg border p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">
+                            {member.full_name}
+                            {isCurrentUser && (
+                              <span className="ml-2 text-xs text-muted-foreground">(você)</span>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {member.email || "—"}
+                          </p>
+                          {member.phone && (
+                            <p className="text-sm text-muted-foreground">{member.phone}</p>
+                          )}
+                        </div>
+                        {getRoleBadge(currentRole)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-normal">
+                          {formatCommission(member.commission)}
+                        </Badge>
+                      </div>
+                      {!isCurrentUser && (
+                        <div className="flex flex-wrap gap-2 pt-2 border-t">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenCommissionDialog(member)}
+                            className="gap-1"
+                          >
+                            <DollarSign className="h-3 w-3" />
+                            Comissão
+                          </Button>
+                          <Select
+                            value={currentRole}
+                            onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
+                          >
+                            <SelectTrigger className="w-36">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="staff">Profissional</SelectItem>
+                              <SelectItem value="admin">Administrador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Função</TableHead>
+                      <TableHead>Comissão</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
               </TableHeader>
               <TableBody>
                 {team.map((member) => {
@@ -630,6 +693,8 @@ export default function Equipe() {
                 })}
               </TableBody>
             </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

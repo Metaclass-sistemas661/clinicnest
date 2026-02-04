@@ -286,6 +286,57 @@ export default function Servicos() {
               <p className="text-muted-foreground">Nenhum serviço cadastrado</p>
             </div>
           ) : (
+            <>
+              {/* Mobile: Card Layout */}
+              <div className="block md:hidden space-y-3">
+                {services.map((service) => (
+                  <div
+                    key={service.id}
+                    className={`rounded-lg border p-4 space-y-3 ${!service.is_active ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{service.name}</p>
+                        {service.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          service.is_active
+                            ? "bg-success/20 text-success border-success/30"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {service.is_active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        {service.duration_minutes} min
+                      </span>
+                      <span className="font-semibold">{formatCurrency(service.price)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Switch
+                        checked={service.is_active}
+                        onCheckedChange={() => toggleActive(service)}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {service.is_active ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table Layout */}
+              <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -347,6 +398,8 @@ export default function Servicos() {
                 ))}
               </TableBody>
             </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
