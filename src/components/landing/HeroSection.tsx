@@ -151,20 +151,6 @@ export function HeroSection() {
             Tudo em uma plataforma simples e poderosa.
           </p>
 
-          {/* Quick Preview Badge */}
-          <div className="mb-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
-            <a 
-              href="#showcase" 
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 transition-colors text-white text-sm"
-            >
-              <span>🎬 Veja o sistema em ação</span>
-              <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: "0.2s" }}>

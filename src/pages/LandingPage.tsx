@@ -11,7 +11,6 @@ import {
   TestimonialsSection,
   PricingSection,
   ScreenshotsSection,
-  ProductShowcaseSection,
   SocialProofSection,
   ROICalculatorSection,
 } from "@/components/landing";
@@ -24,7 +23,6 @@ export default function LandingPage() {
       <HeroSection />
       <StatsSection />
       <SocialProofSection />
-      <ProductShowcaseSection />
       <HowItWorksSection />
       <FeaturesSection />
       <ScreenshotsSection />
