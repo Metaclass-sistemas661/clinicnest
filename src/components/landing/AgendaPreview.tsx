@@ -3,11 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, User, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SidebarPreview } from "./SidebarPreview";
 
 export function AgendaPreview() {
   return (
-    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
-      <div className="rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+    <div className="relative dark min-h-full flex" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
+      {/* Sidebar */}
+      <SidebarPreview activePage="agenda" />
+      
+      <div className="flex-1 ml-72 rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
         {/* Header */}
         <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

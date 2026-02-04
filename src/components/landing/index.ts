@@ -15,6 +15,7 @@ export { AgendaPreview } from "./AgendaPreview";
 export { ClientesPreview } from "./ClientesPreview";
 export { FinanceiroPreview } from "./FinanceiroPreview";
 export { EstoquePreview } from "./EstoquePreview";
+export { SidebarPreview } from "./SidebarPreview";
 export { ProductShowcaseSection } from "./ProductShowcaseSection";
 export { SocialProofSection } from "./SocialProofSection";
 export { ROICalculatorSection } from "./ROICalculatorSection";
