@@ -10,6 +10,7 @@ import {
   FeaturesSection,
   TestimonialsSection,
   PricingSection,
+  ScreenshotsSection,
 } from "@/components/landing";
 import { LandingLayout } from "@/components/landing/LandingLayout";
 
@@ -21,6 +22,7 @@ export default function LandingPage() {
       <StatsSection />
       <HowItWorksSection />
       <FeaturesSection />
+      <ScreenshotsSection />
       <BeforeAfterSection />
       <TestimonialsSection />
       <FAQSection />
