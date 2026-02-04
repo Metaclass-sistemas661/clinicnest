@@ -5,3 +5,7 @@ export { FAQSection } from "./FAQSection";
 export { GuaranteeSection } from "./GuaranteeSection";
 export { DevicesSection } from "./DevicesSection";
 export { UrgentCTASection } from "./UrgentCTASection";
+export { HeroSection } from "./HeroSection";
+export { FeaturesSection } from "./FeaturesSection";
+export { TestimonialsSection } from "./TestimonialsSection";
+export { PricingSection } from "./PricingSection";

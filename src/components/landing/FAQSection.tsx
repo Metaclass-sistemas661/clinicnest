@@ -40,7 +40,7 @@ export function FAQSection() {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 border border-blue-200 mb-6">
-            <HelpCircle className="h-4 w-4 text-blue-600" />
+            <HelpCircle className="h-4 w-4 text-blue-600" aria-hidden="true" />
             <span className="text-sm font-medium text-blue-600">Perguntas Frequentes</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">

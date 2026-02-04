@@ -48,24 +48,42 @@ export function Navbar() {
           <button
             className="md:hidden p-2"
             onClick={() => setIsOpen(!isOpen)}
+            aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={isOpen}
           >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {isOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
           </button>
         </div>
 
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200">
+          <div className="md:hidden py-4 border-t border-gray-200" role="menu">
             <div className="flex flex-col gap-4">
-              <a href="/#features" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
+              <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+                e.preventDefault();
+                setIsOpen(false);
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+              }}>
                 Recursos
               </a>
-              <a href="/#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
+              <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+                e.preventDefault();
+                setIsOpen(false);
+                document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' });
+              }}>
                 Depoimentos
               </a>
-              <a href="/#faq" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
+              <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+                e.preventDefault();
+                setIsOpen(false);
+                document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' });
+              }}>
                 FAQ
               </a>
-              <a href="/#pricing" className="text-gray-600 hover:text-gray-900 transition-colors py-2">
+              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+                e.preventDefault();
+                setIsOpen(false);
+                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+              }}>
                 Preços
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">

@@ -94,10 +94,10 @@ export function BeforeAfterSection() {
                 return (
                   <div key={item.text} className="flex items-center gap-4 p-3 rounded-xl bg-green-50/50">
                     <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <Icon className="h-5 w-5 text-green-600" />
+                      <Icon className="h-5 w-5 text-green-600" aria-hidden="true" />
                     </div>
                     <span className="text-foreground flex-1">{item.text}</span>
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" aria-hidden="true" />
                   </div>
                 );
               })}

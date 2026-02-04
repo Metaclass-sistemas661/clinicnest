@@ -66,7 +66,7 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
       className="relative group p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col"
     >
       <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl mb-4 flex-shrink-0 ${colors.bg}`}>
-        <Icon className={`h-7 w-7 ${colors.text}`} />
+        <Icon className={`h-7 w-7 ${colors.text}`} aria-hidden="true" />
       </div>
       <div className="space-y-1 flex-1">
         <div className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">

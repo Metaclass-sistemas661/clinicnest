@@ -93,7 +93,7 @@ export function HowItWorksSection() {
                       "inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110 flex-shrink-0",
                       colors.bg
                     )}>
-                      <Icon className={cn("h-8 w-8", colors.text)} />
+                      <Icon className={cn("h-8 w-8", colors.text)} aria-hidden="true" />
                     </div>
                     
                     {/* Content */}

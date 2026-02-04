@@ -64,11 +64,11 @@ export function DevicesSection() {
                       
                       {/* Device icon container */}
                       <div className="relative h-32 w-32 rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-100 flex items-center justify-center">
-                        <Icon className="h-16 w-16 text-violet-600 group-hover:scale-110 transition-transform duration-300" />
+                        <Icon className="h-16 w-16 text-violet-600 group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
                         
                         {/* Online indicator */}
-                        <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-white">
-                          <Wifi className="h-3 w-3 text-white" />
+                        <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-white" aria-label="Online">
+                          <Wifi className="h-3 w-3 text-white" aria-hidden="true" />
                         </div>
                       </div>
                     </div>

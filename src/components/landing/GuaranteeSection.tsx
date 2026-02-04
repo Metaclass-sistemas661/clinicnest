@@ -74,7 +74,7 @@ export function GuaranteeSection() {
                     "h-20 w-20 rounded-full flex items-center justify-center mx-auto transition-all duration-300 group-hover:scale-110",
                     colors.bg
                   )}>
-                    <Icon className={cn("h-10 w-10", colors.text)} />
+                    <Icon className={cn("h-10 w-10", colors.text)} aria-hidden="true" />
                   </div>
                   {/* Checkmark badge */}
                   <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-green-500 flex items-center justify-center border-4 border-white">

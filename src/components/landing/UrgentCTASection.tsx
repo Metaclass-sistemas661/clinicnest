@@ -4,26 +4,25 @@ import { ArrowRight, Zap, Gift, Clock, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function UrgentCTASection() {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 23,
-    minutes: 59,
-    seconds: 59
-  });
+  // Calculate time until end of day (23:59:59)
+  const getTimeUntilMidnight = () => {
+    const now = new Date();
+    const midnight = new Date();
+    midnight.setHours(23, 59, 59, 999);
+    
+    const diff = midnight.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return { hours: Math.max(0, hours), minutes: Math.max(0, minutes), seconds: Math.max(0, seconds) };
+  };
+
+  const [timeLeft, setTimeLeft] = useState(getTimeUntilMidnight());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          // Reset to 24 hours
-          return { hours: 23, minutes: 59, seconds: 59 };
-        }
-      });
+      setTimeLeft(getTimeUntilMidnight());
     }, 1000);
 
     return () => clearInterval(timer);
@@ -66,17 +65,17 @@ export function UrgentCTASection() {
 
             <div className="text-center max-w-3xl mx-auto">
               <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
-                Comece agora e ganhe{" "}
-                <span className="text-yellow-300">30 dias grátis!</span>
+                Comece agora e{" "}
+                <span className="text-yellow-300">ganhe benefícios exclusivos!</span>
               </h2>
               
               <p className="text-lg sm:text-xl text-white/90 mb-8">
-                Cadastre-se nas próximas 24 horas e dobre seu período de teste. 
-                De 14 para 30 dias completamente grátis!
+                Cadastre-se nas próximas 24 horas e aproveite 5 dias grátis + benefícios especiais 
+                para começar com o pé direito!
               </p>
 
               {/* Countdown Timer */}
-              <div className="flex justify-center gap-4 mb-10">
+              <div className="flex justify-center gap-4 mb-10" role="timer" aria-live="polite" aria-label="Contador regressivo até o fim do dia">
                 {[
                   { value: timeLeft.hours, label: "Horas" },
                   { value: timeLeft.minutes, label: "Min" },
@@ -84,7 +83,7 @@ export function UrgentCTASection() {
                 ].map((item) => (
                   <div key={item.label} className="flex flex-col items-center">
                     <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-                      <span className="font-display text-2xl sm:text-3xl font-bold text-white">
+                      <span className="font-display text-2xl sm:text-3xl font-bold text-white" aria-label={`${item.value} ${item.label}`}>
                         {formatNumber(item.value)}
                       </span>
                     </div>
@@ -96,15 +95,15 @@ export function UrgentCTASection() {
               {/* Bonuses */}
               <div className="flex flex-wrap justify-center gap-4 mb-10">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                  <Gift className="h-5 w-5 text-yellow-300" />
-                  <span className="text-sm font-medium text-white">+16 dias grátis</span>
+                  <Gift className="h-5 w-5 text-yellow-300" aria-hidden="true" />
+                  <span className="text-sm font-medium text-white">5 dias grátis</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                  <Clock className="h-5 w-5 text-green-300" />
+                  <Clock className="h-5 w-5 text-green-300" aria-hidden="true" />
                   <span className="text-sm font-medium text-white">Setup prioritário</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                  <Users className="h-5 w-5 text-blue-300" />
+                  <Users className="h-5 w-5 text-blue-300" aria-hidden="true" />
                   <span className="text-sm font-medium text-white">Suporte VIP</span>
                 </div>
               </div>
