@@ -29,57 +29,40 @@ export function PromoBanner() {
 
   const formatNumber = (num: number) => num.toString().padStart(2, '0');
 
+  const promoText = "5 dias grátis + benefícios exclusivos!";
+  const timerText = `${formatNumber(timeLeft.hours)}h:${formatNumber(timeLeft.minutes)}m:${formatNumber(timeLeft.seconds)}s`;
+
   return (
     <div 
-      className="fixed top-16 sm:top-20 left-0 right-0 z-40 bg-yellow-400 text-black border-b-2 border-yellow-500 shadow-lg"
+      className="fixed top-16 sm:top-20 left-0 right-0 z-40 bg-yellow-400 text-black border-b-2 border-yellow-500 shadow-lg overflow-hidden"
       style={{ backgroundColor: "#FFEB3B" }}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 py-2 sm:py-3">
-          {/* Promoção */}
-          <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
-            <Zap className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <span>5 dias grátis + benefícios exclusivos!</span>
-          </div>
-
-          {/* Separador */}
-          <div className="hidden sm:block w-px h-6 bg-black/20" />
-
-          {/* Cronômetro */}
-          <div className="flex items-center gap-2 sm:gap-4" role="timer" aria-live="polite" aria-label="Contador regressivo até o fim do dia">
-            <Clock className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-sm sm:text-base" aria-label={`${timeLeft.hours} horas`}>
-                  {formatNumber(timeLeft.hours)}
-                </span>
-                <span className="text-xs sm:text-sm">h</span>
-              </div>
-              <span className="font-bold">:</span>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-sm sm:text-base" aria-label={`${timeLeft.minutes} minutos`}>
-                  {formatNumber(timeLeft.minutes)}
-                </span>
-                <span className="text-xs sm:text-sm">m</span>
-              </div>
-              <span className="font-bold">:</span>
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-sm sm:text-base" aria-label={`${timeLeft.seconds} segundos`}>
-                  {formatNumber(timeLeft.seconds)}
-                </span>
-                <span className="text-xs sm:text-sm">s</span>
-              </div>
+      <div className="relative flex items-center py-2 sm:py-3">
+        {/* Marquee - Texto Correndo */}
+        <div className="flex items-center gap-6 animate-marquee whitespace-nowrap flex-shrink-0 pr-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 flex-shrink-0">
+              <Zap className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
+              <span className="text-sm sm:text-base font-semibold">
+                {promoText}
+              </span>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
+              <span className="font-bold text-sm sm:text-base" role="timer" aria-live="polite">
+                {timerText}
+              </span>
+              <span className="text-lg font-bold">•</span>
             </div>
-          </div>
-
-          {/* CTA Link */}
-          <Link 
-            to="/cadastro" 
-            className="ml-auto text-xs sm:text-sm font-bold underline hover:no-underline transition-all whitespace-nowrap"
-          >
-            Aproveitar agora →
-          </Link>
+          ))}
         </div>
+
+        {/* CTA Link - Fixo à direita */}
+        <Link 
+          to="/cadastro" 
+          className="absolute right-4 sm:right-6 z-10 bg-yellow-400 px-3 py-1 rounded-md text-xs sm:text-sm font-bold underline hover:no-underline transition-all whitespace-nowrap backdrop-blur-sm shadow-sm"
+          style={{ backgroundColor: "#FFEB3B" }}
+        >
+          Aproveitar agora →
+        </Link>
       </div>
     </div>
   );
