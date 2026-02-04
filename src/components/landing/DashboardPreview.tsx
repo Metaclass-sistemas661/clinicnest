@@ -7,16 +7,16 @@ import {
   Calendar,
   Users,
   Package,
-  Clock,
   Wallet,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function DashboardPreview() {
   return (
-    <div className="relative">
+    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
       {/* Mock Dashboard Container */}
-      <div className="rounded-2xl border bg-card shadow-2xl overflow-hidden">
+      <div className="rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
         {/* Mock Header */}
         <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -32,66 +32,75 @@ export function DashboardPreview() {
         </div>
 
         {/* Mock Content */}
-        <div className="p-6 bg-background">
-          {/* Stats Grid */}
+        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+          {/* Stats Grid - Cards maiores e não comprimidos */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard
-              title="Saldo do Mês"
-              value="R$ 12.450"
-              icon={Wallet}
-              variant="success"
-              trend={{ value: 15, isPositive: true }}
-            />
-            <StatCard
-              title="Agendamentos Hoje"
-              value="8"
-              icon={Calendar}
-              variant="info"
-            />
-            <StatCard
-              title="Clientes"
-              value="342"
-              icon={Users}
-              variant="default"
-            />
-            <StatCard
-              title="Estoque Baixo"
-              value="3"
-              icon={Package}
-              variant="warning"
-            />
+            <div className="dark">
+              <StatCard
+                title="Saldo do Mês"
+                value="R$ 12.450,00"
+                icon={Wallet}
+                variant="success"
+                trend={{ value: 15, isPositive: true }}
+              />
+            </div>
+            <div className="dark">
+              <StatCard
+                title="Agendamentos Hoje"
+                value="8"
+                icon={Calendar}
+                variant="info"
+              />
+            </div>
+            <div className="dark">
+              <StatCard
+                title="Total de Clientes"
+                value="342"
+                icon={Users}
+                variant="default"
+              />
+            </div>
+            <div className="dark">
+              <StatCard
+                title="Estoque Baixo"
+                value="3"
+                icon={Package}
+                variant="warning"
+              />
+            </div>
           </div>
 
-          {/* Mock Table */}
-          <Card>
+          {/* Mock Table - Mais espaçada */}
+          <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
             <CardHeader>
-              <CardTitle className="text-base">Agendamentos de Hoje</CardTitle>
+              <CardTitle className="text-base text-foreground">Agendamentos de Hoje</CardTitle>
               <CardDescription>Próximos compromissos</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {[
                   { time: "09:00", client: "Maria Silva", service: "Corte + Escova", status: "confirmed" },
-                  { time: "10:30", client: "João Santos", service: "Barba", status: "confirmed" },
+                  { time: "10:30", client: "João Santos", service: "Barba Completa", status: "confirmed" },
                   { time: "14:00", client: "Ana Costa", service: "Coloração", status: "pending" },
                 ].map((apt, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    style={{ backgroundColor: "hsl(250 25% 10%)" }}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-100 to-fuchsia-100 flex items-center justify-center text-sm font-semibold text-violet-700">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-sm font-semibold text-white">
                         {apt.time}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{apt.client}</p>
+                        <p className="font-medium text-sm text-foreground">{apt.client}</p>
                         <p className="text-xs text-muted-foreground">{apt.service}</p>
                       </div>
                     </div>
                     <Badge
                       variant={apt.status === "confirmed" ? "default" : "secondary"}
                       className={cn(
-                        apt.status === "confirmed" && "bg-green-100 text-green-700"
+                        apt.status === "confirmed" && "bg-green-500/20 text-green-400 border-green-500/30"
                       )}
                     >
                       {apt.status === "confirmed" ? "Confirmado" : "Pendente"}
@@ -103,10 +112,6 @@ export function DashboardPreview() {
           </Card>
         </div>
       </div>
-
-      {/* Decorative Elements */}
-      <div className="absolute -top-4 -right-4 h-24 w-24 bg-violet-500/20 rounded-full blur-2xl -z-10" />
-      <div className="absolute -bottom-4 -left-4 h-32 w-32 bg-fuchsia-500/20 rounded-full blur-3xl -z-10" />
     </div>
   );
 }

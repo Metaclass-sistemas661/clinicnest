@@ -152,20 +152,24 @@ export function ProductShowcaseSection() {
             <div className="sticky top-24">
               <div className="relative">
                 {/* Browser Frame */}
-                <div className="rounded-t-lg bg-gray-200 p-2 flex items-center gap-2">
+                <div className="rounded-t-lg bg-gray-800 p-2 flex items-center gap-2 border-b border-gray-700">
                   <div className="flex gap-1.5">
-                    <div className="h-3 w-3 rounded-full bg-red-400" />
-                    <div className="h-3 w-3 rounded-full bg-yellow-400" />
-                    <div className="h-3 w-3 rounded-full bg-green-400" />
+                    <div className="h-3 w-3 rounded-full bg-red-500" />
+                    <div className="h-3 w-3 rounded-full bg-yellow-500" />
+                    <div className="h-3 w-3 rounded-full bg-green-500" />
                   </div>
-                  <div className="flex-1 bg-white rounded px-3 py-1 text-xs text-gray-500 text-center">
+                  <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
                     app.vynlobella.com
                   </div>
                 </div>
 
-                {/* Dashboard Preview */}
-                <div className="border-x border-b rounded-b-lg overflow-hidden bg-background">
-                  <DashboardPreview />
+                {/* Dynamic Preview based on activeFeature */}
+                <div className="border-x border-b border-gray-700 rounded-b-lg overflow-hidden min-h-[600px]" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+                  {activeFeature === "dashboard" && <DashboardPreview />}
+                  {activeFeature === "agenda" && <AgendaPreview />}
+                  {activeFeature === "clientes" && <ClientesPreview />}
+                  {activeFeature === "financeiro" && <FinanceiroPreview />}
+                  {activeFeature === "estoque" && <EstoquePreview />}
                 </div>
 
                 {/* Floating Badge */}
