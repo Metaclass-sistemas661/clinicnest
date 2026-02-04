@@ -10,7 +10,6 @@ import {
   FeaturesSection,
   TestimonialsSection,
   PricingSection,
-  ScreenshotsSection,
   ProductShowcaseSection,
   SocialProofSection,
   ROICalculatorSection,
@@ -27,7 +26,6 @@ export default function LandingPage() {
       <ProductShowcaseSection />
       <HowItWorksSection />
       <FeaturesSection />
-      <ScreenshotsSection />
       <BeforeAfterSection />
       <TestimonialsSection />
       <ROICalculatorSection />
