@@ -13,22 +13,22 @@ const pricingPlans = [
     savings: null,
   },
   {
-    name: "Trimestral",
-    price: "69,90",
-    period: "/mês",
-    description: "Mais popular entre nossos clientes",
-    popular: true,
-    savings: "Economize R$30",
-    totalPrice: "R$209,70 cobrados a cada 3 meses",
-  },
-  {
     name: "Anual",
     price: "49,90",
     period: "/mês",
-    description: "Melhor custo-benefício",
-    popular: false,
+    description: "Mais popular entre nossos clientes",
+    popular: true,
     savings: "Economize R$360",
     totalPrice: "R$598,80 cobrados anualmente",
+  },
+  {
+    name: "Trimestral",
+    price: "69,90",
+    period: "/mês",
+    description: "Melhor custo-benefício",
+    popular: false,
+    savings: "Economize R$30",
+    totalPrice: "R$209,70 cobrados a cada 3 meses",
   },
 ];
 
