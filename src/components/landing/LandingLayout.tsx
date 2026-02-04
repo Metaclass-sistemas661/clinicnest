@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { PromoBanner } from "./PromoBanner";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -133,7 +134,10 @@ export function LandingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      {children}
+      <PromoBanner />
+      <div className="pt-28 sm:pt-32">
+        {children}
+      </div>
       <Footer />
     </div>
   );

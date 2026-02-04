@@ -88,7 +88,7 @@ export function ProductShowcaseSection() {
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 mb-6">
             <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-violet-600">Veja Como Funciona</span>
+            <span className="text-sm font-medium text-violet-600">Explore o Sistema</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Conheça o{" "}

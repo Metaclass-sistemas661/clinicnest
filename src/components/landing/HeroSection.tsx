@@ -39,7 +39,7 @@ function FloatingCard({
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* ========== PURPLE + PINK GRADIENT BACKGROUND ========== */}
       <div className="absolute inset-0">
         {/* Base gradient - purple to pink */}

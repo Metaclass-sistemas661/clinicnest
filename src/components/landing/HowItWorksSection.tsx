@@ -50,7 +50,7 @@ export function HowItWorksSection() {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 mb-6">
             <ArrowRight className="h-4 w-4 text-violet-600" />
-            <span className="text-sm font-medium text-violet-600">Como Funciona</span>
+            <span className="text-sm font-medium text-violet-600">Primeiros Passos</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Comece em{" "}
