@@ -10,3 +10,7 @@ export { FeaturesSection } from "./FeaturesSection";
 export { TestimonialsSection } from "./TestimonialsSection";
 export { PricingSection } from "./PricingSection";
 export { ScreenshotsSection } from "./ScreenshotsSection";
+export { DashboardPreview } from "./DashboardPreview";
+export { ProductShowcaseSection } from "./ProductShowcaseSection";
+export { SocialProofSection } from "./SocialProofSection";
+export { ROICalculatorSection } from "./ROICalculatorSection";

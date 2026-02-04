@@ -85,19 +85,34 @@ export function FeaturesSection() {
                 key={feature.title}
                 className="group relative p-6 sm:p-8 rounded-2xl border bg-card hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:border-violet-200 h-full flex flex-col"
               >
-                <div className={cn(
-                  "inline-flex h-14 w-14 items-center justify-center rounded-2xl mb-6 transition-all duration-300 group-hover:scale-110 flex-shrink-0",
-                  colors.bg
-                )}>
-                  <Icon className={cn("h-7 w-7", colors.text)} aria-hidden="true" />
+                {/* Animated Icon */}
+                <div className="relative mb-6">
+                  <div className={cn(
+                    "inline-flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300 group-hover:scale-110 flex-shrink-0 relative z-10",
+                    colors.bg
+                  )}>
+                    <Icon className={cn("h-7 w-7", colors.text)} aria-hidden="true" />
+                  </div>
+                  {/* Glow effect on hover */}
+                  <div className={cn(
+                    "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl",
+                    colors.bg
+                  )} />
                 </div>
                 <div className="flex-1 flex flex-col">
-                  <h3 className="font-display text-xl font-semibold mb-3">
+                  <h3 className="font-display text-xl font-semibold mb-3 group-hover:text-violet-600 transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-muted-foreground flex-1">
                     {feature.description}
                   </p>
+                  {/* Decorative element */}
+                  <div className="mt-4 pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                      <span>Incluído em todos os planos</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
