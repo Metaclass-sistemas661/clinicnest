@@ -12,6 +12,10 @@ import {
   Check,
 } from "lucide-react";
 import { DashboardPreview } from "./DashboardPreview";
+import { AgendaPreview } from "./AgendaPreview";
+import { ClientesPreview } from "./ClientesPreview";
+import { FinanceiroPreview } from "./FinanceiroPreview";
+import { EstoquePreview } from "./EstoquePreview";
 import { cn } from "@/lib/utils";
 
 const features = [
