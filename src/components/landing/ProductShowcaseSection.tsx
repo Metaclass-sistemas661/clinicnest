@@ -69,6 +69,18 @@ export function ProductShowcaseSection() {
 
   const activeFeatureData = features.find(f => f.id === activeFeature);
 
+  // Mapeamento de IDs para URLs
+  const getFeatureUrl = (featureId: string) => {
+    const urlMap: Record<string, string> = {
+      dashboard: "app.vynlobella.com/dashboard",
+      agenda: "app.vynlobella.com/agenda",
+      clientes: "app.vynlobella.com/clientes",
+      financeiro: "app.vynlobella.com/financeiro",
+      estoque: "app.vynlobella.com/estoque",
+    };
+    return urlMap[featureId] || "app.vynlobella.com";
+  };
+
   return (
     <section id="showcase" className="py-20 sm:py-32 bg-gradient-to-b from-background via-violet-50/30 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -199,7 +211,7 @@ export function ProductShowcaseSection() {
                 <div className="h-3 w-3 rounded-full bg-green-500" />
               </div>
               <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
-                app.vynlobella.com
+                {getFeatureUrl(activeFeature)}
               </div>
             </div>
 
