@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,8 @@ const features = [
 
 export function ProductShowcaseSection() {
   const [activeFeature, setActiveFeature] = useState("dashboard");
+  const previewRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
     violet: { bg: "bg-violet-100", text: "text-violet-600", border: "border-violet-200" },
@@ -81,6 +83,27 @@ export function ProductShowcaseSection() {
     return urlMap[featureId] || "app.vynlobella.com";
   };
 
+  // Função para detectar se está no mobile
+  const isMobile = () => {
+    return window.innerWidth < 768; // md breakpoint
+  };
+
+  // Handler para mudança de feature com scroll automático no mobile
+  const handleFeatureChange = (featureId: string) => {
+    setActiveFeature(featureId);
+    
+    // Scroll automático apenas no mobile
+    if (isMobile() && previewRef.current) {
+      setTimeout(() => {
+        previewRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 100);
+    }
+  };
+
   return (
     <section id="showcase" className="py-20 sm:py-32 bg-gradient-to-b from-background via-violet-50/30 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -102,9 +125,12 @@ export function ProductShowcaseSection() {
           </p>
         </div>
 
-        {/* Menu Fixo - Lado a Lado */}
-        <div className="mb-8">
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+        {/* Menu Fixo - Sticky no Mobile */}
+        <div 
+          ref={menuRef}
+          className="mb-8 md:mb-8 sticky top-28 sm:top-32 z-30 bg-background/95 backdrop-blur-sm py-2 md:py-0 md:static md:bg-transparent md:backdrop-blur-none"
+        >
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
             {features.map((feature) => {
               const Icon = feature.icon;
               const colors = colorClasses[feature.color];
@@ -113,9 +139,9 @@ export function ProductShowcaseSection() {
               return (
                 <button
                   key={feature.id}
-                  onClick={() => setActiveFeature(feature.id)}
+                  onClick={() => handleFeatureChange(feature.id)}
                   className={cn(
-                    "flex items-center gap-3 px-5 py-3 rounded-xl border-2 transition-all duration-300",
+                    "flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-3 rounded-xl border-2 transition-all duration-300 flex-shrink-0",
                     "hover:shadow-lg hover:-translate-y-1",
                     isActive
                       ? `${colors.border} bg-white shadow-lg`
@@ -124,20 +150,20 @@ export function ProductShowcaseSection() {
                 >
                   <div
                     className={cn(
-                      "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+                      "h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
                       isActive ? colors.bg : "bg-muted"
                     )}
                   >
                     <Icon
                       className={cn(
-                        "h-5 w-5 transition-colors",
+                        "h-4 w-4 sm:h-5 sm:w-5 transition-colors",
                         isActive ? colors.text : "text-muted-foreground"
                       )}
                     />
                   </div>
                   <div className="text-left">
                     <h3 className={cn(
-                      "font-semibold text-sm sm:text-base",
+                      "font-semibold text-xs sm:text-sm md:text-base",
                       isActive ? colors.text : "text-foreground"
                     )}>
                       {feature.title}
@@ -145,7 +171,7 @@ export function ProductShowcaseSection() {
                     <p className="text-xs text-muted-foreground hidden sm:block">{feature.description}</p>
                   </div>
                   {isActive && (
-                    <Badge className={cn(colors.bg, colors.text, "text-xs")}>Ativo</Badge>
+                    <Badge className={cn(colors.bg, colors.text, "text-xs hidden sm:inline-flex")}>Ativo</Badge>
                   )}
                 </button>
               );
@@ -201,7 +227,7 @@ export function ProductShowcaseSection() {
         )}
 
         {/* Preview Area - Largura Total Abaixo */}
-        <div className="relative max-w-6xl mx-auto">
+        <div ref={previewRef} className="relative max-w-6xl mx-auto scroll-mt-32 md:scroll-mt-0">
           <div className="relative">
             {/* Browser Frame */}
             <div className="rounded-t-lg bg-gray-800 p-2 flex items-center gap-2 border-b border-gray-700">
