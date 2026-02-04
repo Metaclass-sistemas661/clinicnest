@@ -22,9 +22,9 @@ export function FinanceiroPreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
             <div className="dark">
               <StatCard
                 title="Saldo do Mês"
@@ -61,11 +61,11 @@ export function FinanceiroPreview() {
 
           {/* Transactions List */}
           <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground">Últimas Transações</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-foreground">Últimas Transações</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
                   { type: "income", description: "Serviço - Corte + Escova", amount: "R$ 120,00", date: "Hoje, 09:00" },
                   { type: "expense", description: "Compra de produtos", amount: "R$ 350,00", date: "Hoje, 08:30" },

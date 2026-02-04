@@ -21,36 +21,36 @@ import { cn } from "@/lib/utils";
 const features = [
   {
     id: "dashboard",
-    title: "Dashboard Inteligente",
-    description: "Visão completa do seu negócio em tempo real",
+    title: "Dashboard",
+    description: "Visão completa do seu negócio",
     icon: BarChart3,
     color: "violet",
   },
   {
     id: "agenda",
-    title: "Agenda Digital",
-    description: "Gerencie todos os agendamentos em um só lugar",
+    title: "Agenda",
+    description: "Gerencie agendamentos",
     icon: Calendar,
     color: "blue",
   },
   {
     id: "clientes",
-    title: "Gestão de Clientes",
-    description: "Histórico completo e fidelização",
+    title: "Clientes",
+    description: "Histórico e fidelização",
     icon: Users,
     color: "fuchsia",
   },
   {
     id: "financeiro",
-    title: "Controle Financeiro",
-    description: "Receitas, despesas e lucros em tempo real",
+    title: "Financeiro",
+    description: "Controle financeiro completo",
     icon: DollarSign,
     color: "green",
   },
   {
     id: "estoque",
-    title: "Controle de Estoque",
-    description: "Alertas automáticos e gestão completa",
+    title: "Estoque",
+    description: "Gestão de produtos",
     icon: Package,
     color: "orange",
   },
@@ -67,11 +67,13 @@ export function ProductShowcaseSection() {
     orange: { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" },
   };
 
+  const activeFeatureData = features.find(f => f.id === activeFeature);
+
   return (
     <section id="showcase" className="py-20 sm:py-32 bg-gradient-to-b from-background via-violet-50/30 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 mb-6">
             <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden="true" />
             <span className="text-sm font-medium text-violet-600">Veja Como Funciona</span>
@@ -88,9 +90,9 @@ export function ProductShowcaseSection() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Feature Selector */}
-          <div className="space-y-4">
+        {/* Menu Fixo - Lado a Lado */}
+        <div className="mb-8">
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {features.map((feature) => {
               const Icon = feature.icon;
               const colors = colorClasses[feature.color];
@@ -101,87 +103,119 @@ export function ProductShowcaseSection() {
                   key={feature.id}
                   onClick={() => setActiveFeature(feature.id)}
                   className={cn(
-                    "w-full text-left p-6 rounded-2xl border-2 transition-all duration-300",
+                    "flex items-center gap-3 px-5 py-3 rounded-xl border-2 transition-all duration-300",
                     "hover:shadow-lg hover:-translate-y-1",
                     isActive
                       ? `${colors.border} bg-white shadow-lg`
                       : "border-border bg-card hover:border-violet-200"
                   )}
                 >
-                  <div className="flex items-start gap-4">
-                    <div
+                  <div
+                    className={cn(
+                      "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+                      isActive ? colors.bg : "bg-muted"
+                    )}
+                  >
+                    <Icon
                       className={cn(
-                        "h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
-                        isActive ? colors.bg : "bg-muted"
+                        "h-5 w-5 transition-colors",
+                        isActive ? colors.text : "text-muted-foreground"
                       )}
-                    >
-                      <Icon
-                        className={cn(
-                          "h-6 w-6 transition-colors",
-                          isActive ? colors.text : "text-muted-foreground"
-                        )}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg">{feature.title}</h3>
-                        {isActive && (
-                          <Badge className={colors.bg + " " + colors.text}>Ativo</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{feature.description}</p>
-                      {isActive && (
-                        <div className="mt-4 space-y-2">
-                          {[
-                            "Interface intuitiva e moderna",
-                            "Dados em tempo real",
-                            "Relatórios detalhados",
-                          ].map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-sm">
-                              <Check className="h-4 w-4 text-green-600" />
-                              <span className="text-muted-foreground">{item}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    />
                   </div>
+                  <div className="text-left">
+                    <h3 className={cn(
+                      "font-semibold text-sm sm:text-base",
+                      isActive ? colors.text : "text-foreground"
+                    )}>
+                      {feature.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground hidden sm:block">{feature.description}</p>
+                  </div>
+                  {isActive && (
+                    <Badge className={cn(colors.bg, colors.text, "text-xs")}>Ativo</Badge>
+                  )}
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Preview Area */}
+        {/* Informações Encapsuladas - Lado a Lado */}
+        {activeFeatureData && (
+          <div className="grid sm:grid-cols-3 gap-4 mb-8">
+            <Card className="border-2 border-violet-100 bg-violet-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
+                    <Check className={cn("h-5 w-5", colorClasses[activeFeatureData.color].text)} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Interface Intuitiva</p>
+                    <p className="text-xs text-muted-foreground">Design moderno e fácil</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-violet-100 bg-violet-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
+                    <Check className={cn("h-5 w-5", colorClasses[activeFeatureData.color].text)} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Dados em Tempo Real</p>
+                    <p className="text-xs text-muted-foreground">Atualização instantânea</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-violet-100 bg-violet-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
+                    <Check className={cn("h-5 w-5", colorClasses[activeFeatureData.color].text)} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Relatórios Detalhados</p>
+                    <p className="text-xs text-muted-foreground">Análises completas</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Preview Area - Largura Total Abaixo */}
+        <div className="relative max-w-6xl mx-auto">
           <div className="relative">
-            <div className="sticky top-24">
-              <div className="relative">
-                {/* Browser Frame */}
-                <div className="rounded-t-lg bg-gray-800 p-2 flex items-center gap-2 border-b border-gray-700">
-                  <div className="flex gap-1.5">
-                    <div className="h-3 w-3 rounded-full bg-red-500" />
-                    <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                    <div className="h-3 w-3 rounded-full bg-green-500" />
-                  </div>
-                  <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
-                    app.vynlobella.com
-                  </div>
-                </div>
-
-                {/* Dynamic Preview based on activeFeature */}
-                <div className="border-x border-b border-gray-700 rounded-b-lg overflow-hidden min-h-[600px]" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
-                  {activeFeature === "dashboard" && <DashboardPreview />}
-                  {activeFeature === "agenda" && <AgendaPreview />}
-                  {activeFeature === "clientes" && <ClientesPreview />}
-                  {activeFeature === "financeiro" && <FinanceiroPreview />}
-                  {activeFeature === "estoque" && <EstoquePreview />}
-                </div>
-
-                {/* Floating Badge */}
-                <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                  <span className="text-sm font-semibold">100% Funcional</span>
-                  <Check className="h-4 w-4" />
-                </div>
+            {/* Browser Frame */}
+            <div className="rounded-t-lg bg-gray-800 p-2 flex items-center gap-2 border-b border-gray-700">
+              <div className="flex gap-1.5">
+                <div className="h-3 w-3 rounded-full bg-red-500" />
+                <div className="h-3 w-3 rounded-full bg-yellow-500" />
+                <div className="h-3 w-3 rounded-full bg-green-500" />
               </div>
+              <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
+                app.vynlobella.com
+              </div>
+            </div>
+
+            {/* Dynamic Preview - Largura Total */}
+            <div className="border-x border-b border-gray-700 rounded-b-lg overflow-x-auto" style={{ backgroundColor: "hsl(250 25% 7%)", minHeight: "650px" }}>
+              {activeFeature === "dashboard" && <DashboardPreview />}
+              {activeFeature === "agenda" && <AgendaPreview />}
+              {activeFeature === "clientes" && <ClientesPreview />}
+              {activeFeature === "financeiro" && <FinanceiroPreview />}
+              {activeFeature === "estoque" && <EstoquePreview />}
+            </div>
+
+            {/* Floating Badge */}
+            <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-10">
+              <span className="text-sm font-semibold">100% Funcional</span>
+              <Check className="h-4 w-4" />
             </div>
           </div>
         </div>

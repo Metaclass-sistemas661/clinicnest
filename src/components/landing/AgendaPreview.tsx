@@ -21,7 +21,7 @@ export function AgendaPreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
           {/* Calendar View */}
           <div className="mb-6">
             <div className="grid grid-cols-7 gap-2 mb-4">
@@ -47,14 +47,14 @@ export function AgendaPreview() {
 
           {/* Appointments List */}
           <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4" />
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <Clock className="h-5 w-5" />
                 Agendamentos de Hoje
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
                   { time: "09:00", client: "Maria Silva", service: "Corte Feminino", professional: "Ana", status: "confirmed" },
                   { time: "10:30", client: "João Santos", service: "Barba", professional: "Carlos", status: "confirmed" },

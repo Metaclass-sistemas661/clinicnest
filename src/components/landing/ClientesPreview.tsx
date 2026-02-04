@@ -22,7 +22,7 @@ export function ClientesPreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
@@ -37,11 +37,11 @@ export function ClientesPreview() {
 
           {/* Clients List */}
           <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground">Lista de Clientes</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-foreground">Lista de Clientes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
                   { name: "Maria Silva", phone: "(11) 98765-4321", services: 12, products: 5, total: "R$ 2.450,00" },
                   { name: "João Santos", phone: "(21) 97654-3210", services: 8, products: 3, total: "R$ 1.890,00" },

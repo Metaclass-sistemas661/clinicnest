@@ -22,7 +22,7 @@ export function EstoquePreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
@@ -37,14 +37,14 @@ export function EstoquePreview() {
 
           {/* Products List */}
           <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground flex items-center gap-2">
-                <Package className="h-4 w-4" />
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <Package className="h-5 w-5" />
                 Produtos em Estoque
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
                   { name: "Shampoo Profissional", quantity: 45, minStock: 20, price: "R$ 35,00", status: "ok" },
                   { name: "Condicionador", quantity: 12, minStock: 15, price: "R$ 32,00", status: "low" },

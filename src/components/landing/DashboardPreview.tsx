@@ -32,9 +32,9 @@ export function DashboardPreview() {
         </div>
 
         {/* Mock Content */}
-        <div className="p-6" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
           {/* Stats Grid - Cards maiores e não comprimidos */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <div className="dark">
               <StatCard
                 title="Saldo do Mês"
@@ -72,12 +72,12 @@ export function DashboardPreview() {
 
           {/* Mock Table - Mais espaçada */}
           <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base text-foreground">Agendamentos de Hoje</CardTitle>
-              <CardDescription>Próximos compromissos</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-foreground">Agendamentos de Hoje</CardTitle>
+              <CardDescription className="text-sm">Próximos compromissos</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[
                   { time: "09:00", client: "Maria Silva", service: "Corte + Escova", status: "confirmed" },
                   { time: "10:30", client: "João Santos", service: "Barba Completa", status: "confirmed" },
