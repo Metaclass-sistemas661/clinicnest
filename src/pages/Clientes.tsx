@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,15 +29,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
+
+const clientFormSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
+  phone: z.string().optional(),
+  email: z.union([z.string().email("E-mail inválido"), z.literal("")]),
+  notes: z.string().optional(),
+});
 
 export default function Clientes() {
   const { profile, isAdmin } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [clientSpending, setClientSpending] = useState<ClientSpendingRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,15 +69,16 @@ export default function Clientes() {
     }
   }, [profile?.tenant_id, isAdmin]);
 
-  useEffect(() => {
-    const filtered = clients.filter(
+  const filteredClients = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return clients;
+    const q = debouncedSearchQuery.toLowerCase().trim();
+    return clients.filter(
       (client) =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.phone?.includes(searchQuery) ||
-        client.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        client.name.toLowerCase().includes(q) ||
+        client.phone?.includes(debouncedSearchQuery) ||
+        client.email?.toLowerCase().includes(q)
     );
-    setFilteredClients(filtered);
-  }, [clients, searchQuery]);
+  }, [clients, debouncedSearchQuery]);
 
   const fetchClientSpending = async () => {
     if (!profile?.tenant_id) return;
@@ -87,12 +97,14 @@ export default function Clientes() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-  const sortedAndFilteredClients = [...filteredClients].sort((a, b) => {
-    if (!isAdmin || clientSpending.length === 0) return 0;
-    const sa = getSpendingForClient(a.id)?.total_amount ?? 0;
-    const sb = getSpendingForClient(b.id)?.total_amount ?? 0;
-    return sb - sa;
-  });
+  const sortedAndFilteredClients = useMemo(() => {
+    if (!isAdmin || clientSpending.length === 0) return [...filteredClients];
+    return [...filteredClients].sort((a, b) => {
+      const sa = getSpendingForClient(a.id)?.total_amount ?? 0;
+      const sb = getSpendingForClient(b.id)?.total_amount ?? 0;
+      return sb - sa;
+    });
+  }, [filteredClients, isAdmin, clientSpending]);
 
   const fetchClients = async () => {
     if (!profile?.tenant_id) return;
@@ -100,15 +112,15 @@ export default function Clientes() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("*")
+        .select("id,tenant_id,name,phone,email,notes,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
       if (error) throw error;
       setClients((data as Client[]) || []);
-      setFilteredClients((data as Client[]) || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
+      toast.error("Erro ao carregar clientes. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -139,15 +151,27 @@ export default function Clientes() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
+    const parsed = clientFormSchema.safeParse({
+      name: formData.name.trim(),
+      phone: formData.phone,
+      email: formData.email || "",
+      notes: formData.notes,
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.errors[0]?.message ?? "Verifique os dados";
+      toast.error(msg);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const clientData = {
         tenant_id: profile.tenant_id,
-        name: formData.name,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        notes: formData.notes || null,
+        name: parsed.data.name,
+        phone: parsed.data.phone || null,
+        email: parsed.data.email || null,
+        notes: parsed.data.notes || null,
       };
 
       if (editingClient) {
@@ -270,6 +294,7 @@ export default function Clientes() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, telefone ou email..."
             className="pl-10"
+            aria-label="Buscar clientes por nome, telefone ou email"
           />
         </div>
       </div>
@@ -324,6 +349,7 @@ export default function Clientes() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenDialog(client)}
+                          aria-label={`Editar cliente ${client.name}`}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -464,6 +490,7 @@ export default function Clientes() {
                                       setDetailClient(client);
                                       setIsDetailOpen(true);
                                     }}
+                                    aria-label={`Ver detalhes e consumo de ${client.name}`}
                                   >
                                     <Info className="h-3 w-3" />
                                   </Button>
@@ -481,6 +508,7 @@ export default function Clientes() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleOpenDialog(client)}
+                              aria-label={`Editar cliente ${client.name}`}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>

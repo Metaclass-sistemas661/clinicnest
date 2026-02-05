@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
@@ -86,18 +86,26 @@ export default function Financeiro() {
     transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
   });
 
-  // Calculate stats
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const balance = totalIncome - totalExpense;
-  const totalProductLoss = productLosses.reduce((sum, loss) => sum + Number(loss.totalLoss), 0);
+  // Calculate stats (memoized to avoid recalc on every render)
+  const totalIncome = useMemo(
+    () => transactions.filter((t) => t.type === "income").reduce((sum, t) => sum + Number(t.amount), 0),
+    [transactions]
+  );
+  const totalExpense = useMemo(
+    () => transactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0),
+    [transactions]
+  );
+  const balance = useMemo(() => totalIncome - totalExpense, [totalIncome, totalExpense]);
+  const totalProductLoss = useMemo(
+    () => productLosses.reduce((sum, loss) => sum + Number(loss.totalLoss), 0),
+    [productLosses]
+  );
 
   // Count linked transactions (from appointments)
-  const linkedTransactions = transactions.filter((t) => t.appointment_id).length;
+  const linkedTransactions = useMemo(
+    () => transactions.filter((t) => t.appointment_id).length,
+    [transactions]
+  );
 
   // Handle PDF export with custom date range
   const handleExportPdf = async (startDate: Date, endDate: Date) => {
@@ -107,7 +115,7 @@ export default function Financeiro() {
       // Fetch transactions for the selected date range
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("*")
+        .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
         .lte("transaction_date", format(endDate, "yyyy-MM-dd"))
@@ -216,7 +224,7 @@ export default function Financeiro() {
     try {
       const { data, error } = await supabase
         .from("financial_transactions")
-        .select("*")
+        .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .gte("transaction_date", format(start, "yyyy-MM-dd"))
         .lte("transaction_date", format(end, "yyyy-MM-dd"))
@@ -226,6 +234,7 @@ export default function Financeiro() {
       setTransactions((data as FinancialTransaction[]) || []);
     } catch (error) {
       console.error("Error fetching transactions:", error);
+      toast.error("Erro ao carregar transações. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -235,16 +244,29 @@ export default function Financeiro() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
+    const parsed = transactionFormSchema.safeParse({
+      type: formData.type,
+      category: formData.category,
+      amount: formData.amount,
+      description: formData.description,
+      transaction_date: formData.transaction_date,
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.errors[0]?.message ?? "Verifique os dados";
+      toast.error(msg);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const { error } = await supabase.from("financial_transactions").insert({
         tenant_id: profile.tenant_id,
-        type: formData.type,
-        category: formData.category,
-        amount: parseFloat(formData.amount),
-        description: formData.description || null,
-        transaction_date: formData.transaction_date,
+        type: parsed.data.type,
+        category: parsed.data.category,
+        amount: parsed.data.amount,
+        description: parsed.data.description || null,
+        transaction_date: parsed.data.transaction_date,
       });
 
       if (error) throw error;
@@ -308,6 +330,7 @@ export default function Financeiro() {
       setProfessionals((data || []) as any[]);
     } catch (error) {
       console.error("Error fetching professionals:", error);
+      toast.error("Erro ao carregar profissionais. Tente novamente.");
     }
   };
 

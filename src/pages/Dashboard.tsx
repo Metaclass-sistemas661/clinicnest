@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { fetchClientSpendingByPeriod } from "@/lib/clientSpending";
+import { toast } from "sonner";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 
 export default function Dashboard() {
@@ -127,7 +128,7 @@ export default function Dashboard() {
         isAdmin
           ? supabase
               .from("products")
-              .select("*")
+              .select("id,tenant_id,name,description,cost,quantity,min_quantity,is_active,created_at,updated_at")
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
@@ -258,6 +259,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      toast.error("Erro ao carregar painel. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

@@ -88,12 +88,12 @@ export default function Equipe() {
       const [profilesRes, rolesRes, commissionsRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("*")
+          .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name"),
         supabase
           .from("user_roles")
-          .select("*")
+          .select("id,user_id,tenant_id,role,created_at")
           .eq("tenant_id", profile.tenant_id),
         supabase
           .from("professional_commissions")
@@ -125,6 +125,7 @@ export default function Equipe() {
       setTeam(teamData);
     } catch (error) {
       console.error("Error fetching team:", error);
+      toast.error("Erro ao carregar equipe. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

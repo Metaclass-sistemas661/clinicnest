@@ -127,6 +127,7 @@ export default function Produtos() {
       setProducts((data as ProductWithCategory[]) || []);
     } catch (error) {
       console.error("Error fetching products:", error);
+      toast.error("Erro ao carregar produtos. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

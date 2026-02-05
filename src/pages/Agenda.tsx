@@ -95,18 +95,18 @@ export default function Agenda() {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("clients")
-          .select("*")
+          .select("id,tenant_id,name,phone,email,notes,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("name"),
         supabase
           .from("services")
-          .select("*")
+          .select("id,tenant_id,name,description,duration_minutes,price,is_active,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
           .order("name"),
         supabase
           .from("profiles")
-          .select("*")
+          .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name"),
         supabase
@@ -127,6 +127,7 @@ export default function Agenda() {
       setProducts(((productsRes.data as Product[]) || []).filter((product) => product.is_active));
     } catch (error) {
       console.error("Error fetching data:", error);
+      toast.error("Erro ao carregar agenda. Tente novamente.");
     } finally {
       setIsLoading(false);
     }

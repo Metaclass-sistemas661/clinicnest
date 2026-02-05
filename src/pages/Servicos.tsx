@@ -58,7 +58,7 @@ export default function Servicos() {
     try {
       const { data, error } = await supabase
         .from("services")
-        .select("*")
+        .select("id,tenant_id,name,description,duration_minutes,price,is_active,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
@@ -66,6 +66,7 @@ export default function Servicos() {
       setServices((data as Service[]) || []);
     } catch (error) {
       console.error("Error fetching services:", error);
+      toast.error("Erro ao carregar serviços. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -98,16 +99,29 @@ export default function Servicos() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
+    const parsed = serviceFormSchema.safeParse({
+      name: formData.name.trim(),
+      description: formData.description,
+      duration_minutes: formData.duration_minutes,
+      price: formData.price,
+      is_active: formData.is_active,
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.errors[0]?.message ?? "Verifique os dados";
+      toast.error(msg);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const serviceData = {
         tenant_id: profile.tenant_id,
-        name: formData.name,
-        description: formData.description || null,
-        duration_minutes: parseInt(formData.duration_minutes),
-        price: parseFloat(formData.price) || 0,
-        is_active: formData.is_active,
+        name: parsed.data.name,
+        description: parsed.data.description || null,
+        duration_minutes: parsed.data.duration_minutes,
+        price: parsed.data.price,
+        is_active: parsed.data.is_active,
       };
 
       if (editingService) {
@@ -320,7 +334,7 @@ export default function Servicos() {
                       <span className="font-semibold">{formatCurrency(service.price)}</span>
                     </div>
                     <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)} aria-label={`Editar serviço ${service.name}`}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Switch
@@ -385,6 +399,7 @@ export default function Servicos() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleOpenDialog(service)}
+                          aria-label={`Editar serviço ${service.name}`}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
