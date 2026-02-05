@@ -57,12 +57,6 @@ export interface Service {
   updated_at: string;
 }
 
-export interface ProductCategory {
-  id: string;
-  tenant_id: string;
-  name: string;
-  created_at: string;
-}
 
 export interface Product {
   id: string;
@@ -70,14 +64,11 @@ export interface Product {
   name: string;
   description: string | null;
   cost: number;
-  sale_price: number;
   quantity: number;
   min_quantity: number;
-  category_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  category?: ProductCategory | null;
 }
 
 export interface Appointment {
@@ -103,7 +94,6 @@ export interface FinancialTransaction {
   id: string;
   tenant_id: string;
   appointment_id: string | null;
-  product_id: string | null;
   type: TransactionType;
   category: string;
   amount: number;
@@ -113,8 +103,6 @@ export interface FinancialTransaction {
   updated_at: string;
 }
 
-export type StockOutReasonType = 'sale' | 'damaged';
-
 export interface StockMovement {
   id: string;
   tenant_id: string;
@@ -123,7 +111,6 @@ export interface StockMovement {
   movement_type: 'in' | 'out';
   reason: string | null;
   created_by: string | null;
-  out_reason_type: StockOutReasonType | null;
   created_at: string;
 }
 

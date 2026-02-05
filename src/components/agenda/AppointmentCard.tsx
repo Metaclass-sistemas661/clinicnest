@@ -159,7 +159,7 @@ export function AppointmentCard({
             {/* Time column */}
             <div className="flex w-24 shrink-0 flex-col items-center justify-center bg-primary/5 p-4">
               <span className="text-2xl font-bold text-primary">
-                {format(new Date(appointment.scheduled_at), "HH:mm")}
+                {formatInAppTz(new Date(appointment.scheduled_at), "HH:mm")}
               </span>
               <span className="text-xs text-muted-foreground">
                 {appointment.service?.duration_minutes || appointment.duration_minutes} min

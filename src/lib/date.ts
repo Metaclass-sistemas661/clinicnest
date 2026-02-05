@@ -11,7 +11,6 @@ export const APP_TIMEZONE = "America/Sao_Paulo" as const;
 type FormatOptions = {
   locale?: Locale;
   weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  firstWeekContainsDate?: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   [key: string]: unknown;
 };
 
