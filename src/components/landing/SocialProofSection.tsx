@@ -84,24 +84,24 @@ export function SocialProofSection() {
         </div>
 
         {/* Trust Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-6 max-w-3xl mx-auto">
-          <div className="text-center px-2 sm:px-0">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+        <div className="flex flex-row items-start justify-center gap-1 sm:gap-4 md:gap-6 max-w-3xl mx-auto px-2">
+          <div className="flex-1 text-center min-w-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               98%
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
           </div>
-          <div className="text-center px-2 sm:px-0">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+          <div className="flex-1 text-center min-w-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               4.9/5
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
           </div>
-          <div className="text-center px-2 sm:px-0">
-            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+          <div className="flex-1 text-center min-w-0">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               24/7
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Suporte Disponível</p>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Disponível</p>
           </div>
         </div>
       </div>
