@@ -37,9 +37,9 @@ export function PromoBanner() {
       className="fixed top-16 sm:top-20 left-0 right-0 z-40 bg-yellow-400 text-black border-b-2 border-yellow-500 shadow-lg overflow-hidden"
       style={{ backgroundColor: "#FFEB3B" }}
     >
-      <div className="relative flex items-center py-2 sm:py-3">
-        {/* Marquee - Texto Correndo */}
-        <div className="flex items-center gap-6 animate-marquee whitespace-nowrap flex-shrink-0 pr-6">
+      <div className="flex items-center py-2 sm:py-3 overflow-hidden">
+        {/* Marquee - Texto Correndo com Botão */}
+        <div className="flex items-center gap-6 animate-marquee whitespace-nowrap flex-shrink-0">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-4 flex-shrink-0">
               <Zap className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" aria-hidden="true" />
@@ -51,18 +51,16 @@ export function PromoBanner() {
                 {timerText}
               </span>
               <span className="text-lg font-bold">•</span>
+              <Link 
+                to="/cadastro" 
+                className="px-3 py-1 rounded-md text-xs sm:text-sm font-bold underline hover:no-underline transition-all whitespace-nowrap bg-yellow-500 hover:bg-yellow-600 shadow-sm"
+              >
+                Aproveitar agora →
+              </Link>
+              <span className="text-lg font-bold">•</span>
             </div>
           ))}
         </div>
-
-        {/* CTA Link - Fixo à direita */}
-        <Link 
-          to="/cadastro" 
-          className="absolute right-4 sm:right-6 z-10 bg-yellow-400 px-3 py-1 rounded-md text-xs sm:text-sm font-bold underline hover:no-underline transition-all whitespace-nowrap backdrop-blur-sm shadow-sm"
-          style={{ backgroundColor: "#FFEB3B" }}
-        >
-          Aproveitar agora →
-        </Link>
       </div>
     </div>
   );

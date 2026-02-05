@@ -84,24 +84,24 @@ export function SocialProofSection() {
         </div>
 
         {/* Trust Stats */}
-        <div className="grid sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
-          <div className="text-center">
-            <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-2">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 max-w-3xl mx-auto">
+          <div className="text-center px-2 sm:px-0">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               98%
             </div>
-            <p className="text-sm text-muted-foreground">Taxa de Satisfação</p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-2">
+          <div className="text-center px-2 sm:px-0">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               4.9/5
             </div>
-            <p className="text-sm text-muted-foreground">Avaliação Média</p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-2">
+          <div className="text-center px-2 sm:px-0">
+            <div className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               24/7
             </div>
-            <p className="text-sm text-muted-foreground">Suporte Disponível</p>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Suporte Disponível</p>
           </div>
         </div>
       </div>

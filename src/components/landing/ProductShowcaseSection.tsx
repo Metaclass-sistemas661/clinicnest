@@ -128,9 +128,9 @@ export function ProductShowcaseSection() {
         {/* Menu Fixo - Sticky no Mobile */}
         <div 
           ref={menuRef}
-          className="mb-8 md:mb-8 sticky top-28 sm:top-32 z-30 bg-background/95 backdrop-blur-sm py-2 md:py-0 md:static md:bg-transparent md:backdrop-blur-none"
+          className="mb-8 sticky top-28 sm:top-32 z-30 bg-background/95 backdrop-blur-sm py-2 md:static md:mb-8 md:bg-transparent md:backdrop-blur-none md:py-0"
         >
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0 scrollbar-hide md:overflow-x-visible">
             {features.map((feature) => {
               const Icon = feature.icon;
               const colors = colorClasses[feature.color];
@@ -142,10 +142,10 @@ export function ProductShowcaseSection() {
                   onClick={() => handleFeatureChange(feature.id)}
                   className={cn(
                     "flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-3 rounded-xl border-2 transition-all duration-300 flex-shrink-0",
-                    "hover:shadow-lg hover:-translate-y-1",
+                    "md:hover:shadow-lg",
                     isActive
                       ? `${colors.border} bg-white shadow-lg`
-                      : "border-border bg-card hover:border-violet-200"
+                      : "border-border bg-card md:hover:border-violet-200"
                   )}
                 >
                   <div
