@@ -37,8 +37,7 @@ export async function fetchClientSpendingAllTime(
       amount,
       category,
       transaction_date,
-      appointments(client_id, clients(id, name), service_id, services(name)),
-      products(name)
+      appointments(client_id, clients(id, name), service_id, services(name))
     `
     )
     .eq("tenant_id", tenantId)
@@ -93,9 +92,8 @@ export async function fetchClientSpendingAllTime(
       });
     } else if (row.category === "Venda de Produto") {
       cur.products += 1;
-      const prod = row.products as { name: string } | null;
       cur.products_detail.push({
-        name: prod?.name ?? "Produto",
+        name: "Produto",
         amount,
         date,
       });

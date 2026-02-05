@@ -39,10 +39,6 @@ export default function Dashboard() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [commissionsPaid, setCommissionsPaid] = useState(0);
-  const [commissionsPending, setCommissionsPending] = useState(0);
-  const [commissionsReceived, setCommissionsReceived] = useState(0);
-  const [commissionsToReceive, setCommissionsToReceive] = useState(0);
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
   const [clientsCount, setClientsCount] = useState(0);
@@ -133,32 +129,10 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões (admin: todas; staff: só do usuário)
-        isAdmin
-          ? supabase
-              .from("commission_payments")
-              .select("amount, status, created_at, professional_id")
-              .eq("tenant_id", profile.tenant_id)
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-          : supabase
-              .from("commission_payments")
-              .select("amount, status, created_at")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("professional_id", profile.user_id)
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd),
-        // 7. Perdas de produtos danificados (admin) - mês atual
-        isAdmin
-          ? supabase
-              .from("stock_movements")
-              .select("quantity, product:products(cost)")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("movement_type", "out")
-              .eq("out_reason_type", "damaged")
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-          : Promise.resolve({ data: null }),
+        // 6. Placeholder for commissions - removed as table doesn't exist
+        Promise.resolve({ data: null }),
+        // 7. Placeholder for product losses - removed damaged filter
+        Promise.resolve({ data: null }),
         // 8. Total de clientes
         supabase
           .from("clients")
@@ -217,27 +191,7 @@ export default function Dashboard() {
         );
       }
 
-      if (commissionsData) {
-        if (isAdmin) {
-          const paid = commissionsData
-            .filter((c) => c.status === "paid")
-            .reduce((sum, c) => sum + Number(c.amount), 0);
-          const pending = commissionsData
-            .filter((c) => c.status === "pending")
-            .reduce((sum, c) => sum + Number(c.amount), 0);
-          setCommissionsPaid(paid);
-          setCommissionsPending(pending);
-        } else {
-          const received = commissionsData
-            .filter((c) => c.status === "paid")
-            .reduce((sum, c) => sum + Number(c.amount), 0);
-          const toReceive = commissionsData
-            .filter((c) => c.status === "pending")
-            .reduce((sum, c) => sum + Number(c.amount), 0);
-          setCommissionsReceived(received);
-          setCommissionsToReceive(toReceive);
-        }
-      }
+      // Commissions functionality removed - table doesn't exist
 
       setStats({
         monthlyBalance: monthlyIncome - monthlyExpenses,
@@ -365,34 +319,10 @@ export default function Dashboard() {
                     icon={Users}
                     description="Clientes cadastrados"
                   />
-                  <StatCard
-                    title="Comissões Pagas"
-                    value={formatCurrency(commissionsPaid)}
-                    icon={Wallet}
-                    variant="success"
-                  />
-                  <StatCard
-                    title="Comissões a Pagar"
-                    value={formatCurrency(commissionsPending)}
-                    icon={CreditCard}
-                    variant="warning"
-                  />
                 </>
               )}
               {!isAdmin && (
                 <>
-                  <StatCard
-                    title="Comissões Recebidas"
-                    value={formatCurrency(commissionsReceived)}
-                    icon={Wallet}
-                    variant="success"
-                  />
-                  <StatCard
-                    title="Comissões a Receber"
-                    value={formatCurrency(commissionsToReceive)}
-                    icon={CreditCard}
-                    variant="warning"
-                  />
                   <StatCard
                     title="Total de Clientes"
                     value={clientsCount}
