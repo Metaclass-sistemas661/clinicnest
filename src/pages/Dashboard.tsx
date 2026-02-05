@@ -42,6 +42,8 @@ export default function Dashboard() {
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
   const [clientsCount, setClientsCount] = useState(0);
+  const [commissionsPending, setCommissionsPending] = useState(0);
+  const [commissionsPaid, setCommissionsPaid] = useState(0);
   const [clientRanking, setClientRanking] = useState<
     { client_id: string; client_name: string; today_total: number; month_total: number }[]
   >([]);
@@ -129,10 +131,39 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Placeholder for commissions - removed as table doesn't exist
-        Promise.resolve({ data: null }),
-        // 7. Placeholder for product losses - removed damaged filter
-        Promise.resolve({ data: null }),
+        // 6. Comissões do mês (admin)
+        isAdmin
+          ? supabase
+              .from("commission_payments")
+              .select("amount, status")
+              .eq("tenant_id", profile.tenant_id)
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+              .in("status", ["pending", "paid"])
+          : Promise.resolve({ data: null }),
+        // 7. Perdas de produtos (baixas danificadas) do mês
+        isAdmin
+          ? supabase
+              .from("stock_movements")
+              .select(
+                `
+                  id,
+                  product_id,
+                  quantity,
+                  reason,
+                  created_at,
+                  movement_type,
+                  out_reason_type,
+                  product:products(name, cost)
+                `
+              )
+              .eq("tenant_id", profile.tenant_id)
+              .eq("movement_type", "out")
+              .eq("out_reason_type", "damaged")
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: null }),
         // 8. Total de clientes
         supabase
           .from("clients")
@@ -182,6 +213,20 @@ export default function Dashboard() {
       }
       setProductLossTotal(productLoss);
 
+      // Calcular comissões pagas e pendentes
+      let pendingCommissions = 0;
+      let paidCommissions = 0;
+      if (commissionsData) {
+        pendingCommissions = commissionsData
+          .filter((c: any) => c.status === "pending")
+          .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+        paidCommissions = commissionsData
+          .filter((c: any) => c.status === "paid")
+          .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
+      }
+      setCommissionsPending(pendingCommissions);
+      setCommissionsPaid(paidCommissions);
+
       setClientsCount(clientsCountResult);
 
       let lowStockData: Product[] = [];
@@ -190,8 +235,6 @@ export default function Dashboard() {
           (p) => p.quantity <= p.min_quantity
         );
       }
-
-      // Commissions functionality removed - table doesn't exist
 
       setStats({
         monthlyBalance: monthlyIncome - monthlyExpenses,
@@ -265,7 +308,7 @@ export default function Dashboard() {
         {/* Stats Grid - skeleton enquanto carrega para layout aparecer na hora */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {isLoading ? (
-            Array.from({ length: isAdmin ? 11 : 5 }).map((_, i) => (
+            Array.from({ length: isAdmin ? 13 : 5 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3"
@@ -318,6 +361,20 @@ export default function Dashboard() {
                     value={clientsCount}
                     icon={Users}
                     description="Clientes cadastrados"
+                  />
+                  <StatCard
+                    title="Comissões a Pagar"
+                    value={formatCurrency(commissionsPending)}
+                    icon={CreditCard}
+                    variant="warning"
+                    description="Comissões pendentes do mês"
+                  />
+                  <StatCard
+                    title="Comissões Pagas"
+                    value={formatCurrency(commissionsPaid)}
+                    icon={Wallet}
+                    variant="success"
+                    description="Comissões pagas no mês"
                   />
                 </>
               )}
