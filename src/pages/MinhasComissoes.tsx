@@ -110,6 +110,30 @@ export default function MinhasComissoes() {
     return options;
   })();
 
+  const exportCsv = () => {
+    const headers = ["Data", "Valor do serviço", "Comissão", "Status", "Pagamento"];
+    const rows = commissions.map((c) => [
+      formatInAppTz(c.created_at, "dd/MM/yyyy HH:mm"),
+      Number(c.service_price || 0).toFixed(2).replace(".", ","),
+      Number(c.amount || 0).toFixed(2).replace(".", ","),
+      c.status === "paid" ? "Pago" : "Pendente",
+      c.status === "paid" && c.payment_date
+        ? format(new Date(c.payment_date), "dd/MM/yyyy")
+        : "—",
+    ]);
+    const csvContent = [
+      headers.join(";"),
+      ...rows.map((r) => r.join(";")),
+    ].join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `minhas-comissoes-${filterMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isAdmin) {
     return (
       <MainLayout title="Minhas Comissões" subtitle="Acesso restrito">
