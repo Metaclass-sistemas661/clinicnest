@@ -227,6 +227,20 @@ export default function Financeiro() {
     }
   }, [profile?.tenant_id, isAdmin, filterMonth]);
 
+  // Refetch ao voltar para a aba (ex.: após concluir atendimento na Agenda)
+  useEffect(() => {
+    const onFocus = () => {
+      if (profile?.tenant_id && isAdmin) {
+        fetchTransactions();
+        fetchCommissions();
+        fetchProfessionals();
+        fetchProductLosses();
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [profile?.tenant_id, isAdmin, filterMonth]);
+
   const fetchTransactions = async () => {
     if (!profile?.tenant_id) return;
 
