@@ -334,7 +334,7 @@ export default function Agenda() {
     if (!profile?.tenant_id) return undefined;
 
     try {
-      const { error } = await supabase.rpc("complete_appointment_with_sale", {
+      const { data: rpcResult, error } = await supabase.rpc("complete_appointment_with_sale", {
         p_appointment_id: appointment.id,
         p_product_id: sale?.productId ?? null,
         p_quantity: sale?.quantity ?? null,
@@ -355,16 +355,12 @@ export default function Agenda() {
         }
       }
 
-      // Staff: buscar comissão criada pelo RPC e exibir popup com valor recebido
+      // Staff: usar valor retornado pelo RPC (fonte confiável) para popup de comissão
       if (!isAdmin && profile?.id && profile?.user_id) {
-        const { data: commission } = await supabase
-          .from("commission_payments")
-          .select("amount")
-          .eq("appointment_id", appointment.id)
-          .eq("professional_id", profile.user_id)
-          .maybeSingle();
+        const commissionAmount = rpcResult?.commission_amount != null ? Number(rpcResult.commission_amount) : 0;
+        const servicePriceFromRpc = rpcResult?.service_price != null ? Number(rpcResult.service_price) : Number(appointment.price || 0);
 
-        if (!commission || Number(commission.amount || 0) <= 0) {
+        if (commissionAmount <= 0) {
           toast.success(
             sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
           );
@@ -392,9 +388,9 @@ export default function Agenda() {
         fetchData();
         return {
           type: "congrats",
-          commissionAmount: Number(commission.amount),
+          commissionAmount,
           serviceName: (appointment.service as { name?: string })?.name || "Serviço",
-          servicePrice: Number(appointment.price || 0),
+          servicePrice: servicePriceFromRpc,
           completedThisMonth,
           valueGeneratedThisMonth,
         };
