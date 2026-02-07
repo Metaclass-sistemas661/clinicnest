@@ -14,7 +14,8 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, title, subtitle, actions }: MainLayoutProps) {
-  const { isAdmin } = useAuth();
+  const auth = useAuth();
+  const isAdmin = auth?.isAdmin ?? false;
   const isMobile = useIsMobile();
 
   return (
