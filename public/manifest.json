@@ -1,0 +1,18 @@
+{
+  "name": "VynloBella",
+  "short_name": "VynloBella",
+  "description": "Gestão Profissional para Salões de Beleza",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}

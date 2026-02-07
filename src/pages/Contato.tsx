@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Contato() {
   const [submitted, setSubmitted] = useState(false);
@@ -12,11 +14,31 @@ export default function Contato() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const subject = formData.get("subject") as string;
+    const message = formData.get("message") as string;
+
     setLoading(true);
-    // Simula envio; você pode integrar com API ou e-mail depois
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setSubmitted(true);
+    try {
+      const { error } = await supabase.from("contact_messages").insert({
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+
+      if (error) throw error;
+      setSubmitted(true);
+      form.reset();
+    } catch (err) {
+      console.error("Erro ao enviar contato:", err);
+      toast.error("Erro ao enviar mensagem. Tente novamente ou envie para contato@vynlobella.com");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

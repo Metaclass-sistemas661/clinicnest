@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -295,10 +296,17 @@ export default function Servicos() {
               ))}
             </div>
           ) : services.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Scissors className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum serviço cadastrado</p>
-            </div>
+            <EmptyState
+              icon={Scissors}
+              title="Nenhum serviço cadastrado"
+              description="Cadastre os serviços oferecidos pelo salão para usar na agenda."
+              action={
+                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Serviço
+                </Button>
+              }
+            />
           ) : (
             <>
               {/* Mobile: Card Layout */}

@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info } from "lucide-react";
@@ -319,12 +320,23 @@ export default function Clientes() {
               ))}
             </div>
           ) : filteredClients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">
-                {searchQuery ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-              </p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title={searchQuery ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+              description={
+                searchQuery
+                  ? "Tente ajustar os termos da busca."
+                  : "Cadastre seu primeiro cliente para começar a organizar sua agenda."
+              }
+              action={
+                !searchQuery && (
+                  <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Cliente
+                  </Button>
+                )
+              }
+            />
           ) : (
             <>
               {/* Mobile: Card Layout */}

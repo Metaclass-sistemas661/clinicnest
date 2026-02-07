@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -42,6 +44,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <GoogleAnalytics />
           <AuthProvider>
             <InternalDarkMode />
             <ErrorBoundary>
@@ -62,7 +65,10 @@ const App = () => (
                   path="/dashboard"
                   element={
                     <ProtectedRoute>
-                      <Dashboard />
+                      <>
+                        <WelcomeModal />
+                        <Dashboard />
+                      </>
                     </ProtectedRoute>
                   }
                 />

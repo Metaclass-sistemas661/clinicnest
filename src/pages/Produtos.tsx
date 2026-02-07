@@ -34,6 +34,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Package, Plus, Loader2, AlertTriangle, ArrowUp, ArrowDown, Tag } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
 import type { Product, ProductCategory, StockMovement, StockOutReasonType } from "@/types/database";
@@ -1001,10 +1002,17 @@ export default function Produtos() {
               ))}
             </div>
           ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Package className="mb-4 h-12 w-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">Nenhum produto cadastrado</p>
-            </div>
+            <EmptyState
+              icon={Package}
+              title="Nenhum produto cadastrado"
+              description="Cadastre os produtos em estoque para controlar vendas e baixas."
+              action={
+                <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Produto
+                </Button>
+              }
+            />
           ) : (
             <>
               {/* Mobile: Card Layout */}
