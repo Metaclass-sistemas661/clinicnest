@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = userRole?.role === 'admin';
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string): Promise<{ profile: Profile | null; userRole: UserRole | null; tenant: Tenant | null }> => {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
@@ -38,52 +38,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', userId)
         .single();
 
-      if (profileData) {
-        setProfile(profileData as Profile);
+      if (!profileData) return { profile: null, userRole: null, tenant: null };
 
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('tenant_id', profileData.tenant_id)
-          .single();
+      let roleData: UserRole | null = null;
+      let tenantData: Tenant | null = null;
 
-        if (roleData) {
-          setUserRole(roleData as UserRole);
-        }
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('tenant_id', profileData.tenant_id)
+        .single();
+      if (role) roleData = role as UserRole;
 
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('id', profileData.tenant_id)
-          .single();
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', profileData.tenant_id)
+        .single();
+      if (tenant) tenantData = tenant as Tenant;
 
-        if (tenantData) {
-          setTenant(tenantData as Tenant);
-        }
-      }
+      return {
+        profile: profileData as Profile,
+        userRole: roleData,
+        tenant: tenantData,
+      };
     } catch (error) {
       console.error('Error fetching user data:', error);
+      return { profile: null, userRole: null, tenant: null };
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchUserData(user.id);
+      const data = await fetchUserData(user.id);
+      if (data.profile) setProfile(data.profile);
+      setUserRole(data.userRole);
+      setTenant(data.tenant);
     }
   };
 
   /**
    * Aplica a sessão e garante que profile/tenant estejam carregados antes de liberar a UI.
-   * isLoading só vira false após fetchUserData completar (quando há sessão), evitando
-   * race condition no Dashboard.
+   * Atualiza profile, userRole e tenant em batch junto com isLoading para evitar race
+   * entre state updates e re-render do Dashboard.
    */
   const applySession = async (session: Session | null) => {
     setSession(session);
     setUser(session?.user ?? null);
 
     if (session?.user) {
-      await fetchUserData(session.user.id);
+      const data = await fetchUserData(session.user.id);
+      setProfile(data.profile);
+      setUserRole(data.userRole);
+      setTenant(data.tenant);
     } else {
       setProfile(null);
       setUserRole(null);
@@ -93,17 +101,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const applySessionSafe = async (session: Session | null) => {
+      await applySession(session);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        applySession(session);
+        if (!cancelled) applySessionSafe(session);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      applySession(session);
+      if (!cancelled) applySessionSafe(session);
     });
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
   }, []);
