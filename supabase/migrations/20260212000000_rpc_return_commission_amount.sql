@@ -24,13 +24,20 @@ DECLARE
   v_client_name TEXT;
   v_product_name TEXT;
   v_sale_amount DECIMAL(10,2);
+  v_product_revenue DECIMAL(10,2);  -- receita venda = sale_price * qty
+  v_product_cost DECIMAL(10,2);     -- custo = cost * qty
   v_description TEXT;
+  v_professional_name TEXT;
   -- Comissão
   v_professional_user_id UUID;
   v_commission_config RECORD;
-  v_commission_amount DECIMAL(10,2);
+  v_commission_amount DECIMAL(10,2) := 0;
   v_tenant_default_pct DECIMAL(5,2) := 0;
   v_result JSONB := NULL;
+  v_product_sales JSONB := '[]'::jsonb;
+  v_product_profit DECIMAL(10,2) := 0;
+  v_service_profit DECIMAL(10,2) := 0;
+  v_total_profit DECIMAL(10,2) := 0;
 BEGIN
   -- Obter tenant e profile do usuário atual
   SELECT tenant_id, id INTO v_tenant_id, v_profile_id
@@ -73,7 +80,17 @@ BEGIN
       RAISE EXCEPTION 'Estoque insuficiente para o produto selecionado.';
     END IF;
 
-    v_sale_amount := COALESCE(v_product.cost, 0) * p_quantity;
+    v_product_revenue := COALESCE(v_product.sale_price, v_product.cost, 0) * p_quantity;
+    v_product_cost := COALESCE(v_product.cost, 0) * p_quantity;
+    v_sale_amount := v_product_revenue;
+    v_product_profit := v_product_profit + (v_product_revenue - v_product_cost);
+    v_product_sales := v_product_sales || jsonb_build_array(jsonb_build_object(
+      'product_name', v_product.name,
+      'quantity', p_quantity,
+      'revenue', (v_product_revenue)::float,
+      'cost', (v_product_cost)::float,
+      'profit', ((v_product_revenue - v_product_cost))::float
+    ));
     v_service_name := v_appointment.service_name;
     v_client_name := v_appointment.client_name;
     v_product_name := v_product.name;
@@ -106,6 +123,11 @@ BEGIN
   END IF;
 
   UPDATE public.appointments SET status = 'completed' WHERE id = p_appointment_id;
+
+  -- Nome do profissional (para popup admin)
+  IF v_appointment.professional_id IS NOT NULL THEN
+    SELECT full_name INTO v_professional_name FROM public.profiles WHERE id = v_appointment.professional_id LIMIT 1;
+  END IF;
 
   -- Criar comissão e preparar retorno
   IF v_appointment.professional_id IS NOT NULL AND v_appointment.tenant_id IS NOT NULL THEN
@@ -159,14 +181,24 @@ BEGIN
                           ELSE v_tenant_default_pct END),
             'pending'
           );
-          v_result := jsonb_build_object(
-            'commission_amount', (v_commission_amount)::float,
-            'service_price', (COALESCE(v_appointment.price, 0))::float
-          );
         END IF;
       END IF;
     END IF;
   END IF;
+
+  -- Montar retorno: staff (commission_amount, service_price) e admin (profit, products)
+  v_service_profit := COALESCE(v_appointment.price, 0) - COALESCE(v_commission_amount, 0);
+  v_total_profit := v_service_profit + v_product_profit;
+  v_result := jsonb_build_object(
+    'commission_amount', (COALESCE(v_commission_amount, 0))::float,
+    'service_price', (COALESCE(v_appointment.price, 0))::float,
+    'service_name', COALESCE(v_appointment.service_name, 'Serviço'),
+    'professional_name', COALESCE(v_professional_name, ''),
+    'service_profit', (v_service_profit)::float,
+    'product_sales', v_product_sales,
+    'product_profit_total', (v_product_profit)::float,
+    'total_profit', (v_total_profit)::float
+  );
 
   RETURN v_result;
 END;

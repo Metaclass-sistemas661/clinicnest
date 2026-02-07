@@ -66,6 +66,7 @@ import {
   CongratulationsCommissionDialog,
   type CongratulationsCommissionData,
 } from "./CongratulationsCommissionDialog";
+import { AdminProfitCongratulationsDialog, type AdminProfitData } from "./AdminProfitCongratulationsDialog";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
@@ -83,6 +84,7 @@ interface AppointmentsTableProps {
   ) => Promise<
     | { type: "congrats" } & CongratulationsCommissionData
     | { type: "no_commission" }
+    | { type: "admin_congrats" } & AdminProfitData
     | undefined
   >;
   onEdit: (id: string, data: EditAppointmentData) => Promise<void>;
@@ -161,6 +163,8 @@ export function AppointmentsTable({
   const [isCompleting, setIsCompleting] = useState(false);
   const [congratsDialogOpen, setCongratsDialogOpen] = useState(false);
   const [congratsData, setCongratsData] = useState<CongratulationsCommissionData | null>(null);
+  const [adminCongratsDialogOpen, setAdminCongratsDialogOpen] = useState(false);
+  const [adminCongratsData, setAdminCongratsData] = useState<AdminProfitData | null>(null);
   const [noCommissionDialogOpen, setNoCommissionDialogOpen] = useState(false);
 
   const formatCurrency = (value: number) => {
@@ -299,13 +303,15 @@ export function AppointmentsTable({
     try {
       const result = await onComplete(appointmentToComplete, salePayload);
       resetCompleteDialog();
-      // Popup para staff (profissional que concluiu)
-      if (!isAdmin && result) {
+      if (result) {
         if (result.type === "no_commission") {
           setNoCommissionDialogOpen(true);
         } else if (result.type === "congrats") {
           setCongratsData(result);
           setCongratsDialogOpen(true);
+        } else if (result.type === "admin_congrats") {
+          setAdminCongratsData(result);
+          setAdminCongratsDialogOpen(true);
         }
       }
     } catch (error) {
@@ -943,6 +949,11 @@ export function AppointmentsTable({
       <NoCommissionWarningDialog
         open={noCommissionDialogOpen}
         onOpenChange={setNoCommissionDialogOpen}
+      />
+      <AdminProfitCongratulationsDialog
+        open={adminCongratsDialogOpen}
+        onOpenChange={setAdminCongratsDialogOpen}
+        data={adminCongratsData}
       />
     </>
   );
