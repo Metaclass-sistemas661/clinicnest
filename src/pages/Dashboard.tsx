@@ -45,6 +45,8 @@ export default function Dashboard() {
   const [clientsCount, setClientsCount] = useState(0);
   const [commissionsPending, setCommissionsPending] = useState(0);
   const [commissionsPaid, setCommissionsPaid] = useState(0);
+  const [professionalCommissionsToReceive, setProfessionalCommissionsToReceive] = useState(0);
+  const [professionalCommissionsReceived, setProfessionalCommissionsReceived] = useState(0);
   const [clientRanking, setClientRanking] = useState<
     { client_id: string; client_name: string; today_total: number; month_total: number }[]
   >([]);
@@ -225,8 +227,13 @@ export default function Dashboard() {
           .filter((c: any) => c.status === "paid")
           .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
       }
-      setCommissionsPending(pendingCommissions);
-      setCommissionsPaid(paidCommissions);
+      if (isAdmin) {
+        setCommissionsPending(pendingCommissions);
+        setCommissionsPaid(paidCommissions);
+      } else {
+        setProfessionalCommissionsToReceive(pendingCommissions);
+        setProfessionalCommissionsReceived(paidCommissions);
+      }
 
       setClientsCount(clientsCountResult);
 
@@ -310,7 +317,7 @@ export default function Dashboard() {
         {/* Stats Grid - skeleton enquanto carrega para layout aparecer na hora */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {isLoading ? (
-            Array.from({ length: isAdmin ? 13 : 5 }).map((_, i) => (
+            Array.from({ length: isAdmin ? 13 : 7 }).map((_, i) => (
               <div
                 key={i}
                 className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3"
@@ -382,6 +389,20 @@ export default function Dashboard() {
               )}
               {!isAdmin && (
                 <>
+                  <StatCard
+                    title="Comissões a Receber"
+                    value={formatCurrency(professionalCommissionsToReceive)}
+                    icon={CreditCard}
+                    variant="warning"
+                    description="Comissões pendentes (aguardando pagamento do admin)"
+                  />
+                  <StatCard
+                    title="Comissões Recebidas"
+                    value={formatCurrency(professionalCommissionsReceived)}
+                    icon={Wallet}
+                    variant="success"
+                    description="Comissões já pagas neste mês"
+                  />
                   <StatCard
                     title="Total de Clientes"
                     value={clientsCount}
