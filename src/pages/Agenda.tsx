@@ -355,16 +355,16 @@ export default function Agenda() {
         }
       }
 
-      // Staff: verificar se tem comissão configurada e qual popup exibir
+      // Staff: buscar comissão criada pelo RPC e exibir popup com valor recebido
       if (!isAdmin && profile?.id && profile?.user_id) {
-        const { data: commissionConfig } = await supabase
-          .from("professional_commissions")
-          .select("id")
-          .eq("user_id", profile.user_id)
-          .eq("tenant_id", profile.tenant_id)
+        const { data: commission } = await supabase
+          .from("commission_payments")
+          .select("amount")
+          .eq("appointment_id", appointment.id)
+          .eq("professional_id", profile.user_id)
           .maybeSingle();
 
-        if (!commissionConfig) {
+        if (!commission || Number(commission.amount || 0) <= 0) {
           toast.success(
             sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
           );
@@ -392,7 +392,7 @@ export default function Agenda() {
         fetchData();
         return {
           type: "congrats",
-          commissionAmount: 0,
+          commissionAmount: Number(commission.amount),
           serviceName: (appointment.service as { name?: string })?.name || "Serviço",
           servicePrice: Number(appointment.price || 0),
           completedThisMonth,
