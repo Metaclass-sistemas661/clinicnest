@@ -33,28 +33,25 @@ VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 
 ---
 
-## 3. Imagem OG (Redes Sociais)
+## 3. Imagem OG (Redes Sociais) ✅
 
-O `index.html` já referencia `/og-image.png`. Adicione uma imagem em:
-
-```
-public/og-image.png
-```
-
-**Recomendado:** 1200×630 px, com logo VynloBella e tagline para compartilhamento em WhatsApp, Facebook, LinkedIn.
+A imagem `og-image.png` está em `public/` (1200×630 px). Usada no compartilhamento em WhatsApp, Facebook, LinkedIn.
 
 ---
 
-## 4. PWA (Manifest)
+## 4. PWA (Manifest) ✅
 
-O `manifest.json` está em `public/`. O favicon é usado como ícone. Para ícones melhores em instalação:
-
-- Adicione `public/icon-192.png` e `public/icon-512.png`
-- Atualize `manifest.json` com as novas entradas em `icons`
+O `manifest.json` inclui ícones 192×192 e 512×512 em `public/icon-192.png` e `public/icon-512.png`. Permite instalar o app na tela inicial em dispositivos móveis.
 
 ---
 
-## 5. Onboarding
+## 5. Sitemap (SEO) ✅
+
+O `sitemap.xml` está em `public/`. O `robots.txt` referencia `https://vynlobella.com/sitemap.xml`. Se usar outro domínio, atualize a URL em ambos os arquivos.
+
+---
+
+## 6. Onboarding
 
 O modal de boas-vindas aparece na primeira visita ao Dashboard. Usa `localStorage` com chave `vynlobella_onboarding_seen`.
 
