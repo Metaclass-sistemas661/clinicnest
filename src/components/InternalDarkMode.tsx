@@ -11,6 +11,7 @@ const PROTECTED_PATHS = [
   "/servicos",
   "/clientes",
   "/equipe",
+  "/metas",
   "/configuracoes",
   "/assinatura",
 ];
