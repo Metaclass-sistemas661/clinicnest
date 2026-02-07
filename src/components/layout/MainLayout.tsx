@@ -6,6 +6,7 @@ import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissionReminderDialog";
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
+import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -33,6 +34,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           "min-h-screen transition-all duration-300",
           isMobile ? "ml-0" : "ml-72"
         )}>
+          <GoalsProgressBar />
           {/* Header */}
           {(title || actions) && (
             <header className={cn(

@@ -24,6 +24,7 @@ import Equipe from "@/pages/Equipe";
 import Configuracoes from "@/pages/Configuracoes";
 import Assinatura from "@/pages/Assinatura";
 import MinhasComissoes from "@/pages/MinhasComissoes";
+import Metas from "@/pages/Metas";
 
 // Lazy apenas para páginas públicas (evita flash ao navegar no dashboard)
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -118,6 +119,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Clientes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/metas"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Metas />
                     </ProtectedRoute>
                   }
                 />

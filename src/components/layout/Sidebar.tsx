@@ -17,6 +17,7 @@ import {
   Sparkles,
   Menu,
   Wallet,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -58,6 +59,7 @@ const navCategories: NavCategory[] = [
   {
     label: "Administrativo",
     items: [
+      { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
