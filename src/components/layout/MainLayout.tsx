@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissionReminderDialog";
+import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -20,7 +21,12 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
 
   return (
     <SubscriptionGuard>
-      {isAdmin && <AdminCommissionReminderDialog />}
+      {isAdmin && (
+        <>
+          <AdminCommissionReminderDialog />
+          <AdminProfitRealtimeListener />
+        </>
+      )}
       <div className="min-h-screen bg-background">
         <Sidebar />
         <main className={cn(

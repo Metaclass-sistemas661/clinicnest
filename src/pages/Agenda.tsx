@@ -329,7 +329,6 @@ export default function Agenda() {
   ): Promise<
     | { type: "congrats"; commissionAmount: number; serviceName: string; servicePrice: number; completedThisMonth: number; valueGeneratedThisMonth: number }
     | { type: "no_commission" }
-    | { type: "admin_congrats"; professionalName: string; serviceName: string; serviceProfit: number; productSales: { product_name: string; quantity: number; profit: number }[]; productProfitTotal: number; totalProfit: number }
     | undefined
   > => {
     if (!profile?.tenant_id) return undefined;
@@ -397,26 +396,7 @@ export default function Agenda() {
         };
       }
 
-      // Admin: popup com lucro (serviço + produtos, após comissão e custos)
-      if (isAdmin && rpcResult) {
-        const productSales = Array.isArray(rpcResult.product_sales)
-          ? (rpcResult.product_sales as { product_name: string; quantity: number; profit: number }[])
-          : [];
-        toast.success(
-          sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
-        );
-        fetchData();
-        return {
-          type: "admin_congrats",
-          professionalName: String(rpcResult.professional_name ?? ""),
-          serviceName: String(rpcResult.service_name ?? "Serviço"),
-          serviceProfit: Number(rpcResult.service_profit ?? 0),
-          productSales,
-          productProfitTotal: Number(rpcResult.product_profit_total ?? 0),
-          totalProfit: Number(rpcResult.total_profit ?? 0),
-        };
-      }
-
+      // Admin: popup de lucro vem via Realtime (AdminProfitRealtimeListener)
       toast.success(
         sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
       );
