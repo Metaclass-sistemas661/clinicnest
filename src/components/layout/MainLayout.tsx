@@ -3,6 +3,8 @@ import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
+import { useAuth } from "@/contexts/AuthContext";
+import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissionReminderDialog";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -16,6 +18,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
 
   return (
     <SubscriptionGuard>
+      {isAdmin && <AdminCommissionReminderDialog />}
       <div className="min-h-screen bg-background">
         <Sidebar />
         <main className={cn(

@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   DollarSign, 
@@ -66,12 +67,25 @@ const categories = {
 
 export default function Financeiro() {
   const { profile, isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(formatInAppTz(new Date(), "yyyy-MM"));
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTabState, setActiveTabState] = useState("overview");
+  const validTabs = ["overview", "cashflow", "transactions", "commissions"];
+  const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : activeTabState;
+  const setActiveTab = (v: string) => {
+    setActiveTabState(v);
+    setSearchParams((p) => {
+      const next = new URLSearchParams(p);
+      if (v === "overview") next.delete("tab");
+      else next.set("tab", v);
+      return next;
+    });
+  };
   const [commissions, setCommissions] = useState<any[]>([]);
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
   const [professionals, setProfessionals] = useState<any[]>([]);

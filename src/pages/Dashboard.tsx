@@ -123,12 +123,19 @@ export default function Dashboard() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        // 4. Contagem de pendentes
-        supabase
-          .from("appointments")
-          .select("*", { count: "exact", head: true })
-          .eq("tenant_id", profile.tenant_id)
-          .eq("status", "pending"),
+        // 4. Contagem de pendentes (admin = todos; staff = só seus)
+        isAdmin
+          ? supabase
+              .from("appointments")
+              .select("*", { count: "exact", head: true })
+              .eq("tenant_id", profile.tenant_id)
+              .eq("status", "pending")
+          : supabase
+              .from("appointments")
+              .select("*", { count: "exact", head: true })
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.id)
+              .eq("status", "pending"),
         // 5. Produtos (admin) para estoque baixo
         isAdmin
           ? supabase
@@ -429,13 +436,15 @@ export default function Dashboard() {
                     variant="warning"
                     description="Comissões pendentes do mês"
                   />
-                  <StatCard
-                    title="Comissões Pagas"
-                    value={formatCurrency(commissionsPaid)}
-                    icon={Wallet}
-                    variant="success"
-                    description="Comissões pagas no mês"
-                  />
+                  <Link to="/financeiro?tab=commissions">
+                    <StatCard
+                      title="Comissões Pagas"
+                      value={formatCurrency(commissionsPaid)}
+                      icon={Wallet}
+                      variant="success"
+                      description="Comissões pagas no mês"
+                    />
+                  </Link>
                 </>
               )}
               {!isAdmin && (
@@ -447,13 +456,15 @@ export default function Dashboard() {
                     variant="warning"
                     description="Comissões pendentes (aguardando pagamento do admin)"
                   />
-                  <StatCard
-                    title="Comissões Recebidas"
-                    value={formatCurrency(professionalCommissionsReceived)}
-                    icon={Wallet}
-                    variant="success"
-                    description="Comissões já pagas neste mês"
-                  />
+                  <Link to="/minhas-comissoes" className="block [&:hover]:no-underline">
+                    <StatCard
+                      title="Comissões Recebidas"
+                      value={formatCurrency(professionalCommissionsReceived)}
+                      icon={Wallet}
+                      variant="success"
+                      description="Comissões já pagas neste mês"
+                    />
+                  </Link>
                   <StatCard
                     title="Meu desempenho"
                     value={staffCompletedThisMonth}
@@ -474,10 +485,11 @@ export default function Dashboard() {
                 icon={Calendar}
               />
               <StatCard
-                title="Pendentes"
+                title={isAdmin ? "Pendentes" : "Meus pendentes"}
                 value={stats.pendingAppointments}
                 icon={Clock}
                 variant={stats.pendingAppointments > 0 ? "warning" : "default"}
+                description={!isAdmin ? "Agendamentos pendentes de confirmação" : undefined}
               />
               {isAdmin && (
                 <StatCard

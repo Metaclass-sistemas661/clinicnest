@@ -53,6 +53,8 @@ export default function Clientes() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [detailClient, setDetailClient] = useState<Client | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [myClientIds, setMyClientIds] = useState<Set<string>>(new Set());
+  const [clientFilter, setClientFilter] = useState<"all" | "mine">("all");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -69,6 +71,26 @@ export default function Clientes() {
       }
     }
   }, [profile?.tenant_id, isAdmin]);
+
+  // Staff: buscar IDs de clientes que o profissional já atendeu
+  useEffect(() => {
+    if (!profile?.tenant_id || !profile?.id || isAdmin) return;
+    const fetchMyClientIds = async () => {
+      try {
+        const { data } = await supabase
+          .from("appointments")
+          .select("client_id")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("professional_id", profile.id)
+          .not("client_id", "is", null);
+        const ids = new Set((data || []).map((r: { client_id: string }) => r.client_id));
+        setMyClientIds(ids);
+      } catch (err) {
+        console.error("Error fetching my clients:", err);
+      }
+    };
+    fetchMyClientIds();
+  }, [profile?.tenant_id, profile?.id, isAdmin]);
 
   const filteredClients = useMemo(() => {
     if (!debouncedSearchQuery.trim()) return clients;
@@ -210,7 +232,7 @@ export default function Clientes() {
   return (
     <MainLayout
       title="Clientes"
-      subtitle="Gerencie seus clientes"
+      subtitle={isAdmin ? "Gerencie seus clientes" : "Clientes do salão"}
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -286,8 +308,8 @@ export default function Clientes() {
         </Dialog>
       }
     >
-      {/* Search */}
-      <div className="mb-4 md:mb-6">
+      {/* Search + Staff filter */}
+      <div className="mb-4 md:mb-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -298,12 +320,32 @@ export default function Clientes() {
             aria-label="Buscar clientes por nome, telefone ou email"
           />
         </div>
+        {!isAdmin && (
+          <div className="flex rounded-lg border border-border bg-card">
+            <Button
+              variant={clientFilter === "all" ? "default" : "ghost"}
+              size="sm"
+              className={clientFilter === "all" ? "gradient-primary text-primary-foreground" : ""}
+              onClick={() => setClientFilter("all")}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={clientFilter === "mine" ? "default" : "ghost"}
+              size="sm"
+              className={clientFilter === "mine" ? "gradient-primary text-primary-foreground" : ""}
+              onClick={() => setClientFilter("mine")}
+            >
+              Meus clientes ({myClientIds.size})
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>
-            {isLoading ? "Clientes Cadastrados" : `Clientes Cadastrados (${filteredClients.length})`}
+            {isLoading ? "Clientes Cadastrados" : `Clientes Cadastrados (${sortedAndFilteredClients.length})`}
           </CardTitle>
           {isAdmin && clientSpending.length > 0 && (
             <CardDescription>

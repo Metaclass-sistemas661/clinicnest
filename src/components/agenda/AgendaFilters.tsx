@@ -16,6 +16,7 @@ interface AgendaFiltersProps {
   professionalFilter: string;
   onProfessionalFilterChange: (professionalId: string) => void;
   professionals: Profile[];
+  isAdmin?: boolean;
   appointmentCounts: {
     total: number;
     pending: number;
@@ -99,7 +100,8 @@ export function AgendaFilters({
         })}
       </div>
 
-      {/* Professional filter */}
+      {/* Professional filter - apenas admin */}
+      {isAdmin && (
       <div className="w-full sm:w-auto sm:ml-auto">
         <Select value={professionalFilter} onValueChange={onProfessionalFilterChange}>
           <SelectTrigger className="w-full sm:w-48">
@@ -115,6 +117,7 @@ export function AgendaFilters({
           </SelectContent>
         </Select>
       </div>
+      )}
     </div>
   );
 }

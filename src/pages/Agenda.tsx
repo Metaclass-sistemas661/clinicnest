@@ -326,8 +326,12 @@ export default function Agenda() {
   const handleCompleteAppointment = async (
     appointment: Appointment,
     sale?: { productId: string; quantity: number }
-  ) => {
-    if (!profile?.tenant_id) return;
+  ): Promise<
+    | { type: "congrats"; commissionAmount: number; serviceName: string; servicePrice: number; completedThisMonth: number; valueGeneratedThisMonth: number }
+    | { type: "no_commission" }
+    | undefined
+  > => {
+    if (!profile?.tenant_id) return undefined;
 
     try {
       const { error } = await supabase.rpc("complete_appointment_with_sale", {
@@ -351,10 +355,56 @@ export default function Agenda() {
         }
       }
 
+      // Staff: verificar se tem comissão configurada e qual popup exibir
+      if (!isAdmin && profile?.id && profile?.user_id) {
+        const { data: commissionConfig } = await supabase
+          .from("professional_commissions")
+          .select("id")
+          .eq("user_id", profile.user_id)
+          .eq("tenant_id", profile.tenant_id)
+          .maybeSingle();
+
+        if (!commissionConfig) {
+          toast.success(
+            sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
+          );
+          fetchData();
+          return { type: "no_commission" };
+        }
+
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+        const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+        const { data: monthApts } = await supabase
+          .from("appointments")
+          .select("id, price")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("professional_id", profile.id)
+          .eq("status", "completed")
+          .gte("scheduled_at", monthStart)
+          .lte("scheduled_at", monthEnd);
+
+        const completedThisMonth = (monthApts || []).length;
+        const valueGeneratedThisMonth = (monthApts || []).reduce((s, a) => s + Number(a.price || 0), 0);
+        toast.success(
+          sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
+        );
+        fetchData();
+        return {
+          type: "congrats",
+          commissionAmount: 0,
+          serviceName: (appointment.service as { name?: string })?.name || "Serviço",
+          servicePrice: Number(appointment.price || 0),
+          completedThisMonth,
+          valueGeneratedThisMonth,
+        };
+      }
+
       toast.success(
         sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
       );
       fetchData();
+      return undefined;
     } catch (error: any) {
       const errMsg = error?.message ?? (typeof error === "string" ? error : "Erro desconhecido");
       console.error("Error completing appointment:", errMsg, error);
@@ -404,7 +454,7 @@ export default function Agenda() {
   return (
     <MainLayout
       title="Agenda"
-      subtitle="Gerencie os agendamentos do salão"
+      subtitle={isAdmin ? "Gerencie os agendamentos do salão" : "Gerencie seus agendamentos"}
       actions={
         <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center sm:justify-end">
           <div className="flex items-center rounded-lg border border-border bg-card text-foreground">

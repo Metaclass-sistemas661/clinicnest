@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign } from "lucide-react";
+import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import type { Profile, UserRole, AppRole } from "@/types/database";
 
@@ -52,6 +53,10 @@ interface CommissionFormData {
 
 export default function Equipe() {
   const { profile, isAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightUserId = searchParams.get("highlight");
+  const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement | null>(null);
+
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -79,6 +84,26 @@ export default function Equipe() {
       fetchTeam();
     }
   }, [profile?.tenant_id, isAdmin]);
+
+  useEffect(() => {
+    if (highlightUserId && !isLoading && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightUserId, isLoading]);
+
+  const hasOpenedForHighlight = useRef(false);
+  useEffect(() => {
+    if (highlightUserId && team.length > 0 && !hasOpenedForHighlight.current) {
+      const member = team.find((m) => m.user_id === highlightUserId);
+      if (member && !member.commission) {
+        hasOpenedForHighlight.current = true;
+        setSelectedMember(member);
+        setCommissionData({ type: "percentage", value: "" });
+        setIsCommissionDialogOpen(true);
+        setSearchParams({});
+      }
+    }
+  }, [highlightUserId, team]);
 
   const fetchTeam = async () => {
     if (!profile?.tenant_id) return;
@@ -564,8 +589,17 @@ export default function Equipe() {
                 {team.map((member) => {
                   const currentRole = member.user_roles[0]?.role || "staff";
                   const isCurrentUser = member.user_id === profile?.user_id;
+                  const isHighlighted = member.user_id === highlightUserId && !member.commission;
                   return (
-                    <div key={member.id} className="rounded-lg border p-4 space-y-3">
+                    <div key={member.id} className="rounded-lg border p-4 space-y-3 relative" ref={isHighlighted ? highlightedRowRef : undefined}>
+                      {isHighlighted && (
+                        <div className="absolute -top-8 left-0 right-0 flex justify-center">
+                          <div className="flex items-center gap-1 rounded-md bg-warning/20 px-3 py-1 text-sm text-warning border border-warning/30">
+                            <ArrowDown className="h-4 w-4" />
+                            <span>Profissional sem comissão definida</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">
@@ -636,10 +670,17 @@ export default function Equipe() {
                 {team.map((member) => {
                   const currentRole = member.user_roles[0]?.role || "staff";
                   const isCurrentUser = member.user_id === profile?.user_id;
+                  const isHighlighted = member.user_id === highlightUserId && !member.commission;
 
                   return (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.id} ref={isHighlighted ? highlightedRowRef : undefined}>
                       <TableCell className="font-medium">
+                        {isHighlighted && (
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-md bg-warning/20 px-3 py-1 text-sm text-warning border border-warning/30 z-10">
+                            <ArrowDown className="h-4 w-4" />
+                            <span>Profissional sem comissão definida</span>
+                          </div>
+                        )}
                         {member.full_name}
                         {isCurrentUser && (
                           <span className="ml-2 text-xs text-muted-foreground">(você)</span>

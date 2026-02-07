@@ -10,6 +10,7 @@ export interface Tenant {
   phone: string | null;
   email: string | null;
   address: string | null;
+  default_commission_percent?: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Sparkles,
   Menu,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -50,7 +51,8 @@ const navCategories: NavCategory[] = [
     label: "Financeiro",
     items: [
       { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-      { title: "Produtos", href: "/produtos", icon: Package, adminOnly: true },
+      { title: "Minhas Comissões", href: "/minhas-comissoes", icon: Wallet, staffOnly: true },
+      { title: "Produtos", href: "/produtos", icon: Package },
     ],
   },
   {

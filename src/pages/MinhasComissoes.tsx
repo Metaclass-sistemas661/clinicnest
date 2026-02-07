@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, CreditCard, Calendar, Loader2 } from "lucide-react";
+import { Wallet, CreditCard, Calendar, Loader2, Download } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
 
 type CommissionStatus = "pending" | "paid";
 type CommissionPayment = {
@@ -129,7 +130,17 @@ export default function MinhasComissoes() {
       title="Minhas Comissões"
       subtitle="Histórico de comissões pendentes e pagas"
       actions={
-        <Select value={filterMonth} onValueChange={setFilterMonth}>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={isLoading || commissions.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </Button>
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
@@ -144,7 +155,8 @@ export default function MinhasComissoes() {
               );
             })}
           </SelectContent>
-        </Select>
+          </Select>
+        </div>
       }
     >
       <div className="space-y-6">

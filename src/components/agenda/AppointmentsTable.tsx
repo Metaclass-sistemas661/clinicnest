@@ -62,6 +62,10 @@ import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import type { Appointment, AppointmentStatus, Client, Service, Profile, Product } from "@/types/database";
 import { TimeSlotPicker } from "./TimeSlotPicker";
+import {
+  CongratulationsCommissionDialog,
+  type CongratulationsCommissionData,
+} from "./CongratulationsCommissionDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 
@@ -75,7 +79,11 @@ interface AppointmentsTableProps {
   onComplete: (
     appointment: Appointment,
     sale?: { productId: string; quantity: number }
-  ) => Promise<void>;
+  ) => Promise<
+    | { type: "congrats" } & CongratulationsCommissionData
+    | { type: "no_commission" }
+    | undefined
+  >;
   onEdit: (id: string, data: EditAppointmentData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   isLoading?: boolean;
@@ -150,6 +158,9 @@ export function AppointmentsTable({
   const [selectedProductId, setSelectedProductId] = useState("");
   const [saleQuantity, setSaleQuantity] = useState("1");
   const [isCompleting, setIsCompleting] = useState(false);
+  const [congratsDialogOpen, setCongratsDialogOpen] = useState(false);
+  const [congratsData, setCongratsData] = useState<CongratulationsCommissionData | null>(null);
+  const [noCommissionDialogOpen, setNoCommissionDialogOpen] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -285,8 +296,17 @@ export function AppointmentsTable({
     setUpdatingId(appointmentToComplete.id);
     setIsCompleting(true);
     try {
-      await onComplete(appointmentToComplete, salePayload);
+      const result = await onComplete(appointmentToComplete, salePayload);
       resetCompleteDialog();
+      // Popup para staff (profissional que concluiu)
+      if (!isAdmin && result) {
+        if (result.type === "no_commission") {
+          setNoCommissionDialogOpen(true);
+        } else if (result.type === "congrats") {
+          setCongratsData(result);
+          setCongratsDialogOpen(true);
+        }
+      }
     } catch (error) {
       console.error("Error completing appointment:", error);
     } finally {
@@ -332,6 +352,7 @@ export function AppointmentsTable({
           const status = statusConfig[appointment.status];
           const StatusIcon = status.icon;
           const isUpdating = updatingId === appointment.id;
+          const canEdit = isAdmin || appointment.professional_id === currentProfileId;
 
           return (
             <div key={appointment.id} className="rounded-lg border bg-card p-4 space-y-3">
@@ -424,14 +445,18 @@ export function AppointmentsTable({
                           <XCircle className="mr-2 h-4 w-4 text-destructive" />
                           Cancelar
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => openDeleteDialog(appointment)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => openDeleteDialog(appointment)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </>
@@ -461,6 +486,7 @@ export function AppointmentsTable({
               const status = statusConfig[appointment.status];
               const StatusIcon = status.icon;
               const isUpdating = updatingId === appointment.id;
+              const canEdit = isAdmin || appointment.professional_id === currentProfileId;
 
               return (
                 <TableRow key={appointment.id} className="group">
@@ -556,11 +582,13 @@ export function AppointmentsTable({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
+                              {canEdit && (
+                                <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Editar
+                                </DropdownMenuItem>
+                              )}
+                              {canEdit && <DropdownMenuSeparator />}
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "pending")}
                                 disabled={appointment.status === "pending"}
@@ -589,14 +617,18 @@ export function AppointmentsTable({
                                 <XCircle className="mr-2 h-4 w-4 text-destructive" />
                                 Cancelar
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => openDeleteDialog(appointment)}
-                                className="text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </DropdownMenuItem>
+                              {isAdmin && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openDeleteDialog(appointment)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </>
@@ -900,6 +932,17 @@ export function AppointmentsTable({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Congratulations popup (staff only - após concluir atendimento) */}
+      <CongratulationsCommissionDialog
+        open={congratsDialogOpen}
+        onOpenChange={setCongratsDialogOpen}
+        data={congratsData}
+      />
+      <NoCommissionWarningDialog
+        open={noCommissionDialogOpen}
+        onOpenChange={setNoCommissionDialogOpen}
+      />
     </>
   );
 }
