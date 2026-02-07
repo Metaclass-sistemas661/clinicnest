@@ -23,6 +23,7 @@ import Clientes from "@/pages/Clientes";
 import Equipe from "@/pages/Equipe";
 import Configuracoes from "@/pages/Configuracoes";
 import Assinatura from "@/pages/Assinatura";
+import MinhasComissoes from "@/pages/MinhasComissoes";
 
 // Lazy apenas para páginas públicas (evita flash ao navegar no dashboard)
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
