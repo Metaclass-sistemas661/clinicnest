@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -42,7 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileData) {
         setProfile(profileData as Profile);
 
-        // Fetch user role
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('*')
@@ -54,7 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserRole(roleData as UserRole);
         }
 
-        // Fetch tenant
         const { data: tenantData } = await supabase
           .from('tenants')
           .select('*')
@@ -76,33 +73,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+  /**
+   * Aplica a sessão e garante que profile/tenant estejam carregados antes de liberar a UI.
+   * isLoading só vira false após fetchUserData completar (quando há sessão), evitando
+   * race condition no Dashboard.
+   */
+  const applySession = async (session: Session | null) => {
+    setSession(session);
+    setUser(session?.user ?? null);
 
-        if (session?.user) {
-          // Use setTimeout to avoid potential deadlock with Supabase client
-          setTimeout(() => fetchUserData(session.user.id), 0);
-        } else {
-          setProfile(null);
-          setUserRole(null);
-          setTenant(null);
-        }
-        setIsLoading(false);
+    if (session?.user) {
+      await fetchUserData(session.user.id);
+    } else {
+      setProfile(null);
+      setUserRole(null);
+      setTenant(null);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        applySession(session);
       }
     );
 
-    // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-      setIsLoading(false);
+      applySession(session);
     });
 
     return () => {
