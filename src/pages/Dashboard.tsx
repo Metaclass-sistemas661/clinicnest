@@ -91,6 +91,7 @@ export default function Dashboard() {
         commissionsResult,
         productLossesResult,
         clientsResult,
+        staffPerformanceResult,
       ] = await Promise.all([
         // 1. Financeiro do mês (admin)
         isAdmin
