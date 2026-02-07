@@ -688,6 +688,7 @@ export default function Agenda() {
           professionalFilter={professionalFilter}
           onProfessionalFilterChange={setProfessionalFilter}
           professionals={professionals}
+          isAdmin={isAdmin}
           appointmentCounts={appointmentCounts}
         />
       </div>

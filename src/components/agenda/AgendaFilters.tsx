@@ -32,6 +32,7 @@ export function AgendaFilters({
   professionalFilter,
   onProfessionalFilterChange,
   professionals,
+  isAdmin = false,
   appointmentCounts,
 }: AgendaFiltersProps) {
   const statusOptions = [
