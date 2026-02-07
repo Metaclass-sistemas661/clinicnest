@@ -11,6 +11,8 @@ interface GoalProgress {
   target_value: number;
   current_value: number;
   progress_pct: number;
+  professional_id: string | null;
+  show_in_header?: boolean;
 }
 
 export function GoalsProgressBar() {
@@ -18,7 +20,7 @@ export function GoalsProgressBar() {
   const [goal, setGoal] = useState<GoalProgress | null>(null);
 
   useEffect(() => {
-    if (!profile?.tenant_id || !isAdmin) return;
+    if (!profile?.tenant_id) return;
 
     const fetchHeaderGoal = async () => {
       const { data, error } = await supabase.rpc("get_goals_with_progress", {
@@ -26,7 +28,17 @@ export function GoalsProgressBar() {
       });
       if (error) return;
       const goals = (data || []) as Array<GoalProgress & { show_in_header: boolean }>;
-      const headerGoal = goals.find((g) => g.show_in_header);
+
+      let headerGoal: (GoalProgress & { show_in_header?: boolean }) | null = null;
+
+      if (isAdmin) {
+        // Admin: só metas gerais (sem profissional) com show_in_header
+        headerGoal = goals.find((g) => !g.professional_id && g.show_in_header) || null;
+      } else if (profile?.id) {
+        // Profissional: sua meta (professional_id = profile.id)
+        headerGoal = goals.find((g) => g.professional_id === profile.id) || null;
+      }
+
       setGoal(headerGoal || null);
     };
 
@@ -39,9 +51,9 @@ export function GoalsProgressBar() {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [profile?.tenant_id, isAdmin]);
+  }, [profile?.tenant_id, profile?.id, isAdmin]);
 
-  if (!isAdmin || !goal) return null;
+  if (!goal) return null;
 
   const pct = Math.min(100, goal.progress_pct);
   const isComplete = pct >= 100;
@@ -56,11 +68,7 @@ export function GoalsProgressBar() {
     return String(goal.current_value);
   };
 
-  return (
-    <Link
-      to="/metas"
-      className="block border-b border-border bg-muted/30 px-4 py-2 hover:bg-muted/50 transition-colors"
-    >
+  const content = (
       <div className="flex items-center gap-3 max-w-4xl mx-auto">
         <Target className="h-4 w-4 text-primary shrink-0" />
         <div className="flex-1 min-w-0">
@@ -80,6 +88,15 @@ export function GoalsProgressBar() {
           </div>
         </div>
       </div>
+  );
+
+  return isAdmin ? (
+    <Link to="/metas" className="block border-b border-border bg-muted/30 px-4 py-2 hover:bg-muted/50 transition-colors">
+      {content}
     </Link>
+  ) : (
+    <div className="block border-b border-border bg-muted/30 px-4 py-2">
+      {content}
+    </div>
   );
 }

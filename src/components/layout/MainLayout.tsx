@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissionReminderDialog";
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
+import { ProfessionalGoalMotivationDialog } from "@/components/admin/ProfessionalGoalMotivationDialog";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -28,6 +29,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           <AdminProfitRealtimeListener />
         </>
       )}
+      {!isAdmin && <ProfessionalGoalMotivationDialog />}
       <div className="min-h-screen bg-background">
         <Sidebar />
         <main className={cn(
