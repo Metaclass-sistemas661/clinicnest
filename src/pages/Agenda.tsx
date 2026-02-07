@@ -57,6 +57,13 @@ export default function Agenda() {
     }
   }, [isAdmin, profile?.id]);
 
+  // Staff: ao abrir modal novo agendamento, definir profissional como ele mesmo
+  useEffect(() => {
+    if (isDialogOpen && !isAdmin && profile?.id) {
+      setFormData((prev) => ({ ...prev, professional_id: profile.id }));
+    }
+  }, [isDialogOpen, isAdmin, profile?.id]);
+
   // Form state
   const [formData, setFormData] = useState({
     client_id: "",
@@ -201,11 +208,12 @@ export default function Agenda() {
         return;
       }
 
+      const professionalId = !isAdmin ? (profile?.id ?? null) : (formData.professional_id || null);
       const { error } = await supabase.from("appointments").insert({
         tenant_id: profile.tenant_id,
         client_id: formData.client_id || null,
         service_id: formData.service_id || null,
-        professional_id: formData.professional_id || null,
+        professional_id: professionalId,
         scheduled_at: scheduledAt.toISOString(),
         duration_minutes: durationMinutes,
         price: selectedService?.price || 0,
@@ -322,87 +330,35 @@ export default function Agenda() {
     if (!profile?.tenant_id) return;
 
     try {
+      const { error } = await supabase.rpc("complete_appointment_with_sale", {
+        p_appointment_id: appointment.id,
+        p_product_id: sale?.productId ?? null,
+        p_quantity: sale?.quantity ?? null,
+      });
+
+      if (error) throw error;
+
       if (sale) {
         const product = products.find((p) => p.id === sale.productId);
-        if (!product) {
-          toast.error("Produto selecionado não encontrado.");
-          throw new Error("Produto não encontrado");
+        if (product) {
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.id === product.id
+                ? { ...p, quantity: Math.max(0, p.quantity - sale.quantity) }
+                : p
+            )
+          );
         }
-
-        if (product.quantity < sale.quantity) {
-          toast.error("Estoque insuficiente para o produto selecionado.");
-          throw new Error("Estoque insuficiente");
-        }
-
-        const saleAmount = Number(product.cost || 0) * sale.quantity;
-        const transactionDate = formatInAppTz(new Date(), "yyyy-MM-dd");
-        const appointmentData: any = appointment;
-        const serviceName: string | undefined = appointmentData?.service?.name;
-        const clientName: string | undefined = appointmentData?.client?.name;
-
-        const { error: stockError } = await supabase.from("stock_movements").insert({
-          tenant_id: profile.tenant_id,
-          product_id: sale.productId,
-          quantity: -sale.quantity,
-          movement_type: "out",
-          reason: serviceName
-            ? `Venda durante o serviço ${serviceName}`
-            : "Venda durante atendimento",
-          created_by: profile.id,
-        });
-        if (stockError) throw stockError;
-
-        const { error: updateProductError } = await supabase
-          .from("products")
-          .update({ quantity: product.quantity - sale.quantity })
-          .eq("id", sale.productId);
-        if (updateProductError) throw updateProductError;
-
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === product.id
-              ? { ...p, quantity: Math.max(0, p.quantity - sale.quantity) }
-              : p
-          )
-        );
-
-        const descriptionParts: string[] = [
-          `Venda de ${product.name}`,
-          `(${sale.quantity} un.)`,
-        ];
-        if (serviceName) {
-          descriptionParts.push(`Serviço: ${serviceName}`);
-        }
-        if (clientName) {
-          descriptionParts.push(`Cliente: ${clientName}`);
-        }
-
-        const { error: financialError } = await supabase.from("financial_transactions").insert({
-          tenant_id: profile.tenant_id,
-          type: "income",
-          category: "Venda de Produto",
-          amount: saleAmount,
-          description: descriptionParts.join(" · "),
-          transaction_date: transactionDate,
-          product_id: sale.productId,
-          appointment_id: appointment.id,
-        });
-        if (financialError) throw financialError;
       }
-
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .update({ status: "completed" })
-        .eq("id", appointment.id);
-      if (appointmentError) throw appointmentError;
 
       toast.success(
         sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
       );
       fetchData();
     } catch (error: any) {
-      console.error("Error completing appointment:", error);
-      if (!error?.message?.includes("Estoque insuficiente") && !error?.message?.includes("Produto não encontrado")) {
+      const errMsg = error?.message ?? (typeof error === "string" ? error : "Erro desconhecido");
+      console.error("Error completing appointment:", errMsg, error);
+      if (!errMsg?.includes("Estoque insuficiente") && !errMsg?.includes("Produto não encontrado")) {
         toast.error("Erro ao concluir agendamento.");
       }
       throw error;
@@ -527,6 +483,7 @@ export default function Agenda() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {isAdmin ? (
                   <div className="space-y-2">
                     <Label>Profissional</Label>
                     <Select
@@ -550,6 +507,17 @@ export default function Agenda() {
                       </SelectContent>
                     </Select>
                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Profissional</Label>
+                    <Input
+                      value={profile?.full_name ?? "Você"}
+                      disabled
+                      className="bg-muted"
+                    />
+                    <p className="text-xs text-muted-foreground">Agendamentos são direcionados para você</p>
+                  </div>
+                )}
                   <div className="space-y-2">
                     <Label>Data</Label>
                     <Input
@@ -571,7 +539,7 @@ export default function Agenda() {
                       selectedProfessional={formData.professional_id}
                       professionals={professionals}
                       existingAppointments={allAppointments}
-                      onProfessionalChange={(profId) => setFormData({ ...formData, professional_id: profId })}
+                      onProfessionalChange={isAdmin ? (profId) => setFormData({ ...formData, professional_id: profId }) : undefined}
                     />
                     </div>
                   )}
@@ -694,6 +662,7 @@ export default function Agenda() {
             professionals={professionals}
             allAppointments={allAppointments}
             onStatusChange={updateAppointmentStatus}
+            currentProfileId={profile?.id}
             onComplete={handleCompleteAppointment}
             onEdit={editAppointment}
             onDelete={deleteAppointment}

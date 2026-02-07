@@ -81,6 +81,7 @@ interface AppointmentsTableProps {
   isLoading?: boolean;
   isAdmin?: boolean;
   products: Product[];
+  currentProfileId?: string;
 }
 
 export interface EditAppointmentData {
@@ -127,6 +128,7 @@ export function AppointmentsTable({
   isLoading,
   isAdmin = false,
   products,
+  currentProfileId,
 }: AppointmentsTableProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -212,7 +214,7 @@ export function AppointmentsTable({
     setEditFormData({
       client_id: appointment.client_id || "",
       service_id: appointment.service_id || "",
-      professional_id: appointment.professional_id || "",
+      professional_id: !isAdmin && currentProfileId ? currentProfileId : (appointment.professional_id || ""),
       scheduled_at: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: format(scheduledDate, "HH:mm"),
       notes: appointment.notes || "",
@@ -228,10 +230,11 @@ export function AppointmentsTable({
     try {
       const scheduledAt = new Date(`${editFormData.scheduled_at}T${editFormData.scheduled_time}`);
       
+      const professionalId = !isAdmin ? (currentProfileId ?? null) : (editFormData.professional_id || null);
       await onEdit(appointmentToEdit.id, {
         client_id: editFormData.client_id || null,
         service_id: editFormData.service_id || null,
-        professional_id: editFormData.professional_id || null,
+        professional_id: professionalId,
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
       });
@@ -813,21 +816,32 @@ export function AppointmentsTable({
               </div>
               <div className="space-y-2">
                 <Label>Profissional</Label>
-                <Select
-                  value={editFormData.professional_id}
-                  onValueChange={(v) => setEditFormData({ ...editFormData, professional_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o profissional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professionals.map((prof) => (
-                      <SelectItem key={prof.id} value={prof.id}>
-                        {prof.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isAdmin ? (
+                  <Select
+                    value={editFormData.professional_id}
+                    onValueChange={(v) => setEditFormData({ ...editFormData, professional_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o profissional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {professionals.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <>
+                    <Input
+                      value={professionals.find((p) => p.id === currentProfileId)?.full_name ?? "Você"}
+                      disabled
+                      className="bg-muted"
+                    />
+                    <p className="text-xs text-muted-foreground">Você não pode direcionar agendamentos para outros</p>
+                  </>
+                )}
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Data</Label>
@@ -852,9 +866,9 @@ export function AppointmentsTable({
                   existingAppointments={allAppointments.filter(
                     (apt) => apt.id !== appointmentToEdit?.id
                   )}
-                  onProfessionalChange={(profId) =>
+                  onProfessionalChange={isAdmin ? (profId) =>
                     setEditFormData({ ...editFormData, professional_id: profId })
-                  }
+                  : undefined}
                 />
                 </div>
               )}
