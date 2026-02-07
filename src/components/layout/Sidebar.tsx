@@ -73,7 +73,9 @@ function SidebarContent({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
-  const { profile, tenant, isAdmin, signOut } = useAuth();
+  const auth = useAuth();
+  const { profile, tenant, signOut } = auth;
+  const isAdmin = auth?.isAdmin ?? false;
 
   const handleSignOut = () => {
     onNavigate?.();

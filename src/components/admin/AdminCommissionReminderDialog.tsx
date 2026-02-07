@@ -23,7 +23,9 @@ interface StaffWithoutCommission {
 }
 
 export function AdminCommissionReminderDialog() {
-  const { profile, isAdmin } = useAuth();
+  const auth = useAuth();
+  const profile = auth?.profile;
+  const isAdmin = auth?.isAdmin ?? false;
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [staffWithoutCommission, setStaffWithoutCommission] = useState<StaffWithoutCommission[]>([]);
