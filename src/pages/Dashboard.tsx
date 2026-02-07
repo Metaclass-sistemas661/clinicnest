@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +50,8 @@ export default function Dashboard() {
   const [clientRanking, setClientRanking] = useState<
     { client_id: string; client_name: string; today_total: number; month_total: number }[]
   >([]);
+  const [staffCompletedThisMonth, setStaffCompletedThisMonth] = useState(0);
+  const [staffValueGeneratedThisMonth, setStaffValueGeneratedThisMonth] = useState(0);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -134,7 +136,7 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês (admin)
+        // 6. Comissões do mês (admin = todos; staff = só suas comissões)
         isAdmin
           ? supabase
               .from("commission_payments")
@@ -143,7 +145,14 @@ export default function Dashboard() {
               .gte("created_at", monthStart)
               .lte("created_at", monthEnd)
               .in("status", ["pending", "paid"])
-          : Promise.resolve({ data: null }),
+          : supabase
+              .from("commission_payments")
+              .select("amount, status")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.user_id)
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+              .in("status", ["pending", "paid"]),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -172,6 +181,17 @@ export default function Dashboard() {
           .from("clients")
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id),
+        // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
+        !isAdmin && profile?.id
+          ? supabase
+              .from("appointments")
+              .select("id, price, status")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.id)
+              .eq("status", "completed")
+              .gte("scheduled_at", monthStart)
+              .lte("scheduled_at", monthEnd)
+          : Promise.resolve({ data: null }),
       ]);
 
       const financialData = financialResult.data;
@@ -182,6 +202,7 @@ export default function Dashboard() {
       const commissionsData = commissionsResult.data;
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
+      const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
@@ -244,17 +265,32 @@ export default function Dashboard() {
         );
       }
 
+      const apts = (appointmentsData as Appointment[]) || [];
+      const myTodayCount = !isAdmin && profile?.id
+        ? apts.filter((a) => a.professional_id === profile.id).length
+        : apts.length;
+
       setStats({
         monthlyBalance: monthlyIncome - monthlyExpenses,
         monthlyIncome,
         monthlyExpenses,
-        todayAppointments: appointmentsData?.length || 0,
+        todayAppointments: isAdmin ? apts.length : myTodayCount,
         lowStockProducts: lowStockData.length,
         pendingAppointments: pendingCount,
       });
 
-      setTodayAppointments((appointmentsData as Appointment[]) || []);
+      setTodayAppointments(apts);
       setLowStockProducts(lowStockData);
+
+      if (!isAdmin && staffPerformanceData?.length) {
+        const completed = staffPerformanceData.length;
+        const valueGenerated = staffPerformanceData.reduce((sum, a) => sum + Number(a.price || 0), 0);
+        setStaffCompletedThisMonth(completed);
+        setStaffValueGeneratedThisMonth(valueGenerated);
+      } else if (!isAdmin) {
+        setStaffCompletedThisMonth(0);
+        setStaffValueGeneratedThisMonth(0);
+      }
 
       if (isAdmin) {
         try {
@@ -278,6 +314,20 @@ export default function Dashboard() {
       currency: "BRL",
     }).format(value);
   };
+
+  const myTodayAppointments = useMemo(() => {
+    if (isAdmin || !profile?.id) return todayAppointments;
+    return todayAppointments.filter((a) => a.professional_id === profile.id);
+  }, [todayAppointments, isAdmin, profile?.id]);
+
+  const nextAppointment = useMemo(() => {
+    if (isAdmin || myTodayAppointments.length === 0) return null;
+    const now = new Date();
+    const upcoming = myTodayAppointments
+      .filter((a) => a.status !== "cancelled" && new Date(a.scheduled_at) >= now)
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+    return upcoming[0] ?? myTodayAppointments.find((a) => a.status !== "cancelled") ?? null;
+  }, [myTodayAppointments, isAdmin]);
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -402,6 +452,12 @@ export default function Dashboard() {
                     icon={Wallet}
                     variant="success"
                     description="Comissões já pagas neste mês"
+                  />
+                  <StatCard
+                    title="Meu desempenho"
+                    value={staffCompletedThisMonth}
+                    icon={TrendingUp}
+                    description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados este mês`}
                   />
                   <StatCard
                     title="Total de Clientes"
@@ -532,7 +588,9 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Agenda de Hoje</CardTitle>
+                <CardTitle className="text-lg">
+                  {isAdmin ? "Agenda de Hoje" : "Meus agendamentos hoje"}
+                </CardTitle>
                 <CardDescription>
                   {formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}
                 </CardDescription>
@@ -542,11 +600,11 @@ export default function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              {todayAppointments.length === 0 ? (
+              {myTodayAppointments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Calendar className="mb-4 h-12 w-12 text-muted-foreground/50" />
                   <p className="text-muted-foreground">
-                    Nenhum agendamento para hoje
+                    {isAdmin ? "Nenhum agendamento para hoje" : "Nenhum agendamento seu para hoje"}
                   </p>
                   <Button variant="link" asChild className="mt-2">
                     <Link to="/agenda">Criar agendamento</Link>
@@ -554,7 +612,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-2 md:space-y-3">
-                  {todayAppointments.slice(0, 5).map((appointment) => (
+                  {myTodayAppointments.slice(0, 5).map((appointment) => (
                     <div
                       key={appointment.id}
                       className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50 gap-2 sm:gap-4"
@@ -582,6 +640,42 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+
+          {/* Próximo atendimento - Staff only */}
+          {!isAdmin && nextAppointment && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Próximo atendimento</CardTitle>
+                <CardDescription>
+                  Seu próximo agendamento de hoje
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+                      <Clock className="h-4 w-4 md:h-5 md:w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm md:text-base truncate">
+                        {nextAppointment.client?.name || "Cliente não informado"}
+                      </p>
+                      <p className="text-xs md:text-sm text-muted-foreground truncate">
+                        {nextAppointment.service?.name} •{" "}
+                        {formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="self-end sm:self-auto">
+                    {getStatusBadge(nextAppointment.status)}
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" asChild className="mt-4">
+                  <Link to="/agenda">Ver agenda</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Low Stock Alert - Admin Only */}
           {isAdmin && (

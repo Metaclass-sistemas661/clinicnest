@@ -470,26 +470,12 @@ export default function Produtos() {
 
   const lowStockCount = products.filter((p) => p.quantity <= p.min_quantity).length;
 
-  if (!isAdmin) {
-    return (
-      <MainLayout title="Produtos" subtitle="Acesso restrito">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              Apenas administradores podem gerenciar produtos
-            </p>
-          </CardContent>
-        </Card>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout
       title="Produtos"
-      subtitle="Gerencie o estoque do salão"
+      subtitle={isAdmin ? "Gerencie o estoque do salão" : "Consulte produtos e estoque"}
       actions={
+        isAdmin ? (
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-end">
           <Dialog
             open={isCategoryDialogOpen}
@@ -969,10 +955,11 @@ export default function Produtos() {
             </DialogContent>
           </Dialog>
         </div>
+        ) : null
       }
     >
-      {/* Low Stock Alert */}
-      {lowStockCount > 0 && (
+      {/* Low Stock Alert - Admin only */}
+      {isAdmin && lowStockCount > 0 && (
         <Card className="mb-6 border-warning/30 bg-warning/5">
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20 text-warning">
@@ -1059,9 +1046,11 @@ export default function Produtos() {
                               <span className="text-muted-foreground">Estoque:</span>
                               <span className={isLowStock ? "font-bold text-warning" : ""}>{product.quantity}</span>
                             </div>
-                            <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => openEditPriceDialog(product)}>
-                              Editar detalhes
-                            </Button>
+                            {isAdmin && (
+                              <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => openEditPriceDialog(product)}>
+                                Editar detalhes
+                              </Button>
+                            )}
                           </div>
                         );
                       })}
@@ -1143,9 +1132,11 @@ export default function Produtos() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
-                                Editar detalhes
-                              </Button>
+                              {isAdmin && (
+                                <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
+                                  Editar detalhes
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
@@ -1161,7 +1152,8 @@ export default function Produtos() {
         </CardContent>
       </Card>
 
-      {/* Damaged Products History */}
+      {/* Damaged Products History - Admin only */}
+      {isAdmin && (
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Histórico de Baixas (danificados)</CardTitle>
@@ -1229,6 +1221,7 @@ export default function Produtos() {
           )}
         </CardContent>
       </Card>
+      )}
     </MainLayout>
   );
 }

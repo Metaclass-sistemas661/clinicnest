@@ -50,6 +50,13 @@ export default function Agenda() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
   const [professionalFilter, setProfessionalFilter] = useState<string>("all");
 
+  // Staff: default to "my appointments" filter
+  useEffect(() => {
+    if (!isAdmin && profile?.id) {
+      setProfessionalFilter(profile.id);
+    }
+  }, [isAdmin, profile?.id]);
+
   // Form state
   const [formData, setFormData] = useState({
     client_id: "",

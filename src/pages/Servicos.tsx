@@ -29,10 +29,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Scissors, Plus, Loader2, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import type { Service } from "@/types/database";
 
+const serviceFormSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
+  description: z.string().optional(),
+  duration_minutes: z.coerce.number().min(5, "Mínimo 5 minutos").max(480, "Máximo 8 horas"),
+  price: z.union([
+    z.string().refine((v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0, "Preço inválido"),
+    z.number().min(0),
+  ]),
+  is_active: z.boolean(),
+});
+
 export default function Servicos() {
-  const { profile } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -121,7 +133,7 @@ export default function Servicos() {
         name: parsed.data.name,
         description: parsed.data.description || null,
         duration_minutes: parsed.data.duration_minutes,
-        price: parsed.data.price,
+        price: parseFloat(parsed.data.price as string) || 0,
         is_active: parsed.data.is_active,
       };
 
@@ -184,8 +196,9 @@ export default function Servicos() {
   return (
     <MainLayout
       title="Serviços"
-      subtitle="Gerencie os serviços oferecidos"
+      subtitle={isAdmin ? "Gerencie os serviços oferecidos" : "Consulte os serviços do salão"}
       actions={
+        isAdmin ? (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
@@ -281,6 +294,7 @@ export default function Servicos() {
             </form>
           </DialogContent>
         </Dialog>
+        ) : null
       }
     >
       <Card>
@@ -299,13 +313,13 @@ export default function Servicos() {
             <EmptyState
               icon={Scissors}
               title="Nenhum serviço cadastrado"
-              description="Cadastre os serviços oferecidos pelo salão para usar na agenda."
-              action={
+              description={isAdmin ? "Cadastre os serviços oferecidos pelo salão para usar na agenda." : "Ainda não há serviços cadastrados."}
+              action={isAdmin ? (
                 <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Serviço
                 </Button>
-              }
+              ) : undefined}
             />
           ) : (
             <>
@@ -341,6 +355,7 @@ export default function Servicos() {
                       </span>
                       <span className="font-semibold">{formatCurrency(service.price)}</span>
                     </div>
+                    {isAdmin && (
                     <div className="flex items-center gap-2 pt-2 border-t">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)} aria-label={`Editar serviço ${service.name}`}>
                         <Pencil className="h-4 w-4" />
@@ -353,6 +368,7 @@ export default function Servicos() {
                         {service.is_active ? "Ativo" : "Inativo"}
                       </span>
                     </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -402,6 +418,7 @@ export default function Servicos() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      {isAdmin && (
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -416,6 +433,7 @@ export default function Servicos() {
                           onCheckedChange={() => toggleActive(service)}
                         />
                       </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

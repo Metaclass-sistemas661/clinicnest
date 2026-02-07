@@ -28,6 +28,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   adminOnly?: boolean;
+  staffOnly?: boolean;
 }
 
 interface NavCategory {
@@ -104,9 +105,11 @@ function SidebarContent({
       {/* Navigation */}
       <nav className="flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
         {navCategories.map((category) => {
-          const filteredItems = category.items.filter(
-            (item) => !item.adminOnly || isAdmin
-          );
+          const filteredItems = category.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false;
+            if (item.staffOnly && isAdmin) return false;
+            return true;
+          });
           if (filteredItems.length === 0) return null;
           return (
             <div key={category.label} className="space-y-1.5">
