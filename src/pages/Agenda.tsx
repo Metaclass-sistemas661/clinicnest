@@ -226,17 +226,21 @@ export default function Agenda() {
 
       if (error) throw error;
 
-      // Notificar profissional quando admin cria agendamento para ele
-      if (isAdmin && professionalId) {
+      // Notificar profissional: quando admin cria para ele OU quando cria o próprio
+      if (professionalId && profile?.user_id) {
         const prof = professionals.find((p) => p.id === professionalId);
         const client = clients.find((c) => c.id === formData.client_id);
         const service = selectedService;
-        if (prof?.user_id) {
+        const profUserId = prof?.user_id ?? (professionalId === profile.id ? profile.user_id : null);
+        if (profUserId) {
+          const msg = isAdmin && profUserId !== profile.user_id
+            ? "Novo agendamento"
+            : "Agendamento criado";
           notifyUser(
             profile.tenant_id,
-            prof.user_id,
+            profUserId,
             "appointment_created",
-            "Novo agendamento",
+            msg,
             `${client?.name || "Cliente"} • ${service?.name || "Serviço"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
             {}
           ).catch(() => {});
