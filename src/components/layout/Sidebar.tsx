@@ -60,6 +60,7 @@ const navCategories: NavCategory[] = [
     label: "Administrativo",
     items: [
       { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
+      { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },

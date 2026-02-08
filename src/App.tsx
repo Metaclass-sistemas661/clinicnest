@@ -25,6 +25,7 @@ import Configuracoes from "@/pages/Configuracoes";
 import Assinatura from "@/pages/Assinatura";
 import MinhasComissoes from "@/pages/MinhasComissoes";
 import Metas from "@/pages/Metas";
+import MinhasMetas from "@/pages/MinhasMetas";
 
 // Lazy apenas para páginas públicas (evita flash ao navegar no dashboard)
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -127,6 +128,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <Metas />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/minhas-metas"
+                  element={
+                    <ProtectedRoute>
+                      <MinhasMetas />
                     </ProtectedRoute>
                   }
                 />

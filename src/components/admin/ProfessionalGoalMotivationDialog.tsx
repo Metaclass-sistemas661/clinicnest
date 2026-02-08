@@ -86,7 +86,11 @@ export function ProfessionalGoalMotivationDialog() {
   if (!goal || !profile) return null;
 
   const fmt = (v: number) => {
-    if (goal.goal_type === "revenue" || goal.goal_type === "product_revenue") {
+    if (
+      goal.goal_type === "revenue" ||
+      goal.goal_type === "product_revenue" ||
+      goal.goal_type === "ticket_medio"
+    ) {
       return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
     }
     return String(Math.round(v));
