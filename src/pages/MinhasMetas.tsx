@@ -160,11 +160,14 @@ export default function MinhasMetas() {
           />
         </div>
 
-        <GoalSuggestionForm
-          tenantId={profile!.tenant_id!}
-          professionalId={profile!.id}
-          onSuccess={fetchData}
-        />
+        {/* Sugestão de meta - destaque para o staff propor metas */}
+        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-1">
+          <GoalSuggestionForm
+            tenantId={profile!.tenant_id!}
+            professionalId={profile!.id}
+            onSuccess={fetchData}
+          />
+        </div>
 
         {suggestions.length > 0 && (
           <Card>

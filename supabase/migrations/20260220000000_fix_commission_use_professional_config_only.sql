@@ -46,7 +46,8 @@ BEGIN
 
   v_is_admin := public.is_tenant_admin(auth.uid(), v_tenant_id);
 
-  SELECT a.*, s.name as service_name, c.name as client_name
+  SELECT a.*, s.name as service_name, c.name as client_name,
+         COALESCE(a.price, s.price, 0) as effective_price
   INTO v_appointment
   FROM public.appointments a
   LEFT JOIN public.services s ON s.id = a.service_id
@@ -147,7 +148,7 @@ BEGIN
         -- Prioridade 2: config do profissional na Equipe (percentual ou fixo)
         ELSIF v_commission_config IS NOT NULL THEN
           IF v_commission_config.type = 'percentage' THEN
-            v_commission_amount := COALESCE(v_appointment.price, 0) * (v_commission_config.value / 100);
+            v_commission_amount := COALESCE(v_appointment.effective_price, v_appointment.price, 0) * (v_commission_config.value / 100);
           ELSE
             v_commission_amount := v_commission_config.value;
           END IF;
@@ -160,12 +161,12 @@ BEGIN
             amount, service_price, commission_type, commission_value, status
           ) VALUES (
             v_appointment.tenant_id, v_professional_user_id, p_appointment_id,
-            v_commission_config.id,
-            v_commission_amount, COALESCE(v_appointment.price, 0),
+            (SELECT id FROM public.professional_commissions WHERE user_id = v_professional_user_id AND tenant_id = v_appointment.tenant_id LIMIT 1),
+            v_commission_amount, COALESCE(v_appointment.effective_price, v_appointment.price, 0),
             CASE WHEN v_appointment.commission_amount IS NOT NULL THEN 'fixed'
                  WHEN v_commission_config IS NOT NULL THEN v_commission_config.type
                  ELSE 'fixed' END,
-            COALESCE(v_appointment.commission_amount, v_commission_config.value),
+            COALESCE(v_appointment.commission_amount, (SELECT value FROM public.professional_commissions WHERE user_id = v_professional_user_id AND tenant_id = v_appointment.tenant_id LIMIT 1)),
             'pending'
           );
         END IF;
@@ -173,11 +174,11 @@ BEGIN
     END IF;
   END IF;
 
-  v_service_profit := COALESCE(v_appointment.price, 0) - COALESCE(v_commission_amount, 0);
+  v_service_profit := COALESCE(v_appointment.effective_price, v_appointment.price, 0) - COALESCE(v_commission_amount, 0);
   v_total_profit := v_service_profit + v_product_profit;
   v_result := jsonb_build_object(
     'commission_amount', (COALESCE(v_commission_amount, 0))::float,
-    'service_price', (COALESCE(v_appointment.price, 0))::float,
+    'service_price', (COALESCE(v_appointment.effective_price, v_appointment.price, 0))::float,
     'service_name', COALESCE(v_appointment.service_name, 'Serviço'),
     'professional_name', COALESCE(v_professional_name, ''),
     'service_profit', (v_service_profit)::float,

@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
   const [clientsCount, setClientsCount] = useState(0);
+  const [staffMyClientsCount, setStaffMyClientsCount] = useState<number | null>(null);
   const [commissionsPending, setCommissionsPending] = useState(0);
   const [commissionsPaid, setCommissionsPaid] = useState(0);
   const [professionalCommissionsToReceive, setProfessionalCommissionsToReceive] = useState(0);
@@ -58,10 +59,10 @@ export default function Dashboard() {
   >([]);
 
   useEffect(() => {
-    if (profile?.tenant_id) {
+    if (profile?.tenant_id && (isAdmin || (profile?.user_id && profile?.id))) {
       fetchDashboardData();
     }
-  }, [profile?.tenant_id]);
+  }, [profile?.tenant_id, profile?.user_id, profile?.id, isAdmin]);
 
   // Refetch quando o usuário volta para a página (ex.: após marcar comissão como paga no Financeiro)
   useEffect(() => {
@@ -74,6 +75,7 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
+    if (!isAdmin && (!profile?.user_id || !profile?.id)) return;
 
     const today = new Date();
     const monthStart = startOfMonth(today).toISOString();
@@ -96,6 +98,7 @@ export default function Dashboard() {
         productLossesResult,
         clientsResult,
         staffPerformanceResult,
+        staffMyClientsResult,
       ] = await Promise.all([
         // 1. Financeiro do mês (admin)
         isAdmin
@@ -204,6 +207,15 @@ export default function Dashboard() {
               .gte("scheduled_at", monthStart)
               .lte("scheduled_at", monthEnd)
           : Promise.resolve({ data: null }),
+        // 10. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
+        !isAdmin && profile?.id
+          ? supabase
+              .from("appointments")
+              .select("client_id")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.id)
+              .not("client_id", "is", null)
+          : Promise.resolve({ data: null }),
       ]);
 
       const financialData = financialResult.data;
@@ -215,6 +227,7 @@ export default function Dashboard() {
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
+      const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
@@ -269,6 +282,15 @@ export default function Dashboard() {
       }
 
       setClientsCount(clientsCountResult);
+
+      if (!isAdmin && staffMyClientsData.length > 0) {
+        const uniqueClients = new Set(staffMyClientsData.map((r) => r.client_id).filter(Boolean));
+        setStaffMyClientsCount(uniqueClients.size);
+      } else if (!isAdmin) {
+        setStaffMyClientsCount(0);
+      } else {
+        setStaffMyClientsCount(null);
+      }
 
       let lowStockData: Product[] = [];
       if (productsData) {
@@ -509,10 +531,10 @@ export default function Dashboard() {
                     description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados este mês`}
                   />
                   <StatCard
-                    title="Total de Clientes"
-                    value={clientsCount}
+                    title="Clientes que atendi"
+                    value={staffMyClientsCount ?? 0}
                     icon={Users}
-                    description="Clientes cadastrados"
+                    description="Clientes únicos nos seus atendimentos"
                   />
                 </>
               )}

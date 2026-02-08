@@ -25,6 +25,8 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 type CommissionStatus = "pending" | "paid";
 type CommissionPayment = {
@@ -40,7 +42,8 @@ type CommissionPayment = {
 
 export default function MinhasComissoes() {
   const { profile, isAdmin } = useAuth();
-  const [filterMonth, setFilterMonth] = useState(formatInAppTz(new Date(), "yyyy-MM"));
+  const [filterMonth, setFilterMonth] = useState<string>(formatInAppTz(new Date(), "yyyy-MM"));
+  const [showAllPeriods, setShowAllPeriods] = useState(false);
   const [commissions, setCommissions] = useState<CommissionPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,18 +51,15 @@ export default function MinhasComissoes() {
     if (profile?.tenant_id && profile?.user_id && !isAdmin) {
       fetchCommissions();
     }
-  }, [profile?.tenant_id, profile?.user_id, isAdmin, filterMonth]);
+  }, [profile?.tenant_id, profile?.user_id, isAdmin, filterMonth, showAllPeriods]);
 
   const fetchCommissions = async () => {
     if (!profile?.tenant_id || !profile?.user_id || isAdmin) return;
 
     setIsLoading(true);
-    const [year, month] = filterMonth.split("-").map(Number);
-    const start = startOfMonth(new Date(year, month - 1));
-    const end = endOfMonth(new Date(year, month - 1));
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("commission_payments")
         .select(`
           id,
@@ -72,10 +72,18 @@ export default function MinhasComissoes() {
           appointment:appointments(id)
         `)
         .eq("tenant_id", profile.tenant_id)
-        .eq("professional_id", profile.user_id)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString())
-        .order("created_at", { ascending: false });
+        .eq("professional_id", profile.user_id);
+
+      if (!showAllPeriods) {
+        const [year, month] = filterMonth.split("-").map(Number);
+        const start = startOfMonth(new Date(year, month - 1));
+        const end = endOfMonth(new Date(year, month - 1));
+        query = query
+          .gte("created_at", start.toISOString())
+          .lte("created_at", end.toISOString());
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       setCommissions((data || []) as CommissionPayment[]);
@@ -154,7 +162,15 @@ export default function MinhasComissoes() {
       title="Minhas Comissões"
       subtitle="Histórico de comissões pendentes e pagas"
       actions={
-        <div className="flex flex-wrap gap-2 justify-end">
+        <div className="flex flex-wrap gap-2 justify-end items-center">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-all"
+              checked={showAllPeriods}
+              onCheckedChange={setShowAllPeriods}
+            />
+            <Label htmlFor="show-all" className="text-sm cursor-pointer">Todos os períodos</Label>
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -164,6 +180,7 @@ export default function MinhasComissoes() {
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
           </Button>
+          {!showAllPeriods && (
           <Select value={filterMonth} onValueChange={setFilterMonth}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
@@ -180,6 +197,7 @@ export default function MinhasComissoes() {
             })}
           </SelectContent>
           </Select>
+          )}
         </div>
       }
     >
@@ -229,7 +247,7 @@ export default function MinhasComissoes() {
           <CardHeader>
             <CardTitle>Histórico</CardTitle>
             <CardDescription>
-              Comissões do mês selecionado
+              {showAllPeriods ? "Todas as comissões" : "Comissões do mês selecionado"}
             </CardDescription>
           </CardHeader>
           <CardContent>

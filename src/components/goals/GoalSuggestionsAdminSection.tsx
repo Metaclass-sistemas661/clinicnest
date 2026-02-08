@@ -33,18 +33,22 @@ interface GoalSuggestion {
 interface Profile {
   id: string;
   full_name: string;
+  user_id?: string;
 }
 
 interface GoalSuggestionsAdminSectionProps {
   tenantId: string;
   professionals: Profile[];
   onApprovedOrRejected: () => void;
+  /** Exibir seção mesmo quando não há sugestões pendentes */
+  showEmptyState?: boolean;
 }
 
 export function GoalSuggestionsAdminSection({
   tenantId,
   professionals,
   onApprovedOrRejected,
+  showEmptyState = false,
 }: GoalSuggestionsAdminSectionProps) {
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,17 +113,20 @@ export function GoalSuggestionsAdminSection({
 
       if (updateError) throw updateError;
 
-      // Notificar profissional
-      const { data: prefs } = await supabase
-        .from("user_notification_preferences")
-        .select("goal_approved")
-        .eq("user_id", suggestion.professional_id)
-        .maybeSingle();
-      const shouldNotify = prefs?.goal_approved !== false;
-      if (shouldNotify) {
+      // Notificar profissional (user_id = auth.users id do profissional)
+      const profUserId = professionals.find((p) => p.id === suggestion.professional_id)?.user_id;
+      const { data: prefs } = profUserId
+        ? await supabase
+            .from("user_notification_preferences")
+            .select("goal_approved")
+            .eq("user_id", profUserId)
+            .maybeSingle()
+        : { data: null };
+      const shouldNotify = profUserId && prefs?.goal_approved !== false;
+      if (shouldNotify && profUserId) {
         await supabase.from("notifications").insert({
           tenant_id: tenantId,
-          user_id: suggestion.professional_id,
+          user_id: profUserId,
           type: "goal_approved",
           title: "Meta aprovada",
           body: `Sua sugestão "${suggestion.name || "Meta"}" foi aprovada e a meta foi criada.`,
@@ -154,17 +161,20 @@ export function GoalSuggestionsAdminSection({
 
       if (error) throw error;
 
-      // Notificar profissional
-      const { data: prefs } = await supabase
-        .from("user_notification_preferences")
-        .select("goal_rejected")
-        .eq("user_id", rejectDialog.suggestion.professional_id)
-        .maybeSingle();
-      const shouldNotify = prefs?.goal_rejected !== false;
-      if (shouldNotify) {
+      // Notificar profissional (user_id = auth.users id do profissional)
+      const profUserId = professionals.find((p) => p.id === rejectDialog.suggestion.professional_id)?.user_id;
+      const { data: prefs } = profUserId
+        ? await supabase
+            .from("user_notification_preferences")
+            .select("goal_rejected")
+            .eq("user_id", profUserId)
+            .maybeSingle()
+        : { data: null };
+      const shouldNotify = profUserId && prefs?.goal_rejected !== false;
+      if (shouldNotify && profUserId) {
         await supabase.from("notifications").insert({
           tenant_id: tenantId,
-          user_id: rejectDialog.suggestion.professional_id,
+          user_id: profUserId,
           type: "goal_rejected",
           title: "Meta rejeitada",
           body: rejectDialog.reason.trim()
@@ -185,7 +195,8 @@ export function GoalSuggestionsAdminSection({
     }
   };
 
-  if (isLoading || suggestions.length === 0) return null;
+  if (isLoading) return null;
+  if (!showEmptyState && suggestions.length === 0) return null;
 
   return (
     <>
@@ -193,14 +204,23 @@ export function GoalSuggestionsAdminSection({
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" />
-            Sugestões pendentes
-            <Badge variant="secondary" className="ml-auto">{suggestions.length}</Badge>
+            Sugestões dos profissionais
+            {suggestions.length > 0 && (
+              <Badge variant="secondary" className="ml-auto">{suggestions.length} pendente(s)</Badge>
+            )}
           </CardTitle>
           <CardDescription>
-            Profissionais sugeriram metas. Aprove ou rejeite.
+            {suggestions.length > 0
+              ? "Profissionais sugeriram metas. Aprove ou rejeite."
+              : "Nenhuma sugestão pendente no momento. Os profissionais podem sugerir metas em Minhas Metas."}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {suggestions.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-sm">
+              Nenhuma sugestão aguardando aprovação
+            </div>
+          ) : (
           <ul className="space-y-3">
             {suggestions.map((s) => {
               const prof = professionals.find((p) => p.id === s.professional_id)?.full_name ?? "Profissional";
@@ -248,6 +268,7 @@ export function GoalSuggestionsAdminSection({
               );
             })}
           </ul>
+          )}
         </CardContent>
       </Card>
 

@@ -58,6 +58,7 @@ import { GoalSuggestionsAdminSection } from "@/components/goals/GoalSuggestionsA
 interface Profile {
   id: string;
   full_name: string;
+  user_id?: string;
 }
 
 interface Product {
@@ -114,7 +115,7 @@ export default function Metas() {
         }),
         supabase
           .from("profiles")
-          .select("id, full_name")
+          .select("id, full_name, user_id")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name"),
         supabase
@@ -472,7 +473,7 @@ export default function Metas() {
   return (
     <MainLayout
       title="Metas"
-      subtitle="Defina e acompanhe as metas do salão"
+      subtitle="Defina metas, aprove sugestões dos profissionais e acompanhe o desempenho"
       actions={
         <div className="flex flex-wrap gap-2 justify-end">
           <Button
@@ -751,6 +752,7 @@ export default function Metas() {
             tenantId={profile.tenant_id}
             professionals={professionals}
             onApprovedOrRejected={() => fetchData(showArchived)}
+            showEmptyState
           />
         </div>
       )}
