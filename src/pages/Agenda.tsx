@@ -334,17 +334,27 @@ export default function Agenda() {
     if (!profile?.tenant_id) return undefined;
 
     try {
-      const { data: rpcResult, error } = await supabase.rpc("complete_appointment_with_sale", {
-        p_appointment_id: appointment.id,
-        p_product_id: sale?.productId ?? null,
-        p_quantity: sale?.quantity ?? null,
-      });
+      // Atualizar status do agendamento para completed
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "completed" })
+        .eq("id", appointment.id);
 
       if (error) throw error;
 
       if (sale) {
         const product = products.find((p) => p.id === sale.productId);
         if (product) {
+          // Registrar movimento de estoque
+          await supabase.from("stock_movements").insert({
+            tenant_id: profile.tenant_id,
+            product_id: sale.productId,
+            quantity: -sale.quantity,
+            movement_type: "out",
+            reason: `Venda no agendamento`,
+            created_by: profile.id,
+          });
+
           setProducts((prev) =>
             prev.map((p) =>
               p.id === product.id
@@ -355,20 +365,23 @@ export default function Agenda() {
         }
       }
 
-      // Staff: usar valor retornado pelo RPC ou consultar commission_payments (fonte da verdade)
+      // Calcular comissão baseado na configuração do profissional
       if (!isAdmin && profile?.id && profile?.user_id) {
-        let commissionAmount = rpcResult?.commission_amount != null ? Number(rpcResult.commission_amount) : 0;
-        const servicePriceFromRpc = rpcResult?.service_price != null ? Number(rpcResult.service_price) : Number(appointment.price || 0);
+        const { data: commissionConfig } = await supabase
+          .from("professional_commissions")
+          .select("type, value")
+          .eq("user_id", profile.user_id)
+          .eq("tenant_id", profile.tenant_id)
+          .maybeSingle();
 
-        // Se RPC retornou 0, verificar se comissão foi criada em commission_payments (fonte da verdade)
-        if (commissionAmount <= 0) {
-          const { data: payment } = await supabase
-            .from("commission_payments")
-            .select("amount, service_price")
-            .eq("appointment_id", appointment.id)
-            .maybeSingle();
-          if (payment?.amount != null && Number(payment.amount) > 0) {
-            commissionAmount = Number(payment.amount);
+        let commissionAmount = 0;
+        const servicePrice = Number(appointment.price || 0);
+
+        if (commissionConfig) {
+          if (commissionConfig.type === "percentage") {
+            commissionAmount = (servicePrice * Number(commissionConfig.value)) / 100;
+          } else {
+            commissionAmount = Number(commissionConfig.value);
           }
         }
 
@@ -402,7 +415,7 @@ export default function Agenda() {
           type: "congrats",
           commissionAmount,
           serviceName: (appointment.service as { name?: string })?.name || "Serviço",
-          servicePrice: servicePriceFromRpc,
+          servicePrice,
           completedThisMonth,
           valueGeneratedThisMonth,
         };

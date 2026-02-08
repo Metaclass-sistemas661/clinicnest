@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, ChevronDown, Send, Clock, Check, X, LayoutDashboard } from "lucide-react";
+import { Target, TrendingUp, ChevronDown, Clock, Check, X, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

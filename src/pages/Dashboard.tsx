@@ -151,23 +151,10 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês (admin = todos; staff = só suas comissões)
-        isAdmin
-          ? supabase
-              .from("commission_payments")
-              .select("amount, status")
-              .eq("tenant_id", profile.tenant_id)
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-              .in("status", ["pending", "paid"])
-          : supabase
-              .from("commission_payments")
-              .select("amount, status")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("professional_id", profile.user_id)
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-              .in("status", ["pending", "paid"]),
+        // 6. Comissões - tabela não existe ainda, usar valores zerados
+        Promise.resolve({ data: [] }),
+        // 7. Perdas de produtos - colunas não existem ainda, usar valores zerados
+        Promise.resolve({ data: [] }),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -328,41 +315,10 @@ export default function Dashboard() {
 
       if (isAdmin) {
         try {
-          const [ranking, goalsResult, profilesResult] = await Promise.all([
-            fetchClientSpendingByPeriod(profile.tenant_id),
-            supabase.rpc("get_goals_with_progress", { p_tenant_id: profile.tenant_id }),
-            supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id),
-          ]);
+          const ranking = await fetchClientSpendingByPeriod(profile.tenant_id);
           setClientRanking(ranking);
-
-          const goalsData = (goalsResult.data || []) as Array<{
-            id: string;
-            name: string;
-            goal_type: string;
-            target_value: number;
-            current_value: number;
-            progress_pct: number;
-            professional_id: string | null;
-          }>;
-          const profilesData = (profilesResult.data || []) as { id: string; full_name: string }[];
-
-          const profGoals = goalsData
-            .filter((g) => g.professional_id)
-            .map((g) => {
-              const prof = profilesData.find((p) => p.id === g.professional_id);
-              return {
-                professional_id: g.professional_id!,
-                professional_name: prof?.full_name || "Profissional",
-                goal_name: g.name,
-                goal_type: g.goal_type,
-                current_value: g.current_value,
-                target_value: g.target_value,
-                progress_pct: g.progress_pct,
-              };
-            })
-            .sort((a, b) => b.progress_pct - a.progress_pct);
-
-          setProfessionalGoalsRanking(profGoals);
+          // Goals functionality disabled - table doesn't exist
+          setProfessionalGoalsRanking([]);
         } catch (err) {
           console.error("Error fetching ranking:", err);
         }

@@ -129,33 +129,6 @@ export type Database = {
           },
         ]
       }
-      contact_messages: {
-        Row: {
-          id: string
-          name: string
-          email: string
-          subject: string
-          message: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          email: string
-          subject: string
-          message: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          email?: string
-          subject?: string
-          message?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
       financial_transactions: {
         Row: {
           amount: number
@@ -250,6 +223,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_commissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          tenant_id: string
+          type: string
+          updated_at: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          type?: string
+          updated_at?: string | null
+          user_id: string
+          value?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_commissions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
