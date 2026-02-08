@@ -803,89 +803,120 @@ export default function Metas() {
         </div>
       )}
 
-      <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all" className="gap-2">
+      {/* Abas de filtro: implementação customizada (sem Radix Tabs) para garantir troca de conteúdo */}
+      <div className="space-y-4">
+        <div
+          role="tablist"
+          className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full"
+        >
+          <button
+            role="tab"
+            aria-selected={tabValue === "all"}
+            onClick={() => setTabValue("all")}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
+              tabValue === "all" ? "bg-background text-foreground shadow-sm" : ""
+            }`}
+          >
             <BarChart3 className="h-4 w-4" />
             Todas
-          </TabsTrigger>
-          <TabsTrigger value="general" className="gap-2">
+          </button>
+          <button
+            role="tab"
+            aria-selected={tabValue === "general"}
+            onClick={() => setTabValue("general")}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
+              tabValue === "general" ? "bg-background text-foreground shadow-sm" : ""
+            }`}
+          >
             <TrendingUp className="h-4 w-4" />
             Gerais
-          </TabsTrigger>
-          <TabsTrigger value="products" className="gap-2">
+          </button>
+          <button
+            role="tab"
+            aria-selected={tabValue === "products"}
+            onClick={() => setTabValue("products")}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
+              tabValue === "products" ? "bg-background text-foreground shadow-sm" : ""
+            }`}
+          >
             <Package className="h-4 w-4" />
             Produtos
-          </TabsTrigger>
-          <TabsTrigger value="professionals" className="gap-2">
+          </button>
+          <button
+            role="tab"
+            aria-selected={tabValue === "professionals"}
+            onClick={() => setTabValue("professionals")}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
+              tabValue === "professionals" ? "bg-background text-foreground shadow-sm" : ""
+            }`}
+          >
             <Users className="h-4 w-4" />
             Profissionais
-          </TabsTrigger>
-        </TabsList>
+          </button>
+        </div>
 
-        <TabsContent value="all" className="mt-4 focus-visible:outline-none">
-          {isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-32" />
-              ))}
-            </div>
-          ) : goalsToShow.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
-                <p className="text-muted-foreground mb-2">
-                  {showArchived
-                    ? "Nenhuma meta arquivada"
-                    : "Nenhuma meta criada"}
-                </p>
-                {!showArchived && (
-                  <Button
-                    onClick={() => setIsDialogOpen(true)}
-                    className="gradient-primary text-primary-foreground"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar primeira meta
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
+        <div className="mt-4" role="tabpanel">
+          {tabValue === "all" &&
+            (isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-32" />
+                ))}
+              </div>
+            ) : goalsToShow.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                  <p className="text-muted-foreground mb-2">
+                    {showArchived ? "Nenhuma meta arquivada" : "Nenhuma meta criada"}
+                  </p>
+                  {!showArchived && (
+                    <Button
+                      onClick={() => setIsDialogOpen(true)}
+                      className="gradient-primary text-primary-foreground"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar primeira meta
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filterAndSort(goalsToShow).map(renderGoalCard)}
+              </div>
+            ))}
+
+          {tabValue === "general" && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filterAndSort(goalsToShow).map(renderGoalCard)}
+              {generalGoals.length === 0 && !isLoading && (
+                <p className="col-span-full text-muted-foreground">Nenhuma meta geral</p>
+              )}
+              {filterAndSort(generalGoals).map(renderGoalCard)}
             </div>
           )}
-        </TabsContent>
 
-        <TabsContent value="general" className="mt-4 focus-visible:outline-none">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {generalGoals.length === 0 && !isLoading && (
-              <p className="col-span-full text-muted-foreground">Nenhuma meta geral</p>
-            )}
-            {filterAndSort(generalGoals).map(renderGoalCard)}
-          </div>
-        </TabsContent>
+          {tabValue === "products" && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {productGoals.length === 0 && !isLoading && (
+                <p className="col-span-full text-muted-foreground">Nenhuma meta de produtos</p>
+              )}
+              {filterAndSort(productGoals).map(renderGoalCard)}
+            </div>
+          )}
 
-        <TabsContent value="products" className="mt-4 focus-visible:outline-none">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {productGoals.length === 0 && !isLoading && (
-              <p className="col-span-full text-muted-foreground">Nenhuma meta de produtos</p>
-            )}
-            {filterAndSort(productGoals).map(renderGoalCard)}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="professionals" className="mt-4 focus-visible:outline-none">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {professionalGoals.length === 0 && !isLoading && (
-              <p className="col-span-full text-muted-foreground">
-                Nenhuma meta por profissional
-              </p>
-            )}
-            {filterAndSort(professionalGoals).map(renderGoalCard)}
-          </div>
-        </TabsContent>
-      </Tabs>
+          {tabValue === "professionals" && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {professionalGoals.length === 0 && !isLoading && (
+                <p className="col-span-full text-muted-foreground">
+                  Nenhuma meta por profissional
+                </p>
+              )}
+              {filterAndSort(professionalGoals).map(renderGoalCard)}
+            </div>
+          )}
+        </div>
+      </div>
 
       {detailGoal && profile?.tenant_id && (
         <GoalDetailDialog

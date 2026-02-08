@@ -230,18 +230,6 @@ export default function Dashboard() {
         console.warn("[Dashboard:Comissões] Erro ao buscar:", commissionsResult.error);
       }
       const commissionsData = commissionsResult.data ?? null;
-      if (!isAdmin) {
-        console.log("[Dashboard:Comissões] Staff - dados:", {
-          staffUserId,
-          profile_user_id: profile?.user_id,
-          user_id: user?.id,
-          commissionsCount: commissionsData?.length ?? 0,
-          commissionsRaw: commissionsData,
-          pending: commissionsData
-            ?.filter((c: any) => String(c?.status ?? "").toLowerCase() === "pending")
-            .reduce((s: number, c: any) => s + Number(c.amount || 0), 0),
-        });
-      }
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
@@ -295,7 +283,7 @@ export default function Dashboard() {
       if (isAdmin) {
         setCommissionsPending(pendingCommissions);
         setCommissionsPaid(paidCommissions);
-      } else {
+      } else if (staffUserId) {
         setProfessionalCommissionsToReceive(pendingCommissions);
         setProfessionalCommissionsReceived(paidCommissions);
       }
