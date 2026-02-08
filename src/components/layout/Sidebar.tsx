@@ -18,12 +18,14 @@ import {
   Menu,
   Wallet,
   Target,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
 interface NavItem {
   title: string;
@@ -61,8 +63,10 @@ const navCategories: NavCategory[] = [
     items: [
       { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
+      { title: "Notificações", href: "/notificacoes", icon: Bell, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Minhas Configurações", href: "/minhas-configuracoes", icon: Settings, staffOnly: true },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
     ],
   },
@@ -173,6 +177,7 @@ function SidebarContent({
                   {isAdmin ? "Administrador" : "Profissional"}
                 </p>
               </div>
+              {!isAdmin && <NotificationsBell />}
               <ThemeToggle />
             </div>
           </div>

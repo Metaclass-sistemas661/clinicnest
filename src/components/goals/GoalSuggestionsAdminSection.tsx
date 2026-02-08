@@ -109,6 +109,24 @@ export function GoalSuggestionsAdminSection({
 
       if (updateError) throw updateError;
 
+      // Notificar profissional
+      const { data: prefs } = await supabase
+        .from("user_notification_preferences")
+        .select("goal_approved")
+        .eq("user_id", suggestion.professional_id)
+        .maybeSingle();
+      const shouldNotify = prefs?.goal_approved !== false;
+      if (shouldNotify) {
+        await supabase.from("notifications").insert({
+          tenant_id: tenantId,
+          user_id: suggestion.professional_id,
+          type: "goal_approved",
+          title: "Meta aprovada",
+          body: `Sua sugestão "${suggestion.name || "Meta"}" foi aprovada e a meta foi criada.`,
+          metadata: { goal_suggestion_id: suggestion.id, created_goal_id: goal?.id },
+        });
+      }
+
       toast.success("Sugestão aprovada! Meta criada.");
       fetchSuggestions();
       onApprovedOrRejected();
@@ -135,6 +153,26 @@ export function GoalSuggestionsAdminSection({
         .eq("id", rejectDialog.suggestion.id);
 
       if (error) throw error;
+
+      // Notificar profissional
+      const { data: prefs } = await supabase
+        .from("user_notification_preferences")
+        .select("goal_rejected")
+        .eq("user_id", rejectDialog.suggestion.professional_id)
+        .maybeSingle();
+      const shouldNotify = prefs?.goal_rejected !== false;
+      if (shouldNotify) {
+        await supabase.from("notifications").insert({
+          tenant_id: tenantId,
+          user_id: rejectDialog.suggestion.professional_id,
+          type: "goal_rejected",
+          title: "Meta rejeitada",
+          body: rejectDialog.reason.trim()
+            ? `Sua sugestão foi rejeitada. Motivo: ${rejectDialog.reason.trim()}`
+            : "Sua sugestão foi rejeitada.",
+          metadata: { goal_suggestion_id: rejectDialog.suggestion.id, rejection_reason: rejectDialog.reason || null },
+        });
+      }
 
       toast.success("Sugestão rejeitada.");
       setRejectDialog(null);
