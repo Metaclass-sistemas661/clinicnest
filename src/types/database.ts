@@ -23,6 +23,7 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
+  show_goals_progress_in_header?: boolean;
   created_at: string;
   updated_at: string;
 }

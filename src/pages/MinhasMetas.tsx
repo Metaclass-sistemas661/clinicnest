@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, ChevronDown, Send, Clock, Check, X } from "lucide-react";
+import { Target, TrendingUp, ChevronDown, Send, Clock, Check, X, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,6 +22,8 @@ import {
 import { GoalDetailDialog } from "@/components/goals/GoalDetailDialog";
 import { GoalAchievementsSection } from "@/components/goals/GoalAchievementsSection";
 import { GoalSuggestionForm } from "@/components/goals/GoalSuggestionForm";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface GoalSuggestion {
   id: string;
@@ -35,11 +37,17 @@ interface GoalSuggestion {
 }
 
 export default function MinhasMetas() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, refreshProfile } = useAuth();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [detailGoal, setDetailGoal] = useState<GoalWithProgress | null>(null);
+  const [showBarInHeader, setShowBarInHeader] = useState(true);
+  const [savingBarPref, setSavingBarPref] = useState(false);
+
+  useEffect(() => {
+    setShowBarInHeader(profile?.show_goals_progress_in_header !== false);
+  }, [profile?.show_goals_progress_in_header]);
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -115,9 +123,43 @@ export default function MinhasMetas() {
 
   const pendingSuggestions = suggestions.filter((s) => s.status === "pending");
 
+  const handleToggleBarInHeader = async (checked: boolean) => {
+    if (!profile?.user_id) return;
+    setShowBarInHeader(checked);
+    setSavingBarPref(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ show_goals_progress_in_header: checked })
+        .eq("user_id", profile.user_id);
+      if (error) throw error;
+      await refreshProfile();
+    } catch (e) {
+      setShowBarInHeader(!checked);
+      toast.error("Erro ao salvar preferência");
+    } finally {
+      setSavingBarPref(false);
+    }
+  };
+
   return (
     <MainLayout title="Minhas Metas" subtitle="Acompanhe o progresso das suas metas">
       <div className="space-y-6">
+        <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="show-bar-header" className="text-sm font-medium cursor-pointer">
+              Exibir barra de progresso das metas no topo da página
+            </Label>
+          </div>
+          <Switch
+            id="show-bar-header"
+            checked={showBarInHeader}
+            onCheckedChange={handleToggleBarInHeader}
+            disabled={savingBarPref}
+          />
+        </div>
+
         <GoalSuggestionForm
           tenantId={profile!.tenant_id!}
           professionalId={profile!.id}

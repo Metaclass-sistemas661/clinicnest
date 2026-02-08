@@ -8,6 +8,7 @@ import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissio
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
 import { ProfessionalGoalMotivationDialog } from "@/components/admin/ProfessionalGoalMotivationDialog";
+import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -37,43 +38,40 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           isMobile ? "ml-0" : "ml-72"
         )}>
           <GoalsProgressBar />
-          {/* Header */}
-          {(title || actions) && (
-            <header className={cn(
-              "sticky top-0 z-30 glass border-b border-border",
-              isMobile && "top-14" // Account for mobile header
+          {/* Header: título + sino (staff) + actions */}
+          <header className={cn(
+            "sticky top-0 z-30 glass border-b border-border",
+            isMobile && "top-14"
+          )}>
+            <div className={cn(
+              "flex items-center justify-between",
+              isMobile ? "h-auto min-h-16 flex-col gap-3 px-4 py-4 sm:flex-row sm:h-16 sm:py-0" : "h-20 px-8"
             )}>
               <div className={cn(
-                "flex items-center justify-between",
-                isMobile ? "h-auto min-h-16 flex-col gap-3 px-4 py-4 sm:flex-row sm:h-16 sm:py-0" : "h-20 px-8"
+                "space-y-0.5",
+                isMobile && "w-full text-center sm:text-left sm:w-auto"
               )}>
-                <div className={cn(
-                  "space-y-0.5",
-                  isMobile && "w-full text-center sm:text-left sm:w-auto"
-                )}>
-                  {title && (
-                    <h1 className={cn(
-                      "font-display font-bold tracking-tight text-foreground",
-                      isMobile ? "text-xl" : "text-2xl"
-                    )}>
-                      {title}
-                    </h1>
-                  )}
-                  {subtitle && (
-                    <p className="text-sm text-muted-foreground">{subtitle}</p>
-                  )}
-                </div>
-                {actions && (
-                  <div className={cn(
-                    "flex items-center gap-2 sm:gap-3",
-                    isMobile && "w-full justify-center sm:w-auto sm:justify-end flex-wrap"
+                {title && (
+                  <h1 className={cn(
+                    "font-display font-bold tracking-tight text-foreground",
+                    isMobile ? "text-xl" : "text-2xl"
                   )}>
-                    {actions}
-                  </div>
+                    {title}
+                  </h1>
+                )}
+                {subtitle && (
+                  <p className="text-sm text-muted-foreground">{subtitle}</p>
                 )}
               </div>
-            </header>
-          )}
+              <div className={cn(
+                "flex items-center gap-2 sm:gap-3",
+                isMobile && "w-full justify-center sm:w-auto sm:justify-end flex-wrap"
+              )}>
+                {!isAdmin && <NotificationsBell />}
+                {actions}
+              </div>
+            </div>
+          </header>
 
           {/* Content */}
           <div className={cn(

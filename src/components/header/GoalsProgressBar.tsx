@@ -60,6 +60,8 @@ export function GoalsProgressBar() {
     };
   }, [profile?.tenant_id, profile?.id, isAdmin]);
 
+  // Staff pode ocultar a barra (preferência em Minhas Metas)
+  if (!isAdmin && profile?.show_goals_progress_in_header === false) return null;
   if (goals.length === 0) return null;
 
   const formatValue = (goal: GoalProgress) => {
