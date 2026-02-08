@@ -55,16 +55,16 @@ export function AdminCommissionReminderDialog() {
     const commissions = commissionsRes.data || [];
 
     const staffUserIds = new Set(
-      roles.filter((r: { role: string }) => r.role === "staff").map((r: { user_id: string }) => r.user_id)
+      roles.filter((r) => r.role === "staff").map((r) => r.user_id)
     );
-    const usersWithCommission = new Set(commissions.map((c: { user_id: string }) => c.user_id));
+    const usersWithCommission = new Set(commissions.map((c) => c.user_id));
 
     const staffWithout: StaffWithoutCommission[] = profiles
       .filter(
-        (p: { user_id: string }) =>
+        (p) =>
           staffUserIds.has(p.user_id) && !usersWithCommission.has(p.user_id)
       )
-      .map((p: { id: string; user_id: string; full_name: string }) => ({
+      .map((p) => ({
         user_id: p.user_id,
         full_name: p.full_name || "Profissional",
         profile_id: p.id,

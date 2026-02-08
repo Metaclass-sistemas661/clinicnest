@@ -673,7 +673,7 @@ export default function Equipe() {
                   const isHighlighted = member.user_id === highlightUserId && !member.commission;
 
                   return (
-                    <TableRow key={member.id} ref={isHighlighted ? highlightedRowRef : undefined}>
+                    <TableRow key={member.id} ref={isHighlighted ? highlightedRowRef as React.Ref<HTMLTableRowElement> : undefined}>
                       <TableCell className="font-medium">
                         {isHighlighted && (
                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-md bg-warning/20 px-3 py-1 text-sm text-warning border border-warning/30 z-10">
