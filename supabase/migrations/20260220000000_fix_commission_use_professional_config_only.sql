@@ -123,6 +123,7 @@ BEGIN
 
   -- Comissão: SOMENTE appointment.commission_amount OU professional_commissions (Equipe). Sem default do tenant.
   IF v_appointment.professional_id IS NOT NULL AND v_appointment.tenant_id IS NOT NULL THEN
+    -- Obter auth user id do profissional (profiles.user_id)
     SELECT user_id INTO v_professional_user_id
     FROM public.profiles
     WHERE id = v_appointment.professional_id
@@ -132,10 +133,12 @@ BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM public.commission_payments WHERE appointment_id = p_appointment_id
       ) THEN
-        SELECT * INTO v_commission_config
-        FROM public.professional_commissions
-        WHERE user_id = v_professional_user_id
-        AND tenant_id = v_appointment.tenant_id
+        -- Buscar config via JOIN: liga profile (id=professional_id) a professional_commissions (user_id=profiles.user_id)
+        SELECT pc.* INTO v_commission_config
+        FROM public.professional_commissions pc
+        INNER JOIN public.profiles p ON p.user_id = pc.user_id
+        WHERE p.id = v_appointment.professional_id
+        AND pc.tenant_id = v_appointment.tenant_id
         LIMIT 1;
 
         -- Prioridade 1: valor explícito no agendamento
@@ -157,8 +160,7 @@ BEGIN
             amount, service_price, commission_type, commission_value, status
           ) VALUES (
             v_appointment.tenant_id, v_professional_user_id, p_appointment_id,
-            (SELECT id FROM public.professional_commissions
-             WHERE user_id = v_professional_user_id AND tenant_id = v_appointment.tenant_id LIMIT 1),
+            v_commission_config.id,
             v_commission_amount, COALESCE(v_appointment.price, 0),
             CASE WHEN v_appointment.commission_amount IS NOT NULL THEN 'fixed'
                  WHEN v_commission_config IS NOT NULL THEN v_commission_config.type

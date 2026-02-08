@@ -355,10 +355,22 @@ export default function Agenda() {
         }
       }
 
-      // Staff: usar valor retornado pelo RPC (fonte confiável) para popup de comissão
+      // Staff: usar valor retornado pelo RPC ou consultar commission_payments (fonte da verdade)
       if (!isAdmin && profile?.id && profile?.user_id) {
-        const commissionAmount = rpcResult?.commission_amount != null ? Number(rpcResult.commission_amount) : 0;
+        let commissionAmount = rpcResult?.commission_amount != null ? Number(rpcResult.commission_amount) : 0;
         const servicePriceFromRpc = rpcResult?.service_price != null ? Number(rpcResult.service_price) : Number(appointment.price || 0);
+
+        // Se RPC retornou 0, verificar se comissão foi criada em commission_payments (fonte da verdade)
+        if (commissionAmount <= 0) {
+          const { data: payment } = await supabase
+            .from("commission_payments")
+            .select("amount, service_price")
+            .eq("appointment_id", appointment.id)
+            .maybeSingle();
+          if (payment?.amount != null && Number(payment.amount) > 0) {
+            commissionAmount = Number(payment.amount);
+          }
+        }
 
         if (commissionAmount <= 0) {
           toast.success(
