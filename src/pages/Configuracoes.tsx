@@ -18,7 +18,6 @@ export default function Configuracoes() {
     phone: "",
     email: "",
     address: "",
-    default_commission_percent: "",
   });
 
   useEffect(() => {
@@ -28,9 +27,6 @@ export default function Configuracoes() {
         phone: tenant.phone || "",
         email: tenant.email || "",
         address: tenant.address || "",
-        default_commission_percent: tenant.default_commission_percent != null
-          ? String(tenant.default_commission_percent)
-          : "10",
       });
     }
   }, [tenant]);
@@ -41,10 +37,6 @@ export default function Configuracoes() {
 
     setIsSaving(true);
 
-    const defaultPct = formData.default_commission_percent
-      ? Math.min(100, Math.max(0, parseFloat(formData.default_commission_percent)))
-      : 10;
-
     try {
       const { error } = await supabase
         .from("tenants")
@@ -53,7 +45,6 @@ export default function Configuracoes() {
           phone: formData.phone || null,
           email: formData.email || null,
           address: formData.address || null,
-          default_commission_percent: defaultPct,
         })
         .eq("id", tenant.id);
 
@@ -140,21 +131,9 @@ export default function Configuracoes() {
                   placeholder="Rua, número, bairro, cidade"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Comissão padrão (%)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.5"
-                  value={formData.default_commission_percent}
-                  onChange={(e) => setFormData({ ...formData, default_commission_percent: e.target.value })}
-                  placeholder="10"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Usada quando o profissional não tem comissão configurada na Equipe
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                A comissão de cada profissional é definida na aba Equipe (percentual ou valor fixo por atendimento).
+              </p>
               <Button
                 type="submit"
                 disabled={isSaving}

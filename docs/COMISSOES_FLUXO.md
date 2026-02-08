@@ -30,10 +30,9 @@ Não é recomendado unificar em uma única tabela: `professional_commissions` gu
 
 Ordem de prioridade:
 1. `appointments.commission_amount` (valor fixo no agendamento)
-2. `professional_commissions` (config em Equipe)
-3. `tenants.default_commission_percent` (config em Configurações do salão)
+2. `professional_commissions` (config em Equipe — percentual ou valor fixo)
 
-Se nenhum existir, a comissão não é criada.
+**Não há comissão padrão.** Se o profissional não tiver config em Equipe e o agendamento não tiver valor explícito, a comissão não é criada.
 
 ---
 
