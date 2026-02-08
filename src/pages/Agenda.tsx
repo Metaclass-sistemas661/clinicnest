@@ -22,11 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
+import { notifyUser } from "@/lib/notifications";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
@@ -34,6 +36,7 @@ import type { Appointment, Client, Service, Profile, AppointmentStatus, Product 
 
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
+  const goalMotivation = useGoalMotivation();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -223,6 +226,23 @@ export default function Agenda() {
 
       if (error) throw error;
 
+      // Notificar profissional quando admin cria agendamento para ele
+      if (isAdmin && professionalId) {
+        const prof = professionals.find((p) => p.id === professionalId);
+        const client = clients.find((c) => c.id === formData.client_id);
+        const service = selectedService;
+        if (prof?.user_id) {
+          notifyUser(
+            profile.tenant_id,
+            prof.user_id,
+            "appointment_created",
+            "Novo agendamento",
+            `${client?.name || "Cliente"} • ${service?.name || "Serviço"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
+            {}
+          ).catch(() => {});
+        }
+      }
+
       toast.success("Agendamento criado com sucesso!");
       setIsDialogOpen(false);
       setFormData({
@@ -245,6 +265,7 @@ export default function Agenda() {
 
   const updateAppointmentStatus = async (id: string, status: AppointmentStatus) => {
     try {
+      const apt = appointments.find((a) => a.id === id);
       const { error, data } = await supabase
         .from("appointments")
         .update({ status })
@@ -255,6 +276,22 @@ export default function Agenda() {
         console.error("Error updating appointment status:", error);
         toast.error(`Erro ao atualizar status: ${error.message}`);
         return;
+      }
+
+      // Notificar profissional quando agendamento é cancelado
+      if (status === "cancelled" && apt?.professional_id && profile?.tenant_id) {
+        const prof = professionals.find((p) => p.id === apt.professional_id);
+        const client = apt.client as { name?: string } | undefined;
+        if (prof?.user_id) {
+          notifyUser(
+            profile.tenant_id,
+            prof.user_id,
+            "appointment_cancelled",
+            "Agendamento cancelado",
+            `O agendamento com ${client?.name || "cliente"} foi cancelado.`,
+            {}
+          ).catch(() => {});
+        }
       }
 
       const statusMessages = {
@@ -329,99 +366,92 @@ export default function Agenda() {
   ): Promise<
     | { type: "congrats"; commissionAmount: number; serviceName: string; servicePrice: number; completedThisMonth: number; valueGeneratedThisMonth: number }
     | { type: "no_commission" }
+    | { type: "goal_motivation" }
     | undefined
   > => {
     if (!profile?.tenant_id) return undefined;
 
     try {
-      // Atualizar status do agendamento para completed
-      const { error } = await supabase
-        .from("appointments")
-        .update({ status: "completed" })
-        .eq("id", appointment.id);
+      // Usar RPC para concluir: atualiza status, registra venda, cria comissão e insere em
+      // appointment_completion_summaries (que aciona o popup de lucro do admin via Realtime)
+      const { data: rpcData, error } = await supabase.rpc("complete_appointment_with_sale", {
+        p_appointment_id: appointment.id,
+        p_product_id: sale?.productId ?? null,
+        p_quantity: sale?.quantity ?? null,
+      });
 
       if (error) throw error;
 
-      if (sale) {
-        const product = products.find((p) => p.id === sale.productId);
-        if (product) {
-          // Registrar movimento de estoque
-          await supabase.from("stock_movements").insert({
-            tenant_id: profile.tenant_id,
-            product_id: sale.productId,
-            quantity: -sale.quantity,
-            movement_type: "out",
-            reason: `Venda no agendamento`,
-            created_by: profile.id,
-          });
+      const result = rpcData as {
+        commission_amount?: number;
+        service_price?: number;
+        service_name?: string;
+        professional_name?: string;
+        service_profit?: number;
+        product_sales?: unknown[];
+        product_profit_total?: number;
+        total_profit?: number;
+      } | null;
 
-          setProducts((prev) =>
-            prev.map((p) =>
-              p.id === product.id
-                ? { ...p, quantity: Math.max(0, p.quantity - sale.quantity) }
-                : p
-            )
-          );
-        }
-      }
+      const commissionAmount = Number(result?.commission_amount ?? 0);
 
-      // Calcular comissão baseado na configuração do profissional
       if (!isAdmin && profile?.id && profile?.user_id) {
-        const { data: commissionConfig } = await supabase
-          .from("professional_commissions")
-          .select("type, value")
-          .eq("user_id", profile.user_id)
-          .eq("tenant_id", profile.tenant_id)
-          .maybeSingle();
-
-        let commissionAmount = 0;
-        const servicePrice = Number(appointment.price || 0);
-
-        if (commissionConfig) {
-          if (commissionConfig.type === "percentage") {
-            commissionAmount = (servicePrice * Number(commissionConfig.value)) / 100;
-          } else {
-            commissionAmount = Number(commissionConfig.value);
-          }
-        }
-
-        if (commissionAmount <= 0) {
-          toast.success(
-            sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
-          );
-          fetchData();
-          return { type: "no_commission" };
-        }
-
-        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-        const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).toISOString();
-
-        const { data: monthApts } = await supabase
-          .from("appointments")
-          .select("id, price")
-          .eq("tenant_id", profile.tenant_id)
-          .eq("professional_id", profile.id)
-          .eq("status", "completed")
-          .gte("scheduled_at", monthStart)
-          .lte("scheduled_at", monthEnd);
-
-        const completedThisMonth = (monthApts || []).length;
-        const valueGeneratedThisMonth = (monthApts || []).reduce((s, a) => s + Number(a.price || 0), 0);
         toast.success(
           sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
         );
         fetchData();
-        return {
-          type: "congrats",
-          commissionAmount,
-          serviceName: (appointment.service as { name?: string })?.name || "Serviço",
-          servicePrice,
-          completedThisMonth,
-          valueGeneratedThisMonth,
-        };
+
+        // Popup de meta: buscar metas do profissional e mostrar mensagem motivacional + comissão + quanto falta
+        try {
+          const { data: goalsData } = await supabase.rpc("get_goals_with_progress", {
+            p_tenant_id: profile.tenant_id,
+            p_include_archived: false,
+          });
+          const allGoals = (goalsData || []) as { professional_id?: string; id: string; name: string; goal_type: string; target_value: number; current_value: number; progress_pct: number; days_remaining?: number }[];
+          const myGoals = allGoals
+            .filter((g) => g.professional_id === profile.id)
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              goal_type: g.goal_type,
+              target_value: g.target_value,
+              current_value: g.current_value,
+              progress_pct: g.progress_pct,
+              days_remaining: g.days_remaining,
+            }));
+
+          goalMotivation?.showGoalMotivation({
+            commissionAmount,
+            goals: myGoals,
+          });
+        } catch (_) {
+          goalMotivation?.showGoalMotivation({
+            commissionAmount,
+            goals: [],
+          });
+        }
+
+        // Popup de meta já foi mostrado; não exibir popup de comissão separado
+        return { type: "goal_motivation" };
       }
 
-      // Admin: popup de lucro vem via Realtime (AdminProfitRealtimeListener)
+      // Admin: popup de lucro vem via Realtime (AdminProfitRealtimeListener) - o RPC já inseriu em appointment_completion_summaries
+      // Notificar profissional quando admin conclui atendimento dele
+      if (appointment.professional_id && profile?.tenant_id) {
+        const prof = professionals.find((p) => p.id === appointment.professional_id);
+        const serviceName = (result?.service_name ?? (appointment.service as { name?: string })?.name) || "Serviço";
+        if (prof?.user_id) {
+          notifyUser(
+            profile.tenant_id,
+            prof.user_id,
+            "appointment_completed",
+            "Atendimento concluído",
+            `O administrador concluiu o agendamento "${serviceName}".`,
+            {}
+          ).catch(() => {});
+        }
+      }
+
       toast.success(
         sale ? "Agendamento concluído e venda registrada!" : "Agendamento concluído!"
       );

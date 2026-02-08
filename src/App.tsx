@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -51,6 +52,7 @@ const App = () => (
         <BrowserRouter>
           <GoogleAnalytics />
           <AuthProvider>
+            <GoalMotivationProvider>
             <InternalDarkMode />
             <ErrorBoundary>
               <Suspense fallback={<RouteFallback />}>
@@ -187,6 +189,7 @@ const App = () => (
                 </Routes>
               </Suspense>
             </ErrorBoundary>
+            </GoalMotivationProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

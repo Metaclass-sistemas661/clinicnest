@@ -83,6 +83,7 @@ interface AppointmentsTableProps {
   ) => Promise<
     | { type: "congrats" } & CongratulationsCommissionData
     | { type: "no_commission" }
+    | { type: "goal_motivation" }
     | undefined
   >;
   onEdit: (id: string, data: EditAppointmentData) => Promise<void>;
@@ -300,7 +301,9 @@ export function AppointmentsTable({
       const result = await onComplete(appointmentToComplete, salePayload);
       resetCompleteDialog();
       if (result) {
-        if (result.type === "no_commission") {
+        if (result.type === "goal_motivation") {
+          // Popup de meta já foi mostrado via GoalMotivationContext
+        } else if (result.type === "no_commission") {
           setNoCommissionDialogOpen(true);
         } else if (result.type === "congrats") {
           setCongratsData(result);

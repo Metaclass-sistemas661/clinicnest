@@ -5,22 +5,71 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Lock } from "lucide-react";
+import { Loader2, User, Lock, Bell } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
+
+interface NotificationPrefs {
+  appointment_created: boolean;
+  appointment_completed: boolean;
+  appointment_cancelled: boolean;
+  goal_approved: boolean;
+  goal_rejected: boolean;
+  goal_reminder: boolean;
+  goal_reached: boolean;
+  commission_paid: boolean;
+}
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  appointment_created: true,
+  appointment_completed: true,
+  appointment_cancelled: true,
+  goal_approved: true,
+  goal_rejected: true,
+  goal_reminder: true,
+  goal_reached: true,
+  commission_paid: true,
+};
 
 export default function MinhasConfiguracoes() {
   const { profile, user, refreshProfile } = useAuth();
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
 
   useEffect(() => {
     setPhone(profile?.phone ?? "");
   }, [profile?.phone]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("user_notification_preferences")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setPrefs({
+            appointment_created: data.appointment_created ?? true,
+            appointment_completed: data.appointment_completed ?? true,
+            appointment_cancelled: data.appointment_cancelled ?? true,
+            goal_approved: data.goal_approved ?? true,
+            goal_rejected: data.goal_rejected ?? true,
+            goal_reminder: data.goal_reminder ?? true,
+            goal_reached: data.goal_reached ?? true,
+            commission_paid: data.commission_paid ?? true,
+          });
+        }
+      });
+  }, [user?.id]);
 
   const handleSaveProfile = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -40,6 +89,30 @@ export default function MinhasConfiguracoes() {
       console.error(e);
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleSavePrefs = async () => {
+    if (!user?.id) return;
+    setIsSavingPrefs(true);
+    try {
+      const { error } = await supabase
+        .from("user_notification_preferences")
+        .upsert(
+          {
+            user_id: user.id,
+            ...prefs,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+      if (error) throw error;
+      toast.success("Preferências de notificação salvas!");
+    } catch (e) {
+      toast.error("Erro ao salvar preferências");
+      console.error(e);
+    } finally {
+      setIsSavingPrefs(false);
     }
   };
 
@@ -143,6 +216,53 @@ export default function MinhasConfiguracoes() {
                   </Button>
                 </div>
               </form>
+            </section>
+
+            <Separator />
+
+            {/* Preferências de notificação */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold">Notificações</h3>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/notificacoes">Ver notificações</Link>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escolha quais notificações deseja receber.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { key: "appointment_created" as const, label: "Novo agendamento para mim" },
+                  { key: "appointment_completed" as const, label: "Atendimento concluído (por admin)" },
+                  { key: "appointment_cancelled" as const, label: "Agendamento cancelado" },
+                  { key: "goal_approved" as const, label: "Meta sugerida aprovada" },
+                  { key: "goal_rejected" as const, label: "Meta sugerida rejeitada" },
+                  { key: "goal_reminder" as const, label: "Meta quase alcançada (80%+)" },
+                  { key: "goal_reached" as const, label: "Meta alcançada" },
+                  { key: "commission_paid" as const, label: "Comissão paga" },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <Label htmlFor={key} className="cursor-pointer text-sm">
+                      {label}
+                    </Label>
+                    <Switch
+                      id={key}
+                      checked={prefs[key]}
+                      onCheckedChange={(checked) =>
+                        setPrefs((p) => ({ ...p, [key]: checked }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button onClick={handleSavePrefs} disabled={isSavingPrefs} size="sm">
+                {isSavingPrefs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Salvar preferências
+              </Button>
             </section>
           </CardContent>
         </Card>

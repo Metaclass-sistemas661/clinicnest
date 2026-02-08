@@ -18,6 +18,7 @@ import {
   Menu,
   Wallet,
   Target,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -64,6 +65,7 @@ const navCategories: NavCategory[] = [
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Minhas Configurações", href: "/minhas-configuracoes", icon: Settings, staffOnly: true },
+      { title: "Notificações", href: "/notificacoes", icon: Bell, staffOnly: true },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
     ],
   },

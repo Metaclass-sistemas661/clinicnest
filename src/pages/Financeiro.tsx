@@ -54,6 +54,7 @@ import {
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
+import { notifyUser } from "@/lib/notifications";
 import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
 import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
 import { ExportPdfDialog } from "@/components/financeiro/ExportPdfDialog";
@@ -416,6 +417,8 @@ export default function Financeiro() {
   const handleMarkAsPaid = async (commissionId: string) => {
     if (!profile?.tenant_id) return;
 
+    const commission = commissions.find((c) => c.id === commissionId);
+
     try {
       const { error } = await supabase
         .from("commission_payments")
@@ -427,6 +430,19 @@ export default function Financeiro() {
         .eq("id", commissionId);
 
       if (error) throw error;
+
+      // Notificar profissional que a comissão foi paga
+      if (commission?.professional_id) {
+        const amount = Number(commission.amount || 0);
+        notifyUser(
+          profile.tenant_id,
+          commission.professional_id,
+          "commission_paid",
+          "Comissão paga",
+          `Sua comissão de ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(amount)} foi paga.`,
+          {}
+        ).catch(() => {});
+      }
 
       toast.success("Comissão marcada como paga! Despesa registrada automaticamente.");
       

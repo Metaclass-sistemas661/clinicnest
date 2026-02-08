@@ -9,6 +9,7 @@ import { Target, TrendingUp, ChevronDown, Clock, Check, X, LayoutDashboard } fro
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notifyUser } from "@/lib/notifications";
 import {
   goalTypeLabels,
   periodLabels,
@@ -80,6 +81,61 @@ export default function MinhasMetas() {
       const myGoals = allGoals.filter((g) => g.professional_id === profile.id);
       setGoals(myGoals);
       setSuggestions((suggestionsRes.data || []) as GoalSuggestion[]);
+
+      // Notificação "meta quase alcançada" (80%+) - evita duplicar checando notificações recentes
+      if (profile.user_id) {
+        const almostReached = myGoals.filter((g) => g.progress_pct >= 80 && g.progress_pct < 100);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const { data: recentReminders } = await supabase
+          .from("notifications")
+          .select("metadata")
+          .eq("user_id", profile.user_id)
+          .eq("type", "goal_reminder")
+          .gte("created_at", weekAgo.toISOString());
+        const notifiedGoalIds = new Set(
+          (recentReminders || [])
+            .map((r: { metadata?: { goal_id?: string } }) => r.metadata?.goal_id)
+            .filter(Boolean)
+        );
+        for (const goal of almostReached) {
+          if (!notifiedGoalIds.has(goal.id)) {
+            notifyUser(
+              profile.tenant_id,
+              profile.user_id,
+              "goal_reminder",
+              "Meta quase alcançada!",
+              `"${goal.name}" está em ${Math.round(goal.progress_pct)}%. Falta pouco!`,
+              { goal_id: goal.id }
+            ).catch(() => {});
+          }
+        }
+
+        // Notificação "meta alcançada" (100%) - uma vez por meta
+        const reached = myGoals.filter((g) => g.progress_pct >= 100);
+        const { data: existingReached } = await supabase
+          .from("notifications")
+          .select("metadata")
+          .eq("user_id", profile.user_id)
+          .eq("type", "goal_reached");
+        const reachedGoalIds = new Set(
+          (existingReached || [])
+            .map((r: { metadata?: { goal_id?: string } }) => r.metadata?.goal_id)
+            .filter(Boolean)
+        );
+        for (const goal of reached) {
+          if (!reachedGoalIds.has(goal.id)) {
+            notifyUser(
+              profile.tenant_id,
+              profile.user_id,
+              "goal_reached",
+              "Meta alcançada!",
+              `Parabéns! Você concluiu a meta "${goal.name}".`,
+              { goal_id: goal.id }
+            ).catch(() => {});
+          }
+        }
+      }
     } catch (e: unknown) {
       console.error(e);
       toast.error("Erro ao carregar suas metas");
