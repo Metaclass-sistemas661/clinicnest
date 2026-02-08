@@ -153,24 +153,12 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês (admin = todos; staff = só suas comissões; professional_id = auth user_id)
-        // Sem filtro de status na query - buscar todas e filtrar em JS (evita quirks de enum no PostgREST)
-        isAdmin
-          ? supabase
-              .from("commission_payments")
-              .select("amount, status")
-              .eq("tenant_id", profile.tenant_id)
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-          : (staffUserId
-              ? supabase
-                  .from("commission_payments")
-                  .select("amount, status")
-                  .eq("tenant_id", profile.tenant_id)
-                  .eq("professional_id", staffUserId)
-                  .gte("created_at", monthStart)
-                  .lte("created_at", monthEnd)
-              : Promise.resolve({ data: [], error: null })),
+        // 6. Comissões do mês via RPC (evita RLS/filtro no cliente)
+        supabase.rpc("get_dashboard_commission_totals", {
+          p_tenant_id: profile.tenant_id,
+          p_is_admin: isAdmin,
+          p_professional_user_id: isAdmin ? null : staffUserId ?? null,
+        }),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -226,10 +214,10 @@ export default function Dashboard() {
       const appointmentsData = appointmentsResult.data;
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
+      const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
       if (commissionsResult.error) {
         console.warn("[Dashboard:Comissões] Erro ao buscar:", commissionsResult.error);
       }
-      const commissionsData = commissionsResult.data ?? null;
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
@@ -268,18 +256,9 @@ export default function Dashboard() {
       }
       setProductLossTotal(productLoss);
 
-      // Calcular comissões pagas e pendentes (ignorar status cancelled)
-      let pendingCommissions = 0;
-      let paidCommissions = 0;
-      if (commissionsData && Array.isArray(commissionsData)) {
-        const s = (c: any) => String(c?.status ?? "").toLowerCase();
-        pendingCommissions = commissionsData
-          .filter((c: any) => s(c) === "pending")
-          .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
-        paidCommissions = commissionsData
-          .filter((c: any) => s(c) === "paid")
-          .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
-      }
+      // Comissões: RPC retorna { pending, paid } diretamente
+      const pendingCommissions = Number(commissionsData?.pending ?? 0);
+      const paidCommissions = Number(commissionsData?.paid ?? 0);
       if (isAdmin) {
         setCommissionsPending(pendingCommissions);
         setCommissionsPaid(paidCommissions);
