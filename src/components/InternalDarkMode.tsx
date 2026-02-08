@@ -7,6 +7,7 @@ const PROTECTED_PATHS = [
   "/agenda",
   "/financeiro",
   "/minhas-comissoes",
+  "/minhas-metas",
   "/produtos",
   "/servicos",
   "/clientes",
