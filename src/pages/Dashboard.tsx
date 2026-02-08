@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 
 export default function Dashboard() {
-  const { profile, tenant, isAdmin } = useAuth();
+  const { user, profile, tenant, isAdmin } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     monthlyBalance: 0,
     monthlyIncome: 0,
@@ -59,10 +59,11 @@ export default function Dashboard() {
   >([]);
 
   useEffect(() => {
-    if (profile?.tenant_id && (isAdmin || (profile?.user_id && profile?.id))) {
+    const hasStaffId = profile?.user_id ?? user?.id;
+    if (profile?.tenant_id && (isAdmin || (hasStaffId && profile?.id))) {
       fetchDashboardData();
     }
-  }, [profile?.tenant_id, profile?.user_id, profile?.id, isAdmin]);
+  }, [profile?.tenant_id, profile?.user_id, profile?.id, user?.id, isAdmin]);
 
   // Refetch quando o usuário volta para a página (ex.: após marcar comissão como paga no Financeiro)
   useEffect(() => {
@@ -75,7 +76,8 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
-    if (!isAdmin && (!profile?.user_id || !profile?.id)) return;
+    const staffUserId = profile?.user_id ?? user?.id;
+    if (!isAdmin && (!staffUserId || !profile?.id)) return;
 
     const today = new Date();
     const monthStart = startOfMonth(today).toISOString();
@@ -151,10 +153,22 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões - tabela não existe ainda, usar valores zerados
-        Promise.resolve({ data: [] }),
-        // 7. Perdas de produtos - colunas não existem ainda, usar valores zerados
-        Promise.resolve({ data: [] }),
+        // 6. Comissões do mês (admin = todos; staff = só suas comissões; professional_id = user_id)
+        // Sem filtro de status na query - buscar todas e filtrar em JS (evita quirks de enum no PostgREST)
+        isAdmin
+          ? supabase
+              .from("commission_payments")
+              .select("amount, status")
+              .eq("tenant_id", profile.tenant_id)
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+          : supabase
+              .from("commission_payments")
+              .select("amount, status")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.user_id ?? user?.id ?? "")
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -210,7 +224,10 @@ export default function Dashboard() {
       const appointmentsData = appointmentsResult.data;
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
-      const commissionsData = commissionsResult.data;
+      if (commissionsResult.error) {
+        console.warn("Erro ao buscar comissões:", commissionsResult.error);
+      }
+      const commissionsData = commissionsResult.data ?? null;
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
@@ -249,15 +266,16 @@ export default function Dashboard() {
       }
       setProductLossTotal(productLoss);
 
-      // Calcular comissões pagas e pendentes
+      // Calcular comissões pagas e pendentes (ignorar status cancelled)
       let pendingCommissions = 0;
       let paidCommissions = 0;
-      if (commissionsData) {
+      if (commissionsData && Array.isArray(commissionsData)) {
+        const s = (c: any) => String(c?.status ?? "").toLowerCase();
         pendingCommissions = commissionsData
-          .filter((c: any) => c.status === "pending")
+          .filter((c: any) => s(c) === "pending")
           .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
         paidCommissions = commissionsData
-          .filter((c: any) => c.status === "paid")
+          .filter((c: any) => s(c) === "paid")
           .reduce((sum: number, c: any) => sum + Number(c.amount || 0), 0);
       }
       if (isAdmin) {

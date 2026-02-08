@@ -100,6 +100,7 @@ export default function Metas() {
     product_id: "" as string | null,
     show_in_header: false,
   });
+  const [tabValue, setTabValue] = useState("all");
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -802,7 +803,7 @@ export default function Metas() {
         </div>
       )}
 
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all" className="gap-2">
             <BarChart3 className="h-4 w-4" />

@@ -145,6 +145,15 @@ export default function MinhasMetas() {
   return (
     <MainLayout title="Minhas Metas" subtitle="Acompanhe o progresso das suas metas">
       <div className="space-y-6">
+        {/* Sugerir meta - primeiro bloco, em destaque */}
+        <Card className="border-primary/30 bg-primary/5">
+          <GoalSuggestionForm
+            tenantId={profile!.tenant_id!}
+            professionalId={profile!.id}
+            onSuccess={fetchData}
+          />
+        </Card>
+
         <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3">
           <div className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
@@ -157,15 +166,6 @@ export default function MinhasMetas() {
             checked={showBarInHeader}
             onCheckedChange={handleToggleBarInHeader}
             disabled={savingBarPref}
-          />
-        </div>
-
-        {/* Sugestão de meta - destaque para o staff propor metas */}
-        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-1">
-          <GoalSuggestionForm
-            tenantId={profile!.tenant_id!}
-            professionalId={profile!.id}
-            onSuccess={fetchData}
           />
         </div>
 
