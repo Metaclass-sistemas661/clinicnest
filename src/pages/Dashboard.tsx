@@ -153,7 +153,7 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês (admin = todos; staff = só suas comissões; professional_id = user_id)
+        // 6. Comissões do mês (admin = todos; staff = só suas comissões; professional_id = auth user_id)
         // Sem filtro de status na query - buscar todas e filtrar em JS (evita quirks de enum no PostgREST)
         isAdmin
           ? supabase
@@ -162,13 +162,15 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .gte("created_at", monthStart)
               .lte("created_at", monthEnd)
-          : supabase
-              .from("commission_payments")
-              .select("amount, status")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("professional_id", profile.user_id ?? user?.id ?? "")
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd),
+          : (staffUserId
+              ? supabase
+                  .from("commission_payments")
+                  .select("amount, status")
+                  .eq("tenant_id", profile.tenant_id)
+                  .eq("professional_id", staffUserId)
+                  .gte("created_at", monthStart)
+                  .lte("created_at", monthEnd)
+              : Promise.resolve({ data: [], error: null })),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -225,9 +227,21 @@ export default function Dashboard() {
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
       if (commissionsResult.error) {
-        console.warn("Erro ao buscar comissões:", commissionsResult.error);
+        console.warn("[Dashboard:Comissões] Erro ao buscar:", commissionsResult.error);
       }
       const commissionsData = commissionsResult.data ?? null;
+      if (!isAdmin) {
+        console.log("[Dashboard:Comissões] Staff - dados:", {
+          staffUserId,
+          profile_user_id: profile?.user_id,
+          user_id: user?.id,
+          commissionsCount: commissionsData?.length ?? 0,
+          commissionsRaw: commissionsData,
+          pending: commissionsData
+            ?.filter((c: any) => String(c?.status ?? "").toLowerCase() === "pending")
+            .reduce((s: number, c: any) => s + Number(c.amount || 0), 0),
+        });
+      }
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];

@@ -398,6 +398,14 @@ export default function Agenda() {
       } | null;
 
       const commissionAmount = Number(result?.commission_amount ?? 0);
+      console.log("[Agenda:Comissão] RPC retornou:", {
+        raw: rpcData,
+        commission_amount: result?.commission_amount,
+        commissionAmount,
+        profile_id: profile?.id,
+        profile_user_id: profile?.user_id,
+        appointment_professional_id: appointment.professional_id,
+      });
 
       if (!isAdmin && profile?.id && profile?.user_id) {
         toast.success(
@@ -424,11 +432,13 @@ export default function Agenda() {
               days_remaining: g.days_remaining,
             }));
 
+          console.log("[Agenda:Comissão] Abrindo popup com:", { commissionAmount, goalsCount: myGoals.length });
           goalMotivation?.showGoalMotivation({
             commissionAmount,
             goals: myGoals,
           });
         } catch (_) {
+          console.log("[Agenda:Comissão] Erro ao buscar metas, abrindo popup só com comissão:", { commissionAmount });
           goalMotivation?.showGoalMotivation({
             commissionAmount,
             goals: [],

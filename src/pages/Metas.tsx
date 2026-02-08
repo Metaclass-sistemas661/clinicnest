@@ -823,70 +823,68 @@ export default function Metas() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Conteúdo renderizado condicionalmente (evita problema do Radix TabsContent não exibir ao trocar) */}
-        <div className="mt-4">
-          {tabValue === "all" &&
-            (isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32" />
-                ))}
-              </div>
-            ) : goalsToShow.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
-                  <p className="text-muted-foreground mb-2">
-                    {showArchived
-                      ? "Nenhuma meta arquivada"
-                      : "Nenhuma meta criada"}
-                  </p>
-                  {!showArchived && (
-                    <Button
-                      onClick={() => setIsDialogOpen(true)}
-                      className="gradient-primary text-primary-foreground"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar primeira meta
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filterAndSort(goalsToShow).map(renderGoalCard)}
-              </div>
-            ))}
-
-          {tabValue === "general" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {generalGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">Nenhuma meta geral</p>
-              )}
-              {filterAndSort(generalGoals).map(renderGoalCard)}
+        <TabsContent value="all" className="mt-4 focus-visible:outline-none">
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
             </div>
-          )}
-
-          {tabValue === "products" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {productGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">Nenhuma meta de produtos</p>
-              )}
-              {filterAndSort(productGoals).map(renderGoalCard)}
-            </div>
-          )}
-
-          {tabValue === "professionals" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {professionalGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">
-                  Nenhuma meta por profissional
+          ) : goalsToShow.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                <p className="text-muted-foreground mb-2">
+                  {showArchived
+                    ? "Nenhuma meta arquivada"
+                    : "Nenhuma meta criada"}
                 </p>
-              )}
-              {filterAndSort(professionalGoals).map(renderGoalCard)}
+                {!showArchived && (
+                  <Button
+                    onClick={() => setIsDialogOpen(true)}
+                    className="gradient-primary text-primary-foreground"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar primeira meta
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filterAndSort(goalsToShow).map(renderGoalCard)}
             </div>
           )}
-        </div>
+        </TabsContent>
+
+        <TabsContent value="general" className="mt-4 focus-visible:outline-none">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {generalGoals.length === 0 && !isLoading && (
+              <p className="col-span-full text-muted-foreground">Nenhuma meta geral</p>
+            )}
+            {filterAndSort(generalGoals).map(renderGoalCard)}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="products" className="mt-4 focus-visible:outline-none">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {productGoals.length === 0 && !isLoading && (
+              <p className="col-span-full text-muted-foreground">Nenhuma meta de produtos</p>
+            )}
+            {filterAndSort(productGoals).map(renderGoalCard)}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="professionals" className="mt-4 focus-visible:outline-none">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {professionalGoals.length === 0 && !isLoading && (
+              <p className="col-span-full text-muted-foreground">
+                Nenhuma meta por profissional
+              </p>
+            )}
+            {filterAndSort(professionalGoals).map(renderGoalCard)}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {detailGoal && profile?.tenant_id && (

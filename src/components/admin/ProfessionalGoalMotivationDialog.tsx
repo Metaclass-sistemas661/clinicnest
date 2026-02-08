@@ -29,6 +29,13 @@ function getMotivationalMessage(progressPct: number): string {
 export function ProfessionalGoalMotivationDialog() {
   const { motivationOpen, motivationData, closeMotivation } = useGoalMotivation() ?? {};
 
+  if (motivationData) {
+    console.log("[Popup:Comissão] Dados recebidos:", {
+      commissionAmount: motivationData.commissionAmount,
+      goalsCount: motivationData.goals?.length ?? 0,
+    });
+  }
+
   if (!motivationData) return null;
 
   const primaryGoal = motivationData.goals[0];
