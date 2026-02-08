@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Crown, Sparkles, Loader2 } from "lucide-react";
+import { Check, Crown, Sparkles, Loader2, LogOut } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface TrialExpiredModalProps {
   open: boolean;
+  isStaff?: boolean;
 }
 
 const plans = [
@@ -45,9 +46,9 @@ const plans = [
   },
 ];
 
-export function TrialExpiredModal({ open }: TrialExpiredModalProps) {
-  const navigate = useNavigate();
+export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalProps) {
   const { createCheckout } = useSubscription();
+  const { signOut } = useAuth();
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleSelectPlan = async (planKey: "monthly" | "quarterly" | "annual") => {
@@ -63,9 +64,42 @@ export function TrialExpiredModal({ open }: TrialExpiredModalProps) {
     }
   };
 
+  const handleSair = async () => {
+    await signOut();
+  };
+
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className={isStaff ? "max-w-md" : "max-w-4xl max-h-[90vh] overflow-y-auto"}
+        hideCloseButton={isStaff}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => isStaff && e.preventDefault()}
+      >
+        {isStaff ? (
+          <>
+            <DialogHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-600">
+                  <Crown className="h-8 w-8" />
+                </div>
+              </div>
+              <DialogTitle className="text-2xl font-bold">
+                Seu período de teste expirou
+              </DialogTitle>
+              <DialogDescription className="text-base">
+                Entre em contato com o administrador do salão para continuar usando o VynloBella.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center mt-6">
+              <Button onClick={handleSair} variant="outline" className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Sair
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-lg">
@@ -145,6 +179,8 @@ export function TrialExpiredModal({ open }: TrialExpiredModalProps) {
         <p className="text-center text-xs text-muted-foreground mt-4">
           Pagamento seguro via Stripe. Cancele quando quiser.
         </p>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
