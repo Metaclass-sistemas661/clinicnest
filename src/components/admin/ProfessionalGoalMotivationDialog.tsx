@@ -36,8 +36,8 @@ export function ProfessionalGoalMotivationDialog() {
 
   return (
     <Dialog open={!!motivationOpen} onOpenChange={(o) => !o && closeMotivation?.()}>
-      <DialogContent className="sm:max-w-md overflow-hidden rounded-2xl border-0 bg-gradient-to-b from-primary/5 via-card to-card p-0 shadow-xl">
-        <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 px-6 py-6">
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col rounded-2xl border-0 bg-gradient-to-b from-primary/5 via-card to-card p-0 shadow-xl overflow-hidden">
+        <div className="relative overflow-hidden rounded-t-2xl bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 px-6 py-6 shrink-0">
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative flex flex-col items-center gap-2 text-center">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 ring-4 ring-primary/30">
@@ -53,18 +53,24 @@ export function ProfessionalGoalMotivationDialog() {
           </div>
         </div>
 
-        <div className="space-y-5 px-6 pb-6 pt-4">
+        <div className="space-y-5 px-6 pb-6 pt-4 overflow-y-auto flex-1 min-h-0">
           {/* Comissão que o staff recebeu */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 shrink-0">
             <p className="text-sm font-medium text-muted-foreground mb-1">Sua comissão neste atendimento</p>
-            <p className="text-xl font-bold text-primary">
-              {formatCurrency(motivationData.commissionAmount)}
-            </p>
+            {motivationData.commissionAmount > 0 ? (
+              <p className="text-xl font-bold text-primary">
+                {formatCurrency(motivationData.commissionAmount)}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Sem comissão configurada na Equipe para este serviço.
+              </p>
+            )}
           </div>
 
           {/* Metas e quanto falta */}
           {hasGoals ? (
-            <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4">
+            <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-4 shrink-0">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
                 Suas metas
@@ -112,7 +118,7 @@ export function ProfessionalGoalMotivationDialog() {
           )}
 
           <Button
-            className="w-full gradient-primary text-primary-foreground"
+            className="w-full gradient-primary text-primary-foreground shrink-0"
             onClick={() => closeMotivation?.()}
           >
             Continuar
