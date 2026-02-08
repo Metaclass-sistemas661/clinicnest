@@ -53,6 +53,7 @@ import { GoalDetailDialog } from "@/components/goals/GoalDetailDialog";
 import { BulkCreateGoalsDialog } from "@/components/goals/BulkCreateGoalsDialog";
 import { GoalCreateWizard } from "@/components/goals/GoalCreateWizard";
 import { GoalAchievementsSection } from "@/components/goals/GoalAchievementsSection";
+import { GoalSuggestionsAdminSection } from "@/components/goals/GoalSuggestionsAdminSection";
 
 interface Profile {
   id: string;
@@ -741,6 +742,16 @@ export default function Metas() {
               <p className="text-2xl font-bold mt-1">{activeGoals.length}</p>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {!isLoading && profile?.tenant_id && (
+        <div className="mb-6">
+          <GoalSuggestionsAdminSection
+            tenantId={profile.tenant_id}
+            professionals={professionals}
+            onApprovedOrRejected={() => fetchData(showArchived)}
+          />
         </div>
       )}
 

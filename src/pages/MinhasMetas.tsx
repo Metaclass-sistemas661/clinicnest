@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, ChevronDown } from "lucide-react";
+import { Target, TrendingUp, ChevronDown, Send, Clock, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -21,10 +21,23 @@ import {
 } from "@/lib/goals";
 import { GoalDetailDialog } from "@/components/goals/GoalDetailDialog";
 import { GoalAchievementsSection } from "@/components/goals/GoalAchievementsSection";
+import { GoalSuggestionForm } from "@/components/goals/GoalSuggestionForm";
+
+interface GoalSuggestion {
+  id: string;
+  name: string | null;
+  goal_type: string;
+  target_value: number;
+  period: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+  rejection_reason: string | null;
+}
 
 export default function MinhasMetas() {
   const { profile, isAdmin } = useAuth();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
+  const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [detailGoal, setDetailGoal] = useState<GoalWithProgress | null>(null);
 
@@ -41,16 +54,24 @@ export default function MinhasMetas() {
     if (!profile?.tenant_id || !profile?.id || isAdmin) return;
 
     try {
-      const { data, error } = await supabase.rpc("get_goals_with_progress", {
-        p_tenant_id: profile.tenant_id,
-        p_include_archived: false,
-      });
+      const [goalsRes, suggestionsRes] = await Promise.all([
+        supabase.rpc("get_goals_with_progress", {
+          p_tenant_id: profile.tenant_id,
+          p_include_archived: false,
+        }),
+        supabase
+          .from("goal_suggestions")
+          .select("id, name, goal_type, target_value, period, status, created_at, rejection_reason")
+          .eq("professional_id", profile.id)
+          .order("created_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      if (goalsRes.error) throw goalsRes.error;
 
-      const allGoals = (data || []) as GoalWithProgress[];
+      const allGoals = (goalsRes.data || []) as GoalWithProgress[];
       const myGoals = allGoals.filter((g) => g.professional_id === profile.id);
       setGoals(myGoals);
+      setSuggestions((suggestionsRes.data || []) as GoalSuggestion[]);
     } catch (e: unknown) {
       console.error(e);
       toast.error("Erro ao carregar suas metas");
@@ -92,35 +113,92 @@ export default function MinhasMetas() {
     );
   }
 
-  if (goals.length === 0) {
-    return (
-      <MainLayout title="Minhas Metas" subtitle="Suas metas do salão">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-center mb-2">
-              Você ainda não tem metas definidas pelo administrador.
-            </p>
-            <p className="text-sm text-muted-foreground text-center">
-              Entre em contato com o administrador do salão para definir suas metas.
-            </p>
-          </CardContent>
-        </Card>
-      </MainLayout>
-    );
-  }
+  const pendingSuggestions = suggestions.filter((s) => s.status === "pending");
 
   return (
     <MainLayout title="Minhas Metas" subtitle="Acompanhe o progresso das suas metas">
       <div className="space-y-6">
+        <GoalSuggestionForm
+          tenantId={profile!.tenant_id!}
+          professionalId={profile!.id}
+          onSuccess={fetchData}
+        />
+
+        {suggestions.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Minhas sugestões</CardTitle>
+              <CardDescription>Status das sugestões enviadas ao administrador</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {suggestions.map((s) => (
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <div>
+                      <span className="font-medium">{s.name || `Meta ${goalTypeLabels[s.goal_type as GoalType]}`}</span>
+                      <span className="text-muted-foreground ml-2">
+                        {goalTypeLabels[s.goal_type as GoalType]} · {periodLabels[s.period as GoalPeriod]} ·{" "}
+                        {s.goal_type === "revenue" || s.goal_type === "ticket_medio"
+                          ? formatCurrency(s.target_value)
+                          : s.target_value}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge
+                        variant={
+                          s.status === "approved"
+                            ? "default"
+                            : s.status === "rejected"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {s.status === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                        {s.status === "approved" && <Check className="h-3 w-3 mr-1" />}
+                        {s.status === "rejected" && <X className="h-3 w-3 mr-1" />}
+                        {s.status === "pending" && "Aguardando aprovação"}
+                        {s.status === "approved" && "Aprovada"}
+                        {s.status === "rejected" && "Rejeitada"}
+                      </Badge>
+                      {s.status === "rejected" && s.rejection_reason && (
+                        <span className="text-xs text-muted-foreground max-w-[200px] text-right">
+                          {s.rejection_reason}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {pendingSuggestions.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {pendingSuggestions.length} sugestão(ões) aguardando aprovação do administrador.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <GoalAchievementsSection
           completedGoals={goals.filter((g) => g.progress_pct >= 100)}
           professionals={[]}
           tenantId={profile!.tenant_id!}
           professionalId={profile!.id}
         />
+
         <div className="space-y-4">
-        {goals.map((goal) => {
+        {goals.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Target className="mb-4 h-12 w-12 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-center">
+                Você ainda não tem metas definidas. Sugira uma meta acima ou aguarde o administrador.
+              </p>
+            </CardContent>
+          </Card>
+        ) : goals.map((goal) => {
           const pct = Math.min(100, goal.progress_pct);
           const indicatorClass = getProgressIndicatorClass(pct);
           const borderColor = getProgressBorderColor(pct);
