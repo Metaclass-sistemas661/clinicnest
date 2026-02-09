@@ -77,13 +77,13 @@ BEGIN
     RETURN 0;
   END IF;
 
-  -- Contar clientes únicos do tenant
-  SELECT COUNT(DISTINCT id)
+  -- Contar clientes únicos do tenant (garantir filtro correto)
+  SELECT COUNT(id)
   INTO v_count
   FROM clients
   WHERE tenant_id = p_tenant_id;
 
-  RETURN COALESCE(v_count, 0);
+  RETURN COALESCE(v_count, 0)::INTEGER;
 END;
 $$;
 

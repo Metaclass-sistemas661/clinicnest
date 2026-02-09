@@ -159,24 +159,27 @@ export default function Dashboard() {
           const currentYear = new Date().getFullYear();
           
           // Buscar profissionais com salário configurado
-          const { data: professionalsData, error: profError } = await supabase
-            .from("professional_commissions")
+          const profResult = await (supabase.from("professional_commissions") as any)
             .select("user_id, salary_amount")
             .eq("tenant_id", tenantId)
             .eq("payment_type", "salary")
             .not("salary_amount", "is", null)
             .gt("salary_amount", 0);
+          const professionalsData = profResult.data;
+          const profError = profResult.error;
           
           if (profError) throw profError;
           
           // Buscar salários pagos no mês
-          const { data: paidSalaries, error: paidError } = await (supabase as any)
-            .from("salary_payments")
+          const paidQuery = (supabase as any).from("salary_payments");
+          const paidResult = await paidQuery
             .select("professional_id, amount")
             .eq("tenant_id", tenantId)
             .eq("payment_year", currentYear)
             .eq("payment_month", currentMonth)
             .eq("status", "paid");
+          const paidSalaries = paidResult.data;
+          const paidError = paidResult.error;
           
           if (paidError) throw paidError;
           
@@ -299,23 +302,41 @@ export default function Dashboard() {
           : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
         // 7. Perdas de produtos (baixas danificadas) do mês - usar RPC como outros cards
         isAdmin
-          ? supabase.rpc("get_dashboard_product_loss_total" as any, {
-              p_tenant_id: profile.tenant_id,
-              p_year: null,
-              p_month: null,
-            }).then((r) => ({ data: r.data ?? 0, error: r.error })).catch((err) => ({ data: 0, error: err }))
+          ? (async (): Promise<{ data: number; error: any }> => {
+              try {
+                const r = await (supabase.rpc as any)("get_dashboard_product_loss_total", {
+                  p_tenant_id: profile.tenant_id,
+                  p_year: null,
+                  p_month: null,
+                });
+                const value = r.data !== null && r.data !== undefined ? Number(r.data) : 0;
+                return { data: isNaN(value) ? 0 : value, error: r.error };
+              } catch (err) {
+                return { data: 0, error: err };
+              }
+            })()
           : Promise.resolve({ data: 0, error: null }),
         // 8. Total de clientes - usar RPC como outros cards para garantir precisão
-        supabase.rpc("get_dashboard_clients_count" as any, {
-          p_tenant_id: profile.tenant_id,
-        }).then((r) => ({ data: r.data ?? 0, error: r.error })).catch((err) => {
-          // Fallback: buscar e contar manualmente se RPC falhar
-          return supabase
-            .from("clients")
-            .select("id", { count: "exact", head: true })
-            .eq("tenant_id", profile.tenant_id)
-            .then((fallback) => ({ data: fallback.count ?? 0, error: null }));
-        }),
+        (async (): Promise<{ data: number; error: any }> => {
+          try {
+            const r = await (supabase.rpc as any)("get_dashboard_clients_count", {
+              p_tenant_id: profile.tenant_id,
+            });
+            const value = r.data !== null && r.data !== undefined ? Number(r.data) : 0;
+            return { data: isNaN(value) ? 0 : value, error: r.error };
+          } catch (err) {
+            // Fallback: buscar e contar manualmente se RPC falhar
+            try {
+              const fallback = await supabase
+                .from("clients")
+                .select("id", { count: "exact", head: true })
+                .eq("tenant_id", profile.tenant_id);
+              return { data: fallback.count ?? 0, error: null };
+            } catch {
+              return { data: 0, error: null };
+            }
+          }
+        })(),
         // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
         !isAdmin && profile?.id
           ? supabase
@@ -338,13 +359,13 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 11. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
-          ? supabase.rpc("get_professionals_with_salary" as any, {
+          ? (supabase.rpc as any)("get_professionals_with_salary", {
               p_tenant_id: profile.tenant_id,
             })
           : Promise.resolve({ data: null }),
         // 12. Admin: salários pagos no mês
         isAdmin
-          ? supabase.rpc("get_salary_payments" as any, {
+          ? (supabase.rpc as any)("get_salary_payments", {
               p_tenant_id: profile.tenant_id,
               p_professional_id: null,
               p_year: new Date().getFullYear(),
@@ -353,14 +374,17 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 13. Staff: configuração de salário fixo
         !isAdmin && profile?.user_id
-          ? supabase
-              .from("professional_commissions")
-              .select("salary_amount, payment_type")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("user_id", profile.user_id)
-              .eq("payment_type", "salary")
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
+          ? new Promise<{ data: any; error: any }>((resolve) => {
+              (supabase.from("professional_commissions") as any)
+                .select("salary_amount, payment_type")
+                .eq("tenant_id", profile.tenant_id)
+                .eq("user_id", profile.user_id)
+                .eq("payment_type", "salary")
+                .maybeSingle()
+                .then((r: any) => resolve(r))
+                .catch(() => resolve({ data: null, error: null }));
+            })
+          : Promise.resolve({ data: null, error: null }),
         // 14. Staff: último pagamento de salário
         !isAdmin && profile?.user_id
           ? supabase.rpc("get_salary_payments" as any, {
@@ -405,19 +429,35 @@ export default function Dashboard() {
           console.error("Fallback product loss calculation failed:", fallbackError);
         }
       } else {
-        productLossTotalValue = Number(productLossesResult?.data ?? 0);
+        const rawValue = productLossesResult?.data;
+        productLossTotalValue = rawValue !== null && rawValue !== undefined ? Number(rawValue) : 0;
+        if (isNaN(productLossTotalValue)) {
+          console.error("Invalid product loss value:", rawValue);
+          productLossTotalValue = 0;
+        }
       }
       
       // Contagem de clientes: RPC retorna número diretamente, com fallback
       let clientsCountResult = 0;
       if (clientsResult?.error) {
         console.error("Error fetching clients count:", clientsResult.error);
-        // Fallback já foi feito no Promise.all acima
-        clientsCountResult = Number(clientsResult?.data ?? 0);
+        // Fallback: buscar e contar manualmente
+        try {
+          const { data: fallbackData, count } = await supabase
+            .from("clients")
+            .select("id", { count: "exact" })
+            .eq("tenant_id", profile.tenant_id);
+          clientsCountResult = count ?? (Array.isArray(fallbackData) ? fallbackData.length : 0);
+        } catch (fallbackError) {
+          console.error("Fallback clients count failed:", fallbackError);
+          clientsCountResult = 0;
+        }
       } else {
-        clientsCountResult = Number(clientsResult?.data ?? 0);
-        // Se ainda for 0 e não houver erro, tentar fallback manual
-        if (clientsCountResult === 0) {
+        const rawValue = clientsResult?.data;
+        clientsCountResult = rawValue !== null && rawValue !== undefined ? Number(rawValue) : 0;
+        if (isNaN(clientsCountResult) || clientsCountResult < 0) {
+          console.error("Invalid clients count value:", rawValue, "for tenant:", profile.tenant_id);
+          // Fallback: buscar e contar manualmente
           try {
             const { data: fallbackData, count } = await supabase
               .from("clients")
@@ -426,6 +466,7 @@ export default function Dashboard() {
             clientsCountResult = count ?? (Array.isArray(fallbackData) ? fallbackData.length : 0);
           } catch (fallbackError) {
             console.error("Fallback clients count failed:", fallbackError);
+            clientsCountResult = 0;
           }
         }
       }
@@ -484,8 +525,9 @@ export default function Dashboard() {
       }
       setDailyBalance(dailyIncome - dailyExpenses);
 
-      // Perdas de produtos: já calculado pelo RPC (ou fallback)
-      setProductLossTotal(productLossTotalValue);
+      // Perdas de produtos: já calculado pelo RPC (ou fallback) - garantir que seja número válido
+      const validProductLoss = isNaN(productLossTotalValue) || productLossTotalValue < 0 ? 0 : productLossTotalValue;
+      setProductLossTotal(validProductLoss);
 
       // Comissões: RPC retorna { pending, paid } diretamente
       const pendingCommissions = Number(commissionsData?.pending ?? 0);
@@ -498,7 +540,9 @@ export default function Dashboard() {
         setProfessionalCommissionsReceived(paidCommissions);
       }
 
-      setClientsCount(clientsCountResult);
+      // Garantir que clientsCount seja um número válido e positivo
+      const validClientsCount = isNaN(clientsCountResult) || clientsCountResult < 0 ? 0 : Math.floor(clientsCountResult);
+      setClientsCount(validClientsCount);
 
       if (!isAdmin && staffMyClientsData.length > 0) {
         const uniqueClients = new Set(staffMyClientsData.map((r) => r.client_id).filter(Boolean));
@@ -554,7 +598,7 @@ export default function Dashboard() {
         );
       }
 
-      const apts = (appointmentsData as Appointment[]) || [];
+      const apts = (appointmentsData as unknown as Appointment[]) || [];
       const myTodayCount = !isAdmin && profile?.id
         ? apts.filter((a) => a.professional_id === profile.id).length
         : apts.length;
