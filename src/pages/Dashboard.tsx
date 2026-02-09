@@ -297,34 +297,25 @@ export default function Dashboard() {
               null
             ).then((r) => ({ data: r, error: null }))
           : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
-        // 7. Perdas de produtos (baixas danificadas) do mês
+        // 7. Perdas de produtos (baixas danificadas) do mês - usar RPC como outros cards
         isAdmin
-          ? supabase
-              .from("stock_movements")
-              .select(
-                `
-                  id,
-                  product_id,
-                  quantity,
-                  reason,
-                  created_at,
-                  movement_type,
-                  out_reason_type,
-                  product:products(name, cost)
-                `
-              )
-              .eq("tenant_id", profile.tenant_id)
-              .eq("movement_type", "out")
-              .eq("out_reason_type", "damaged")
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: null }),
-        // 8. Total de clientes - buscar todos e contar manualmente para garantir precisão
-        supabase
-          .from("clients")
-          .select("id")
-          .eq("tenant_id", profile.tenant_id),
+          ? supabase.rpc("get_dashboard_product_loss_total" as any, {
+              p_tenant_id: profile.tenant_id,
+              p_year: null,
+              p_month: null,
+            }).then((r) => ({ data: r.data ?? 0, error: r.error })).catch((err) => ({ data: 0, error: err }))
+          : Promise.resolve({ data: 0, error: null }),
+        // 8. Total de clientes - usar RPC como outros cards para garantir precisão
+        supabase.rpc("get_dashboard_clients_count" as any, {
+          p_tenant_id: profile.tenant_id,
+        }).then((r) => ({ data: r.data ?? 0, error: r.error })).catch((err) => {
+          // Fallback: buscar e contar manualmente se RPC falhar
+          return supabase
+            .from("clients")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", profile.tenant_id)
+            .then((fallback) => ({ data: fallback.count ?? 0, error: null }));
+        }),
         // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
         !isAdmin && profile?.id
           ? supabase
@@ -388,10 +379,57 @@ export default function Dashboard() {
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
       const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
-      const productLossesData = productLossesResult.data;
-      // Contagem de clientes: contar manualmente o array para garantir precisão
-      const clientsData = Array.isArray(clientsResult.data) ? clientsResult.data : [];
-      const clientsCountResult = clientsData.length;
+      // Perdas de produtos: RPC retorna número diretamente, com fallback
+      let productLossTotalValue = 0;
+      if (productLossesResult?.error) {
+        console.error("Error fetching product loss total:", productLossesResult.error);
+        // Fallback: calcular manualmente se RPC falhar
+        try {
+          const { data: fallbackData } = await supabase
+            .from("stock_movements")
+            .select("quantity, product:products(cost)")
+            .eq("tenant_id", profile.tenant_id)
+            .eq("movement_type", "out")
+            .eq("out_reason_type", "damaged")
+            .gte("created_at", monthStart)
+            .lte("created_at", monthEnd);
+          
+          if (fallbackData && Array.isArray(fallbackData)) {
+            productLossTotalValue = fallbackData.reduce((sum: number, m: any) => {
+              const qty = Math.abs(Number(m.quantity) || 0);
+              const cost = Number(m.product?.cost || 0);
+              return sum + (qty * cost);
+            }, 0);
+          }
+        } catch (fallbackError) {
+          console.error("Fallback product loss calculation failed:", fallbackError);
+        }
+      } else {
+        productLossTotalValue = Number(productLossesResult?.data ?? 0);
+      }
+      
+      // Contagem de clientes: RPC retorna número diretamente, com fallback
+      let clientsCountResult = 0;
+      if (clientsResult?.error) {
+        console.error("Error fetching clients count:", clientsResult.error);
+        // Fallback já foi feito no Promise.all acima
+        clientsCountResult = Number(clientsResult?.data ?? 0);
+      } else {
+        clientsCountResult = Number(clientsResult?.data ?? 0);
+        // Se ainda for 0 e não houver erro, tentar fallback manual
+        if (clientsCountResult === 0) {
+          try {
+            const { data: fallbackData, count } = await supabase
+              .from("clients")
+              .select("id", { count: "exact" })
+              .eq("tenant_id", profile.tenant_id);
+            clientsCountResult = count ?? (Array.isArray(fallbackData) ? fallbackData.length : 0);
+          } catch (fallbackError) {
+            console.error("Fallback clients count failed:", fallbackError);
+          }
+        }
+      }
+      
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
       const professionalsWithSalaryData = Array.isArray(professionalsWithSalaryResult?.data) 
@@ -446,31 +484,8 @@ export default function Dashboard() {
       }
       setDailyBalance(dailyIncome - dailyExpenses);
 
-      let productLoss = 0;
-      if (productLossesData && Array.isArray(productLossesData) && productLossesData.length > 0) {
-        // Buscar custos dos produtos de uma vez se não estiverem no join
-        const productIds = [...new Set(productLossesData.map((m: any) => m.product_id).filter(Boolean))];
-        let productsMap = new Map<string, number>();
-        
-        if (productIds.length > 0) {
-          const { data: productsData } = await supabase
-            .from("products")
-            .select("id, cost")
-            .in("id", productIds);
-          
-          if (productsData) {
-            productsMap = new Map(productsData.map((p: any) => [p.id, Number(p.cost || 0)]));
-          }
-        }
-        
-        productLoss = productLossesData.reduce((sum: number, m: any) => {
-          const qty = Math.abs(Number(m.quantity) || 0);
-          // Tentar pegar o custo do join primeiro, senão do map
-          const cost = Number(m.product?.cost || productsMap.get(m.product_id) || 0);
-          return sum + (qty * cost);
-        }, 0);
-      }
-      setProductLossTotal(productLoss);
+      // Perdas de produtos: já calculado pelo RPC (ou fallback)
+      setProductLossTotal(productLossTotalValue);
 
       // Comissões: RPC retorna { pending, paid } diretamente
       const pendingCommissions = Number(commissionsData?.pending ?? 0);
