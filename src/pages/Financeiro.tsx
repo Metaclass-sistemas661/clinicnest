@@ -410,20 +410,29 @@ export default function Financeiro() {
       if (professionalsError) throw professionalsError;
 
       // Criar lista combinada: salários pagos + profissionais com salário configurado (pendentes)
-      const paidMap = new Map((paidSalaries || []).map((s: any) => [s.professional_id, s]));
+      // Criar mapa de profissionais pagos no mês/ano específico
+      const paidMap = new Map<string, any>();
+      (paidSalaries || []).forEach((s: any) => {
+        if (s.professional_id && s.payment_month === month && s.payment_year === year) {
+          paidMap.set(s.professional_id, s);
+        }
+      });
+      
       const allSalaries: any[] = [];
 
-      // Adicionar salários pagos
+      // Adicionar salários pagos do período
       (paidSalaries || []).forEach((s: any) => {
-        allSalaries.push({
-          ...s,
-          status: "paid",
-        });
+        if (s.payment_month === month && s.payment_year === year) {
+          allSalaries.push({
+            ...s,
+            status: "paid",
+          });
+        }
       });
 
-      // Adicionar profissionais com salário configurado que ainda não foram pagos
+      // Adicionar profissionais com salário configurado que ainda não foram pagos neste período
       (professionalsWithSalary || []).forEach((p: any) => {
-        if (!paidMap.has(p.professional_id)) {
+        if (p.professional_id && !paidMap.has(p.professional_id) && p.salary_amount && Number(p.salary_amount) > 0) {
           // Calcular dias do mês
           const daysInMonth = new Date(year, month, 0).getDate();
           allSalaries.push({
@@ -432,11 +441,11 @@ export default function Financeiro() {
             professional_name: p.professional_name,
             payment_month: month,
             payment_year: year,
-            amount: p.salary_amount,
+            amount: Number(p.salary_amount),
             days_in_month: daysInMonth,
             status: "pending",
-            payment_method: p.default_payment_method,
-            salary_amount: p.salary_amount,
+            payment_method: p.default_payment_method || null,
+            salary_amount: Number(p.salary_amount),
           });
         }
       });
@@ -1287,7 +1296,7 @@ export default function Financeiro() {
                           </p>
                           <div className="flex justify-between text-sm">
                             <span className="font-semibold text-primary">
-                              {formatCurrency(Number(salary.amount))}
+                              {formatCurrency(Number(salary.amount || salary.salary_amount || 0))}
                             </span>
                             {salary.payment_method && (
                               <Badge variant="outline" className="text-xs">
@@ -1349,7 +1358,7 @@ export default function Financeiro() {
                                 {salary.professional_name || "—"}
                               </TableCell>
                               <TableCell className="font-semibold text-primary">
-                                {formatCurrency(Number(salary.amount))}
+                                {formatCurrency(Number(salary.amount || salary.salary_amount || 0))}
                               </TableCell>
                               <TableCell>
                                 {salary.payment_method ? (

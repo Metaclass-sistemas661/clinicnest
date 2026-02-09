@@ -267,13 +267,13 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 11. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
-          ? supabase.rpc("get_professionals_with_salary", {
+          ? supabase.rpc("get_professionals_with_salary" as any, {
               p_tenant_id: profile.tenant_id,
             })
           : Promise.resolve({ data: null }),
         // 12. Admin: salários pagos no mês
         isAdmin
-          ? supabase.rpc("get_salary_payments", {
+          ? supabase.rpc("get_salary_payments" as any, {
               p_tenant_id: profile.tenant_id,
               p_professional_id: null,
               p_year: new Date().getFullYear(),
@@ -284,7 +284,7 @@ export default function Dashboard() {
         !isAdmin && profile?.user_id
           ? supabase
               .from("professional_commissions")
-              .select("salary_amount")
+              .select("salary_amount, payment_type")
               .eq("tenant_id", profile.tenant_id)
               .eq("user_id", profile.user_id)
               .eq("payment_type", "salary")
@@ -292,7 +292,7 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 14. Staff: último pagamento de salário
         !isAdmin && profile?.user_id
-          ? supabase.rpc("get_salary_payments", {
+          ? supabase.rpc("get_salary_payments" as any, {
               p_tenant_id: profile.tenant_id,
               p_professional_id: profile.user_id,
               p_year: null,
@@ -311,21 +311,27 @@ export default function Dashboard() {
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
-      const professionalsWithSalaryData = (professionalsWithSalaryResult?.data || []) as Array<{
-        professional_id: string;
-        professional_name: string;
-        salary_amount: number;
-        salary_payment_day: number;
-        default_payment_method: string;
-        commission_id: string;
-      }>;
-      const salariesPaidData = (salariesPaidResult?.data || []) as Array<{
-        id: string;
-        professional_id: string;
-        amount: number;
-        status: string;
-        payment_date: string | null;
-      }>;
+      const professionalsWithSalaryData = Array.isArray(professionalsWithSalaryResult?.data) 
+        ? (professionalsWithSalaryResult.data as Array<{
+            professional_id: string;
+            professional_name: string;
+            salary_amount: number;
+            salary_payment_day: number;
+            default_payment_method: string;
+            commission_id: string;
+          }>)
+        : [];
+      const salariesPaidData = Array.isArray(salariesPaidResult?.data)
+        ? (salariesPaidResult.data as Array<{
+            id: string;
+            professional_id: string;
+            amount: number;
+            status: string;
+            payment_date: string | null;
+            payment_month: number;
+            payment_year: number;
+          }>)
+        : [];
       const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
       const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
         id: string;
@@ -390,30 +396,45 @@ export default function Dashboard() {
       }
 
       // Salários: Admin - calcular total a pagar (soma de todos os salários configurados que ainda não foram pagos)
-      if (isAdmin && professionalsWithSalaryData.length > 0) {
-        // Verificar quais profissionais já foram pagos no mês atual
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-        const paidProfessionalIds = new Set(
-          salariesPaidData
-            .filter((s) => s.status === "paid" && s.payment_month === currentMonth && s.payment_year === currentYear)
-            .map((s) => s.professional_id)
-        );
-        
-        // Somar apenas salários de profissionais que ainda não foram pagos
-        const totalToPay = professionalsWithSalaryData
-          .filter((p) => !paidProfessionalIds.has(p.professional_id))
-          .reduce((sum, p) => sum + Number(p.salary_amount || 0), 0);
-        setSalariesToPay(totalToPay);
+      if (isAdmin) {
+        if (professionalsWithSalaryData && professionalsWithSalaryData.length > 0) {
+          // Verificar quais profissionais já foram pagos no mês atual
+          const currentMonth = new Date().getMonth() + 1;
+          const currentYear = new Date().getFullYear();
+          const paidProfessionalIds = new Set(
+            (salariesPaidData || [])
+              .filter((s: any) => {
+                const isPaid = s.status === "paid";
+                const sameMonth = s.payment_month === currentMonth;
+                const sameYear = s.payment_year === currentYear;
+                return isPaid && sameMonth && sameYear;
+              })
+              .map((s: any) => s.professional_id)
+          );
+          
+          // Somar apenas salários de profissionais que ainda não foram pagos
+          const totalToPay = professionalsWithSalaryData
+            .filter((p: any) => {
+              const notPaid = !paidProfessionalIds.has(p.professional_id);
+              return notPaid && p.salary_amount && Number(p.salary_amount) > 0;
+            })
+            .reduce((sum: number, p: any) => {
+              const amount = Number(p.salary_amount || 0);
+              return sum + amount;
+            }, 0);
+          setSalariesToPay(totalToPay);
+        } else {
+          setSalariesToPay(0);
+        }
       } else {
         setSalariesToPay(0);
       }
 
       // Salários: Admin - calcular total pago no mês
-      if (isAdmin && salariesPaidData.length > 0) {
+      if (isAdmin && salariesPaidData && salariesPaidData.length > 0) {
         const totalPaid = salariesPaidData
-          .filter((s) => s.status === "paid")
-          .reduce((sum, s) => sum + Number(s.amount || 0), 0);
+          .filter((s: any) => s.status === "paid")
+          .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
         setSalariesPaid(totalPaid);
       } else {
         setSalariesPaid(0);
