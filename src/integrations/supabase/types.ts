@@ -129,6 +129,63 @@ export type Database = {
           },
         ]
       }
+      commission_payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          professional_id: string
+          service_price: number
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          professional_id: string
+          service_price?: number
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          professional_id?: string
+          service_price?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           amount: number
@@ -531,6 +588,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_appointment_with_sale: {
+        Args: {
+          p_appointment_id: string
+          p_product_id?: string
+          p_quantity?: number
+        }
+        Returns: Json
+      }
+      get_dashboard_commission_totals: {
+        Args: {
+          p_is_admin: boolean
+          p_professional_user_id?: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       get_user_tenant_id: { Args: { p_user_id: string }; Returns: string }
       has_role: {
         Args: {
