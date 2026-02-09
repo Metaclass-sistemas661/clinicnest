@@ -227,9 +227,9 @@ export default function Dashboard() {
         commissionsResult,
         productLossesResult,
         clientsResult,
+        salaryTotalsResult,
         staffPerformanceResult,
         staffMyClientsResult,
-        salaryTotalsResult,
         professionalsWithSalaryResult,
         salariesPaidResult,
         mySalaryConfigResult,
@@ -292,25 +292,22 @@ export default function Dashboard() {
           isAdmin,
           isAdmin ? null : staffUserId ?? null
         ).then((r) => ({ data: r, error: null })),
-        // 6.5. Salários do mês (RPC similar ao de comissões)
-        isAdmin
-          ? fetchSalaryTotals(
-              profile.tenant_id,
-              isAdmin,
-              null
-            ).then((r) => ({ data: r, error: null }))
-          : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
         // 7. Perdas de produtos (baixas danificadas) do mês - usar RPC como outros cards
         isAdmin
           ? (async (): Promise<{ data: number; error: any }> => {
               try {
-                const r = await (supabase.rpc as any)("get_dashboard_product_loss_total", {
+                const { data, error } = await (supabase.rpc as any)("get_dashboard_product_loss_total", {
                   p_tenant_id: profile.tenant_id,
                   p_year: null,
                   p_month: null,
                 });
-                const value = r.data !== null && r.data !== undefined ? Number(r.data) : 0;
-                return { data: isNaN(value) ? 0 : value, error: r.error };
+                // Garantir que data seja um número, não um objeto
+                if (data && typeof data === 'object' && !Array.isArray(data)) {
+                  console.error("Product loss RPC returned object instead of number:", data);
+                  return { data: 0, error: new Error("Invalid RPC response format") };
+                }
+                const value = data !== null && data !== undefined ? Number(data) : 0;
+                return { data: isNaN(value) ? 0 : value, error };
               } catch (err) {
                 return { data: 0, error: err };
               }
@@ -319,11 +316,21 @@ export default function Dashboard() {
         // 8. Total de clientes - usar RPC como outros cards para garantir precisão
         (async (): Promise<{ data: number; error: any }> => {
           try {
-            const r = await (supabase.rpc as any)("get_dashboard_clients_count", {
+            const { data, error } = await (supabase.rpc as any)("get_dashboard_clients_count", {
               p_tenant_id: profile.tenant_id,
             });
-            const value = r.data !== null && r.data !== undefined ? Number(r.data) : 0;
-            return { data: isNaN(value) ? 0 : value, error: r.error };
+            // Garantir que data seja um número
+            if (data && typeof data === 'object' && !Array.isArray(data)) {
+              console.error("Clients count RPC returned object instead of number:", data);
+              // Fallback imediato
+              const fallback = await supabase
+                .from("clients")
+                .select("id", { count: "exact", head: true })
+                .eq("tenant_id", profile.tenant_id);
+              return { data: fallback.count ?? 0, error: null };
+            }
+            const value = data !== null && data !== undefined ? Number(data) : 0;
+            return { data: isNaN(value) ? 0 : value, error };
           } catch (err) {
             // Fallback: buscar e contar manualmente se RPC falhar
             try {
@@ -337,7 +344,15 @@ export default function Dashboard() {
             }
           }
         })(),
-        // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
+        // 9. Salários do mês (RPC similar ao de comissões)
+        isAdmin
+          ? fetchSalaryTotals(
+              profile.tenant_id,
+              isAdmin,
+              null
+            ).then((r) => ({ data: r, error: null }))
+          : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
+        // 10. Staff: desempenho do mês (serviços concluídos, valor gerado)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -348,7 +363,7 @@ export default function Dashboard() {
               .gte("scheduled_at", monthStart)
               .lte("scheduled_at", monthEnd)
           : Promise.resolve({ data: null }),
-        // 10. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
+        // 11. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -357,13 +372,13 @@ export default function Dashboard() {
               .eq("professional_id", profile.id)
               .not("client_id", "is", null)
           : Promise.resolve({ data: null }),
-        // 11. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
+        // 12. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
           ? (supabase.rpc as any)("get_professionals_with_salary", {
               p_tenant_id: profile.tenant_id,
             })
           : Promise.resolve({ data: null }),
-        // 12. Admin: salários pagos no mês
+        // 13. Admin: salários pagos no mês
         isAdmin
           ? (supabase.rpc as any)("get_salary_payments", {
               p_tenant_id: profile.tenant_id,
@@ -372,7 +387,7 @@ export default function Dashboard() {
               p_month: new Date().getMonth() + 1,
             })
           : Promise.resolve({ data: null }),
-        // 13. Staff: configuração de salário fixo
+        // 14. Staff: configuração de salário fixo
         !isAdmin && profile?.user_id
           ? new Promise<{ data: any; error: any }>((resolve) => {
               (supabase.from("professional_commissions") as any)
@@ -385,7 +400,7 @@ export default function Dashboard() {
                 .catch(() => resolve({ data: null, error: null }));
             })
           : Promise.resolve({ data: null, error: null }),
-        // 14. Staff: último pagamento de salário
+        // 15. Staff: último pagamento de salário
         !isAdmin && profile?.user_id
           ? supabase.rpc("get_salary_payments" as any, {
               p_tenant_id: profile.tenant_id,
