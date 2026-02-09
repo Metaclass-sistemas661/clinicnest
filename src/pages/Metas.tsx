@@ -147,10 +147,6 @@ export default function Metas() {
     }
   }, [profile?.tenant_id, isAdmin, showArchived]);
 
-  // Debug: log quando tabValue muda
-  useEffect(() => {
-    console.log("[Metas] tabValue mudou para:", tabValue);
-  }, [tabValue]);
 
   const formatValue = (g: GoalWithProgress) => {
     if (g.goal_type === "revenue" || g.goal_type === "product_revenue" || g.goal_type === "ticket_medio")
@@ -414,16 +410,6 @@ export default function Metas() {
     // Metas de profissionais: tem professional_id (mesmo que também tenha product_id)
     const professionals = toShow.filter((g) => g.professional_id);
 
-    // Debug logs
-    console.log("[Metas] Filtros calculados:", {
-      total: goals.length,
-      active: active.length,
-      archived: archived.length,
-      toShow: toShow.length,
-      general: general.length,
-      products: products.length,
-      professionals: professionals.length,
-    });
 
     return {
       activeGoals: active,
@@ -844,10 +830,7 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "all"}
-            onClick={() => {
-              console.log("[Metas] Clicou em 'Todas', tabValue atual:", tabValue);
-              setTabValue("all");
-            }}
+            onClick={() => setTabValue("all")}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "all" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -858,10 +841,7 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "general"}
-            onClick={() => {
-              console.log("[Metas] Clicou em 'Gerais', tabValue atual:", tabValue);
-              setTabValue("general");
-            }}
+            onClick={() => setTabValue("general")}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "general" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -872,10 +852,7 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "products"}
-            onClick={() => {
-              console.log("[Metas] Clicou em 'Produtos', tabValue atual:", tabValue);
-              setTabValue("products");
-            }}
+            onClick={() => setTabValue("products")}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "products" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -886,10 +863,7 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "professionals"}
-            onClick={() => {
-              console.log("[Metas] Clicou em 'Profissionais', tabValue atual:", tabValue);
-              setTabValue("professionals");
-            }}
+            onClick={() => setTabValue("professionals")}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "professionals" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -899,85 +873,86 @@ export default function Metas() {
           </button>
         </div>
 
-        <div className="mt-4" role="tabpanel" key={tabValue}>
-          {isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-32" />
-              ))}
-            </div>
-          ) : (() => {
-              // Determinar qual lista usar baseado no tabValue
-              let goalsToRender: GoalWithProgress[] = [];
-              let emptyMessage = "";
-
-              switch (tabValue) {
-                case "all":
-                  goalsToRender = goalsToShow;
-                  emptyMessage = showArchived ? "Nenhuma meta arquivada" : "Nenhuma meta criada";
-                  break;
-                case "general":
-                  goalsToRender = generalGoals;
-                  emptyMessage = "Nenhuma meta geral";
-                  break;
-                case "products":
-                  goalsToRender = productGoals;
-                  emptyMessage = "Nenhuma meta de produtos";
-                  break;
-                case "professionals":
-                  goalsToRender = professionalGoals;
-                  emptyMessage = "Nenhuma meta por profissional";
-                  break;
-                default:
-                  goalsToRender = goalsToShow;
-                  emptyMessage = "Nenhuma meta encontrada";
-              }
-
-              console.log("[Metas] Renderizando:", {
-                tabValue,
-                goalsToRenderCount: goalsToRender.length,
-                goalsToShowCount: goalsToShow.length,
-                generalGoalsCount: generalGoals.length,
-                productGoalsCount: productGoals.length,
-                professionalGoalsCount: professionalGoals.length,
-                sampleGoal: goalsToRender[0] ? {
-                  id: goalsToRender[0].id,
-                  name: goalsToRender[0].name,
-                  professional_id: goalsToRender[0].professional_id,
-                  product_id: goalsToRender[0].product_id,
-                } : null,
-              });
-
-              if (goalsToRender.length === 0) {
-                return (
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-16">
-                      <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
-                      <p className="text-muted-foreground mb-2">{emptyMessage}</p>
-                      {!showArchived && tabValue === "all" && (
-                        <Button
-                          onClick={() => setIsDialogOpen(true)}
-                          className="gradient-primary text-primary-foreground"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Criar primeira meta
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              }
-
-              const sortedGoals = filterAndSort(goalsToRender);
-              console.log("[Metas] Goals após filterAndSort:", sortedGoals.length);
-
-              return (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {sortedGoals.map(renderGoalCard)}
+        {isLoading ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4" role="tabpanel" key={`tabpanel-${tabValue}`}>
+            {tabValue === "all" && (
+              goalsToShow.length === 0 ? (
+                <Card key="empty-all">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                    <p className="text-muted-foreground mb-2">
+                      {showArchived ? "Nenhuma meta arquivada" : "Nenhuma meta criada"}
+                    </p>
+                    {!showArchived && (
+                      <Button
+                        onClick={() => setIsDialogOpen(true)}
+                        className="gradient-primary text-primary-foreground"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Criar primeira meta
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div key="content-all" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filterAndSort(goalsToShow).map(renderGoalCard)}
                 </div>
-              );
-            })()}
-        </div>
+              )
+            )}
+
+            {tabValue === "general" && (
+              generalGoals.length === 0 ? (
+                <Card key="empty-general">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma meta geral</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div key="content-general" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filterAndSort(generalGoals).map(renderGoalCard)}
+                </div>
+              )
+            )}
+
+            {tabValue === "products" && (
+              productGoals.length === 0 ? (
+                <Card key="empty-products">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma meta de produtos</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div key="content-products" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filterAndSort(productGoals).map(renderGoalCard)}
+                </div>
+              )
+            )}
+
+            {tabValue === "professionals" && (
+              professionalGoals.length === 0 ? (
+                <Card key="empty-professionals">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhuma meta por profissional</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div key="content-professionals" className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filterAndSort(professionalGoals).map(renderGoalCard)}
+                </div>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       {detailGoal && profile?.tenant_id && (
