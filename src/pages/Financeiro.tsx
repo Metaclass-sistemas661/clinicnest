@@ -343,16 +343,26 @@ export default function Financeiro() {
     const end = endOfMonth(new Date(year, month - 1));
 
     try {
-      // Buscar comissões
+      // Buscar comissões APENAS de profissionais com payment_type = 'commission' ou NULL
+      // JOIN com professional_commissions para filtrar salários
       const { data: commissionsData, error: commissionsError } = await supabase
         .from("commission_payments")
-        .select("*")
+        .select(`
+          *,
+          commission_config:professional_commissions(payment_type)
+        `)
         .eq("tenant_id", profile.tenant_id)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString())
         .order("created_at", { ascending: false });
 
       if (commissionsError) throw commissionsError;
+
+      // Filtrar apenas comissões (excluir salários)
+      const filteredCommissions = (commissionsData || []).filter((c: any) => {
+        const paymentType = c.commission_config?.payment_type;
+        return paymentType === null || paymentType === 'commission' || paymentType === undefined;
+      });
 
       // Buscar nomes dos profissionais
       const { data: profilesData } = await supabase
@@ -362,7 +372,7 @@ export default function Financeiro() {
 
       // Mapear nomes aos registros de comissão
       const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
-      const enrichedCommissions = (commissionsData || []).map((c: any) => ({
+      const enrichedCommissions = filteredCommissions.map((c: any) => ({
         ...c,
         professional: profilesMap.get(c.professional_id) || { full_name: "Profissional", email: null },
       }));
