@@ -327,19 +327,31 @@ export default function Financeiro() {
     const end = endOfMonth(new Date(year, month - 1));
 
     try {
-      const { data, error } = await supabase
+      // Buscar comissões
+      const { data: commissionsData, error: commissionsError } = await supabase
         .from("commission_payments")
-        .select(`
-          *,
-          professional:profiles!commission_payments_professional_id_fkey(full_name, email)
-        `)
+        .select("*")
         .eq("tenant_id", profile.tenant_id)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString())
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setCommissions((data || []) as any[]);
+      if (commissionsError) throw commissionsError;
+
+      // Buscar nomes dos profissionais
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .eq("tenant_id", profile.tenant_id);
+
+      // Mapear nomes aos registros de comissão
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
+      const enrichedCommissions = (commissionsData || []).map((c: any) => ({
+        ...c,
+        professional: profilesMap.get(c.professional_id) || { full_name: "Profissional", email: null },
+      }));
+
+      setCommissions(enrichedCommissions);
     } catch (error) {
       console.error("Error fetching commissions:", error);
     } finally {
@@ -425,7 +437,6 @@ export default function Financeiro() {
         .update({
           status: "paid",
           payment_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
-          paid_by: profile.user_id,
         })
         .eq("id", commissionId);
 
