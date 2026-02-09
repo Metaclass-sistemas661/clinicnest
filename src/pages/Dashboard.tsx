@@ -155,6 +155,7 @@ export default function Dashboard() {
         clientsResult,
         staffPerformanceResult,
         staffMyClientsResult,
+        salaryTotalsResult,
         professionalsWithSalaryResult,
         salariesPaidResult,
         mySalaryConfigResult,
@@ -217,6 +218,14 @@ export default function Dashboard() {
           isAdmin,
           isAdmin ? null : staffUserId ?? null
         ).then((r) => ({ data: r, error: null })),
+        // 6.5. Salários do mês (RPC similar ao de comissões)
+        isAdmin
+          ? fetchSalaryTotals(
+              profile.tenant_id,
+              isAdmin,
+              null
+            ).then((r) => ({ data: r, error: null }))
+          : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -307,6 +316,7 @@ export default function Dashboard() {
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
+      const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
@@ -395,48 +405,14 @@ export default function Dashboard() {
         setStaffMyClientsCount(null);
       }
 
-      // Salários: Admin - calcular total a pagar (soma de todos os salários configurados que ainda não foram pagos)
-      if (isAdmin) {
-        if (professionalsWithSalaryData && professionalsWithSalaryData.length > 0) {
-          // Verificar quais profissionais já foram pagos no mês atual
-          const currentMonth = new Date().getMonth() + 1;
-          const currentYear = new Date().getFullYear();
-          const paidProfessionalIds = new Set(
-            (salariesPaidData || [])
-              .filter((s: any) => {
-                const isPaid = s.status === "paid";
-                const sameMonth = s.payment_month === currentMonth;
-                const sameYear = s.payment_year === currentYear;
-                return isPaid && sameMonth && sameYear;
-              })
-              .map((s: any) => s.professional_id)
-          );
-          
-          // Somar apenas salários de profissionais que ainda não foram pagos
-          const totalToPay = professionalsWithSalaryData
-            .filter((p: any) => {
-              const notPaid = !paidProfessionalIds.has(p.professional_id);
-              return notPaid && p.salary_amount && Number(p.salary_amount) > 0;
-            })
-            .reduce((sum: number, p: any) => {
-              const amount = Number(p.salary_amount || 0);
-              return sum + amount;
-            }, 0);
-          setSalariesToPay(totalToPay);
-        } else {
-          setSalariesToPay(0);
-        }
+      // Salários: usar RPC similar ao de comissões (mais confiável)
+      if (isAdmin && salaryTotalsData) {
+        const pendingSalaries = Number(salaryTotalsData?.pending ?? 0);
+        const paidSalaries = Number(salaryTotalsData?.paid ?? 0);
+        setSalariesToPay(pendingSalaries);
+        setSalariesPaid(paidSalaries);
       } else {
         setSalariesToPay(0);
-      }
-
-      // Salários: Admin - calcular total pago no mês
-      if (isAdmin && salariesPaidData && salariesPaidData.length > 0) {
-        const totalPaid = salariesPaidData
-          .filter((s: any) => s.status === "paid")
-          .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
-        setSalariesPaid(totalPaid);
-      } else {
         setSalariesPaid(0);
       }
 
