@@ -54,6 +54,7 @@ const navCategories: NavCategory[] = [
     items: [
       { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
       { title: "Minhas Comissões", href: "/minhas-comissoes", icon: Wallet, staffOnly: true },
+      { title: "Meus Salários", href: "/meus-salarios", icon: DollarSign, staffOnly: true },
       { title: "Produtos", href: "/produtos", icon: Package },
     ],
   },

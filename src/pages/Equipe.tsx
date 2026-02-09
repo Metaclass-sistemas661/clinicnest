@@ -43,12 +43,20 @@ interface TeamMember extends Profile {
     id: string;
     type: "percentage" | "fixed";
     value: number;
+    payment_type?: "commission" | "salary";
+    salary_amount?: number | null;
+    salary_payment_day?: number | null;
+    default_payment_method?: string | null;
   } | null;
 }
 
 interface CommissionFormData {
+  payment_type: "commission" | "salary";
   type: "percentage" | "fixed";
   value: string;
+  salary_amount?: string;
+  salary_payment_day?: string;
+  default_payment_method?: string;
 }
 
 export default function Equipe() {
@@ -64,8 +72,12 @@ export default function Equipe() {
   const [isCommissionDialogOpen, setIsCommissionDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [commissionData, setCommissionData] = useState<CommissionFormData>({
+    payment_type: "commission",
     type: "percentage",
     value: "",
+    salary_amount: "",
+    salary_payment_day: "",
+    default_payment_method: "",
   });
   const [isSavingCommission, setIsSavingCommission] = useState(false);
 
@@ -98,7 +110,14 @@ export default function Equipe() {
       if (member && !member.commission) {
         hasOpenedForHighlight.current = true;
         setSelectedMember(member);
-        setCommissionData({ type: "percentage", value: "" });
+        setCommissionData({ 
+          payment_type: "commission",
+          type: "percentage", 
+          value: "",
+          salary_amount: "",
+          salary_payment_day: "",
+          default_payment_method: "",
+        });
         setIsCommissionDialogOpen(true);
         setSearchParams({});
       }
@@ -122,7 +141,7 @@ export default function Equipe() {
           .eq("tenant_id", profile.tenant_id),
         supabase
           .from("professional_commissions")
-          .select("id, user_id, type, value")
+          .select("id, user_id, type, value, payment_type, salary_amount, salary_payment_day, default_payment_method")
           .eq("tenant_id", profile.tenant_id),
       ]);
 
@@ -135,6 +154,10 @@ export default function Equipe() {
         user_id: string;
         type: "percentage" | "fixed";
         value: number;
+        payment_type?: "commission" | "salary";
+        salary_amount?: number | null;
+        salary_payment_day?: number | null;
+        default_payment_method?: string | null;
       }>;
 
       // Merge profiles with their roles and commissions
@@ -280,6 +303,9 @@ export default function Equipe() {
 
   const formatCommission = (commission: TeamMember["commission"]) => {
     if (!commission) return "—";
+    if (commission.payment_type === "salary") {
+      return `Salário: R$ ${Number(commission.salary_amount || commission.value).toFixed(2)}`;
+    }
     if (commission.type === "percentage") {
       return `${commission.value}%`;
     }
@@ -290,11 +316,22 @@ export default function Equipe() {
     setSelectedMember(member);
     if (member.commission) {
       setCommissionData({
+        payment_type: member.commission.payment_type || "commission",
         type: member.commission.type,
         value: String(member.commission.value),
+        salary_amount: member.commission.salary_amount ? String(member.commission.salary_amount) : "",
+        salary_payment_day: member.commission.salary_payment_day ? String(member.commission.salary_payment_day) : "",
+        default_payment_method: member.commission.default_payment_method || "",
       });
     } else {
-      setCommissionData({ type: "percentage", value: "" });
+      setCommissionData({ 
+        payment_type: "commission",
+        type: "percentage", 
+        value: "",
+        salary_amount: "",
+        salary_payment_day: "",
+        default_payment_method: "",
+      });
     }
     setIsCommissionDialogOpen(true);
   };
@@ -302,26 +339,63 @@ export default function Equipe() {
   const handleSaveCommission = async () => {
     if (!selectedMember || !profile?.tenant_id) return;
 
-    const value = parseFloat(commissionData.value);
-    if (isNaN(value) || value < 0) {
-      toast.error("Valor inválido");
-      return;
+    // Validações para comissão
+    if (commissionData.payment_type === "commission") {
+      const value = parseFloat(commissionData.value);
+      if (isNaN(value) || value < 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      if (commissionData.type === "percentage" && (value < 0 || value > 100)) {
+        toast.error("Percentual deve estar entre 0 e 100");
+        return;
+      }
     }
 
-    if (commissionData.type === "percentage" && (value < 0 || value > 100)) {
-      toast.error("Percentual deve estar entre 0 e 100");
-      return;
+    // Validações para salário
+    if (commissionData.payment_type === "salary") {
+      const salaryAmount = parseFloat(commissionData.salary_amount || "0");
+      if (isNaN(salaryAmount) || salaryAmount <= 0) {
+        toast.error("Valor do salário deve ser maior que zero");
+        return;
+      }
+
+      const paymentDay = parseInt(commissionData.salary_payment_day || "0");
+      if (paymentDay < 1 || paymentDay > 31) {
+        toast.error("Dia de pagamento deve estar entre 1 e 31");
+        return;
+      }
+
+      if (!commissionData.default_payment_method) {
+        toast.error("Selecione o método de pagamento padrão");
+        return;
+      }
     }
 
     setIsSavingCommission(true);
 
     try {
-      const commissionPayload = {
+      const commissionPayload: any = {
         user_id: selectedMember.user_id,
         tenant_id: profile.tenant_id,
-        type: commissionData.type,
-        value: value,
+        payment_type: commissionData.payment_type,
       };
+
+      if (commissionData.payment_type === "commission") {
+        commissionPayload.type = commissionData.type;
+        commissionPayload.value = parseFloat(commissionData.value);
+        commissionPayload.salary_amount = null;
+        commissionPayload.salary_payment_day = null;
+        commissionPayload.default_payment_method = null;
+      } else {
+        // Salário fixo
+        commissionPayload.type = "fixed"; // Mantém compatibilidade
+        commissionPayload.value = parseFloat(commissionData.salary_amount || "0");
+        commissionPayload.salary_amount = parseFloat(commissionData.salary_amount || "0");
+        commissionPayload.salary_payment_day = parseInt(commissionData.salary_payment_day || "1");
+        commissionPayload.default_payment_method = commissionData.default_payment_method;
+      }
 
       if (selectedMember.commission) {
         // Update existing commission
@@ -331,7 +405,7 @@ export default function Equipe() {
           .eq("id", selectedMember.commission.id);
 
         if (error) throw error;
-        toast.success("Comissão atualizada com sucesso!");
+        toast.success(commissionData.payment_type === "salary" ? "Salário atualizado com sucesso!" : "Comissão atualizada com sucesso!");
       } else {
         // Create new commission
         const { error } = await supabase
@@ -339,16 +413,23 @@ export default function Equipe() {
           .insert(commissionPayload);
 
         if (error) throw error;
-        toast.success("Comissão configurada com sucesso!");
+        toast.success(commissionData.payment_type === "salary" ? "Salário configurado com sucesso!" : "Comissão configurada com sucesso!");
       }
 
       setIsCommissionDialogOpen(false);
       setSelectedMember(null);
-      setCommissionData({ type: "percentage", value: "" });
+      setCommissionData({ 
+        payment_type: "commission",
+        type: "percentage", 
+        value: "",
+        salary_amount: "",
+        salary_payment_day: "",
+        default_payment_method: "",
+      });
       fetchTeam();
     } catch (error: any) {
       console.error("Error saving commission:", error);
-      toast.error(error.message || "Erro ao salvar comissão");
+      toast.error(error.message || "Erro ao salvar configuração");
     } finally {
       setIsSavingCommission(false);
     }
@@ -487,57 +568,132 @@ export default function Equipe() {
         </Dialog>
       }
     >
-      {/* Dialog de Configuração de Comissão */}
+      {/* Dialog de Configuração de Comissão/Salário */}
       <Dialog open={isCommissionDialogOpen} onOpenChange={setIsCommissionDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Configurar Comissão</DialogTitle>
+            <DialogTitle>Configurar Remuneração</DialogTitle>
             <DialogDescription>
-              Configure a comissão para {selectedMember?.full_name}
+              Configure a comissão ou salário fixo para {selectedMember?.full_name}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label>Tipo de Comissão</Label>
+              <Label>Tipo de Remuneração</Label>
               <Select
-                value={commissionData.type}
+                value={commissionData.payment_type}
                 onValueChange={(v) =>
-                  setCommissionData({ ...commissionData, type: v as "percentage" | "fixed" })
+                  setCommissionData({ ...commissionData, payment_type: v as "commission" | "salary" })
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percentual (%)</SelectItem>
-                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                  <SelectItem value="commission">Comissão</SelectItem>
+                  <SelectItem value="salary">Salário Fixo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>
-                {commissionData.type === "percentage" ? "Percentual (%)" : "Valor Fixo (R$)"}
-              </Label>
-              <Input
-                type="number"
-                step={commissionData.type === "percentage" ? "0.01" : "0.01"}
-                min="0"
-                max={commissionData.type === "percentage" ? "100" : undefined}
-                value={commissionData.value}
-                onChange={(e) =>
-                  setCommissionData({ ...commissionData, value: e.target.value })
-                }
-                placeholder={
-                  commissionData.type === "percentage" ? "Ex: 30" : "Ex: 50.00"
-                }
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                {commissionData.type === "percentage"
-                  ? "Digite o percentual (ex: 30 para 30%)"
-                  : "Digite o valor fixo em reais"}
-              </p>
-            </div>
+
+            {commissionData.payment_type === "commission" ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Tipo de Comissão</Label>
+                  <Select
+                    value={commissionData.type}
+                    onValueChange={(v) =>
+                      setCommissionData({ ...commissionData, type: v as "percentage" | "fixed" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Percentual (%)</SelectItem>
+                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    {commissionData.type === "percentage" ? "Percentual (%)" : "Valor Fixo (R$)"}
+                  </Label>
+                  <Input
+                    type="number"
+                    step={commissionData.type === "percentage" ? "0.01" : "0.01"}
+                    min="0"
+                    max={commissionData.type === "percentage" ? "100" : undefined}
+                    value={commissionData.value}
+                    onChange={(e) =>
+                      setCommissionData({ ...commissionData, value: e.target.value })
+                    }
+                    placeholder={
+                      commissionData.type === "percentage" ? "Ex: 30" : "Ex: 50.00"
+                    }
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {commissionData.type === "percentage"
+                      ? "Digite o percentual (ex: 30 para 30%)"
+                      : "Digite o valor fixo em reais"}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Valor do Salário (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={commissionData.salary_amount}
+                    onChange={(e) =>
+                      setCommissionData({ ...commissionData, salary_amount: e.target.value })
+                    }
+                    placeholder="Ex: 2000.00"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Dia do Pagamento</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={commissionData.salary_payment_day}
+                    onChange={(e) =>
+                      setCommissionData({ ...commissionData, salary_payment_day: e.target.value })
+                    }
+                    placeholder="Ex: 5 (dia 5 de cada mês)"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dia do mês em que o salário será pago (1 a 31)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Método de Pagamento Padrão</Label>
+                  <Select
+                    value={commissionData.default_payment_method}
+                    onValueChange={(v) =>
+                      setCommissionData({ ...commissionData, default_payment_method: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o método" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="deposit">Depósito em Conta</SelectItem>
+                      <SelectItem value="cash">Espécie</SelectItem>
+                      <SelectItem value="other">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button

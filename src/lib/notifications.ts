@@ -8,9 +8,10 @@ export type NotificationType =
   | "goal_rejected"
   | "goal_reminder"
   | "goal_reached"
-  | "commission_paid";
+  | "commission_paid"
+  | "salary_paid";
 
-const PREF_MAP: Record<NotificationType, keyof { goal_approved: boolean; goal_rejected: boolean; appointment_created: boolean; appointment_completed: boolean; appointment_cancelled: boolean; goal_reminder: boolean; goal_reached: boolean; commission_paid: boolean }> = {
+const PREF_MAP: Record<NotificationType, keyof { goal_approved: boolean; goal_rejected: boolean; appointment_created: boolean; appointment_completed: boolean; appointment_cancelled: boolean; goal_reminder: boolean; goal_reached: boolean; commission_paid: boolean; salary_paid: boolean }> = {
   appointment_created: "appointment_created",
   appointment_completed: "appointment_completed",
   appointment_cancelled: "appointment_cancelled",
@@ -19,6 +20,7 @@ const PREF_MAP: Record<NotificationType, keyof { goal_approved: boolean; goal_re
   goal_reminder: "goal_reminder",
   goal_reached: "goal_reached",
   commission_paid: "commission_paid",
+  salary_paid: "salary_paid",
 };
 
 /** Verifica preferências e insere notificação se o usuário optou por receber */

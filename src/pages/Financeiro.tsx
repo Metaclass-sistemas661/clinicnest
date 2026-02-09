@@ -76,7 +76,7 @@ export default function Financeiro() {
   const [isSaving, setIsSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(formatInAppTz(new Date(), "yyyy-MM"));
   const [activeTabState, setActiveTabState] = useState("overview");
-  const validTabs = ["overview", "cashflow", "transactions", "commissions"];
+  const validTabs = ["overview", "cashflow", "transactions", "commissions", "salaries"];
   const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : activeTabState;
   const setActiveTab = (v: string) => {
     setActiveTabState(v);
@@ -89,6 +89,8 @@ export default function Financeiro() {
   };
   const [commissions, setCommissions] = useState<any[]>([]);
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
+  const [salaries, setSalaries] = useState<any[]>([]);
+  const [isLoadingSalaries, setIsLoadingSalaries] = useState(false);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [productLosses, setProductLosses] = useState<DamagedProductLoss[]>([]);
   const [isLoadingProductLosses, setIsLoadingProductLosses] = useState(true);
@@ -223,6 +225,7 @@ export default function Financeiro() {
     if (profile?.tenant_id && isAdmin) {
       fetchTransactions();
       fetchCommissions();
+      fetchSalaries();
       fetchProfessionals();
       fetchProductLosses();
     }
@@ -234,6 +237,7 @@ export default function Financeiro() {
       if (profile?.tenant_id && isAdmin) {
         fetchTransactions();
         fetchCommissions();
+        fetchSalaries();
         fetchProfessionals();
         fetchProductLosses();
       }
@@ -273,16 +277,18 @@ export default function Financeiro() {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
-    const parsed = transactionFormSchema.safeParse({
-      type: formData.type,
-      category: formData.category,
-      amount: formData.amount,
-      description: formData.description,
-      transaction_date: formData.transaction_date,
-    });
-    if (!parsed.success) {
-      const msg = parsed.error.errors[0]?.message ?? "Verifique os dados";
-      toast.error(msg);
+    // Validação manual
+    if (!formData.category) {
+      toast.error("Selecione uma categoria");
+      return;
+    }
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Valor inválido");
+      return;
+    }
+    if (!formData.transaction_date) {
+      toast.error("Selecione uma data");
       return;
     }
 
@@ -291,11 +297,11 @@ export default function Financeiro() {
     try {
       const { error } = await supabase.from("financial_transactions").insert({
         tenant_id: profile.tenant_id,
-        type: parsed.data.type,
-        category: parsed.data.category,
-        amount: parsed.data.amount,
-        description: parsed.data.description || null,
-        transaction_date: parsed.data.transaction_date,
+        type: formData.type,
+        category: formData.category,
+        amount: amount,
+        description: formData.description || null,
+        transaction_date: formData.transaction_date,
       });
 
       if (error) throw error;
@@ -359,19 +365,68 @@ export default function Financeiro() {
     }
   };
 
+  const fetchSalaries = async () => {
+    if (!profile?.tenant_id) return;
+
+    setIsLoadingSalaries(true);
+    const [year, month] = filterMonth.split("-").map(Number);
+
+    try {
+      const { data, error } = await supabase.rpc("get_salary_payments", {
+        p_tenant_id: profile.tenant_id,
+        p_professional_id: null,
+        p_year: year,
+        p_month: month,
+      });
+
+      if (error) throw error;
+      setSalaries((data || []) as any[]);
+    } catch (error) {
+      console.error("Error fetching salaries:", error);
+      toast.error("Erro ao carregar salários");
+    } finally {
+      setIsLoadingSalaries(false);
+    }
+  };
+
   const fetchProfessionals = async () => {
     if (!profile?.tenant_id) return;
 
     try {
-      const { data } = await supabase
+      // Buscar profissionais com salário configurado
+      const { data: salaryData } = await supabase.rpc("get_professionals_with_salary", {
+        p_tenant_id: profile.tenant_id,
+      });
+
+      // Buscar todos os profissionais para fallback
+      const { data: allProfessionals } = await supabase
         .from("profiles")
         .select("user_id, full_name")
         .eq("tenant_id", profile.tenant_id)
         .order("full_name");
-      setProfessionals((data || []) as any[]);
+
+      // Combinar dados: profissionais com salário têm informações adicionais
+      const professionalsMap = new Map((allProfessionals || []).map((p: any) => [p.user_id, p]));
+      const enrichedProfessionals = (salaryData || []).map((sp: any) => ({
+        ...professionalsMap.get(sp.professional_id),
+        ...sp,
+      }));
+
+      setProfessionals(enrichedProfessionals as any[]);
     } catch (error) {
       console.error("Error fetching professionals:", error);
-      toast.error("Erro ao carregar profissionais. Tente novamente.");
+      // Fallback para busca simples
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .eq("tenant_id", profile.tenant_id)
+          .order("full_name");
+        setProfessionals((data || []) as any[]);
+      } catch (fallbackError) {
+        console.error("Error in fallback fetch:", fallbackError);
+        toast.error("Erro ao carregar profissionais. Tente novamente.");
+      }
     }
   };
 
@@ -465,6 +520,45 @@ export default function Financeiro() {
     } catch (error) {
       console.error("Error marking commission as paid:", error);
       toast.error("Erro ao marcar comissão como paga");
+    }
+  };
+
+  const handlePaySalary = async (professionalId: string, paymentMonth: number, paymentYear: number, paymentMethod: string, paymentReference?: string) => {
+    if (!profile?.tenant_id) return;
+
+    try {
+      const { data, error } = await supabase.rpc("pay_salary", {
+        p_professional_id: professionalId,
+        p_payment_month: paymentMonth,
+        p_payment_year: paymentYear,
+        p_payment_method: paymentMethod,
+        p_payment_reference: paymentReference || null,
+        p_notes: null,
+      });
+
+      if (error) throw error;
+
+      // Notificar profissional que o salário foi pago
+      const amount = Number(data?.amount || 0);
+      await notifyUser(
+        profile.tenant_id,
+        professionalId,
+        "salary_paid",
+        "Salário pago",
+        `Seu salário de ${formatCurrency(amount)} foi pago.`,
+        {}
+      ).catch(() => {});
+
+      toast.success("Salário pago com sucesso! Despesa registrada automaticamente.");
+      
+      // Aguardar um pouco para garantir que a transação financeira foi criada
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      fetchSalaries();
+      fetchTransactions();
+    } catch (error: any) {
+      console.error("Error paying salary:", error);
+      toast.error(error.message || "Erro ao pagar salário");
     }
   };
 
@@ -737,7 +831,7 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1 p-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
@@ -757,6 +851,11 @@ export default function Financeiro() {
               <Wallet className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Comissões</span>
               <span className="sm:hidden">Com.</span>
+            </TabsTrigger>
+            <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+              <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Salários</span>
+              <span className="sm:hidden">Sal.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1038,6 +1137,175 @@ export default function Financeiro() {
                               >
                                 {transaction.type === "income" ? "+" : "-"}
                                 {formatCurrency(transaction.amount)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Salaries Tab */}
+          <TabsContent value="salaries" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerenciar Salários</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Pagar salários fixos dos profissionais
+                </p>
+              </CardHeader>
+              <CardContent>
+                {isLoadingSalaries ? (
+                  <div className="space-y-3 p-4">
+                    <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                  </div>
+                ) : salaries.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Nenhum salário registrado neste período</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="block md:hidden space-y-3">
+                      {salaries.map((salary: any) => (
+                        <div key={salary.id} className="rounded-lg border p-4 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <p className="font-medium">{salary.professional_name || "—"}</p>
+                            <Badge
+                              variant="outline"
+                              className={
+                                salary.status === "paid"
+                                  ? "bg-success/20 text-success border-success/30"
+                                  : "bg-warning/20 text-warning border-warning/30"
+                              }
+                            >
+                              {salary.status === "paid" ? "Pago" : "Pendente"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {String(salary.payment_month).padStart(2, "0")}/{salary.payment_year}
+                          </p>
+                          <div className="flex justify-between text-sm">
+                            <span className="font-semibold text-primary">
+                              {formatCurrency(Number(salary.amount))}
+                            </span>
+                            {salary.payment_method && (
+                              <Badge variant="outline" className="text-xs">
+                                {salary.payment_method === "pix" ? "PIX" : 
+                                 salary.payment_method === "deposit" ? "Depósito" :
+                                 salary.payment_method === "cash" ? "Espécie" : "Outro"}
+                              </Badge>
+                            )}
+                          </div>
+                          {salary.status === "pending" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Buscar método de pagamento padrão do profissional
+                                const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
+                                const defaultMethod = professional?.default_payment_method || "pix";
+                                handlePaySalary(
+                                  salary.professional_id,
+                                  salary.payment_month,
+                                  salary.payment_year,
+                                  defaultMethod
+                                );
+                              }}
+                              className="w-full gap-1"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              Pagar Salário
+                            </Button>
+                          )}
+                          {salary.status === "paid" && salary.payment_date && (
+                            <p className="text-xs text-muted-foreground">
+                              Pago em {formatInAppTz(salary.payment_date, "dd/MM/yyyy")}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Período</TableHead>
+                            <TableHead>Profissional</TableHead>
+                            <TableHead>Valor</TableHead>
+                            <TableHead>Método</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {salaries.map((salary: any) => (
+                            <TableRow key={salary.id}>
+                              <TableCell>
+                                {String(salary.payment_month).padStart(2, "0")}/{salary.payment_year}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {salary.professional_name || "—"}
+                              </TableCell>
+                              <TableCell className="font-semibold text-primary">
+                                {formatCurrency(Number(salary.amount))}
+                              </TableCell>
+                              <TableCell>
+                                {salary.payment_method ? (
+                                  <Badge variant="outline">
+                                    {salary.payment_method === "pix" ? "PIX" : 
+                                     salary.payment_method === "deposit" ? "Depósito" :
+                                     salary.payment_method === "cash" ? "Espécie" : "Outro"}
+                                  </Badge>
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    salary.status === "paid"
+                                      ? "bg-success/20 text-success border-success/30"
+                                      : "bg-warning/20 text-warning border-warning/30"
+                                  }
+                                >
+                                  {salary.status === "paid" ? "Pago" : "Pendente"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {salary.status === "pending" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
+                                      const defaultMethod = professional?.default_payment_method || "pix";
+                                      handlePaySalary(
+                                        salary.professional_id,
+                                        salary.payment_month,
+                                        salary.payment_year,
+                                        defaultMethod
+                                      );
+                                    }}
+                                    className="gap-1"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Pagar
+                                  </Button>
+                                )}
+                                {salary.status === "paid" && salary.payment_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Pago em {formatInAppTz(salary.payment_date, "dd/MM/yyyy")}
+                                  </span>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

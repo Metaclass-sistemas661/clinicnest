@@ -25,6 +25,7 @@ import Equipe from "@/pages/Equipe";
 import Configuracoes from "@/pages/Configuracoes";
 import Assinatura from "@/pages/Assinatura";
 import MinhasComissoes from "@/pages/MinhasComissoes";
+import MeusSalarios from "@/pages/MeusSalarios";
 import Metas from "@/pages/Metas";
 import MinhasMetas from "@/pages/MinhasMetas";
 import Notificacoes from "@/pages/Notificacoes";
@@ -100,6 +101,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <MinhasComissoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/meus-salarios"
+                  element={
+                    <ProtectedRoute>
+                      <MeusSalarios />
                     </ProtectedRoute>
                   }
                 />

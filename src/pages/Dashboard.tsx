@@ -57,6 +57,10 @@ export default function Dashboard() {
   const [professionalGoalsRanking, setProfessionalGoalsRanking] = useState<
     { professional_id: string; professional_name: string; goal_name: string; goal_type: string; current_value: number; target_value: number; progress_pct: number }[]
   >([]);
+  const [salariesToPay, setSalariesToPay] = useState(0);
+  const [salariesPaid, setSalariesPaid] = useState(0);
+  const [mySalaryAmount, setMySalaryAmount] = useState<number | null>(null);
+  const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
 
   useEffect(() => {
     const hasStaffId = profile?.user_id ?? user?.id;
@@ -151,6 +155,10 @@ export default function Dashboard() {
         clientsResult,
         staffPerformanceResult,
         staffMyClientsResult,
+        professionalsWithSalaryResult,
+        salariesPaidResult,
+        mySalaryConfigResult,
+        mySalaryPaymentsResult,
       ] = await Promise.all([
         // 1. Financeiro do mês (admin)
         isAdmin
@@ -237,7 +245,140 @@ export default function Dashboard() {
           .from("clients")
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id),
-        // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
+        // 11. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
+        isAdmin
+          ? supabase.rpc("get_professionals_with_salary", {
+              p_tenant_id: profile.tenant_id,
+            })
+          : Promise.resolve({ data: null }),
+        // 12. Admin: salários pagos no mês
+        isAdmin
+          ? supabase.rpc("get_salary_payments", {
+              p_tenant_id: profile.tenant_id,
+              p_professional_id: null,
+              p_year: new Date().getFullYear(),
+              p_month: new Date().getMonth() + 1,
+            })
+          : Promise.resolve({ data: null }),
+        // 13. Staff: configuração de salário fixo
+        !isAdmin && profile?.user_id
+          ? supabase
+              .from("professional_commissions")
+              .select("salary_amount")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("user_id", profile.user_id)
+              .eq("payment_type", "salary")
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        // 14. Staff: último pagamento de salário
+        !isAdmin && profile?.user_id
+          ? supabase.rpc("get_salary_payments", {
+              p_tenant_id: profile.tenant_id,
+              p_professional_id: profile.user_id,
+              p_year: null,
+              p_month: null,
+            })
+          : Promise.resolve({ data: null }),
+        // 13. Staff: configuração de salário fixo
+        !isAdmin && profile?.user_id
+          ? supabase
+              .from("professional_commissions")
+              .select("salary_amount")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("user_id", profile.user_id)
+              .eq("payment_type", "salary")
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        // 14. Staff: último pagamento de salário
+        !isAdmin && profile?.user_id
+          ? supabase.rpc("get_salary_payments", {
+              p_tenant_id: profile.tenant_id,
+              p_professional_id: profile.user_id,
+              p_year: null,
+              p_month: null,
+            })
+          : Promise.resolve({ data: null }),
+      ]);
+
+      const [
+        financialResult,
+        dailyFinancialResult,
+        appointmentsResult,
+        pendingResult,
+        productsResult,
+        commissionsResult,
+        productLossesResult,
+        clientsResult,
+        staffPerformanceResult,
+        staffMyClientsResult,
+        professionalsWithSalaryResult,
+        salariesPaidResult,
+        mySalaryConfigResult,
+        mySalaryPaymentsResult,
+      ] = await Promise.all([
+        // ... existing promises ...
+        supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("transaction_date", format(monthStart, "yyyy-MM-dd"))
+          .lte("transaction_date", format(monthEnd, "yyyy-MM-dd")),
+        supabase
+          .from("financial_transactions")
+          .select("*")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("transaction_date", format(startOfDay(new Date()), "yyyy-MM-dd"))
+          .lte("transaction_date", format(endOfDay(new Date()), "yyyy-MM-dd")),
+        supabase
+          .from("appointments")
+          .select("*")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("scheduled_at", startOfDay(new Date()).toISOString())
+          .lte("scheduled_at", endOfDay(new Date()).toISOString())
+          .order("scheduled_at", { ascending: true }),
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", profile.tenant_id)
+          .eq("status", "pending"),
+        isAdmin
+          ? supabase
+              .from("products")
+              .select("id,tenant_id,name,description,cost,quantity,min_quantity,is_active,created_at,updated_at")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("is_active", true)
+          : Promise.resolve({ data: null }),
+        fetchCommissionTotals(
+          profile.tenant_id,
+          isAdmin,
+          isAdmin ? null : staffUserId ?? null
+        ).then((r) => ({ data: r, error: null })),
+        isAdmin
+          ? supabase
+              .from("stock_movements")
+              .select(
+                `
+                  id,
+                  product_id,
+                  quantity,
+                  reason,
+                  created_at,
+                  movement_type,
+                  out_reason_type,
+                  product:products(name, cost)
+                `
+              )
+              .eq("tenant_id", profile.tenant_id)
+              .eq("movement_type", "out")
+              .eq("out_reason_type", "damaged")
+              .gte("created_at", monthStart)
+              .lte("created_at", monthEnd)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: null }),
+        supabase
+          .from("clients")
+          .select("*", { count: "exact", head: true })
+          .eq("tenant_id", profile.tenant_id),
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -248,7 +389,6 @@ export default function Dashboard() {
               .gte("scheduled_at", monthStart)
               .lte("scheduled_at", monthEnd)
           : Promise.resolve({ data: null }),
-        // 10. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -256,6 +396,36 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("professional_id", profile.id)
               .not("client_id", "is", null)
+          : Promise.resolve({ data: null }),
+        isAdmin
+          ? supabase.rpc("get_professionals_with_salary", {
+              p_tenant_id: profile.tenant_id,
+            })
+          : Promise.resolve({ data: null }),
+        isAdmin
+          ? supabase.rpc("get_salary_payments", {
+              p_tenant_id: profile.tenant_id,
+              p_professional_id: null,
+              p_year: new Date().getFullYear(),
+              p_month: new Date().getMonth() + 1,
+            })
+          : Promise.resolve({ data: null }),
+        !isAdmin && profile?.user_id
+          ? supabase
+              .from("professional_commissions")
+              .select("salary_amount")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("user_id", profile.user_id)
+              .eq("payment_type", "salary")
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        !isAdmin && profile?.user_id
+          ? supabase.rpc("get_salary_payments", {
+              p_tenant_id: profile.tenant_id,
+              p_professional_id: profile.user_id,
+              p_year: null,
+              p_month: null,
+            })
           : Promise.resolve({ data: null }),
       ]);
 
@@ -269,6 +439,50 @@ export default function Dashboard() {
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
+      const professionalsWithSalaryData = (professionalsWithSalaryResult?.data || []) as Array<{
+        professional_id: string;
+        professional_name: string;
+        salary_amount: number;
+        salary_payment_day: number;
+        default_payment_method: string;
+        commission_id: string;
+      }>;
+      const salariesPaidData = (salariesPaidResult?.data || []) as Array<{
+        id: string;
+        professional_id: string;
+        amount: number;
+        status: string;
+        payment_date: string | null;
+      }>;
+      const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
+      const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
+        id: string;
+        amount: number;
+        status: string;
+        payment_date: string | null;
+      }>;
+      const professionalsWithSalaryData = (professionalsWithSalaryResult?.data || []) as Array<{
+        professional_id: string;
+        professional_name: string;
+        salary_amount: number;
+        salary_payment_day: number;
+        default_payment_method: string;
+        commission_id: string;
+      }>;
+      const salariesPaidData = (salariesPaidResult?.data || []) as Array<{
+        id: string;
+        professional_id: string;
+        amount: number;
+        status: string;
+        payment_date: string | null;
+      }>;
+      const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
+      const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
+        id: string;
+        amount: number;
+        status: string;
+        payment_date: string | null;
+      }>;
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
@@ -323,6 +537,51 @@ export default function Dashboard() {
         setStaffMyClientsCount(0);
       } else {
         setStaffMyClientsCount(null);
+      }
+
+      // Salários: Admin - calcular total a pagar (soma de todos os salários configurados)
+      if (isAdmin && professionalsWithSalaryData.length > 0) {
+        const totalToPay = professionalsWithSalaryData.reduce((sum, p) => sum + Number(p.salary_amount || 0), 0);
+        setSalariesToPay(totalToPay);
+      } else {
+        setSalariesToPay(0);
+      }
+
+      // Salários: Admin - calcular total pago no mês
+      if (isAdmin && salariesPaidData.length > 0) {
+        const totalPaid = salariesPaidData
+          .filter((s) => s.status === "paid")
+          .reduce((sum, s) => sum + Number(s.amount || 0), 0);
+        setSalariesPaid(totalPaid);
+      } else {
+        setSalariesPaid(0);
+      }
+
+      // Salários: Staff - valor do salário configurado
+      if (!isAdmin && mySalaryConfigData?.salary_amount) {
+        setMySalaryAmount(Number(mySalaryConfigData.salary_amount));
+      } else {
+        setMySalaryAmount(null);
+      }
+
+      // Salários: Staff - último pagamento
+      if (!isAdmin && mySalaryPaymentsData.length > 0) {
+        const paidSalaries = mySalaryPaymentsData.filter((s) => s.status === "paid");
+        if (paidSalaries.length > 0) {
+          const lastPaid = paidSalaries.sort((a, b) => {
+            const dateA = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+            const dateB = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+            return dateB - dateA;
+          })[0];
+          setLastSalaryPayment({
+            date: lastPaid.payment_date,
+            amount: Number(lastPaid.amount || 0),
+          });
+        } else {
+          setLastSalaryPayment(null);
+        }
+      } else {
+        setLastSalaryPayment(null);
       }
 
       let lowStockData: Product[] = [];
@@ -506,6 +765,24 @@ export default function Dashboard() {
                       description="Comissões pagas no mês"
                     />
                   </Link>
+                  <Link to="/financeiro?tab=salaries">
+                    <StatCard
+                      title="Salários a Pagar"
+                      value={formatCurrency(salariesToPay)}
+                      icon={CreditCard}
+                      variant="warning"
+                      description="Total de salários fixos configurados"
+                    />
+                  </Link>
+                  <Link to="/financeiro?tab=salaries">
+                    <StatCard
+                      title="Salários Pagos"
+                      value={formatCurrency(salariesPaid)}
+                      icon={DollarSign}
+                      variant="success"
+                      description="Salários pagos no mês"
+                    />
+                  </Link>
                 </>
               )}
               {!isAdmin && (
@@ -526,6 +803,21 @@ export default function Dashboard() {
                       description="Comissões já pagas neste mês"
                     />
                   </Link>
+                  {mySalaryAmount !== null && (
+                    <Link to="/meus-salarios" className="block [&:hover]:no-underline">
+                      <StatCard
+                        title="Meu Salário"
+                        value={formatCurrency(mySalaryAmount)}
+                        icon={DollarSign}
+                        variant="info"
+                        description={
+                          lastSalaryPayment
+                            ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
+                            : "Salário fixo configurado"
+                        }
+                      />
+                    </Link>
+                  )}
                   <StatCard
                     title="Meu desempenho"
                     value={staffCompletedThisMonth}
