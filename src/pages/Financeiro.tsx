@@ -92,6 +92,16 @@ export default function Financeiro() {
   const [salaries, setSalaries] = useState<any[]>([]);
   const [isLoadingSalaries, setIsLoadingSalaries] = useState(false);
   const [professionals, setProfessionals] = useState<any[]>([]);
+  const [isPaySalaryDialogOpen, setIsPaySalaryDialogOpen] = useState(false);
+  const [selectedSalaryPayment, setSelectedSalaryPayment] = useState<{
+    professionalId: string;
+    professionalName: string;
+    paymentMonth: number;
+    paymentYear: number;
+    salaryAmount: number;
+    defaultPaymentMethod: string;
+  } | null>(null);
+  const [daysWorked, setDaysWorked] = useState<string>("");
   const [productLosses, setProductLosses] = useState<DamagedProductLoss[]>([]);
   const [isLoadingProductLosses, setIsLoadingProductLosses] = useState(true);
 
@@ -372,15 +382,56 @@ export default function Financeiro() {
     const [year, month] = filterMonth.split("-").map(Number);
 
     try {
-      const { data, error } = await supabase.rpc("get_salary_payments", {
+      // Buscar salários já pagos
+      const { data: paidSalaries, error: paidError } = await supabase.rpc("get_salary_payments" as any, {
         p_tenant_id: profile.tenant_id,
         p_professional_id: null,
         p_year: year,
         p_month: month,
       });
 
-      if (error) throw error;
-      setSalaries((data || []) as any[]);
+      if (paidError) throw paidError;
+
+      // Buscar profissionais com salário configurado
+      const { data: professionalsWithSalary, error: professionalsError } = await supabase.rpc("get_professionals_with_salary" as any, {
+        p_tenant_id: profile.tenant_id,
+      });
+
+      if (professionalsError) throw professionalsError;
+
+      // Criar lista combinada: salários pagos + profissionais com salário configurado (pendentes)
+      const paidMap = new Map((paidSalaries || []).map((s: any) => [s.professional_id, s]));
+      const allSalaries: any[] = [];
+
+      // Adicionar salários pagos
+      (paidSalaries || []).forEach((s: any) => {
+        allSalaries.push({
+          ...s,
+          status: "paid",
+        });
+      });
+
+      // Adicionar profissionais com salário configurado que ainda não foram pagos
+      (professionalsWithSalary || []).forEach((p: any) => {
+        if (!paidMap.has(p.professional_id)) {
+          // Calcular dias do mês
+          const daysInMonth = new Date(year, month, 0).getDate();
+          allSalaries.push({
+            id: `pending-${p.professional_id}-${year}-${month}`,
+            professional_id: p.professional_id,
+            professional_name: p.professional_name,
+            payment_month: month,
+            payment_year: year,
+            amount: p.salary_amount,
+            days_in_month: daysInMonth,
+            status: "pending",
+            payment_method: p.default_payment_method,
+            salary_amount: p.salary_amount,
+          });
+        }
+      });
+
+      setSalaries(allSalaries);
     } catch (error) {
       console.error("Error fetching salaries:", error);
       toast.error("Erro ao carregar salários");
@@ -394,7 +445,7 @@ export default function Financeiro() {
 
     try {
       // Buscar profissionais com salário configurado
-      const { data: salaryData } = await supabase.rpc("get_professionals_with_salary", {
+      const { data: salaryData } = await supabase.rpc("get_professionals_with_salary" as any, {
         p_tenant_id: profile.tenant_id,
       });
 
@@ -523,26 +574,54 @@ export default function Financeiro() {
     }
   };
 
-  const handlePaySalary = async (professionalId: string, paymentMonth: number, paymentYear: number, paymentMethod: string, paymentReference?: string) => {
-    if (!profile?.tenant_id) return;
+  const handleOpenPaySalaryDialog = (
+    professionalId: string,
+    professionalName: string,
+    paymentMonth: number,
+    paymentYear: number,
+    salaryAmount: number,
+    defaultPaymentMethod: string
+  ) => {
+    setSelectedSalaryPayment({
+      professionalId,
+      professionalName,
+      paymentMonth,
+      paymentYear,
+      salaryAmount,
+      defaultPaymentMethod,
+    });
+    setDaysWorked("");
+    setIsPaySalaryDialogOpen(true);
+  };
+
+  const handlePaySalary = async () => {
+    if (!profile?.tenant_id || !selectedSalaryPayment) return;
+
+    const daysWorkedNum = daysWorked ? parseInt(daysWorked) : null;
+    
+    if (daysWorkedNum !== null && (daysWorkedNum < 1 || daysWorkedNum > 31)) {
+      toast.error("Dias trabalhados deve estar entre 1 e 31");
+      return;
+    }
 
     try {
-      const { data, error } = await supabase.rpc("pay_salary", {
-        p_professional_id: professionalId,
-        p_payment_month: paymentMonth,
-        p_payment_year: paymentYear,
-        p_payment_method: paymentMethod,
-        p_payment_reference: paymentReference || null,
+      const { data, error } = await supabase.rpc("pay_salary" as any, {
+        p_professional_id: selectedSalaryPayment.professionalId,
+        p_payment_month: selectedSalaryPayment.paymentMonth,
+        p_payment_year: selectedSalaryPayment.paymentYear,
+        p_payment_method: selectedSalaryPayment.defaultPaymentMethod,
+        p_days_worked: daysWorkedNum,
+        p_payment_reference: null,
         p_notes: null,
       });
 
       if (error) throw error;
 
       // Notificar profissional que o salário foi pago
-      const amount = Number(data?.amount || 0);
+      const amount = Number((data as any)?.amount || 0);
       await notifyUser(
         profile.tenant_id,
-        professionalId,
+        selectedSalaryPayment.professionalId,
         "salary_paid",
         "Salário pago",
         `Seu salário de ${formatCurrency(amount)} foi pago.`,
@@ -550,6 +629,10 @@ export default function Financeiro() {
       ).catch(() => {});
 
       toast.success("Salário pago com sucesso! Despesa registrada automaticamente.");
+      
+      setIsPaySalaryDialogOpen(false);
+      setSelectedSalaryPayment(null);
+      setDaysWorked("");
       
       // Aguardar um pouco para garantir que a transação financeira foi criada
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1209,13 +1292,14 @@ export default function Financeiro() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                // Buscar método de pagamento padrão do profissional
                                 const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
-                                const defaultMethod = professional?.default_payment_method || "pix";
-                                handlePaySalary(
+                                const defaultMethod = professional?.default_payment_method || salary.payment_method || "pix";
+                                handleOpenPaySalaryDialog(
                                   salary.professional_id,
+                                  salary.professional_name,
                                   salary.payment_month,
                                   salary.payment_year,
+                                  Number(salary.amount || salary.salary_amount || 0),
                                   defaultMethod
                                 );
                               }}
@@ -1287,11 +1371,13 @@ export default function Financeiro() {
                                     variant="outline"
                                     onClick={() => {
                                       const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
-                                      const defaultMethod = professional?.default_payment_method || "pix";
-                                      handlePaySalary(
+                                      const defaultMethod = professional?.default_payment_method || salary.payment_method || "pix";
+                                      handleOpenPaySalaryDialog(
                                         salary.professional_id,
+                                        salary.professional_name,
                                         salary.payment_month,
                                         salary.payment_year,
+                                        Number(salary.amount || salary.salary_amount || 0),
                                         defaultMethod
                                       );
                                     }}
@@ -1334,6 +1420,74 @@ export default function Financeiro() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog para pagar salário com dias trabalhados */}
+      <Dialog open={isPaySalaryDialogOpen} onOpenChange={setIsPaySalaryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar Salário</DialogTitle>
+            <DialogDescription>
+              {selectedSalaryPayment && (
+                <>
+                  Pagar salário para <strong>{selectedSalaryPayment.professionalName}</strong>
+                  <br />
+                  Período: {String(selectedSalaryPayment.paymentMonth).padStart(2, "0")}/{selectedSalaryPayment.paymentYear}
+                  <br />
+                  Salário mensal: {formatCurrency(selectedSalaryPayment.salaryAmount)}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="days_worked">
+                Quantos dias este funcionário trabalhou neste mês?
+              </Label>
+              <Input
+                id="days_worked"
+                type="number"
+                min="1"
+                max="31"
+                value={daysWorked}
+                onChange={(e) => setDaysWorked(e.target.value)}
+                placeholder="Deixe em branco para pagar o mês completo"
+              />
+              <p className="text-xs text-muted-foreground">
+                {selectedSalaryPayment && (
+                  <>
+                    {(() => {
+                      const daysInMonth = new Date(selectedSalaryPayment.paymentYear, selectedSalaryPayment.paymentMonth, 0).getDate();
+                      const daysWorkedNum = daysWorked ? parseInt(daysWorked) : daysInMonth;
+                      const calculatedAmount = (selectedSalaryPayment.salaryAmount / daysInMonth) * daysWorkedNum;
+                      return `Valor a pagar: ${formatCurrency(calculatedAmount)} (${daysWorkedNum}/${daysInMonth} dias)`;
+                    })()}
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsPaySalaryDialogOpen(false);
+                setSelectedSalaryPayment(null);
+                setDaysWorked("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePaySalary}
+              className="gradient-primary text-primary-foreground"
+            >
+              Confirmar Pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

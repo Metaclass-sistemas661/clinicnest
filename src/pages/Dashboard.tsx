@@ -389,9 +389,21 @@ export default function Dashboard() {
         setStaffMyClientsCount(null);
       }
 
-      // Salários: Admin - calcular total a pagar (soma de todos os salários configurados)
+      // Salários: Admin - calcular total a pagar (soma de todos os salários configurados que ainda não foram pagos)
       if (isAdmin && professionalsWithSalaryData.length > 0) {
-        const totalToPay = professionalsWithSalaryData.reduce((sum, p) => sum + Number(p.salary_amount || 0), 0);
+        // Verificar quais profissionais já foram pagos no mês atual
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const paidProfessionalIds = new Set(
+          salariesPaidData
+            .filter((s) => s.status === "paid" && s.payment_month === currentMonth && s.payment_year === currentYear)
+            .map((s) => s.professional_id)
+        );
+        
+        // Somar apenas salários de profissionais que ainda não foram pagos
+        const totalToPay = professionalsWithSalaryData
+          .filter((p) => !paidProfessionalIds.has(p.professional_id))
+          .reduce((sum, p) => sum + Number(p.salary_amount || 0), 0);
         setSalariesToPay(totalToPay);
       } else {
         setSalariesToPay(0);
