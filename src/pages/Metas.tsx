@@ -147,6 +147,11 @@ export default function Metas() {
     }
   }, [profile?.tenant_id, isAdmin, showArchived]);
 
+  // Debug: log quando tabValue muda
+  useEffect(() => {
+    console.log("[Metas] tabValue mudou para:", tabValue);
+  }, [tabValue]);
+
   const formatValue = (g: GoalWithProgress) => {
     if (g.goal_type === "revenue" || g.goal_type === "product_revenue" || g.goal_type === "ticket_medio")
       return `${formatCurrency(g.current_value)} / ${formatCurrency(g.target_value)}`;
@@ -408,6 +413,17 @@ export default function Metas() {
     
     // Metas de profissionais: tem professional_id (mesmo que também tenha product_id)
     const professionals = toShow.filter((g) => g.professional_id);
+
+    // Debug logs
+    console.log("[Metas] Filtros calculados:", {
+      total: goals.length,
+      active: active.length,
+      archived: archived.length,
+      toShow: toShow.length,
+      general: general.length,
+      products: products.length,
+      professionals: professionals.length,
+    });
 
     return {
       activeGoals: active,
@@ -828,7 +844,10 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "all"}
-            onClick={() => setTabValue("all")}
+            onClick={() => {
+              console.log("[Metas] Clicou em 'Todas', tabValue atual:", tabValue);
+              setTabValue("all");
+            }}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "all" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -839,7 +858,10 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "general"}
-            onClick={() => setTabValue("general")}
+            onClick={() => {
+              console.log("[Metas] Clicou em 'Gerais', tabValue atual:", tabValue);
+              setTabValue("general");
+            }}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "general" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -850,7 +872,10 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "products"}
-            onClick={() => setTabValue("products")}
+            onClick={() => {
+              console.log("[Metas] Clicou em 'Produtos', tabValue atual:", tabValue);
+              setTabValue("products");
+            }}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "products" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -861,7 +886,10 @@ export default function Metas() {
           <button
             role="tab"
             aria-selected={tabValue === "professionals"}
-            onClick={() => setTabValue("professionals")}
+            onClick={() => {
+              console.log("[Metas] Clicou em 'Profissionais', tabValue atual:", tabValue);
+              setTabValue("professionals");
+            }}
             className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2 flex-1 ${
               tabValue === "professionals" ? "bg-background text-foreground shadow-sm" : ""
             }`}
@@ -871,15 +899,15 @@ export default function Metas() {
           </button>
         </div>
 
-        <div className="mt-4" role="tabpanel">
+        <div className="mt-4" role="tabpanel" key={tabValue}>
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="h-32" />
               ))}
             </div>
-          ) : (
-            (() => {
+          ) : (() => {
+              // Determinar qual lista usar baseado no tabValue
               let goalsToRender: GoalWithProgress[] = [];
               let emptyMessage = "";
 
@@ -905,6 +933,21 @@ export default function Metas() {
                   emptyMessage = "Nenhuma meta encontrada";
               }
 
+              console.log("[Metas] Renderizando:", {
+                tabValue,
+                goalsToRenderCount: goalsToRender.length,
+                goalsToShowCount: goalsToShow.length,
+                generalGoalsCount: generalGoals.length,
+                productGoalsCount: productGoals.length,
+                professionalGoalsCount: professionalGoals.length,
+                sampleGoal: goalsToRender[0] ? {
+                  id: goalsToRender[0].id,
+                  name: goalsToRender[0].name,
+                  professional_id: goalsToRender[0].professional_id,
+                  product_id: goalsToRender[0].product_id,
+                } : null,
+              });
+
               if (goalsToRender.length === 0) {
                 return (
                   <Card>
@@ -925,13 +968,15 @@ export default function Metas() {
                 );
               }
 
+              const sortedGoals = filterAndSort(goalsToRender);
+              console.log("[Metas] Goals após filterAndSort:", sortedGoals.length);
+
               return (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filterAndSort(goalsToRender).map(renderGoalCard)}
+                  {sortedGoals.map(renderGoalCard)}
                 </div>
               );
-            })()
-          )}
+            })()}
         </div>
       </div>
 
