@@ -86,8 +86,9 @@ export default function Dashboard() {
         p_professional_user_id: asAdmin ? null : professionalUserId,
       });
       if (error) throw error;
-      const p = Number(data?.pending ?? 0);
-      const paid = Number(data?.paid ?? 0);
+      const result = data as { pending?: number; paid?: number } | null;
+      const p = Number(result?.pending ?? 0);
+      const paid = Number(result?.paid ?? 0);
       return { pending: p, paid };
     } catch {
       if (asAdmin) {
