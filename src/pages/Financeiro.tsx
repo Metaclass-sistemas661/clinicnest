@@ -393,21 +393,203 @@ export default function Financeiro() {
 
     try {
       // Buscar salários já pagos
-      const { data: paidSalaries, error: paidError } = await supabase.rpc("get_salary_payments" as any, {
-        p_tenant_id: profile.tenant_id,
-        p_professional_id: null,
-        p_year: year,
-        p_month: month,
-      });
+      let paidSalaries: any[] = [];
+      try {
+        const { data, error: paidError } = await supabase.rpc("get_salary_payments" as any, {
+          p_tenant_id: profile.tenant_id,
+          p_professional_id: null,
+          p_year: year,
+          p_month: month,
+        });
 
-      if (paidError) throw paidError;
+        if (paidError) {
+          console.error("Error fetching paid salaries:", paidError);
+          // Se o RPC não existe, usar fallback: buscar diretamente da tabela
+          if (paidError.code === '42883' || paidError.message?.includes('does not exist')) {
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from("salary_payments")
+              .select(`
+                id,
+                professional_id,
+                payment_month,
+                payment_year,
+                amount,
+                status,
+                payment_date,
+                payment_method,
+                payment_reference,
+                notes,
+                created_at,
+                updated_at,
+                profiles:professional_id(full_name)
+              `)
+              .eq("tenant_id", profile.tenant_id)
+              .eq("payment_year", year)
+              .eq("payment_month", month);
+            
+            if (!fallbackError && fallbackData) {
+              paidSalaries = fallbackData.map((s: any) => ({
+                id: s.id,
+                professional_id: s.professional_id,
+                professional_name: s.profiles?.full_name || "—",
+                payment_month: s.payment_month,
+                payment_year: s.payment_year,
+                amount: s.amount,
+                status: s.status,
+                payment_date: s.payment_date,
+                payment_method: s.payment_method,
+                payment_reference: s.payment_reference,
+                notes: s.notes,
+                created_at: s.created_at,
+                updated_at: s.updated_at,
+              }));
+            } else {
+              throw paidError;
+            }
+          } else {
+            throw paidError;
+          }
+        } else {
+          paidSalaries = Array.isArray(data) ? data : [];
+        }
+      } catch (rpcError: any) {
+        console.error("RPC get_salary_payments failed, trying direct query:", rpcError);
+        // Fallback: buscar diretamente da tabela
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("salary_payments")
+          .select(`
+            id,
+            professional_id,
+            payment_month,
+            payment_year,
+            amount,
+            status,
+            payment_date,
+            payment_method,
+            payment_reference,
+            notes,
+            created_at,
+            updated_at
+          `)
+          .eq("tenant_id", profile.tenant_id)
+          .eq("payment_year", year)
+          .eq("payment_month", month);
+        
+        if (!fallbackError && fallbackData) {
+          // Buscar nomes dos profissionais separadamente
+          const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))];
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", professionalIds);
+          
+          const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
+          
+          paidSalaries = fallbackData.map((s: any) => ({
+            id: s.id,
+            professional_id: s.professional_id,
+            professional_name: profilesMap.get(s.professional_id) || "—",
+            payment_month: s.payment_month,
+            payment_year: s.payment_year,
+            amount: s.amount,
+            status: s.status,
+            payment_date: s.payment_date,
+            payment_method: s.payment_method,
+            payment_reference: s.payment_reference,
+            notes: s.notes,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+          }));
+        } else {
+          console.error("Fallback also failed:", fallbackError);
+          paidSalaries = [];
+        }
+      }
 
       // Buscar profissionais com salário configurado
-      const { data: professionalsWithSalary, error: professionalsError } = await supabase.rpc("get_professionals_with_salary" as any, {
-        p_tenant_id: profile.tenant_id,
-      });
+      let professionalsWithSalary: any[] = [];
+      try {
+        const { data, error: professionalsError } = await supabase.rpc("get_professionals_with_salary" as any, {
+          p_tenant_id: profile.tenant_id,
+        });
 
-      if (professionalsError) throw professionalsError;
+        if (professionalsError) {
+          console.error("Error fetching professionals with salary:", professionalsError);
+          // Se o RPC não existe, usar fallback: buscar diretamente da tabela
+          if (professionalsError.code === '42883' || professionalsError.message?.includes('does not exist')) {
+            const { data: fallbackData, error: fallbackError } = await supabase
+              .from("professional_commissions")
+              .select(`
+                user_id,
+                salary_amount,
+                salary_payment_day,
+                default_payment_method,
+                id,
+                profiles:user_id(full_name)
+              `)
+              .eq("tenant_id", profile.tenant_id)
+              .eq("payment_type", "salary")
+              .not("salary_amount", "is", null)
+              .gt("salary_amount", 0);
+            
+            if (!fallbackError && fallbackData) {
+              professionalsWithSalary = fallbackData.map((p: any) => ({
+                professional_id: p.user_id,
+                professional_name: p.profiles?.full_name || "—",
+                salary_amount: p.salary_amount,
+                salary_payment_day: p.salary_payment_day,
+                default_payment_method: p.default_payment_method,
+                commission_id: p.id,
+              }));
+            } else {
+              throw professionalsError;
+            }
+          } else {
+            throw professionalsError;
+          }
+        } else {
+          professionalsWithSalary = Array.isArray(data) ? data : [];
+        }
+      } catch (rpcError: any) {
+        console.error("RPC get_professionals_with_salary failed, trying direct query:", rpcError);
+        // Fallback: buscar diretamente da tabela
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("professional_commissions")
+          .select(`
+            user_id,
+            salary_amount,
+            salary_payment_day,
+            default_payment_method,
+            id
+          `)
+          .eq("tenant_id", profile.tenant_id)
+          .eq("payment_type", "salary")
+          .not("salary_amount", "is", null)
+          .gt("salary_amount", 0);
+        
+        if (!fallbackError && fallbackData) {
+          // Buscar nomes dos profissionais separadamente
+          const userIds = fallbackData.map((p: any) => p.user_id);
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", userIds);
+          
+          const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
+          
+          professionalsWithSalary = fallbackData.map((p: any) => ({
+            professional_id: p.user_id,
+            professional_name: profilesMap.get(p.user_id) || "—",
+            salary_amount: p.salary_amount,
+            salary_payment_day: p.salary_payment_day,
+            default_payment_method: p.default_payment_method,
+            commission_id: p.id,
+          }));
+        } else {
+          console.error("Fallback also failed:", fallbackError);
+          professionalsWithSalary = [];
+        }
+      }
 
       // Criar lista combinada: salários pagos + profissionais com salário configurado (pendentes)
       // Criar mapa de profissionais pagos no mês/ano específico
@@ -451,9 +633,17 @@ export default function Financeiro() {
       });
 
       setSalaries(allSalaries);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching salaries:", error);
-      toast.error("Erro ao carregar salários");
+      const errorMessage = error?.message || error?.toString() || "Erro desconhecido ao carregar salários";
+      console.error("Error details:", {
+        message: errorMessage,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      toast.error(`Erro ao carregar salários: ${errorMessage}`);
+      setSalaries([]); // Limpar lista em caso de erro
     } finally {
       setIsLoadingSalaries(false);
     }
