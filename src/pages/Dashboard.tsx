@@ -102,7 +102,7 @@ export default function Dashboard() {
           .eq("tenant_id", tenantId)
           .gte("created_at", startOfMonth(new Date()).toISOString())
           .lte("created_at", endOfMonth(new Date()).toISOString());
-        const rows = data ?? [];
+        const rows = Array.isArray(data) ? data : [];
         const s = (c: { status?: string }) => String(c?.status ?? "").toLowerCase();
         return {
           pending: rows.filter((c) => s(c) === "pending").reduce((a, c) => a + Number(c.amount ?? 0), 0),
@@ -117,7 +117,7 @@ export default function Dashboard() {
           .eq("professional_id", professionalUserId)
           .gte("created_at", startOfMonth(new Date()).toISOString())
           .lte("created_at", endOfMonth(new Date()).toISOString());
-        const rows = data ?? [];
+        const rows = Array.isArray(data) ? data : [];
         const s = (c: { status?: string }) => String(c?.status ?? "").toLowerCase();
         return {
           pending: rows.filter((c) => s(c) === "pending").reduce((a, c) => a + Number(c.amount ?? 0), 0),
@@ -140,42 +140,59 @@ export default function Dashboard() {
         p_professional_user_id: asAdmin ? null : professionalUserId,
       });
       if (error) throw error;
-      const result = data as { pending?: number; paid?: number } | null;
-      const p = Number(result?.pending ?? 0);
-      const paid = Number(result?.paid ?? 0);
+      
+      // Garantir que data seja um objeto válido
+      if (!data || typeof data !== 'object') {
+        throw new Error("Invalid RPC response format");
+      }
+      
+      const result = data as { pending?: number | string; paid?: number | string } | null;
+      const p = Number(result?.pending ?? 0) || 0;
+      const paid = Number(result?.paid ?? 0) || 0;
       return { pending: p, paid };
     } catch (error) {
       console.error("Error fetching salary totals:", error);
       // Fallback: calcular manualmente
       if (asAdmin) {
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-        
-        // Buscar profissionais com salário configurado
-        const { data: professionalsData } = await supabase
-          .from("professional_commissions")
-          .select("user_id, salary_amount")
-          .eq("tenant_id", tenantId)
-          .eq("payment_type", "salary")
-          .not("salary_amount", "is", null)
-          .gt("salary_amount", 0);
-        
-        // Buscar salários pagos no mês
-        const { data: paidSalaries } = await (supabase as any)
-          .from("salary_payments")
-          .select("professional_id, amount")
-          .eq("tenant_id", tenantId)
-          .eq("payment_year", currentYear)
-          .eq("payment_month", currentMonth)
-          .eq("status", "paid");
-        
-        const paidIds = new Set((paidSalaries || []).map((s: any) => s.professional_id));
-        const pending = (professionalsData || [])
-          .filter((p: any) => !paidIds.has(p.user_id))
-          .reduce((sum: number, p: any) => sum + Number(p.salary_amount || 0), 0);
-        const paid = (paidSalaries || [])
-          .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
-        return { pending, paid };
+        try {
+          const currentMonth = new Date().getMonth() + 1;
+          const currentYear = new Date().getFullYear();
+          
+          // Buscar profissionais com salário configurado
+          const { data: professionalsData, error: profError } = await supabase
+            .from("professional_commissions")
+            .select("user_id, salary_amount")
+            .eq("tenant_id", tenantId)
+            .eq("payment_type", "salary")
+            .not("salary_amount", "is", null)
+            .gt("salary_amount", 0);
+          
+          if (profError) throw profError;
+          
+          // Buscar salários pagos no mês
+          const { data: paidSalaries, error: paidError } = await (supabase as any)
+            .from("salary_payments")
+            .select("professional_id, amount")
+            .eq("tenant_id", tenantId)
+            .eq("payment_year", currentYear)
+            .eq("payment_month", currentMonth)
+            .eq("status", "paid");
+          
+          if (paidError) throw paidError;
+          
+          const paidSalariesArray = Array.isArray(paidSalaries) ? paidSalaries : [];
+          const professionalsDataArray = Array.isArray(professionalsData) ? professionalsData : [];
+          const paidIds = new Set(paidSalariesArray.map((s: any) => s.professional_id).filter(Boolean));
+          const pending = professionalsDataArray
+            .filter((p: any) => p.user_id && !paidIds.has(p.user_id))
+            .reduce((sum: number, p: any) => sum + Number(p.salary_amount || 0), 0);
+          const paid = paidSalariesArray
+            .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+          return { pending, paid };
+        } catch (fallbackError) {
+          console.error("Error in salary totals fallback:", fallbackError);
+          return { pending: 0, paid: 0 };
+        }
       } else {
         return { pending: 0, paid: 0 };
       }
@@ -406,7 +423,7 @@ export default function Dashboard() {
 
       let monthlyIncome = 0;
       let monthlyExpenses = 0;
-      if (financialData) {
+      if (financialData && Array.isArray(financialData)) {
         monthlyIncome = financialData
           .filter((t) => t.type === "income")
           .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -417,7 +434,7 @@ export default function Dashboard() {
 
       let dailyIncome = 0;
       let dailyExpenses = 0;
-      if (dailyFinancialData) {
+      if (dailyFinancialData && Array.isArray(dailyFinancialData)) {
         dailyIncome = dailyFinancialData
           .filter((t) => t.type === "income")
           .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -428,7 +445,7 @@ export default function Dashboard() {
       setDailyBalance(dailyIncome - dailyExpenses);
 
       let productLoss = 0;
-      if (productLossesData) {
+      if (productLossesData && Array.isArray(productLossesData)) {
         productLoss = productLossesData.reduce((sum: number, m: any) => {
           const qty = Math.abs(Number(m.quantity) || 0);
           const cost = Number(m.product?.cost) || 0;
@@ -521,7 +538,7 @@ export default function Dashboard() {
       setTodayAppointments(apts);
       setLowStockProducts(lowStockData);
 
-      if (!isAdmin && staffPerformanceData?.length) {
+      if (!isAdmin && Array.isArray(staffPerformanceData) && staffPerformanceData.length > 0) {
         const completed = staffPerformanceData.length;
         const valueGenerated = staffPerformanceData.reduce((sum, a) => sum + Number(a.price || 0), 0);
         setStaffCompletedThisMonth(completed);
