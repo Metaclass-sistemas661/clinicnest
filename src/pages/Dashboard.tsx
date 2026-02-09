@@ -323,7 +323,7 @@ export default function Dashboard() {
         // 8. Total de clientes
         supabase
           .from("clients")
-          .select("*", { count: "exact", head: true })
+          .select("id", { count: "exact" })
           .eq("tenant_id", profile.tenant_id),
         // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
         !isAdmin && profile?.id
@@ -389,7 +389,10 @@ export default function Dashboard() {
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
       const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
       const productLossesData = productLossesResult.data;
-      const clientsCountResult = clientsResult.count ?? 0;
+      // Contagem de clientes: usar count se disponível, senão contar o array de dados
+      const clientsCountResult = clientsResult.count !== null && clientsResult.count !== undefined 
+        ? clientsResult.count 
+        : (Array.isArray(clientsResult.data) ? clientsResult.data.length : 0);
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
       const professionalsWithSalaryData = Array.isArray(professionalsWithSalaryResult?.data) 
