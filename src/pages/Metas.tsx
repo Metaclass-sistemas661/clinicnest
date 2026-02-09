@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -392,16 +392,32 @@ export default function Metas() {
     }
   };
 
-  const activeGoals = goals.filter((g) => !g.archived_at);
-  const archivedGoals = goals.filter((g) => g.archived_at);
+  // Memoizar filtros para evitar recálculos desnecessários
+  const { activeGoals, archivedGoals, goalsToShow, generalGoals, productGoals, professionalGoals } = useMemo(() => {
+    const active = goals.filter((g) => !g.archived_at);
+    const archived = goals.filter((g) => g.archived_at);
+    const toShow = showArchived ? archived : active;
 
-  const goalsToShow = showArchived ? archivedGoals : activeGoals;
+    // Metas gerais: sem profissional E sem produto
+    const general = toShow.filter((g) => !g.professional_id && !g.product_id);
+    
+    // Metas de produtos: tem product_id OU é tipo de meta de produto
+    const products = toShow.filter(
+      (g) => g.product_id || g.goal_type === "product_quantity" || g.goal_type === "product_revenue"
+    );
+    
+    // Metas de profissionais: tem professional_id (mesmo que também tenha product_id)
+    const professionals = toShow.filter((g) => g.professional_id);
 
-  const generalGoals = goalsToShow.filter((g) => !g.professional_id && !g.product_id);
-  const productGoals = goalsToShow.filter(
-    (g) => g.product_id || g.goal_type === "product_quantity" || g.goal_type === "product_revenue"
-  );
-  const professionalGoals = goalsToShow.filter((g) => g.professional_id);
+    return {
+      activeGoals: active,
+      archivedGoals: archived,
+      goalsToShow: toShow,
+      generalGoals: general,
+      productGoals: products,
+      professionalGoals: professionals,
+    };
+  }, [goals, showArchived]);
 
   const filterAndSort = (list: GoalWithProgress[]) => {
     let filtered = list;
@@ -856,64 +872,65 @@ export default function Metas() {
         </div>
 
         <div className="mt-4" role="tabpanel">
-          {tabValue === "all" &&
-            (isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32" />
-                ))}
-              </div>
-            ) : goalsToShow.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
-                  <p className="text-muted-foreground mb-2">
-                    {showArchived ? "Nenhuma meta arquivada" : "Nenhuma meta criada"}
-                  </p>
-                  {!showArchived && (
-                    <Button
-                      onClick={() => setIsDialogOpen(true)}
-                      className="gradient-primary text-primary-foreground"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Criar primeira meta
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filterAndSort(goalsToShow).map(renderGoalCard)}
-              </div>
-            ))}
-
-          {tabValue === "general" && (
+          {isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {generalGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">Nenhuma meta geral</p>
-              )}
-              {filterAndSort(generalGoals).map(renderGoalCard)}
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-32" />
+              ))}
             </div>
-          )}
+          ) : (
+            (() => {
+              let goalsToRender: GoalWithProgress[] = [];
+              let emptyMessage = "";
 
-          {tabValue === "products" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {productGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">Nenhuma meta de produtos</p>
-              )}
-              {filterAndSort(productGoals).map(renderGoalCard)}
-            </div>
-          )}
+              switch (tabValue) {
+                case "all":
+                  goalsToRender = goalsToShow;
+                  emptyMessage = showArchived ? "Nenhuma meta arquivada" : "Nenhuma meta criada";
+                  break;
+                case "general":
+                  goalsToRender = generalGoals;
+                  emptyMessage = "Nenhuma meta geral";
+                  break;
+                case "products":
+                  goalsToRender = productGoals;
+                  emptyMessage = "Nenhuma meta de produtos";
+                  break;
+                case "professionals":
+                  goalsToRender = professionalGoals;
+                  emptyMessage = "Nenhuma meta por profissional";
+                  break;
+                default:
+                  goalsToRender = goalsToShow;
+                  emptyMessage = "Nenhuma meta encontrada";
+              }
 
-          {tabValue === "professionals" && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {professionalGoals.length === 0 && !isLoading && (
-                <p className="col-span-full text-muted-foreground">
-                  Nenhuma meta por profissional
-                </p>
-              )}
-              {filterAndSort(professionalGoals).map(renderGoalCard)}
-            </div>
+              if (goalsToRender.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-16">
+                      <Target className="mb-4 h-14 w-14 text-muted-foreground/50" />
+                      <p className="text-muted-foreground mb-2">{emptyMessage}</p>
+                      {!showArchived && tabValue === "all" && (
+                        <Button
+                          onClick={() => setIsDialogOpen(true)}
+                          className="gradient-primary text-primary-foreground"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Criar primeira meta
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              }
+
+              return (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filterAndSort(goalsToRender).map(renderGoalCard)}
+                </div>
+              );
+            })()
           )}
         </div>
       </div>
