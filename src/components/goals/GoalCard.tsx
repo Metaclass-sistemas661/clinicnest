@@ -120,7 +120,7 @@ export function GoalCard({
               <CardDescription className="flex flex-wrap gap-x-1 gap-y-0.5 text-xs mt-1">
                 <span>{goalTypeLabels[goal.goal_type as GoalType]}</span>
                 <span>·</span>
-                <span>{periodLabels[goal.period as GoalPeriod]</span>
+                <span>{periodLabels[goal.period as GoalPeriod]}</span>
                 {professional && (
                   <>
                     <span>·</span>
