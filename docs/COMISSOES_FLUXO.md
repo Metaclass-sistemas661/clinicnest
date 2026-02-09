@@ -7,15 +7,13 @@
 | **professional_commissions** | Configuração de comissão por profissional (tipo %, valor fixo) – 1 linha por profissional/tenant |
 | **commission_payments** | Registros de comissões geradas – 1 linha por atendimento concluído |
 
-Não é recomendado unificar em uma única tabela: `professional_commissions` guarda regras, `commission_payments` é o histórico. São papéis diferentes.
-
 ---
 
 ## Fluxo esperado
 
 1. **Serviço concluído** → Agenda chama `complete_appointment_with_sale`
 2. **RPC** → Atualiza `appointments.status = 'completed'` e cria registro em `commission_payments`
-3. **Cards** → Dashboard usa `commission_payments` (a pagar / pagas / a receber / recebidas)
+3. **Cards** → Dashboard usa `get_dashboard_commission_totals` (RPC com fallback para query direta)
 4. **Admin** → Em Financeiro > Comissões clica em "Pagar comissão"
 5. **UPDATE** → `commission_payments.status = 'paid'`
 6. **Trigger** → Cria despesa em `financial_transactions`
@@ -36,17 +34,23 @@ Ordem de prioridade:
 
 ---
 
-## Pontos de atenção
+## Identificadores
 
-1. **Migration aplicada?** A migration `20260210000000_create_commission_in_rpc.sql` precisa estar aplicada (SQL Editor ou `supabase db push`).
-2. **Comissão por profissional:** Conferir em Equipe se o profissional tem comissão cadastrada.
-3. **FK:** `commission_payments.professional_id` = `profiles.user_id` (auth), não `profiles.id`.
-4. **Período:** Financeiro filtra por mês (`filterMonth`). Comissões fora desse mês não aparecem.
+- `appointments.professional_id` = `profiles.id` (PK do perfil)
+- `commission_payments.professional_id` = `profiles.user_id` (auth.uid do profissional)
+- `professional_commissions.user_id` = `profiles.user_id` (auth.uid do profissional)
+
+---
+
+## Migrations essenciais
+
+- `20260223000000_commission_system_reset.sql` – RLS, RPC get_dashboard_commission_totals e complete_appointment_with_sale consolidados
 
 ---
 
 ## Diagnóstico rápido
 
-1. Concluir um atendimento de um profissional com comissão configurada.
-2. Verificar em Supabase se existe registro em `commission_payments` para esse `appointment_id`.
-3. Se existir no banco mas não na tela: conferir filtro de mês e se o usuário é admin (admin vê todas; staff só as próprias).
+1. Aplicar migration: `npx supabase db push` ou `npx supabase migration up`
+2. Conferir em Equipe se o profissional tem comissão cadastrada
+3. Concluir atendimento e verificar em Supabase se existe registro em `commission_payments`
+4. Se existir no banco mas não nos cards: verificar se a migration foi aplicada

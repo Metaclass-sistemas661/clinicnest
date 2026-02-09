@@ -74,6 +74,55 @@ export default function Dashboard() {
     return () => window.removeEventListener("focus", onFocus);
   }, [profile?.tenant_id]);
 
+  const fetchCommissionTotals = async (
+    tenantId: string,
+    asAdmin: boolean,
+    professionalUserId: string | null
+  ): Promise<{ pending: number; paid: number }> => {
+    try {
+      const { data, error } = await supabase.rpc("get_dashboard_commission_totals", {
+        p_tenant_id: tenantId,
+        p_is_admin: asAdmin,
+        p_professional_user_id: asAdmin ? null : professionalUserId,
+      });
+      if (error) throw error;
+      const p = Number(data?.pending ?? 0);
+      const paid = Number(data?.paid ?? 0);
+      return { pending: p, paid };
+    } catch {
+      if (asAdmin) {
+        const { data } = await supabase
+          .from("commission_payments")
+          .select("amount, status")
+          .eq("tenant_id", tenantId)
+          .gte("created_at", startOfMonth(new Date()).toISOString())
+          .lte("created_at", endOfMonth(new Date()).toISOString());
+        const rows = data ?? [];
+        const s = (c: { status?: string }) => String(c?.status ?? "").toLowerCase();
+        return {
+          pending: rows.filter((c) => s(c) === "pending").reduce((a, c) => a + Number(c.amount ?? 0), 0),
+          paid: rows.filter((c) => s(c) === "paid").reduce((a, c) => a + Number(c.amount ?? 0), 0),
+        };
+      }
+      if (professionalUserId) {
+        const { data } = await supabase
+          .from("commission_payments")
+          .select("amount, status")
+          .eq("tenant_id", tenantId)
+          .eq("professional_id", professionalUserId)
+          .gte("created_at", startOfMonth(new Date()).toISOString())
+          .lte("created_at", endOfMonth(new Date()).toISOString());
+        const rows = data ?? [];
+        const s = (c: { status?: string }) => String(c?.status ?? "").toLowerCase();
+        return {
+          pending: rows.filter((c) => s(c) === "pending").reduce((a, c) => a + Number(c.amount ?? 0), 0),
+          paid: rows.filter((c) => s(c) === "paid").reduce((a, c) => a + Number(c.amount ?? 0), 0),
+        };
+      }
+    }
+    return { pending: 0, paid: 0 };
+  };
+
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
     const staffUserId = profile?.user_id ?? user?.id;
@@ -153,12 +202,12 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês via RPC (evita RLS/filtro no cliente)
-        supabase.rpc("get_dashboard_commission_totals", {
-          p_tenant_id: profile.tenant_id,
-          p_is_admin: isAdmin,
-          p_professional_user_id: isAdmin ? null : staffUserId ?? null,
-        }),
+        // 6. Comissões do mês (RPC com fallback para query direta)
+        fetchCommissionTotals(
+          profile.tenant_id,
+          isAdmin,
+          isAdmin ? null : staffUserId ?? null
+        ).then((r) => ({ data: r, error: null })),
         // 7. Perdas de produtos (baixas danificadas) do mês
         isAdmin
           ? supabase
@@ -215,9 +264,6 @@ export default function Dashboard() {
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
-      if (commissionsResult.error) {
-        console.warn("[Dashboard:Comissões] Erro ao buscar:", commissionsResult.error);
-      }
       const productLossesData = productLossesResult.data;
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
