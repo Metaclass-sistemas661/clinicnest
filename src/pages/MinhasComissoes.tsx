@@ -126,7 +126,7 @@ export default function MinhasComissoes() {
       Number(c.amount || 0).toFixed(2).replace(".", ","),
       c.status === "paid" ? "Pago" : "Pendente",
       c.status === "paid" && c.payment_date
-        ? format(new Date(c.payment_date), "dd/MM/yyyy")
+        ? formatInAppTz(c.payment_date, "dd/MM/yyyy")
         : "—",
     ]);
     const csvContent = [
@@ -300,7 +300,7 @@ export default function MinhasComissoes() {
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {c.status === "paid" && c.payment_date
-                            ? format(new Date(c.payment_date), "dd/MM/yyyy")
+                            ? formatInAppTz(c.payment_date, "dd/MM/yyyy")
                             : "—"}
                         </TableCell>
                       </TableRow>

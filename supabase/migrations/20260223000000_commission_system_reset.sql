@@ -4,7 +4,11 @@
 -- =============================================================================
 
 -- 1. Garantir política INSERT em commission_payments permite staff criar própria comissão
-DROP POLICY IF EXISTS "Sistema e admins podem criar pagamentos de comissão" ON public.commission_payments;
+DO $$ 
+BEGIN
+  DROP POLICY IF EXISTS "Sistema e admins podem criar pagamentos de comissão" ON public.commission_payments;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 CREATE POLICY "Sistema e admins podem criar pagamentos de comissão"
   ON public.commission_payments FOR INSERT
   WITH CHECK (
