@@ -245,6 +245,26 @@ export default function Dashboard() {
           .from("clients")
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id),
+        // 9. Staff: desempenho do mês (serviços concluídos, valor gerado)
+        !isAdmin && profile?.id
+          ? supabase
+              .from("appointments")
+              .select("id, price, status")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.id)
+              .eq("status", "completed")
+              .gte("scheduled_at", monthStart)
+              .lte("scheduled_at", monthEnd)
+          : Promise.resolve({ data: null }),
+        // 10. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
+        !isAdmin && profile?.id
+          ? supabase
+              .from("appointments")
+              .select("client_id")
+              .eq("tenant_id", profile.tenant_id)
+              .eq("professional_id", profile.id)
+              .not("client_id", "is", null)
+          : Promise.resolve({ data: null }),
         // 11. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
           ? supabase.rpc("get_professionals_with_salary", {
@@ -279,154 +299,6 @@ export default function Dashboard() {
               p_month: null,
             })
           : Promise.resolve({ data: null }),
-        // 13. Staff: configuração de salário fixo
-        !isAdmin && profile?.user_id
-          ? supabase
-              .from("professional_commissions")
-              .select("salary_amount")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("user_id", profile.user_id)
-              .eq("payment_type", "salary")
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-        // 14. Staff: último pagamento de salário
-        !isAdmin && profile?.user_id
-          ? supabase.rpc("get_salary_payments", {
-              p_tenant_id: profile.tenant_id,
-              p_professional_id: profile.user_id,
-              p_year: null,
-              p_month: null,
-            })
-          : Promise.resolve({ data: null }),
-      ]);
-
-      const [
-        financialResult,
-        dailyFinancialResult,
-        appointmentsResult,
-        pendingResult,
-        productsResult,
-        commissionsResult,
-        productLossesResult,
-        clientsResult,
-        staffPerformanceResult,
-        staffMyClientsResult,
-        professionalsWithSalaryResult,
-        salariesPaidResult,
-        mySalaryConfigResult,
-        mySalaryPaymentsResult,
-      ] = await Promise.all([
-        // ... existing promises ...
-        supabase
-          .from("financial_transactions")
-          .select("*")
-          .eq("tenant_id", profile.tenant_id)
-          .gte("transaction_date", format(monthStart, "yyyy-MM-dd"))
-          .lte("transaction_date", format(monthEnd, "yyyy-MM-dd")),
-        supabase
-          .from("financial_transactions")
-          .select("*")
-          .eq("tenant_id", profile.tenant_id)
-          .gte("transaction_date", format(startOfDay(new Date()), "yyyy-MM-dd"))
-          .lte("transaction_date", format(endOfDay(new Date()), "yyyy-MM-dd")),
-        supabase
-          .from("appointments")
-          .select("*")
-          .eq("tenant_id", profile.tenant_id)
-          .gte("scheduled_at", startOfDay(new Date()).toISOString())
-          .lte("scheduled_at", endOfDay(new Date()).toISOString())
-          .order("scheduled_at", { ascending: true }),
-        supabase
-          .from("appointments")
-          .select("*", { count: "exact", head: true })
-          .eq("tenant_id", profile.tenant_id)
-          .eq("status", "pending"),
-        isAdmin
-          ? supabase
-              .from("products")
-              .select("id,tenant_id,name,description,cost,quantity,min_quantity,is_active,created_at,updated_at")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("is_active", true)
-          : Promise.resolve({ data: null }),
-        fetchCommissionTotals(
-          profile.tenant_id,
-          isAdmin,
-          isAdmin ? null : staffUserId ?? null
-        ).then((r) => ({ data: r, error: null })),
-        isAdmin
-          ? supabase
-              .from("stock_movements")
-              .select(
-                `
-                  id,
-                  product_id,
-                  quantity,
-                  reason,
-                  created_at,
-                  movement_type,
-                  out_reason_type,
-                  product:products(name, cost)
-                `
-              )
-              .eq("tenant_id", profile.tenant_id)
-              .eq("movement_type", "out")
-              .eq("out_reason_type", "damaged")
-              .gte("created_at", monthStart)
-              .lte("created_at", monthEnd)
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: null }),
-        supabase
-          .from("clients")
-          .select("*", { count: "exact", head: true })
-          .eq("tenant_id", profile.tenant_id),
-        !isAdmin && profile?.id
-          ? supabase
-              .from("appointments")
-              .select("id, price, status")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("professional_id", profile.id)
-              .eq("status", "completed")
-              .gte("scheduled_at", monthStart)
-              .lte("scheduled_at", monthEnd)
-          : Promise.resolve({ data: null }),
-        !isAdmin && profile?.id
-          ? supabase
-              .from("appointments")
-              .select("client_id")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("professional_id", profile.id)
-              .not("client_id", "is", null)
-          : Promise.resolve({ data: null }),
-        isAdmin
-          ? supabase.rpc("get_professionals_with_salary", {
-              p_tenant_id: profile.tenant_id,
-            })
-          : Promise.resolve({ data: null }),
-        isAdmin
-          ? supabase.rpc("get_salary_payments", {
-              p_tenant_id: profile.tenant_id,
-              p_professional_id: null,
-              p_year: new Date().getFullYear(),
-              p_month: new Date().getMonth() + 1,
-            })
-          : Promise.resolve({ data: null }),
-        !isAdmin && profile?.user_id
-          ? supabase
-              .from("professional_commissions")
-              .select("salary_amount")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("user_id", profile.user_id)
-              .eq("payment_type", "salary")
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-        !isAdmin && profile?.user_id
-          ? supabase.rpc("get_salary_payments", {
-              p_tenant_id: profile.tenant_id,
-              p_professional_id: profile.user_id,
-              p_year: null,
-              p_month: null,
-            })
-          : Promise.resolve({ data: null }),
       ]);
 
       const financialData = financialResult.data;
@@ -439,28 +311,6 @@ export default function Dashboard() {
       const clientsCountResult = clientsResult.count ?? 0;
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
-      const professionalsWithSalaryData = (professionalsWithSalaryResult?.data || []) as Array<{
-        professional_id: string;
-        professional_name: string;
-        salary_amount: number;
-        salary_payment_day: number;
-        default_payment_method: string;
-        commission_id: string;
-      }>;
-      const salariesPaidData = (salariesPaidResult?.data || []) as Array<{
-        id: string;
-        professional_id: string;
-        amount: number;
-        status: string;
-        payment_date: string | null;
-      }>;
-      const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
-      const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
-        id: string;
-        amount: number;
-        status: string;
-        payment_date: string | null;
-      }>;
       const professionalsWithSalaryData = (professionalsWithSalaryResult?.data || []) as Array<{
         professional_id: string;
         professional_name: string;
