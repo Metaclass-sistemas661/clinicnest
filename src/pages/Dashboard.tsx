@@ -128,6 +128,60 @@ export default function Dashboard() {
     return { pending: 0, paid: 0 };
   };
 
+  const fetchSalaryTotals = async (
+    tenantId: string,
+    asAdmin: boolean,
+    professionalUserId: string | null
+  ): Promise<{ pending: number; paid: number }> => {
+    try {
+      const { data, error } = await supabase.rpc("get_dashboard_salary_totals" as any, {
+        p_tenant_id: tenantId,
+        p_is_admin: asAdmin,
+        p_professional_user_id: asAdmin ? null : professionalUserId,
+      });
+      if (error) throw error;
+      const result = data as { pending?: number; paid?: number } | null;
+      const p = Number(result?.pending ?? 0);
+      const paid = Number(result?.paid ?? 0);
+      return { pending: p, paid };
+    } catch (error) {
+      console.error("Error fetching salary totals:", error);
+      // Fallback: calcular manualmente
+      if (asAdmin) {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        
+        // Buscar profissionais com salário configurado
+        const { data: professionalsData } = await supabase
+          .from("professional_commissions")
+          .select("user_id, salary_amount")
+          .eq("tenant_id", tenantId)
+          .eq("payment_type", "salary")
+          .not("salary_amount", "is", null)
+          .gt("salary_amount", 0);
+        
+        // Buscar salários pagos no mês
+        const { data: paidSalaries } = await (supabase as any)
+          .from("salary_payments")
+          .select("professional_id, amount")
+          .eq("tenant_id", tenantId)
+          .eq("payment_year", currentYear)
+          .eq("payment_month", currentMonth)
+          .eq("status", "paid");
+        
+        const paidIds = new Set((paidSalaries || []).map((s: any) => s.professional_id));
+        const pending = (professionalsData || [])
+          .filter((p: any) => !paidIds.has(p.user_id))
+          .reduce((sum: number, p: any) => sum + Number(p.salary_amount || 0), 0);
+        const paid = (paidSalaries || [])
+          .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+        return { pending, paid };
+      } else {
+        return { pending: 0, paid: 0 };
+      }
+    }
+  };
+
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
     const staffUserId = profile?.user_id ?? user?.id;

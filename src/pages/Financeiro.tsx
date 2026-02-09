@@ -406,7 +406,7 @@ export default function Financeiro() {
           console.error("Error fetching paid salaries:", paidError);
           // Se o RPC não existe, usar fallback: buscar diretamente da tabela
           if (paidError.code === '42883' || paidError.message?.includes('does not exist')) {
-            const { data: fallbackData, error: fallbackError } = await supabase
+            const { data: fallbackData, error: fallbackError } = await (supabase as any)
               .from("salary_payments")
               .select(`
                 id,
@@ -420,18 +420,26 @@ export default function Financeiro() {
                 payment_reference,
                 notes,
                 created_at,
-                updated_at,
-                profiles:professional_id(full_name)
+                updated_at
               `)
               .eq("tenant_id", profile.tenant_id)
               .eq("payment_year", year)
               .eq("payment_month", month);
             
             if (!fallbackError && fallbackData) {
+              // Buscar nomes dos profissionais separadamente
+              const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))] as string[];
+              const { data: profilesData } = await supabase
+                .from("profiles")
+                .select("user_id, full_name")
+                .in("user_id", professionalIds);
+              
+              const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
+              
               paidSalaries = fallbackData.map((s: any) => ({
                 id: s.id,
                 professional_id: s.professional_id,
-                professional_name: s.profiles?.full_name || "—",
+                professional_name: profilesMap.get(s.professional_id) || "—",
                 payment_month: s.payment_month,
                 payment_year: s.payment_year,
                 amount: s.amount,
@@ -455,7 +463,7 @@ export default function Financeiro() {
       } catch (rpcError: any) {
         console.error("RPC get_salary_payments failed, trying direct query:", rpcError);
         // Fallback: buscar diretamente da tabela
-        const { data: fallbackData, error: fallbackError } = await supabase
+        const { data: fallbackData, error: fallbackError } = await (supabase as any)
           .from("salary_payments")
           .select(`
             id,
@@ -477,7 +485,7 @@ export default function Financeiro() {
         
         if (!fallbackError && fallbackData) {
           // Buscar nomes dos profissionais separadamente
-          const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))];
+          const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))].filter((id: any): id is string => typeof id === 'string');
           const { data: profilesData } = await supabase
             .from("profiles")
             .select("user_id, full_name")
@@ -509,7 +517,7 @@ export default function Financeiro() {
       // Buscar profissionais com salário configurado
       let professionalsWithSalary: any[] = [];
       try {
-        const { data, error: professionalsError } = await supabase.rpc("get_professionals_with_salary" as any, {
+        const { data, error: professionalsError } = await (supabase.rpc as any)("get_professionals_with_salary", {
           p_tenant_id: profile.tenant_id,
         });
 
@@ -517,25 +525,28 @@ export default function Financeiro() {
           console.error("Error fetching professionals with salary:", professionalsError);
           // Se o RPC não existe, usar fallback: buscar diretamente da tabela
           if (professionalsError.code === '42883' || professionalsError.message?.includes('does not exist')) {
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from("professional_commissions")
-              .select(`
-                user_id,
-                salary_amount,
-                salary_payment_day,
-                default_payment_method,
-                id,
-                profiles:user_id(full_name)
-              `)
+            const queryResult = await (supabase.from("professional_commissions") as any)
+              .select("user_id, salary_amount, salary_payment_day, default_payment_method, id")
               .eq("tenant_id", profile.tenant_id)
               .eq("payment_type", "salary")
               .not("salary_amount", "is", null)
               .gt("salary_amount", 0);
+            const fallbackData = queryResult.data;
+            const fallbackError = queryResult.error;
             
             if (!fallbackError && fallbackData) {
+              // Buscar nomes dos profissionais separadamente
+              const userIds = fallbackData.map((p: any) => p.user_id);
+              const { data: profilesData } = await supabase
+                .from("profiles")
+                .select("user_id, full_name")
+                .in("user_id", userIds);
+              
+              const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
+              
               professionalsWithSalary = fallbackData.map((p: any) => ({
                 professional_id: p.user_id,
-                professional_name: p.profiles?.full_name || "—",
+                professional_name: profilesMap.get(p.user_id) || "—",
                 salary_amount: p.salary_amount,
                 salary_payment_day: p.salary_payment_day,
                 default_payment_method: p.default_payment_method,
@@ -553,19 +564,14 @@ export default function Financeiro() {
       } catch (rpcError: any) {
         console.error("RPC get_professionals_with_salary failed, trying direct query:", rpcError);
         // Fallback: buscar diretamente da tabela
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("professional_commissions")
-          .select(`
-            user_id,
-            salary_amount,
-            salary_payment_day,
-            default_payment_method,
-            id
-          `)
+        const queryResult = await (supabase.from("professional_commissions") as any)
+          .select("user_id, salary_amount, salary_payment_day, default_payment_method, id")
           .eq("tenant_id", profile.tenant_id)
           .eq("payment_type", "salary")
           .not("salary_amount", "is", null)
           .gt("salary_amount", 0);
+        const fallbackData = queryResult.data;
+        const fallbackError = queryResult.error;
         
         if (!fallbackError && fallbackData) {
           // Buscar nomes dos profissionais separadamente
