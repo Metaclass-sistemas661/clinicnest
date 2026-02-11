@@ -312,6 +312,147 @@ export type Database = {
         }
         Relationships: []
       }
+      lgpd_data_requests: {
+        Row: {
+          assigned_admin_user_id: string | null
+          created_at: string
+          id: string
+          request_details: string | null
+          request_type: string
+          requester_email: string | null
+          requester_user_id: string
+          requested_at: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          request_details?: string | null
+          request_type: string
+          requester_email?: string | null
+          requester_user_id: string
+          requested_at?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_admin_user_id?: string | null
+          created_at?: string
+          id?: string
+          request_details?: string | null
+          request_type?: string
+          requester_email?: string | null
+          requester_user_id?: string
+          requested_at?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_data_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lgpd_retention_policies: {
+        Row: {
+          audit_log_retention_days: number
+          auto_cleanup_enabled: boolean
+          client_data_retention_days: number
+          created_at: string
+          created_by: string | null
+          financial_data_retention_days: number
+          last_reviewed_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          audit_log_retention_days?: number
+          auto_cleanup_enabled?: boolean
+          client_data_retention_days?: number
+          created_at?: string
+          created_by?: string | null
+          financial_data_retention_days?: number
+          last_reviewed_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          audit_log_retention_days?: number
+          auto_cleanup_enabled?: boolean
+          client_data_retention_days?: number
+          created_at?: string
+          created_by?: string | null
+          financial_data_retention_days?: number
+          last_reviewed_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lgpd_retention_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           amount: number
@@ -1212,6 +1353,16 @@ export type Database = {
               target_value: number
             }[]
           }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_entity_id?: string
+          p_entity_type: string
+          p_metadata?: Json
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       get_user_tenant_id: { Args: { p_user_id: string }; Returns: string }
       has_role: {
         Args: {

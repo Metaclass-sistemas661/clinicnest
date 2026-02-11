@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Lock, Bell } from "lucide-react";
+import { Loader2, User, Lock, Bell, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -35,15 +37,56 @@ const DEFAULT_PREFS: NotificationPrefs = {
   commission_paid: true,
 };
 
+type LgpdRequestType =
+  | "access"
+  | "correction"
+  | "deletion"
+  | "portability"
+  | "consent_revocation"
+  | "opposition";
+
+type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
+
+interface LgpdDataRequest {
+  id: string;
+  request_type: LgpdRequestType;
+  request_details: string | null;
+  status: LgpdRequestStatus;
+  requested_at: string;
+  resolved_at: string | null;
+  resolution_notes: string | null;
+}
+
+const lgpdRequestTypeLabel: Record<LgpdRequestType, string> = {
+  access: "Acesso aos dados",
+  correction: "Correção de dados",
+  deletion: "Eliminação de dados",
+  portability: "Portabilidade",
+  consent_revocation: "Revogação de consentimento",
+  opposition: "Oposição ao tratamento",
+};
+
+const lgpdStatusLabel: Record<LgpdRequestStatus, string> = {
+  pending: "Pendente",
+  in_progress: "Em andamento",
+  completed: "Concluída",
+  rejected: "Rejeitada",
+};
+
 export default function MinhasConfiguracoes() {
   const { profile, user, refreshProfile } = useAuth();
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const [isSubmittingLgpdRequest, setIsSubmittingLgpdRequest] = useState(false);
+  const [isLoadingLgpdRequests, setIsLoadingLgpdRequests] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
+  const [lgpdRequestType, setLgpdRequestType] = useState<LgpdRequestType>("access");
+  const [lgpdRequestDetails, setLgpdRequestDetails] = useState("");
+  const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
 
   useEffect(() => {
     setPhone(profile?.phone ?? "");
@@ -70,6 +113,32 @@ export default function MinhasConfiguracoes() {
           });
         }
       });
+  }, [user?.id]);
+
+  const fetchLgpdRequests = async () => {
+    if (!user?.id) return;
+    setIsLoadingLgpdRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from("lgpd_data_requests")
+        .select("id, request_type, request_details, status, requested_at, resolved_at, resolution_notes")
+        .eq("requester_user_id", user.id)
+        .order("requested_at", { ascending: false });
+
+      if (error) throw error;
+      setLgpdRequests((data || []) as LgpdDataRequest[]);
+    } catch (e) {
+      logger.error(e);
+      toast.error("Não foi possível carregar suas solicitações LGPD");
+    } finally {
+      setIsLoadingLgpdRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchLgpdRequests();
+    }
   }, [user?.id]);
 
   const handleSaveProfile = async (e?: React.FormEvent) => {
@@ -142,6 +211,46 @@ export default function MinhasConfiguracoes() {
     }
   };
 
+  const handleCreateLgpdRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id || !profile?.tenant_id) return;
+
+    const details = lgpdRequestDetails.trim();
+    if (!details) {
+      toast.error("Descreva sua solicitação LGPD");
+      return;
+    }
+
+    setIsSubmittingLgpdRequest(true);
+    try {
+      const { error } = await supabase.from("lgpd_data_requests").insert({
+        tenant_id: profile.tenant_id,
+        requester_user_id: user.id,
+        requester_email: user.email ?? null,
+        request_type: lgpdRequestType,
+        request_details: details,
+      });
+
+      if (error) throw error;
+
+      setLgpdRequestDetails("");
+      setLgpdRequestType("access");
+      toast.success("Solicitação LGPD enviada com sucesso");
+      await fetchLgpdRequests();
+    } catch (e) {
+      logger.error(e);
+      toast.error("Erro ao enviar solicitação LGPD");
+    } finally {
+      setIsSubmittingLgpdRequest(false);
+    }
+  };
+
+  const getLgpdStatusVariant = (status: LgpdRequestStatus): "secondary" | "default" | "destructive" => {
+    if (status === "completed") return "default";
+    if (status === "rejected") return "destructive";
+    return "secondary";
+  };
+
   return (
     <MainLayout title="Minhas Configurações" subtitle="Gerencie seu perfil e preferências">
       <div className="grid w-full gap-6 xl:grid-cols-3">
@@ -149,7 +258,7 @@ export default function MinhasConfiguracoes() {
           <CardHeader>
             <CardTitle>Minhas Configurações</CardTitle>
             <CardDescription>
-              Dados pessoais e alteração de senha
+              Dados pessoais, segurança e solicitações LGPD
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -219,6 +328,99 @@ export default function MinhasConfiguracoes() {
                   </Button>
                 </div>
               </form>
+            </section>
+
+            <Separator />
+
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Direitos do titular (LGPD)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Solicite acesso, correção, portabilidade, eliminação, oposição ou revogação de
+                consentimento. O administrador do seu salão acompanha e responde por aqui.
+              </p>
+
+              <form onSubmit={handleCreateLgpdRequest} className="space-y-3 rounded-lg border border-border/70 p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="lgpd-request-type">Tipo de solicitação</Label>
+                  <select
+                    id="lgpd-request-type"
+                    value={lgpdRequestType}
+                    onChange={(e) => setLgpdRequestType(e.target.value as LgpdRequestType)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    {Object.entries(lgpdRequestTypeLabel).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lgpd-request-details">Descrição</Label>
+                  <Textarea
+                    id="lgpd-request-details"
+                    placeholder="Descreva sua solicitação e, se necessário, quais dados deseja tratar."
+                    value={lgpdRequestDetails}
+                    onChange={(e) => setLgpdRequestDetails(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" disabled={isSubmittingLgpdRequest}>
+                    {isSubmittingLgpdRequest ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Enviar solicitação
+                  </Button>
+                </div>
+              </form>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Minhas solicitações
+                </p>
+                {isLoadingLgpdRequests ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando solicitações...
+                  </div>
+                ) : lgpdRequests.length === 0 ? (
+                  <div className="rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
+                    Você ainda não abriu nenhuma solicitação LGPD.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {lgpdRequests.map((request) => (
+                      <div key={request.id} className="rounded-lg border border-border/70 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {lgpdRequestTypeLabel[request.request_type]}
+                          </p>
+                          <Badge variant={getLgpdStatusVariant(request.status)}>
+                            {lgpdStatusLabel[request.status]}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Abertura: {new Date(request.requested_at).toLocaleString("pt-BR")}
+                        </p>
+                        {request.request_details ? (
+                          <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                            {request.request_details}
+                          </p>
+                        ) : null}
+                        {request.resolution_notes ? (
+                          <p className="mt-2 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground whitespace-pre-wrap">
+                            Resposta do administrador: {request.resolution_notes}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </section>
           </CardContent>
         </Card>
