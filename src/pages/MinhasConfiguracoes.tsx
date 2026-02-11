@@ -144,8 +144,8 @@ export default function MinhasConfiguracoes() {
 
   return (
     <MainLayout title="Minhas Configurações" subtitle="Gerencie seu perfil e preferências">
-      <div className="w-full max-w-2xl">
-        <Card>
+      <div className="grid w-full gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>Minhas Configurações</CardTitle>
             <CardDescription>
@@ -159,7 +159,7 @@ export default function MinhasConfiguracoes() {
                 <User className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Dados pessoais</h3>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
                   <Label>E-mail</Label>
                   <Input value={user?.email ?? ""} disabled className="bg-muted" />
@@ -176,10 +176,12 @@ export default function MinhasConfiguracoes() {
                   />
                 </div>
               </div>
-              <Button onClick={handleSaveProfile} disabled={isSavingProfile} size="sm">
-                {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Salvar telefone
-              </Button>
+              <div className="flex justify-end">
+                <Button onClick={handleSaveProfile} disabled={isSavingProfile} size="sm">
+                  {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Salvar telefone
+                </Button>
+              </div>
             </section>
 
             <Separator />
@@ -190,7 +192,7 @@ export default function MinhasConfiguracoes() {
                 <Lock className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Alterar senha</h3>
               </div>
-              <form onSubmit={handleChangePassword} className="grid gap-4 sm:grid-cols-2">
+              <form onSubmit={handleChangePassword} className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Nova senha</Label>
                   <Input
@@ -210,7 +212,7 @@ export default function MinhasConfiguracoes() {
                     placeholder="Repita a senha"
                   />
                 </div>
-                <div className="sm:col-span-2">
+                <div className="lg:col-span-2 flex justify-end">
                   <Button type="submit" disabled={isSavingPassword} size="sm">
                     {isSavingPassword ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Alterar senha
@@ -218,53 +220,54 @@ export default function MinhasConfiguracoes() {
                 </div>
               </form>
             </section>
+          </CardContent>
+        </Card>
 
-            <Separator />
-
-            {/* Preferências de notificação */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold">Notificações</h3>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/notificacoes">Ver notificações</Link>
-                </Button>
+        <Card className="h-fit xl:col-span-1">
+          <CardHeader className="space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" />
+                <CardTitle className="text-base">Notificações</CardTitle>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Escolha quais notificações deseja receber.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { key: "appointment_created" as const, label: "Novo agendamento para mim" },
-                  { key: "appointment_completed" as const, label: "Atendimento concluído (por admin)" },
-                  { key: "appointment_cancelled" as const, label: "Agendamento cancelado" },
-                  { key: "goal_approved" as const, label: "Meta sugerida aprovada" },
-                  { key: "goal_rejected" as const, label: "Meta sugerida rejeitada" },
-                  { key: "goal_reminder" as const, label: "Meta quase alcançada (80%+)" },
-                  { key: "goal_reached" as const, label: "Meta alcançada" },
-                  { key: "commission_paid" as const, label: "Comissão paga" },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <Label htmlFor={key} className="cursor-pointer text-sm">
-                      {label}
-                    </Label>
-                    <Switch
-                      id={key}
-                      checked={prefs[key]}
-                      onCheckedChange={(checked) =>
-                        setPrefs((p) => ({ ...p, [key]: checked }))
-                      }
-                    />
-                  </div>
-                ))}
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/notificacoes">Ver notificações</Link>
+              </Button>
+            </div>
+            <CardDescription>
+              Escolha quais notificações deseja receber.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[
+              { key: "appointment_created" as const, label: "Novo agendamento para mim" },
+              { key: "appointment_completed" as const, label: "Atendimento concluído (por admin)" },
+              { key: "appointment_cancelled" as const, label: "Agendamento cancelado" },
+              { key: "goal_approved" as const, label: "Meta sugerida aprovada" },
+              { key: "goal_rejected" as const, label: "Meta sugerida rejeitada" },
+              { key: "goal_reminder" as const, label: "Meta quase alcançada (80%+)" },
+              { key: "goal_reached" as const, label: "Meta alcançada" },
+              { key: "commission_paid" as const, label: "Comissão paga" },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5">
+                <Label htmlFor={key} className="cursor-pointer text-sm leading-snug">
+                  {label}
+                </Label>
+                <Switch
+                  id={key}
+                  checked={prefs[key]}
+                  onCheckedChange={(checked) =>
+                    setPrefs((p) => ({ ...p, [key]: checked }))
+                  }
+                />
               </div>
+            ))}
+            <div className="flex justify-end pt-1">
               <Button onClick={handleSavePrefs} disabled={isSavingPrefs} size="sm">
                 {isSavingPrefs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Salvar preferências
               </Button>
-            </section>
+            </div>
           </CardContent>
         </Card>
       </div>
