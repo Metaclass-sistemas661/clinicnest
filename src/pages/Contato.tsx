@@ -49,7 +49,7 @@ export default function Contato() {
 
   return (
     <LandingLayout>
-      <div className="pt-24 pb-16">
+      <div className="pb-16">
         {/* Hero */}
         <section className="relative py-16 overflow-hidden">
           <div
