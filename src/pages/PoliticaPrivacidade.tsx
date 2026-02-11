@@ -6,7 +6,7 @@ import { openCookieConsentPreferences } from "@/lib/cookieConsent";
 export default function PoliticaPrivacidade() {
   return (
     <LandingLayout>
-      <div className="pt-24 pb-16">
+      <div className="pb-16">
         <section className="relative py-16 overflow-hidden">
           <div
             className="absolute inset-0 opacity-90"
