@@ -53,28 +53,49 @@ export default function CanalLgpd() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("submit-contact-message", {
-        body: {
+      let notificationSent = true;
+      try {
+        const { data, error } = await supabase.functions.invoke("submit-contact-message", {
+          body: {
+            name,
+            email,
+            message: details,
+            channel: "lgpd",
+            requestType,
+            termsAccepted: consentAccepted,
+            privacyAccepted: consentAccepted,
+          },
+        });
+
+        if (error) throw error;
+        if (!data?.success) {
+          throw new Error(data?.error || data?.message || "Erro ao enviar solicitação LGPD.");
+        }
+
+        notificationSent = data?.notificationSent !== false;
+      } catch (invokeError) {
+        logger.warn(
+          "Falha no envio LGPD por Edge Function. Aplicando fallback para gravação direta.",
+          invokeError
+        );
+        const { error: fallbackError } = await supabase.from("contact_messages").insert({
           name,
           email,
-          message: details,
-          channel: "lgpd",
-          requestType,
-          termsAccepted: consentAccepted,
-          privacyAccepted: consentAccepted,
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.success) {
-        throw new Error(data?.error || data?.message || "Erro ao enviar solicitação LGPD.");
+          subject: `Canal LGPD - ${lgpdTypeLabel[requestType]}`,
+          message: `Solicitação recebida pelo Canal LGPD.\nTipo: ${lgpdTypeLabel[requestType]}\n\nDetalhes:\n${details}`,
+          terms_accepted: true,
+          privacy_accepted: true,
+          consented_at: new Date().toISOString(),
+        });
+        if (fallbackError) throw fallbackError;
+        notificationSent = false;
       }
 
       setSubmitted(true);
       setConsentAccepted(false);
       form.reset();
       setRequestType("access");
-      if (data?.notificationSent === false) {
+      if (!notificationSent) {
         toast.success("Solicitação LGPD registrada com sucesso!", {
           description: "A notificação por e-mail está temporariamente indisponível.",
         });
