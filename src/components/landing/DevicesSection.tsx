@@ -1,4 +1,4 @@
-import { Monitor, Tablet, Smartphone, Globe } from "lucide-react";
+import { Monitor, Tablet, Smartphone, Globe, Wifi } from "lucide-react";
 
 const devices = [
   {
