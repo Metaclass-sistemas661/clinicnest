@@ -38,11 +38,12 @@ export default function CanalLgpd() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const name = String(formData.get("name") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
     const email = String(formData.get("email") || "").trim();
     const details = String(formData.get("details") || "").trim();
 
-    if (!name || !email || !details) {
-      toast.error("Preencha nome, e-mail e detalhes da solicitação.");
+    if (!name || !phone || !email || !details) {
+      toast.error("Preencha nome, celular, e-mail e detalhes da solicitação.");
       return;
     }
 
@@ -58,6 +59,7 @@ export default function CanalLgpd() {
         const { data, error } = await supabase.functions.invoke("submit-contact-message", {
           body: {
             name,
+            phone,
             email,
             message: details,
             channel: "lgpd",
@@ -82,7 +84,7 @@ export default function CanalLgpd() {
           name,
           email,
           subject: `Canal LGPD - ${lgpdTypeLabel[requestType]}`,
-          message: `Solicitação recebida pelo Canal LGPD.\nTipo: ${lgpdTypeLabel[requestType]}\n\nDetalhes:\n${details}`,
+          message: `Solicitação recebida pelo Canal LGPD.\nTipo: ${lgpdTypeLabel[requestType]}\nCelular: ${phone}\n\nDetalhes:\n${details}`,
           terms_accepted: true,
           privacy_accepted: true,
           consented_at: new Date().toISOString(),
@@ -222,16 +224,29 @@ export default function CanalLgpd() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="lgpd-email">E-mail</Label>
+                          <Label htmlFor="lgpd-phone">Celular</Label>
                           <Input
-                            id="lgpd-email"
-                            name="email"
-                            type="email"
-                            placeholder="seu@email.com"
+                            id="lgpd-phone"
+                            name="phone"
+                            type="tel"
+                            inputMode="tel"
+                            placeholder="(11) 99999-9999"
                             required
                             className="border-violet-100 focus:ring-violet-500"
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="lgpd-email">E-mail</Label>
+                        <Input
+                          id="lgpd-email"
+                          name="email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          required
+                          className="border-violet-100 focus:ring-violet-500"
+                        />
                       </div>
 
                       <div className="space-y-2">
@@ -298,7 +313,7 @@ export default function CanalLgpd() {
 
                       <Button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !consentAccepted}
                         className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30"
                       >
                         {loading ? (
