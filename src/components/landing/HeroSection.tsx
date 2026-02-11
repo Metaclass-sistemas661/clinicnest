@@ -147,7 +147,7 @@ export function HeroSection() {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-10 animate-slide-up drop-shadow" style={{ animationDelay: "0.1s" }}>
-            Agende, gerencie clientes, controle finanças e aumente seu faturamento. 
+            Agende, gerencie clientes e equipe, acompanhe finanças e metas do salão.
             Tudo em uma plataforma simples e poderosa.
           </p>
 

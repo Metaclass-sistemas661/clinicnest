@@ -9,7 +9,7 @@ import {
 const faqs = [
   {
     question: "Preciso de conhecimento técnico para usar?",
-    answer: "Absolutamente não! O VynloBella foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos tutoriais em vídeo e suporte humanizado para tirar qualquer dúvida."
+    answer: "Absolutamente não! O VynloBella foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos fluxos guiados no sistema e suporte humanizado para tirar dúvidas."
   },
   {
     question: "Posso usar no celular?",
@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     question: "Vocês oferecem suporte?",
-    answer: "Sim! Temos suporte por chat e e-mail de segunda a sábado. Nossa equipe é treinada para resolver qualquer problema rapidamente. Clientes do plano anual têm suporte prioritário."
+    answer: "Sim! Oferecemos suporte por e-mail de segunda a sábado. Nossa equipe é treinada para resolver dúvidas com agilidade, e planos trimestral e anual contam com prioridade no atendimento."
   },
 ];
 

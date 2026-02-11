@@ -10,6 +10,11 @@ import {
   BarChart3,
   ArrowRight,
   Check,
+  UserCog,
+  Target,
+  Wallet,
+  Bell,
+  CreditCard,
 } from "lucide-react";
 import { DashboardPreview } from "./DashboardPreview";
 import { AgendaPreview } from "./AgendaPreview";
@@ -53,6 +58,34 @@ const features = [
     description: "Gestão de produtos",
     icon: Package,
     color: "orange",
+  },
+];
+
+const advancedModules = [
+  {
+    icon: UserCog,
+    title: "Equipe e permissões",
+    description: "Controle de papéis e acesso entre administrador e profissionais.",
+  },
+  {
+    icon: Wallet,
+    title: "Comissões e salários",
+    description: "Gestão de remuneração com histórico por profissional.",
+  },
+  {
+    icon: Target,
+    title: "Metas e performance",
+    description: "Acompanhamento de metas com progresso e indicadores.",
+  },
+  {
+    icon: Bell,
+    title: "Notificações internas",
+    description: "Alertas em tempo real para rotina do salão.",
+  },
+  {
+    icon: CreditCard,
+    title: "Assinatura e acesso",
+    description: "Gerenciamento de plano com fluxo de trial e renovação.",
   },
 ];
 
@@ -121,7 +154,7 @@ export function ProductShowcaseSection() {
             por dentro
           </h2>
           <p className="text-lg text-muted-foreground">
-            Explore as funcionalidades e veja como nosso sistema pode transformar a gestão do seu salão.
+            Explore os principais módulos e veja como nosso sistema organiza a operação completa do salão.
           </p>
         </div>
 
@@ -255,6 +288,24 @@ export function ProductShowcaseSection() {
               <span className="text-sm font-semibold">100% Funcional</span>
               <Check className="h-4 w-4" />
             </div>
+          </div>
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-violet-100 bg-white/80 p-6 sm:p-8">
+          <h3 className="font-display text-xl font-semibold mb-4">Módulos avançados inclusos</h3>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {advancedModules.map((module) => {
+              const Icon = module.icon;
+              return (
+                <div key={module.title} className="rounded-xl border border-border bg-card p-4">
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 mb-3">
+                    <Icon className="h-5 w-5 text-violet-600" />
+                  </div>
+                  <p className="text-sm font-semibold mb-1">{module.title}</p>
+                  <p className="text-xs text-muted-foreground">{module.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
 
