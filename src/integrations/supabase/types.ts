@@ -278,28 +278,37 @@ export type Database = {
       }
       contact_messages: {
         Row: {
+          consented_at: string
           created_at: string
           email: string
           id: string
           message: string
           name: string
+          privacy_accepted: boolean
           subject: string
+          terms_accepted: boolean
         }
         Insert: {
+          consented_at?: string
           created_at?: string
           email: string
           id?: string
           message: string
           name: string
+          privacy_accepted?: boolean
           subject: string
+          terms_accepted?: boolean
         }
         Update: {
+          consented_at?: string
           created_at?: string
           email?: string
           id?: string
           message?: string
           name?: string
+          privacy_accepted?: boolean
           subject?: string
+          terms_accepted?: boolean
         }
         Relationships: []
       }

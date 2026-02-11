@@ -13,7 +13,13 @@ interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, salonName: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    salonName: string,
+    legalAcceptedAt?: string
+  ) => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -132,7 +138,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, salonName: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    salonName: string,
+    legalAcceptedAt?: string
+  ) => {
     // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
     // tenant, profile, user_roles (admin) e subscription - garantindo admin sempre
     const { error: authError } = await supabase.auth.signUp({
@@ -144,6 +156,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
           salon_name: salonName,
+          terms_accepted: true,
+          privacy_policy_accepted: true,
+          legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
         },
       },
     });

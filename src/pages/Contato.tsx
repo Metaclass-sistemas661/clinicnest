@@ -8,10 +8,12 @@ import { Mail, MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 export default function Contato() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,6 +29,11 @@ export default function Contato() {
       return;
     }
 
+    if (!consentAccepted) {
+      toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.from("contact_messages").insert({
@@ -34,9 +41,13 @@ export default function Contato() {
         email,
         subject: subject || "Sem assunto",
         message,
+        terms_accepted: true,
+        privacy_accepted: true,
+        consented_at: new Date().toISOString(),
       });
       if (error) throw error;
       setSubmitted(true);
+      setConsentAccepted(false);
       form.reset();
       toast.success("Mensagem enviada com sucesso!");
     } catch (err) {
@@ -179,6 +190,29 @@ export default function Contato() {
                             rows={5}
                             className="resize-none border-violet-100 focus:ring-violet-500"
                           />
+                        </div>
+                        <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
+                          <label htmlFor="contact-consent" className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <input
+                              id="contact-consent"
+                              type="checkbox"
+                              checked={consentAccepted}
+                              onChange={(e) => setConsentAccepted(e.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-violet-200"
+                              required
+                            />
+                            <span>
+                              Concordo com os{" "}
+                              <Link to="/termos-de-uso" className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600">
+                                Termos de Uso
+                              </Link>
+                              {" "}e a{" "}
+                              <Link to="/politica-de-privacidade" className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600">
+                                Política de Privacidade
+                              </Link>
+                              .
+                            </span>
+                          </label>
                         </div>
                         <Button
                           type="submit"
