@@ -53,23 +53,34 @@ export default function CanalLgpd() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("contact_messages").insert({
-        name,
-        email,
-        subject: `Canal LGPD - ${lgpdTypeLabel[requestType]}`,
-        message: `Solicitação recebida pelo Canal LGPD.\nTipo: ${lgpdTypeLabel[requestType]}\n\nDetalhes:\n${details}`,
-        terms_accepted: true,
-        privacy_accepted: true,
-        consented_at: new Date().toISOString(),
+      const { data, error } = await supabase.functions.invoke("submit-contact-message", {
+        body: {
+          name,
+          email,
+          message: details,
+          channel: "lgpd",
+          requestType,
+          termsAccepted: consentAccepted,
+          privacyAccepted: consentAccepted,
+        },
       });
 
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || data?.message || "Erro ao enviar solicitação LGPD.");
+      }
 
       setSubmitted(true);
       setConsentAccepted(false);
       form.reset();
       setRequestType("access");
-      toast.success("Solicitação LGPD enviada com sucesso.");
+      if (data?.notificationSent === false) {
+        toast.success("Solicitação LGPD registrada com sucesso!", {
+          description: "A notificação por e-mail está temporariamente indisponível.",
+        });
+      } else {
+        toast.success("Solicitação LGPD enviada com sucesso.");
+      }
     } catch (err) {
       logger.error("Erro ao enviar solicitação do Canal LGPD:", err);
       toast.error("Erro ao enviar solicitação. Tente novamente em alguns instantes.");
