@@ -36,20 +36,33 @@ export default function Contato() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from("contact_messages").insert({
-        name,
-        email,
-        subject: subject || "Sem assunto",
-        message,
-        terms_accepted: true,
-        privacy_accepted: true,
-        consented_at: new Date().toISOString(),
+      const { data, error } = await supabase.functions.invoke("submit-contact-message", {
+        body: {
+          name,
+          email,
+          subject: subject || "Sem assunto",
+          message,
+          channel: "contact",
+          termsAccepted: consentAccepted,
+          privacyAccepted: consentAccepted,
+        },
       });
+
       if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || data?.message || "Erro ao enviar mensagem.");
+      }
+
       setSubmitted(true);
       setConsentAccepted(false);
       form.reset();
-      toast.success("Mensagem enviada com sucesso!");
+      if (data?.notificationSent === false) {
+        toast.success("Mensagem registrada com sucesso!", {
+          description: "A notificação por e-mail está temporariamente indisponível.",
+        });
+      } else {
+        toast.success("Mensagem enviada com sucesso!");
+      }
     } catch (err) {
       logger.error("Erro ao enviar contato:", err);
       toast.error("Erro ao enviar mensagem. Tente novamente ou envie para contato@vynlobella.com");

@@ -16,3 +16,7 @@
 - Segredos (Supabase, Stripe, Resend, Upstash) são configurados em **Supabase → Project Settings → Edge Functions → Secrets**.
 - Não defina segredos em arquivos versionados.
 - **SUPABASE_CORS_ORIGINS:** Em produção, defina origens permitidas (vírgula separada), ex: `https://vynlobella.com,https://www.vynlobella.com`. Sem isso, CORS usa `*`.
+- Para notificações de Contato/LGPD:
+  - `RESEND_API_KEY`
+  - `CONTACT_ADMIN_EMAIL`
+  - `CONTACT_EMAIL_FROM`

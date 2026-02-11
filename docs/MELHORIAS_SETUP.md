@@ -3,15 +3,18 @@
 ## Melhorias do Diagnóstico (2025)
 
 - **Webhooks:** Doc consolidado em `docs/WEBHOOK_STRIPE_DEPLOY.md`. CORS em produção: `SUPABASE_CORS_ORIGINS` (ver `docs/SEGURANCA_ENV.md`).
-- **Contato:** Formulário salva em `contact_messages`.
+- **Contato/LGPD:** Formulários salvam em `contact_messages` e enviam notificação ao e-mail do admin (quando `RESEND_API_KEY` estiver configurada).
 - **Validação RPCs:** `pay_salary` e `complete_appointment_with_sale` validam inputs (dias negativos, quantidade negativa).
 - **Logger:** `maskSensitive()` para dados sensíveis em logs.
 
 ---
 
-## 1. Formulário de Contato (Supabase)
+## 1. Formulário de Contato e Canal LGPD (Supabase)
 
-O formulário de contato salva mensagens na tabela `contact_messages`.
+Os formulários de contato e Canal LGPD:
+
+- salvam mensagens na tabela `contact_messages`;
+- disparam notificação por e-mail para o admin via Edge Function `submit-contact-message`.
 
 **Passo:** Execute a migration no seu projeto Supabase:
 
@@ -20,6 +23,12 @@ supabase db push
 ```
 
 Ou execute manualmente o SQL em `supabase/migrations/20260202180000_contact_messages.sql`.
+
+Para envio de e-mail, configure os secrets nas Edge Functions:
+
+- `RESEND_API_KEY`
+- `CONTACT_ADMIN_EMAIL` (ex.: `contato@vynlobella.com`)
+- `CONTACT_EMAIL_FROM` (ex.: `VynloBella <noreply@vynlobella.com>`)
 
 **Como ver as mensagens:** No Dashboard do Supabase → Table Editor → `contact_messages`.
 
