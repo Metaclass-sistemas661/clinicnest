@@ -7,6 +7,7 @@ import {
   Wallet,
   Target,
   Bell,
+  CreditCard,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,12 @@ const features = [
     title: "Notificações Internas",
     description: "Receba alertas sobre agendamentos, metas, comissões e salários em tempo real.",
     color: "violet"
+  },
+  {
+    icon: CreditCard,
+    title: "Assinatura e Cobrança",
+    description: "Gerencie plano, período de teste e status de acesso com fluxo seguro de pagamento.",
+    color: "green"
   }
 ];
 
