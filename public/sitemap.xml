@@ -21,6 +21,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://vynlobella.com/canal-lgpd</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://vynlobella.com/termos-de-uso</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

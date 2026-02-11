@@ -210,7 +210,7 @@ export function Footer() {
                   </button>
                 </li>
                 <li>
-                  <Link to="/contato" className="transition-colors hover:text-foreground">
+                  <Link to="/canal-lgpd" className="transition-colors hover:text-foreground">
                     Canal LGPD
                   </Link>
                 </li>

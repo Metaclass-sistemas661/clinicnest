@@ -17,6 +17,7 @@ export function CookieConsentBanner() {
   const shouldAutoOpen =
     location.pathname === "/" ||
     location.pathname === "/contato" ||
+    location.pathname === "/canal-lgpd" ||
     location.pathname === "/termos-de-uso" ||
     location.pathname === "/politica-de-privacidade";
 

@@ -107,7 +107,7 @@ export default function PoliticaPrivacidade() {
                 correção de dados incompletos ou desatualizados, anonimização, bloqueio ou
                 eliminação de dados desnecessários, portabilidade, revogação do consentimento e
                 informação sobre compartilhamento. Para exercer esses direitos, entre em contato
-                conosco pela página de <Link to="/contato" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Contato</Link>.
+                conosco pela página de <Link to="/canal-lgpd" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Canal LGPD</Link>.
               </p>
             </div>
 
@@ -152,7 +152,7 @@ export default function PoliticaPrivacidade() {
               </h2>
               <p className="text-base leading-relaxed">
                 Para questões sobre privacidade ou para exercer seus direitos, utilize nossa
-                página de <Link to="/contato" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Contato</Link>.
+                página de <Link to="/canal-lgpd" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Canal LGPD</Link>.
               </p>
             </div>
           </div>
