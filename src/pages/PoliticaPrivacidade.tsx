@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { LandingLayout } from "@/components/landing/LandingLayout";
 import { Shield } from "lucide-react";
+import { openCookieConsentPreferences } from "@/lib/cookieConsent";
 
 export default function PoliticaPrivacidade() {
   return (
@@ -118,6 +119,17 @@ export default function PoliticaPrivacidade() {
                 Utilizamos cookies e tecnologias similares para funcionamento da plataforma,
                 preferências e análise de uso. Você pode configurar seu navegador para limitar
                 ou recusar cookies; parte das funcionalidades pode ser afetada.
+              </p>
+              <p className="mt-3 text-sm">
+                Você também pode revisar sua escolha de cookies a qualquer momento usando{" "}
+                <button
+                  type="button"
+                  onClick={openCookieConsentPreferences}
+                  className="font-medium text-violet-600 hover:text-fuchsia-600 underline underline-offset-2"
+                >
+                  Preferências de Cookies
+                </button>
+                {" "}no rodapé do site.
               </p>
             </div>
 

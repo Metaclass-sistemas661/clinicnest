@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { PromoBanner } from "./PromoBanner";
+import { openCookieConsentPreferences } from "@/lib/cookieConsent";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -119,6 +120,13 @@ export function Footer() {
             <Link to="/termos-de-uso" className="hover:text-foreground transition-colors">Termos de Uso</Link>
             <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">Política de Privacidade</Link>
             <Link to="/contato" className="hover:text-foreground transition-colors">Contato</Link>
+            <button
+              type="button"
+              onClick={openCookieConsentPreferences}
+              className="hover:text-foreground transition-colors"
+            >
+              Preferências de Cookies
+            </button>
           </div>
 
           <p className="text-sm text-muted-foreground">

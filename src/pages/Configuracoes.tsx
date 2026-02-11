@@ -163,6 +163,16 @@ export default function Configuracoes() {
 
   const getEntityLabel = (entityType: string) => auditEntityLabel[entityType] || entityType;
 
+  const formatDaysAsYearsAndDays = (days: unknown): string => {
+    if (typeof days !== "number" || Number.isNaN(days) || days <= 0) return "—";
+    if (days < 365) return `${days} dias`;
+    const years = Math.floor(days / 365);
+    const remainingDays = days % 365;
+    const yearsLabel = years === 1 ? "ano" : "anos";
+    if (remainingDays === 0) return `${years} ${yearsLabel} (${days} dias)`;
+    return `${years} ${yearsLabel} e ${remainingDays} dias (${days} dias)`;
+  };
+
   const getAuditMetadataItems = (log: AdminAuditLog): Array<{ label: string; value: string }> => {
     const metadata = log.metadata;
     if (!metadata || typeof metadata !== "object") return [];
@@ -177,15 +187,15 @@ export default function Configuracoes() {
         { label: "Limpeza automática", value: autoCleanup },
         {
           label: "Retenção de clientes",
-          value: typeof clientDays === "number" ? `${clientDays} dias` : "—",
+          value: formatDaysAsYearsAndDays(clientDays),
         },
         {
           label: "Retenção financeira",
-          value: typeof financialDays === "number" ? `${financialDays} dias` : "—",
+          value: formatDaysAsYearsAndDays(financialDays),
         },
         {
           label: "Retenção da trilha",
-          value: typeof auditDays === "number" ? `${auditDays} dias` : "—",
+          value: formatDaysAsYearsAndDays(auditDays),
         },
       ];
     }
@@ -1026,28 +1036,31 @@ export default function Configuracoes() {
                 Nenhum log administrativo recente.
               </div>
             ) : (
-              auditLogs.map((log) => (
-                <div key={log.id} className="rounded-lg border border-border/70 p-3">
-                  <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
-                    {new Date(log.created_at).toLocaleString("pt-BR")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getEntityLabel(log.entity_type)}
-                    {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
-                  </p>
-                  {getAuditMetadataItems(log).length > 0 ? (
-                    <div className="mt-2 space-y-1">
-                      {getAuditMetadataItems(log).map((item) => (
-                        <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))
+              auditLogs.map((log) => {
+                const metadataItems = getAuditMetadataItems(log);
+                return (
+                  <div key={log.id} className="rounded-lg border border-border/70 p-3">
+                    <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
+                      {new Date(log.created_at).toLocaleString("pt-BR")}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getEntityLabel(log.entity_type)}
+                      {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
+                    </p>
+                    {metadataItems.length > 0 ? (
+                      <div className="mt-2 space-y-1">
+                        {metadataItems.map((item) => (
+                          <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
             )}
           </CardContent>
         </Card>

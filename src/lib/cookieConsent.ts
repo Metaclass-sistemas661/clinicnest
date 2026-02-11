@@ -1,6 +1,8 @@
 export type CookieConsentStatus = "granted" | "denied" | null;
 
 export const COOKIE_CONSENT_STORAGE_KEY = "cookie-consent-status";
+export const COOKIE_CONSENT_CHANGED_EVENT = "cookie-consent-changed";
+export const COOKIE_CONSENT_OPEN_EVENT = "open-cookie-consent-preferences";
 const COOKIE_CONSENT_COOKIE_NAME = "cookie_consent";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -28,5 +30,10 @@ export function setCookieConsentStatus(status: Exclude<CookieConsentStatus, null
   window.localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, status);
   document.cookie = `${COOKIE_CONSENT_COOKIE_NAME}=${encodeURIComponent(status)}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; samesite=lax`;
 
-  window.dispatchEvent(new Event("cookie-consent-changed"));
+  window.dispatchEvent(new Event(COOKIE_CONSENT_CHANGED_EVENT));
+}
+
+export function openCookieConsentPreferences(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(COOKIE_CONSENT_OPEN_EVENT));
 }
