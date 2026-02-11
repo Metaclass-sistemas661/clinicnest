@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <GoogleAnalytics />
+          <CookieConsentBanner />
           <AuthProvider>
             <GoalMotivationProvider>
             <InternalDarkMode />

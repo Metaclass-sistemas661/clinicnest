@@ -14,6 +14,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -31,9 +32,20 @@ export default function Register() {
       return;
     }
 
+    if (!legalAccepted) {
+      toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
+      return;
+    }
+
     setIsLoading(true);
 
-    const { error } = await signUp(email, password, fullName, salonName);
+    const { error } = await signUp(
+      email,
+      password,
+      fullName,
+      salonName,
+      new Date().toISOString()
+    );
 
     if (error) {
       toast.error("Erro ao criar conta", {
@@ -139,6 +151,29 @@ export default function Register() {
                     className="h-11 rounded-xl border-white/20 bg-white/50 backdrop-blur-sm"
                   />
                 </div>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background/60 p-3">
+                <label htmlFor="legalAccepted" className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <input
+                    id="legalAccepted"
+                    type="checkbox"
+                    checked={legalAccepted}
+                    onChange={(e) => setLegalAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border"
+                    required
+                  />
+                  <span>
+                    Li e aceito os{" "}
+                    <Link to="/termos-de-uso" className="font-medium text-primary hover:text-accent underline underline-offset-2">
+                      Termos de Uso
+                    </Link>
+                    {" "}e a{" "}
+                    <Link to="/politica-de-privacidade" className="font-medium text-primary hover:text-accent underline underline-offset-2">
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </span>
+                </label>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4 pt-2">

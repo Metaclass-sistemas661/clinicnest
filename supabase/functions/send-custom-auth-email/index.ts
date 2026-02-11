@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const log = createLogger("SEND-CUSTOM-AUTH-EMAIL");
 
@@ -454,6 +455,10 @@ serve(async (req) => {
     const { email, type, name } = body;
     const emailTrim = typeof email === "string" ? email.trim() : "";
     let nameTrim = typeof name === "string" ? name.trim() : "";
+    const requesterIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "unknown";
 
     if (!emailTrim) {
       return new Response(
@@ -469,9 +474,21 @@ serve(async (req) => {
       );
     }
 
-    // Para password_changed, verificar se usuário está autenticado
-    if (type === "password_changed" && !user) {
-      log("ERROR: password_changed requer autenticação");
+    const rl = await checkRateLimit(
+      `custom-auth-email:${type}:${requesterIp}:${emailTrim.toLowerCase()}`,
+      type === "password_reset" ? 5 : 10,
+      60
+    );
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns minutos." }),
+        { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Para tipos sensíveis, exigir autenticação
+    if ((type === "password_changed" || type === "confirmation") && !user) {
+      log("ERROR: tipo de email requer autenticação", { type });
       return new Response(
         JSON.stringify({ error: "Autenticação necessária para este tipo de email" }),
         { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
@@ -530,6 +547,16 @@ serve(async (req) => {
 
       if (linkData.error || !linkData.data) {
         log("ERROR: Erro ao gerar link", { error: linkData.error?.message });
+        if (type === "password_reset") {
+          // Evita enumeração de e-mails no fluxo de recuperação
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "Se o e-mail existir, enviaremos as instruções de recuperação.",
+            }),
+            { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+          );
+        }
         return new Response(
           JSON.stringify({ error: linkData.error?.message || "Erro ao gerar link" }),
           { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
