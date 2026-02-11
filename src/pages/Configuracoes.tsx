@@ -9,7 +9,17 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, Loader2, Building, Save, ShieldCheck, History, Archive } from "lucide-react";
+import {
+  Settings,
+  Loader2,
+  Building,
+  Save,
+  ShieldCheck,
+  History,
+  Archive,
+  Download,
+  ShieldAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -32,6 +42,8 @@ interface LgpdDataRequest {
   assigned_admin_user_id: string | null;
   resolution_notes: string | null;
   requested_at: string;
+  due_at: string;
+  sla_days: number;
   resolved_at: string | null;
 }
 
@@ -52,6 +64,14 @@ interface AdminAuditLog {
   entity_id: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
+}
+
+interface LgpdAnonymizationPreview {
+  target_user_id: string;
+  target_profile_id: string;
+  confirmation_token: string;
+  warnings: string[];
+  summary: Record<string, number>;
 }
 
 const lgpdRequestTypeLabel: Record<LgpdRequestType, string> = {
@@ -97,6 +117,15 @@ export default function Configuracoes() {
   });
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [actorNameByUserId, setActorNameByUserId] = useState<Record<string, string>>({});
+  const [exportingRequestKey, setExportingRequestKey] = useState<string | null>(null);
+  const [previewingRequestId, setPreviewingRequestId] = useState<string | null>(null);
+  const [executingAnonymizationRequestId, setExecutingAnonymizationRequestId] = useState<string | null>(null);
+  const [anonymizationPreviewByRequestId, setAnonymizationPreviewByRequestId] = useState<
+    Record<string, LgpdAnonymizationPreview>
+  >({});
+  const [anonymizationConfirmationByRequestId, setAnonymizationConfirmationByRequestId] = useState<
+    Record<string, string>
+  >({});
 
   useEffect(() => {
     if (tenant) {
@@ -113,6 +142,74 @@ export default function Configuracoes() {
     if (status === "completed") return "default";
     if (status === "rejected") return "destructive";
     return "secondary";
+  };
+
+  const getSlaInfo = (request: LgpdDataRequest): {
+    label: string;
+    variant: "default" | "secondary" | "destructive";
+  } => {
+    if (request.status === "completed" || request.status === "rejected") {
+      return { label: "Encerrada", variant: "default" };
+    }
+
+    const dueAtMs = new Date(request.due_at).getTime();
+    const nowMs = Date.now();
+    const daysRemaining = Math.ceil((dueAtMs - nowMs) / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining < 0) {
+      return { label: `Atrasada (${Math.abs(daysRemaining)} dia(s))`, variant: "destructive" };
+    }
+    if (daysRemaining <= 3) {
+      return { label: `Prazo crítico (${daysRemaining} dia(s))`, variant: "secondary" };
+    }
+    return { label: `No prazo (${daysRemaining} dia(s))`, variant: "default" };
+  };
+
+  const sanitizeFilePart = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  const downloadTextFile = (filename: string, content: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const csvEscape = (value: unknown): string => {
+    if (value === null || value === undefined) return "";
+    const raw =
+      typeof value === "string"
+        ? value
+        : typeof value === "number" || typeof value === "boolean"
+          ? String(value)
+          : JSON.stringify(value);
+    return `"${raw.replace(/"/g, '""')}"`;
+  };
+
+  const toCsv = (rows: Record<string, unknown>[]): string => {
+    if (!rows.length) return "";
+    const headers = Array.from(
+      rows.reduce((set, row) => {
+        Object.keys(row).forEach((key) => set.add(key));
+        return set;
+      }, new Set<string>())
+    );
+    if (!headers.length) return "";
+    const headerLine = headers.map(csvEscape).join(",");
+    const lines = rows.map((row) => headers.map((h) => csvEscape(row[h])).join(","));
+    return [headerLine, ...lines].join("\n");
+  };
+
+  const normalizeDatasetRows = (dataset: unknown): Record<string, unknown>[] => {
+    if (Array.isArray(dataset)) {
+      return dataset.filter((item) => item && typeof item === "object") as Record<string, unknown>[];
+    }
+    if (dataset && typeof dataset === "object" && !Array.isArray(dataset)) {
+      return [dataset as Record<string, unknown>];
+    }
+    return [];
   };
 
   const writeAuditLog = async (
@@ -143,7 +240,7 @@ export default function Configuracoes() {
         supabase
           .from("lgpd_data_requests")
           .select(
-            "id, requester_user_id, requester_email, request_type, request_details, status, assigned_admin_user_id, resolution_notes, requested_at, resolved_at"
+            "id, requester_user_id, requester_email, request_type, request_details, status, assigned_admin_user_id, resolution_notes, requested_at, due_at, sla_days, resolved_at"
           )
           .eq("tenant_id", tenant.id)
           .order("requested_at", { ascending: false })
@@ -325,6 +422,119 @@ export default function Configuracoes() {
       toast.error("Erro ao atualizar solicitação LGPD");
     } finally {
       setIsUpdatingRequests(false);
+    }
+  };
+
+  const handleExportSubjectData = async (
+    request: LgpdDataRequest,
+    format: "json" | "csv"
+  ) => {
+    if (!tenant?.id) return;
+
+    const loadingKey = `${request.id}:${format}`;
+    setExportingRequestKey(loadingKey);
+    try {
+      const { data, error } = await supabase.rpc("export_lgpd_data_subject", {
+        p_tenant_id: tenant.id,
+        p_target_user_id: request.requester_user_id,
+        p_format: format,
+      });
+
+      if (error) throw error;
+
+      const safeBase = sanitizeFilePart(
+        `lgpd-${request.requester_email || request.requester_user_id}-${new Date().toISOString().slice(0, 10)}`
+      );
+
+      if (format === "json") {
+        downloadTextFile(
+          `${safeBase}.json`,
+          JSON.stringify(data, null, 2),
+          "application/json;charset=utf-8"
+        );
+      } else {
+        const payload = (data || {}) as Record<string, unknown>;
+        const datasets = ((payload.datasets || {}) as Record<string, unknown>) ?? {};
+        const sections: string[] = [];
+
+        for (const [datasetName, rawDataset] of Object.entries(datasets)) {
+          const rows = normalizeDatasetRows(rawDataset);
+          const csv = toCsv(rows);
+          if (csv) {
+            sections.push(`# ${datasetName}\n${csv}`);
+          }
+        }
+
+        if (!sections.length) {
+          throw new Error("Nenhum dado disponível para CSV.");
+        }
+
+        downloadTextFile(`${safeBase}.csv`, sections.join("\n\n"), "text/csv;charset=utf-8");
+      }
+
+      toast.success(`Exportação ${format.toUpperCase()} concluída`);
+    } catch (e) {
+      logger.error(e);
+      toast.error(`Erro ao exportar dados em ${format.toUpperCase()}`);
+    } finally {
+      setExportingRequestKey(null);
+    }
+  };
+
+  const handlePreviewAnonymization = async (request: LgpdDataRequest) => {
+    if (!tenant?.id) return;
+
+    setPreviewingRequestId(request.id);
+    try {
+      const { data, error } = await supabase.rpc("preview_lgpd_anonymization", {
+        p_tenant_id: tenant.id,
+        p_target_user_id: request.requester_user_id,
+      });
+      if (error) throw error;
+
+      setAnonymizationPreviewByRequestId((prev) => ({
+        ...prev,
+        [request.id]: data as LgpdAnonymizationPreview,
+      }));
+      setAnonymizationConfirmationByRequestId((prev) => ({
+        ...prev,
+        [request.id]: "",
+      }));
+      toast.success("Prévia de anonimização gerada");
+    } catch (e) {
+      logger.error(e);
+      toast.error("Erro ao gerar prévia de anonimização");
+    } finally {
+      setPreviewingRequestId(null);
+    }
+  };
+
+  const handleExecuteAnonymization = async (request: LgpdDataRequest) => {
+    if (!tenant?.id) return;
+
+    const confirmation = anonymizationConfirmationByRequestId[request.id]?.trim() || "";
+    if (!confirmation) {
+      toast.error("Digite o token de confirmação da anonimização");
+      return;
+    }
+
+    setExecutingAnonymizationRequestId(request.id);
+    try {
+      const { error } = await supabase.rpc("execute_lgpd_anonymization", {
+        p_tenant_id: tenant.id,
+        p_target_user_id: request.requester_user_id,
+        p_confirmation_token: confirmation,
+        p_request_id: request.id,
+      });
+      if (error) throw error;
+
+      toast.success("Anonimização executada com sucesso");
+      await fetchGovernanceData();
+    } catch (e) {
+      logger.error(e);
+      toast.error("Erro ao executar anonimização");
+    } finally {
+      setExecutingAnonymizationRequestId(null);
     }
   };
 
@@ -527,24 +737,131 @@ export default function Configuracoes() {
                 Nenhuma solicitação LGPD aberta para este salão.
               </div>
             ) : (
-              lgpdRequests.map((request) => (
-                <div key={request.id} className="rounded-lg border border-border/70 p-3">
+              lgpdRequests.map((request) => {
+                const slaInfo = getSlaInfo(request);
+                return (
+                  <div key={request.id} className="rounded-lg border border-border/70 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold">{lgpdRequestTypeLabel[request.request_type]}</p>
-                    <Badge variant={getStatusBadgeVariant(request.status)}>
-                      {lgpdStatusLabel[request.status]}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusBadgeVariant(request.status)}>
+                        {lgpdStatusLabel[request.status]}
+                      </Badge>
+                      <Badge variant={slaInfo.variant}>{slaInfo.label}</Badge>
+                    </div>
                   </div>
+                  
                   <p className="mt-1 text-xs text-muted-foreground">
                     Solicitante: {request.requester_email || request.requester_user_id}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Abertura: {new Date(request.requested_at).toLocaleString("pt-BR")}
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    Prazo LGPD: {new Date(request.due_at).toLocaleString("pt-BR")} ({request.sla_days} dia(s))
+                  </p>
                   {request.request_details ? (
                     <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
                       {request.request_details}
                     </p>
+                  ) : null}
+
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={exportingRequestKey === `${request.id}:json`}
+                      onClick={() => handleExportSubjectData(request, "json")}
+                    >
+                      {exportingRequestKey === `${request.id}:json` ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Exportar JSON
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={exportingRequestKey === `${request.id}:csv`}
+                      onClick={() => handleExportSubjectData(request, "csv")}
+                    >
+                      {exportingRequestKey === `${request.id}:csv` ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Exportar CSV
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={previewingRequestId === request.id}
+                      onClick={() => handlePreviewAnonymization(request)}
+                    >
+                      {previewingRequestId === request.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <ShieldAlert className="mr-2 h-4 w-4" />
+                      )}
+                      Prévia anonimização
+                    </Button>
+                  </div>
+
+                  {anonymizationPreviewByRequestId[request.id] ? (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+                      <p className="text-sm font-medium text-amber-900">
+                        Dry-run de anonimização
+                      </p>
+                      <div className="mt-2 grid gap-1">
+                        {Object.entries(anonymizationPreviewByRequestId[request.id].summary).map(
+                          ([key, value]) => (
+                            <p key={key} className="text-xs text-amber-900/80">
+                              {key}: {value}
+                            </p>
+                          )
+                        )}
+                      </div>
+                      {(anonymizationPreviewByRequestId[request.id].warnings || []).length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {anonymizationPreviewByRequestId[request.id].warnings.map((warning) => (
+                            <p key={warning} className="text-xs text-amber-800">
+                              ⚠ {warning}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                      <p className="mt-2 text-xs text-amber-900">
+                        Confirme digitando o token:
+                        {" "}
+                        <span className="font-mono font-semibold">
+                          {anonymizationPreviewByRequestId[request.id].confirmation_token}
+                        </span>
+                      </p>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          value={anonymizationConfirmationByRequestId[request.id] || ""}
+                          onChange={(e) =>
+                            setAnonymizationConfirmationByRequestId((prev) => ({
+                              ...prev,
+                              [request.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Digite o token de confirmação"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={executingAnonymizationRequestId === request.id}
+                          onClick={() => handleExecuteAnonymization(request)}
+                        >
+                          {executingAnonymizationRequestId === request.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Executar anonimização
+                        </Button>
+                      </div>
+                    </div>
                   ) : null}
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -600,7 +917,8 @@ export default function Configuracoes() {
                     </Button>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>

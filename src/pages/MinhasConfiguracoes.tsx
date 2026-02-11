@@ -53,6 +53,8 @@ interface LgpdDataRequest {
   request_details: string | null;
   status: LgpdRequestStatus;
   requested_at: string;
+  due_at: string;
+  sla_days: number;
   resolved_at: string | null;
   resolution_notes: string | null;
 }
@@ -121,7 +123,7 @@ export default function MinhasConfiguracoes() {
     try {
       const { data, error } = await supabase
         .from("lgpd_data_requests")
-        .select("id, request_type, request_details, status, requested_at, resolved_at, resolution_notes")
+        .select("id, request_type, request_details, status, requested_at, due_at, sla_days, resolved_at, resolution_notes")
         .eq("requester_user_id", user.id)
         .order("requested_at", { ascending: false });
 
@@ -249,6 +251,16 @@ export default function MinhasConfiguracoes() {
     if (status === "completed") return "default";
     if (status === "rejected") return "destructive";
     return "secondary";
+  };
+
+  const getLgpdSlaText = (request: LgpdDataRequest) => {
+    if (request.status === "completed" || request.status === "rejected") return "Encerrada";
+    const dueAtMs = new Date(request.due_at).getTime();
+    const nowMs = Date.now();
+    const daysRemaining = Math.ceil((dueAtMs - nowMs) / (1000 * 60 * 60 * 24));
+    if (daysRemaining < 0) return `Atrasada (${Math.abs(daysRemaining)} dia(s))`;
+    if (daysRemaining <= 3) return `Prazo crítico (${daysRemaining} dia(s))`;
+    return `No prazo (${daysRemaining} dia(s))`;
   };
 
   return (
@@ -399,12 +411,18 @@ export default function MinhasConfiguracoes() {
                           <p className="text-sm font-medium">
                             {lgpdRequestTypeLabel[request.request_type]}
                           </p>
-                          <Badge variant={getLgpdStatusVariant(request.status)}>
-                            {lgpdStatusLabel[request.status]}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getLgpdStatusVariant(request.status)}>
+                              {lgpdStatusLabel[request.status]}
+                            </Badge>
+                            <Badge variant="secondary">{getLgpdSlaText(request)}</Badge>
+                          </div>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Abertura: {new Date(request.requested_at).toLocaleString("pt-BR")}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Prazo LGPD: {new Date(request.due_at).toLocaleString("pt-BR")} ({request.sla_days} dia(s))
                         </p>
                         {request.request_details ? (
                           <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">

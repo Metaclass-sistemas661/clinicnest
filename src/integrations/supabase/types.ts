@@ -316,6 +316,7 @@ export type Database = {
         Row: {
           assigned_admin_user_id: string | null
           created_at: string
+          due_at: string
           id: string
           request_details: string | null
           request_type: string
@@ -324,6 +325,7 @@ export type Database = {
           requested_at: string
           resolution_notes: string | null
           resolved_at: string | null
+          sla_days: number
           status: string
           tenant_id: string
           updated_at: string
@@ -331,6 +333,7 @@ export type Database = {
         Insert: {
           assigned_admin_user_id?: string | null
           created_at?: string
+          due_at?: string
           id?: string
           request_details?: string | null
           request_type: string
@@ -339,6 +342,7 @@ export type Database = {
           requested_at?: string
           resolution_notes?: string | null
           resolved_at?: string | null
+          sla_days?: number
           status?: string
           tenant_id: string
           updated_at?: string
@@ -346,6 +350,7 @@ export type Database = {
         Update: {
           assigned_admin_user_id?: string | null
           created_at?: string
+          due_at?: string
           id?: string
           request_details?: string | null
           request_type?: string
@@ -354,6 +359,7 @@ export type Database = {
           requested_at?: string
           resolution_notes?: string | null
           resolved_at?: string | null
+          sla_days?: number
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -1353,6 +1359,23 @@ export type Database = {
               target_value: number
             }[]
           }
+      execute_lgpd_anonymization: {
+        Args: {
+          p_confirmation_token: string
+          p_request_id?: string
+          p_target_user_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
+      export_lgpd_data_subject: {
+        Args: {
+          p_format?: string
+          p_target_user_id: string
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       log_admin_action: {
         Args: {
           p_action: string
@@ -1362,6 +1385,10 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: string
+      }
+      preview_lgpd_anonymization: {
+        Args: { p_target_user_id: string; p_tenant_id: string }
+        Returns: Json
       }
       get_user_tenant_id: { Args: { p_user_id: string }; Returns: string }
       has_role: {
