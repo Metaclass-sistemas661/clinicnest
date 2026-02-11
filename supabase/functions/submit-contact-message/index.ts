@@ -10,6 +10,7 @@ type Channel = "contact" | "lgpd";
 
 interface SubmitContactBody {
   name: string;
+  phone?: string;
   email: string;
   subject?: string;
   message: string;
@@ -51,10 +52,16 @@ function escapeHtml(raw: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function formatMessageForStorage(channel: Channel, requestType: string, message: string): string {
+function formatMessageForStorage(
+  channel: Channel,
+  requestType: string,
+  message: string,
+  phone: string
+): string {
   if (channel === "lgpd") {
     const requestLabel = lgpdRequestTypeLabel[requestType] || requestType || "Solicitacao LGPD";
-    return `Solicitacao recebida pelo Canal LGPD.\nTipo: ${requestLabel}\n\nDetalhes:\n${message}`;
+    const phoneLabel = phone || "Nao informado";
+    return `Solicitacao recebida pelo Canal LGPD.\nTipo: ${requestLabel}\nCelular: ${phoneLabel}\n\nDetalhes:\n${message}`;
   }
   return message;
 }
@@ -111,6 +118,7 @@ interface ContactNotificationTemplateInput {
   channelHuman: string;
   requestTypeHuman: string;
   safeName: string;
+  safePhone: string;
   safeEmail: string;
   safeSubject: string;
   safeMessage: string;
@@ -122,11 +130,20 @@ interface ContactNotificationTemplateInput {
 function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput): string {
   const theme = getChannelTheme(input.channel);
   const showLgpdType = input.channel === "lgpd";
+  const showPhone = input.safePhone.length > 0;
   const requestTypeRow = showLgpdType
     ? `
       <tr>
         <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px; width: 160px;">Tipo LGPD</td>
         <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeRequestType}</td>
+      </tr>
+    `
+    : "";
+  const phoneRow = showPhone
+    ? `
+      <tr>
+        <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">Celular</td>
+        <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safePhone}</td>
       </tr>
     `
     : "";
@@ -177,6 +194,7 @@ function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput
                     <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">E-mail</td>
                     <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeEmail}</td>
                   </tr>
+                  ${phoneRow}
                   <tr>
                     <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">Assunto</td>
                     <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeSubject}</td>
@@ -231,6 +249,7 @@ function getContactNotificationEmailText(input: {
   channelHuman: string;
   requestTypeHuman: string;
   name: string;
+  phone: string;
   email: string;
   subject: string;
   message: string;
@@ -244,6 +263,7 @@ function getContactNotificationEmailText(input: {
     "",
     `Nome: ${input.name}`,
     `E-mail: ${input.email}`,
+    input.phone ? `Celular: ${input.phone}` : "",
     `Assunto: ${input.subject}`,
     `Canal: ${input.channelHuman}`,
     lgpdTypeLine.trimEnd(),
@@ -333,6 +353,7 @@ serve(async (req) => {
     }
 
     const name = toTrimmedString(body.name, 120);
+    const phone = toTrimmedString(body.phone, 40);
     const email = toTrimmedString(body.email, 254).toLowerCase();
     const subject = toTrimmedString(body.subject, 180);
     const message = sanitizeMultiline(body.message, 5000);
@@ -344,6 +365,13 @@ serve(async (req) => {
     if (!name || !email || !message) {
       return new Response(
         JSON.stringify({ success: false, error: "Preencha nome, e-mail e mensagem." }),
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (channel === "lgpd" && !phone) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Preencha nome, celular, e-mail e mensagem." }),
         { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
@@ -381,7 +409,7 @@ serve(async (req) => {
     }
 
     const resolvedSubject = resolveSubject(channel, requestType, subject);
-    const messageForStorage = formatMessageForStorage(channel, requestType, message);
+    const messageForStorage = formatMessageForStorage(channel, requestType, message, phone);
 
     const { data: createdMessage, error: insertError } = await supabaseAdmin
       .from("contact_messages")
@@ -413,6 +441,7 @@ serve(async (req) => {
       channel === "lgpd" ? lgpdRequestTypeLabel[requestType] || requestType || "-" : "-";
 
     const safeName = escapeHtml(name);
+    const safePhone = escapeHtml(phone);
     const safeEmail = escapeHtml(email);
     const safeSubject = escapeHtml(resolvedSubject);
     const safeMessage = escapeHtml(message).replaceAll("\n", "<br />");
@@ -425,6 +454,7 @@ serve(async (req) => {
       channelHuman,
       requestTypeHuman,
       safeName,
+      safePhone,
       safeEmail,
       safeSubject,
       safeMessage,
@@ -437,6 +467,7 @@ serve(async (req) => {
       channelHuman,
       requestTypeHuman,
       name,
+      phone,
       email,
       subject: resolvedSubject,
       message,
