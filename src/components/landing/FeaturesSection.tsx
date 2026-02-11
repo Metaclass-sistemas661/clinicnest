@@ -4,7 +4,9 @@ import {
   DollarSign,
   Scissors,
   Package,
-  BarChart3,
+  Wallet,
+  Target,
+  Bell,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,25 +27,37 @@ const features = [
   {
     icon: DollarSign,
     title: "Controle Financeiro",
-    description: "Acompanhe receitas, despesas e lucros em tempo real. Relatórios detalhados para tomar decisões.",
+    description: "Acompanhe receitas, despesas, fluxo de caixa e exporte relatórios financeiros.",
     color: "green"
   },
   {
     icon: Scissors,
-    title: "Catálogo de Serviços",
-    description: "Configure seus serviços com preços, duração e profissionais responsáveis.",
+    title: "Serviços e Catálogo",
+    description: "Cadastre serviços com preço, duração e disponibilidade para usar na agenda.",
     color: "fuchsia"
   },
   {
     icon: Package,
-    title: "Controle de Estoque",
-    description: "Monitore produtos, receba alertas de reposição e evite perdas no seu estoque.",
+    title: "Produtos e Estoque",
+    description: "Controle entrada, saída, categorias, estoque mínimo e perdas por danificados.",
     color: "orange"
   },
   {
-    icon: BarChart3,
-    title: "Relatórios Avançados",
-    description: "Dashboards com métricas de performance, faturamento e produtividade da equipe.",
+    icon: Wallet,
+    title: "Equipe e Remuneração",
+    description: "Gerencie equipe, permissões, comissões e salários com controle por profissional.",
+    color: "blue"
+  },
+  {
+    icon: Target,
+    title: "Metas e Performance",
+    description: "Crie metas, acompanhe progresso, aprove sugestões e monitore resultados da equipe.",
+    color: "violet"
+  },
+  {
+    icon: Bell,
+    title: "Notificações Internas",
+    description: "Receba alertas sobre agendamentos, metas, comissões e salários em tempo real.",
     color: "violet"
   }
 ];
@@ -63,7 +77,7 @@ export function FeaturesSection() {
             <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">crescer</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Uma plataforma completa que simplifica a gestão do seu salão e aumenta sua produtividade.
+            Uma plataforma completa para operação, equipe, financeiro e metas do seu salão.
           </p>
         </div>
 

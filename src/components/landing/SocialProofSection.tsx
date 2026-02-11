@@ -99,9 +99,9 @@ export function SocialProofSection() {
           </div>
           <div className="flex-1 text-center min-w-0">
             <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
-              24/7
+              Seg-Sáb
             </div>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Disponível</p>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Humanizado</p>
           </div>
         </div>
       </div>

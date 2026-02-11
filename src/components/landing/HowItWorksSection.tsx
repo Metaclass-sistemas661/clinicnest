@@ -19,15 +19,15 @@ const steps = [
   {
     icon: CalendarCheck,
     step: "03",
-    title: "Receba Agendamentos",
-    description: "Sua agenda online 24h. Clientes agendam a qualquer hora.",
+    title: "Organize os Agendamentos",
+    description: "Gerencie sua agenda interna com confirmações e status em tempo real.",
     color: "blue",
   },
   {
     icon: TrendingUp,
     step: "04",
     title: "Acompanhe o Crescimento",
-    description: "Relatórios e métricas para crescer de forma inteligente.",
+    description: "Use financeiro, metas e indicadores para evoluir com consistência.",
     color: "green",
   },
 ];
