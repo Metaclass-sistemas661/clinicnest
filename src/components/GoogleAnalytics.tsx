@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { getCookieConsentStatus, type CookieConsentStatus } from "@/lib/cookieConsent";
+import {
+  COOKIE_CONSENT_CHANGED_EVENT,
+  getCookieConsentStatus,
+  type CookieConsentStatus,
+} from "@/lib/cookieConsent";
 
 const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
@@ -16,13 +20,20 @@ export function GoogleAnalytics() {
 
   useEffect(() => {
     const syncConsent = () => setConsentStatus(getCookieConsentStatus());
-    window.addEventListener("cookie-consent-changed", syncConsent);
+    window.addEventListener(COOKIE_CONSENT_CHANGED_EVENT, syncConsent);
     window.addEventListener("storage", syncConsent);
     return () => {
-      window.removeEventListener("cookie-consent-changed", syncConsent);
+      window.removeEventListener(COOKIE_CONSENT_CHANGED_EVENT, syncConsent);
       window.removeEventListener("storage", syncConsent);
     };
   }, []);
+
+  useEffect(() => {
+    if (!GA_MEASUREMENT_ID || typeof window === "undefined" || !window.gtag) return;
+    window.gtag("consent", "update", {
+      analytics_storage: consentStatus === "granted" ? "granted" : "denied",
+    });
+  }, [consentStatus]);
 
   useEffect(() => {
     if (!GA_MEASUREMENT_ID || typeof window === "undefined") return;
