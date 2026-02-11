@@ -72,6 +72,191 @@ function channelLabel(channel: Channel): string {
   return channel === "lgpd" ? "Canal LGPD" : "Contato";
 }
 
+function getChannelTheme(channel: Channel): {
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  messageBg: string;
+  messageBorder: string;
+  highlightTitle: string;
+  highlightText: string;
+} {
+  if (channel === "lgpd") {
+    return {
+      badgeBg: "#fff7ed",
+      badgeBorder: "#f59e0b",
+      badgeText: "#92400e",
+      messageBg: "#fffbeb",
+      messageBorder: "#f59e0b",
+      highlightTitle: "Solicitacao de privacidade recebida",
+      highlightText:
+        "Esta mensagem veio do Canal LGPD e deve ser tratada conforme os prazos e procedimentos internos.",
+    };
+  }
+
+  return {
+    badgeBg: "#f5f3ff",
+    badgeBorder: "#8b5cf6",
+    badgeText: "#5b21b6",
+    messageBg: "#f8fafc",
+    messageBorder: "#e5e7eb",
+    highlightTitle: "Novo contato recebido pelo site",
+    highlightText:
+      "Revise os dados abaixo e responda ao cliente. O campo Reply-To ja aponta para o e-mail informado.",
+  };
+}
+
+interface ContactNotificationTemplateInput {
+  channel: Channel;
+  channelHuman: string;
+  requestTypeHuman: string;
+  safeName: string;
+  safeEmail: string;
+  safeSubject: string;
+  safeMessage: string;
+  safeRequestType: string;
+  submittedAt: string;
+  messageId: string;
+}
+
+function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput): string {
+  const theme = getChannelTheme(input.channel);
+  const showLgpdType = input.channel === "lgpd";
+  const requestTypeRow = showLgpdType
+    ? `
+      <tr>
+        <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px; width: 160px;">Tipo LGPD</td>
+        <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeRequestType}</td>
+      </tr>
+    `
+    : "";
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova mensagem - VynloBella</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="620" cellpadding="0" cellspacing="0" style="max-width: 620px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(17,24,39,0.08);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 34px 28px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 30px; font-weight: 700;">VynloBella</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 15px;">Gestao profissional para saloes de beleza</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 30px 28px 18px;">
+              <p style="margin: 0 0 12px;">
+                <span style="display: inline-block; background: ${theme.badgeBg}; border: 1px solid ${theme.badgeBorder}; color: ${theme.badgeText}; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 700;">
+                  ${input.channelHuman}
+                </span>
+              </p>
+              <h2 style="margin: 0 0 10px; color: #111827; font-size: 24px; line-height: 1.25;">Nova mensagem recebida</h2>
+              <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
+                ${theme.highlightTitle}. ${theme.highlightText}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 0 28px 22px;">
+              <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 16px 8px; background: #ffffff;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px; width: 160px;">Nome</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">E-mail</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeEmail}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">Assunto</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.safeSubject}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">Canal</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.channelHuman}</td>
+                  </tr>
+                  ${requestTypeRow}
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">Data</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.submittedAt}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0 0 10px; color: #6b7280; font-size: 13px;">ID da solicitacao</td>
+                    <td style="padding: 0 0 10px; color: #111827; font-size: 14px; font-weight: 600;">${input.messageId}</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 0 28px 28px;">
+              <div style="background: ${theme.messageBg}; border: 1px solid ${theme.messageBorder}; border-radius: 10px; padding: 16px;">
+                <p style="margin: 0 0 8px; color: #111827; font-size: 14px; font-weight: 700;">Mensagem</p>
+                <p style="margin: 0; color: #1f2937; font-size: 14px; line-height: 1.7;">${input.safeMessage}</p>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 28px; text-align: center;">
+              <p style="margin: 0 0 6px; color: #6b7280; font-size: 13px;">
+                Email transacional automatico do site VynloBella.
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                © ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+function getContactNotificationEmailText(input: {
+  channelHuman: string;
+  requestTypeHuman: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  submittedAt: string;
+  messageId: string;
+  showLgpdType: boolean;
+}): string {
+  const lgpdTypeLine = input.showLgpdType ? `Tipo LGPD: ${input.requestTypeHuman}\n` : "";
+  return [
+    `Nova mensagem recebida (${input.channelHuman})`,
+    "",
+    `Nome: ${input.name}`,
+    `E-mail: ${input.email}`,
+    `Assunto: ${input.subject}`,
+    `Canal: ${input.channelHuman}`,
+    lgpdTypeLine.trimEnd(),
+    `Data: ${input.submittedAt}`,
+    `ID da solicitacao: ${input.messageId}`,
+    "",
+    "Mensagem:",
+    input.message,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 async function sendEmailViaResend(input: {
   to: string;
   from: string;
@@ -235,36 +420,30 @@ serve(async (req) => {
     const submittedAt = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
     const mailSubject = `[${channelHuman}] ${resolvedSubject}`;
-    const mailHtml = `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-        <h2 style="margin: 0 0 12px;">Nova mensagem recebida (${channelHuman})</h2>
-        <p style="margin: 0 0 16px;">Uma nova solicitacao foi registrada no site.</p>
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
-          <p style="margin: 0 0 8px;"><strong>Nome:</strong> ${safeName}</p>
-          <p style="margin: 0 0 8px;"><strong>E-mail:</strong> ${safeEmail}</p>
-          <p style="margin: 0 0 8px;"><strong>Assunto:</strong> ${safeSubject}</p>
-          <p style="margin: 0 0 8px;"><strong>Canal:</strong> ${channelHuman}</p>
-          <p style="margin: 0 0 8px;"><strong>Tipo LGPD:</strong> ${safeRequestType}</p>
-          <p style="margin: 0 0 8px;"><strong>Data:</strong> ${submittedAt}</p>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 12px 0;" />
-          <p style="margin: 0;"><strong>Mensagem:</strong><br />${safeMessage}</p>
-        </div>
-      </div>
-    `;
+    const mailHtml = getContactNotificationEmailHtml({
+      channel,
+      channelHuman,
+      requestTypeHuman,
+      safeName,
+      safeEmail,
+      safeSubject,
+      safeMessage,
+      safeRequestType,
+      submittedAt,
+      messageId: createdMessage.id,
+    });
 
-    const mailText = [
-      `Nova mensagem recebida (${channelHuman})`,
-      "",
-      `Nome: ${name}`,
-      `E-mail: ${email}`,
-      `Assunto: ${resolvedSubject}`,
-      `Canal: ${channelHuman}`,
-      `Tipo LGPD: ${requestTypeHuman}`,
-      `Data: ${submittedAt}`,
-      "",
-      "Mensagem:",
+    const mailText = getContactNotificationEmailText({
+      channelHuman,
+      requestTypeHuman,
+      name,
+      email,
+      subject: resolvedSubject,
       message,
-    ].join("\n");
+      submittedAt,
+      messageId: createdMessage.id,
+      showLgpdType: channel === "lgpd",
+    });
 
     const emailResult = await sendEmailViaResend({
       to: adminEmail,
