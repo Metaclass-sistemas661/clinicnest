@@ -42,21 +42,20 @@ export function CookieConsentBanner() {
         <p className="text-sm text-muted-foreground">
           {consent === null ? (
             <>
-              Utilizamos cookies para estatísticas e melhoria da experiência. Ao clicar em
-              {" "}
-              <strong className="text-foreground">Aceitar</strong>, você autoriza o uso de cookies
-              analíticos.
+              Utilizamos cookies estritamente necessários para o funcionamento do site.
+              Mediante seu consentimento, também utilizamos cookies analíticos para mensurar
+              audiência, desempenho e aprimorar nossos serviços, nos termos da LGPD.
             </>
           ) : (
             <>
-              Preferências de cookies: atualmente os cookies analíticos estão{" "}
+              Gestão de consentimento: atualmente os cookies analíticos estão{" "}
               <strong className="text-foreground">
                 {consent === "granted" ? "ativados" : "desativados"}
               </strong>
-              . Você pode atualizar sua escolha a qualquer momento.
+              . Você pode revisar e alterar sua escolha a qualquer momento.
             </>
           )}
-          {" "}Veja nossos
+          {" "}Consulte nossos
           {" "}
           <Link to="/termos-de-uso" className="underline underline-offset-2 hover:text-foreground">
             Termos de Uso
