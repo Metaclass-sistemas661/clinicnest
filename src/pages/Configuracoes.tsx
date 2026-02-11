@@ -90,6 +90,21 @@ const lgpdStatusLabel: Record<LgpdRequestStatus, string> = {
   rejected: "Rejeitada",
 };
 
+const auditActionLabel: Record<string, string> = {
+  tenant_settings_updated: "Dados do salão atualizados",
+  lgpd_retention_policy_updated: "Política de retenção LGPD atualizada",
+  lgpd_request_status_updated: "Status da solicitação LGPD atualizado",
+  lgpd_data_exported: "Exportação de dados do titular",
+  lgpd_anonymization_executed: "Anonimização de dados executada",
+};
+
+const auditEntityLabel: Record<string, string> = {
+  tenants: "Salão",
+  lgpd_retention_policies: "Política de retenção",
+  lgpd_data_requests: "Solicitação LGPD",
+  profiles: "Titular",
+};
+
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -142,6 +157,73 @@ export default function Configuracoes() {
     if (status === "completed") return "default";
     if (status === "rejected") return "destructive";
     return "secondary";
+  };
+
+  const getActionLabel = (action: string) => auditActionLabel[action] || action;
+
+  const getEntityLabel = (entityType: string) => auditEntityLabel[entityType] || entityType;
+
+  const getAuditMetadataItems = (log: AdminAuditLog): Array<{ label: string; value: string }> => {
+    const metadata = log.metadata;
+    if (!metadata || typeof metadata !== "object") return [];
+
+    if (log.action === "lgpd_retention_policy_updated") {
+      const autoCleanup = metadata.auto_cleanup_enabled === true ? "Ativado" : "Desativado";
+      const clientDays = metadata.client_data_retention_days;
+      const financialDays = metadata.financial_data_retention_days;
+      const auditDays = metadata.audit_log_retention_days;
+
+      return [
+        { label: "Limpeza automática", value: autoCleanup },
+        {
+          label: "Retenção de clientes",
+          value: typeof clientDays === "number" ? `${clientDays} dias` : "—",
+        },
+        {
+          label: "Retenção financeira",
+          value: typeof financialDays === "number" ? `${financialDays} dias` : "—",
+        },
+        {
+          label: "Retenção da trilha",
+          value: typeof auditDays === "number" ? `${auditDays} dias` : "—",
+        },
+      ];
+    }
+
+    if (log.action === "tenant_settings_updated") {
+      return [
+        { label: "Nome", value: String(metadata.name || "—") },
+        { label: "E-mail", value: String(metadata.email || "—") },
+        { label: "Telefone", value: String(metadata.phone || "—") },
+      ];
+    }
+
+    if (log.action === "lgpd_request_status_updated") {
+      const status = String(metadata.status || "");
+      return [{ label: "Novo status", value: lgpdStatusLabel[status as LgpdRequestStatus] || status || "—" }];
+    }
+
+    if (log.action === "lgpd_data_exported") {
+      return [
+        { label: "Formato", value: String(metadata.requested_format || "—").toUpperCase() },
+        { label: "Titular", value: String(metadata.target_user_id || "—") },
+      ];
+    }
+
+    if (log.action === "lgpd_anonymization_executed") {
+      const rows = Object.entries(metadata)
+        .filter(([, value]) => typeof value === "number")
+        .map(([key, value]) => ({ label: key, value: String(value) }));
+      return rows.length > 0 ? rows : [{ label: "Execução", value: "Concluída" }];
+    }
+
+    return Object.entries(metadata).slice(0, 6).map(([key, value]) => ({
+      label: key,
+      value:
+        typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+          ? String(value)
+          : JSON.stringify(value),
+    }));
   };
 
   const getSlaInfo = (request: LgpdDataRequest): {
@@ -946,19 +1028,23 @@ export default function Configuracoes() {
             ) : (
               auditLogs.map((log) => (
                 <div key={log.id} className="rounded-lg border border-border/70 p-3">
-                  <p className="text-sm font-medium">{log.action}</p>
+                  <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
                   <p className="text-xs text-muted-foreground">
                     {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
                     {new Date(log.created_at).toLocaleString("pt-BR")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {log.entity_type}
-                    {log.entity_id ? ` (${log.entity_id})` : ""}
+                    {getEntityLabel(log.entity_type)}
+                    {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
                   </p>
-                  {log.metadata && Object.keys(log.metadata).length > 0 ? (
-                    <p className="mt-1 text-xs text-muted-foreground break-all">
-                      {JSON.stringify(log.metadata)}
-                    </p>
+                  {getAuditMetadataItems(log).length > 0 ? (
+                    <div className="mt-2 space-y-1">
+                      {getAuditMetadataItems(log).map((item) => (
+                        <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
+                        </p>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
               ))
