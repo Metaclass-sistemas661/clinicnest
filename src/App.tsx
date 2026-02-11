@@ -25,6 +25,7 @@ const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
 const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
 const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));
 const Contato = lazyWithRetry(() => import("@/pages/Contato"));
+const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/termos-de-uso" element={<TermosDeUso />} />
                 <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
                 <Route path="/contato" element={<Contato />} />
+                <Route path="/canal-lgpd" element={<CanalLgpd />} />
 
                 {/* Protected routes */}
                 <Route
