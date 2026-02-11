@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { FinancialTransaction } from "@/types/database";
 
@@ -62,13 +63,6 @@ export function CashFlowTable({ transactions, filterMonth }: CashFlowTableProps)
   const filteredData = cashFlowData.filter(
     (day, index) => day.hasTransactions || index % 5 === 0
   );
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   return (
     <Card>

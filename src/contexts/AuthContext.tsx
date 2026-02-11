@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import type { Profile, UserRole, Tenant } from '@/types/database';
 
 interface AuthContextType {
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenant: tenantData,
       };
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      logger.error('Error fetching user data:', error);
       return { profile: null, userRole: null, tenant: null };
     }
   };

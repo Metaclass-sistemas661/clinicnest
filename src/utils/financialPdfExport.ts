@@ -1,11 +1,17 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+
+/** jsPDF com plugin autotable expõe lastAutoTable */
+interface JsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: { finalY: number };
+}
+import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, differenceInDays, endOfWeek, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import type { FinancialTransaction } from "@/types/database";
 
-interface CommissionPayment {
+export interface CommissionPayment {
   id: string;
   professional_id: string;
   professional?: { full_name: string };
@@ -39,14 +45,6 @@ interface ExportOptions {
   damagedLosses?: DamagedProductLoss[];
   totalProductLoss?: number;
 }
-
-// Utility to format currency
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-};
 
 // Format period string
 const formatPeriod = (startDate: Date, endDate: Date): string => {
@@ -447,7 +445,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       tableWidth: pageWidth - margin * 2,
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
   }
 
   // ==================== EVOLUTION CHARTS ====================
@@ -531,7 +529,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       tableWidth: pageWidth - margin * 2,
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
   }
 
   // Check if we need a new page
@@ -577,7 +575,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       tableWidth: pageWidth - margin * 2,
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + 15;
+    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
   }
 
   // ==================== TRANSACTIONS TABLE (NEW PAGE) ====================

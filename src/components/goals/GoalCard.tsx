@@ -78,7 +78,7 @@ export function GoalCard({
   goal,
   professionals,
   products,
-  formatCurrency,
+  formatCurrency: _formatCurrency,
   formatValue,
   onToggleHeader,
   onArchive,

@@ -28,8 +28,10 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
@@ -86,7 +88,7 @@ export default function Clientes() {
         const ids = new Set((data || []).map((r: { client_id: string }) => r.client_id));
         setMyClientIds(ids);
       } catch (err) {
-        console.error("Error fetching my clients:", err);
+        logger.error("Error fetching my clients:", err);
       }
     };
     fetchMyClientIds();
@@ -109,16 +111,13 @@ export default function Clientes() {
       const data = await fetchClientSpendingAllTime(profile.tenant_id);
       setClientSpending(data);
     } catch (err) {
-      console.error("Error fetching client spending:", err);
+      logger.error("Error fetching client spending:", err);
       toast.error("Erro ao carregar consumo dos clientes.");
     }
   };
 
   const getSpendingForClient = (clientId: string): ClientSpendingRow | undefined =>
     clientSpending.find((s) => s.client_id === clientId);
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
   const sortedAndFilteredClients = useMemo(() => {
     if (!isAdmin || clientSpending.length === 0) return [...filteredClients];
@@ -142,7 +141,7 @@ export default function Clientes() {
       if (error) throw error;
       setClients((data as Client[]) || []);
     } catch (error) {
-      console.error("Error fetching clients:", error);
+      logger.error("Error fetching clients:", error);
       toast.error("Erro ao carregar clientes. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -223,7 +222,7 @@ export default function Clientes() {
       fetchClients();
     } catch (error) {
       toast.error(editingClient ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }

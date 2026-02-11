@@ -14,24 +14,24 @@ export function GoogleAnalytics() {
     if (!GA_MEASUREMENT_ID || typeof window === "undefined") return;
 
     // Injetar script gtag se ainda não existir
-    if (!(window as any).gtag) {
+    if (!window.gtag) {
       const script = document.createElement("script");
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
       document.head.appendChild(script);
 
-      (window as any).dataLayer = (window as any).dataLayer || [];
-      (window as any).gtag = function () {
-        (window as any).dataLayer.push(arguments);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function (...args: unknown[]) {
+        window.dataLayer?.push(args);
       };
-      (window as any).gtag("js", new Date());
-      (window as any).gtag("config", GA_MEASUREMENT_ID, {
+      window.gtag("js", new Date());
+      window.gtag("config", GA_MEASUREMENT_ID, {
         send_page_view: false,
       });
     }
 
     // Enviar page_view na navegação
-    (window as any).gtag?.("event", "page_view", {
+    window.gtag?.("event", "page_view", {
       page_path: location.pathname + location.search,
       page_title: document.title,
     });

@@ -15,8 +15,9 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import { format, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import type { FinancialTransaction } from "@/types/database";
 
 interface FinanceChartsProps {
@@ -81,21 +82,13 @@ export function FinanceCharts({ transactions, filterMonth }: FinanceChartsProps)
     };
   }, [transactions]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
     if (!active || !payload) return null;
 
     return (
       <div className="rounded-lg border bg-card p-3 shadow-lg">
         <p className="mb-2 font-medium">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <p key={index} style={{ color: entry.color }} className="text-sm">
             {entry.name}: {formatCurrency(entry.value)}
           </p>
@@ -202,7 +195,7 @@ export function FinanceCharts({ transactions, filterMonth }: FinanceChartsProps)
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {categoryData.expense.map((entry, index) => (
+                    {categoryData.expense.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -244,7 +237,7 @@ export function FinanceCharts({ transactions, filterMonth }: FinanceChartsProps)
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     labelLine={false}
                   >
-                    {categoryData.income.map((entry, index) => (
+                    {categoryData.income.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

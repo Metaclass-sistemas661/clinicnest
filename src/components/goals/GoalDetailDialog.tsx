@@ -1,6 +1,8 @@
-// Componente desativado - funções RPC de goals não existem
-// TODO: Criar funções RPC no banco de dados para ativar este componente
-
+/**
+ * Diálogo de detalhe da meta.
+ * Desativado: requer funções RPC de goals no banco para ativar.
+ * Para ativar: criar RPCs e implementar o conteúdo do diálogo.
+ */
 import type { GoalWithProgress } from "@/lib/goals";
 
 interface GoalDetailDialogProps {

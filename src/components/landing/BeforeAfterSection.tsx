@@ -10,7 +10,6 @@ import {
   Clock,
   HeartHandshake
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const beforeItems = [
   { icon: FileText, text: "Agenda no papel ou planilhas" },

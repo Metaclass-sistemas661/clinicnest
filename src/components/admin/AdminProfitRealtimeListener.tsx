@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
+import type { ProductSaleItem } from "@/types/supabase-extensions";
 import { AdminProfitCongratulationsDialog, type AdminProfitData } from "@/components/agenda/AdminProfitCongratulationsDialog";
 
 export function AdminProfitRealtimeListener() {
@@ -53,14 +55,14 @@ export function AdminProfitRealtimeListener() {
           .limit(10);
 
         if (error) {
-          console.error("Erro ao buscar summaries pendentes:", error);
+          logger.error("Erro ao buscar summaries pendentes:", error);
           return;
         }
 
         if (summaries && summaries.length > 0) {
           const summariesData: AdminProfitData[] = summaries.map((s) => {
             const productSales = Array.isArray(s.product_sales)
-              ? (s.product_sales as any[]).map((p: any) => ({
+              ? (s.product_sales as ProductSaleItem[]).map((p) => ({
                   product_name: p.product_name ?? "",
                   quantity: p.quantity ?? 0,
                   profit: p.profit ?? 0,
@@ -87,7 +89,7 @@ export function AdminProfitRealtimeListener() {
 
         hasCheckedPendingRef.current = true;
       } catch (error) {
-        console.error("Erro ao verificar summaries pendentes:", error);
+        logger.error("Erro ao verificar summaries pendentes:", error);
       }
     };
 

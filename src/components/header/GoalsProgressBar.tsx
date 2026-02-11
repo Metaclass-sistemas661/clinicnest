@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { Progress } from "@/components/ui/progress";
 import { Target } from "lucide-react";
 import { Link } from "react-router-dom";
-import type { GoalWithProgress, GoalType } from "@/lib/goals";
+import type { GoalWithProgress } from "@/lib/goals";
 import { getProgressIndicatorClass } from "@/lib/goals";
 
 function formatValue(g: GoalWithProgress): string {
@@ -12,12 +13,7 @@ function formatValue(g: GoalWithProgress): string {
     g.goal_type === "revenue" ||
     g.goal_type === "product_revenue" ||
     g.goal_type === "ticket_medio";
-  if (isRevenue) {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(g.current_value);
-  }
+  if (isRevenue) return formatCurrency(g.current_value);
   return `${Math.round(g.current_value)}`;
 }
 
@@ -36,7 +32,7 @@ export function GoalsProgressBar() {
 
     const fetchGoals = async () => {
       try {
-        const { data, error } = await supabase.rpc("get_goals_with_progress", {
+        const { data, error } = await getGoalsWithProgress({
           p_tenant_id: profile.tenant_id,
           p_include_archived: false,
         });

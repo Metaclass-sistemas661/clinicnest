@@ -60,3 +60,57 @@ export async function getAuthenticatedUser(
 
   return { user, error: null };
 }
+
+export type AuthWithTenantResult =
+  | { user: User; tenantId: string; error: null }
+  | { user: null; tenantId: null; error: Response };
+
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+/**
+ * Valida o JWT e retorna o usuário autenticado e o tenant_id do perfil (Seção 4.6).
+ * Use em operações sensíveis que exigem tenant (ex.: convite, recursos por tenant).
+ * Se o perfil não tiver tenant_id, retorna erro 403.
+ */
+export async function getAuthenticatedUserWithTenant(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<AuthWithTenantResult> {
+  const authResult = await getAuthenticatedUser(req, corsHeaders);
+  if (authResult.error) return { user: null, tenantId: null, error: authResult.error };
+
+  const user = authResult.user;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      user: null,
+      tenantId: null,
+      error: new Response(
+        JSON.stringify({ error: "Configuração do servidor incompleta" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile?.tenant_id) {
+    return {
+      user: null,
+      tenantId: null,
+      error: new Response(
+        JSON.stringify({ error: "Perfil ou tenant não encontrado" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  return { user, tenantId: profile.tenant_id, error: null };
+}

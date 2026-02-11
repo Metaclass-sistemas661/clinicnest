@@ -24,10 +24,13 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
 import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { format, addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
@@ -136,14 +139,14 @@ export default function Agenda() {
 
       const professionals = (professionalsRes.data as Profile[]) || [];
 
-      setAppointments((appointmentsRes.data as Appointment[]) || []);
-      setAllAppointments((appointmentsRes.data as Appointment[]) || []);
+      setAppointments((appointmentsRes.data as unknown as Appointment[]) || []);
+      setAllAppointments((appointmentsRes.data as unknown as Appointment[]) || []);
       setClients((clientsRes.data as Client[]) || []);
       setServices((servicesRes.data as Service[]) || []);
       setProfessionals(professionals);
       setProducts(((productsRes.data as Product[]) || []).filter((product) => product.is_active));
     } catch (error) {
-      console.error("Error fetching data:", error);
+      logger.error("Error fetching data:", error);
       toast.error("Erro ao carregar agenda. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -168,7 +171,7 @@ export default function Agenda() {
       .lte("scheduled_at", dayEnd.toISOString())
       .neq("status", "cancelled");
 
-    setAllAppointments((data as Appointment[]) || []);
+    setAllAppointments((data as unknown as Appointment[]) || []);
   };
 
   // Quando a data do formulário muda, buscar agendamentos para verificação de conflitos
@@ -261,7 +264,7 @@ export default function Agenda() {
       fetchData();
     } catch (error) {
       toast.error("Erro ao criar agendamento");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -270,14 +273,14 @@ export default function Agenda() {
   const updateAppointmentStatus = async (id: string, status: AppointmentStatus) => {
     try {
       const apt = appointments.find((a) => a.id === id);
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from("appointments")
         .update({ status })
         .eq("id", id)
         .select();
 
       if (error) {
-        console.error("Error updating appointment status:", error);
+        logger.error("Error updating appointment status:", error);
         toast.error(`Erro ao atualizar status: ${error.message}`);
         return;
       }
@@ -308,16 +311,9 @@ export default function Agenda() {
       toast.success(statusMessages[status]);
       fetchData();
     } catch (error: any) {
-      console.error("Exception updating appointment status:", error);
+      logger.error("Exception updating appointment status:", error);
       toast.error(`Erro ao atualizar status: ${error?.message || "Erro desconhecido"}`);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   const editAppointment = async (id: string, data: EditAppointmentData) => {
@@ -343,7 +339,7 @@ export default function Agenda() {
       fetchData();
     } catch (error) {
       toast.error("Erro ao atualizar agendamento");
-      console.error(error);
+      logger.error(error);
     }
   };
 
@@ -360,7 +356,7 @@ export default function Agenda() {
       fetchData();
     } catch (error) {
       toast.error("Erro ao excluir agendamento");
-      console.error(error);
+      logger.error(error);
     }
   };
 
@@ -407,7 +403,7 @@ export default function Agenda() {
 
         // Popup de meta: buscar metas do profissional e mostrar mensagem motivacional + comissão + quanto falta
         try {
-          const { data: goalsData } = await supabase.rpc("get_goals_with_progress", {
+          const { data: goalsData } = await getGoalsWithProgress({
             p_tenant_id: profile.tenant_id,
             p_include_archived: false,
           });
@@ -463,7 +459,7 @@ export default function Agenda() {
       return undefined;
     } catch (error: any) {
       const errMsg = error?.message ?? (typeof error === "string" ? error : "Erro desconhecido");
-      console.error("Error completing appointment:", errMsg, error);
+      logger.error("Error completing appointment:", errMsg, error);
       if (!errMsg?.includes("Estoque insuficiente") && !errMsg?.includes("Produto não encontrado")) {
         toast.error("Erro ao concluir agendamento.");
       }

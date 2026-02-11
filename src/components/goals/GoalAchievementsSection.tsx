@@ -1,6 +1,8 @@
-// Componente desativado - tabela goals e funções RPC não existem
-// TODO: Criar tabela goals no banco de dados para ativar este componente
-
+/**
+ * Seção de conquistas de metas (Dashboard).
+ * Desativado: requer tabela `goals` e RPCs no banco para ativar.
+ * Para ativar: criar migração goals + RPCs e remover o early return null.
+ */
 import type { GoalWithProgress } from "@/lib/goals";
 
 interface Profile {

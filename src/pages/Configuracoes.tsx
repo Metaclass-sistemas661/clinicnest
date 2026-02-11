@@ -8,9 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Settings, Loader2, Building, Save } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function Configuracoes() {
-  const { profile, tenant, isAdmin, refreshProfile } = useAuth();
+  const { profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -54,7 +55,7 @@ export default function Configuracoes() {
       refreshProfile();
     } catch (error) {
       toast.error("Erro ao salvar configurações");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }

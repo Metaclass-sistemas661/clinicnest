@@ -4,8 +4,8 @@ Este documento contém todas as instruções para migrar o ProBeleza do Lovable 
 
 ## 📋 Informações do Projeto Externo
 
-- **URL:** `https://pijjuhtyxcidqceukogv.supabase.co`
-- **Anon Key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpamp1aHR5eGNpZHFjZXVrb2d2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMTE4MzEsImV4cCI6MjA4NTU4NzgzMX0.oVxZnG_yNCE9naQLjmryXn1fI6fwevCwskgIx2ASGhs`
+- **URL:** `https://SEU_PROJECT_REF.supabase.co`
+- **Anon Key:** (obtenha no Supabase Dashboard → Settings → API)
 
 ---
 
@@ -427,9 +427,9 @@ No painel do Supabase externo, vá em **Authentication > Providers** e configure
 Configure estas variáveis no seu serviço de hospedagem:
 
 ```env
-VITE_SUPABASE_URL=https://pijjuhtyxcidqceukogv.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpamp1aHR5eGNpZHFjZXVrb2d2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwMTE4MzEsImV4cCI6MjA4NTU4NzgzMX0.oVxZnG_yNCE9naQLjmryXn1fI6fwevCwskgIx2ASGhs
-VITE_SUPABASE_PROJECT_ID=pijjuhtyxcidqceukogv
+VITE_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...  # anon/public key do Supabase Dashboard
+VITE_SUPABASE_PROJECT_ID=SEU_PROJECT_REF
 ```
 
 ### 6.2 Build Settings (Vercel)

@@ -7,8 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Target, TrendingUp, ChevronDown, Clock, Check, X, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
 import {
   goalTypeLabels,
@@ -50,9 +53,6 @@ export default function MinhasMetas() {
     setShowBarInHeader(profile?.show_goals_progress_in_header !== false);
   }, [profile?.show_goals_progress_in_header]);
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
-
   const formatValue = (g: GoalWithProgress) => {
     if (g.goal_type === "revenue" || g.goal_type === "product_revenue" || g.goal_type === "ticket_medio")
       return `${formatCurrency(g.current_value)} / ${formatCurrency(g.target_value)}`;
@@ -64,7 +64,7 @@ export default function MinhasMetas() {
 
     try {
       const [goalsRes, suggestionsRes] = await Promise.all([
-        supabase.rpc("get_goals_with_progress", {
+        getGoalsWithProgress({
           p_tenant_id: profile.tenant_id,
           p_include_archived: false,
         }),
@@ -95,7 +95,7 @@ export default function MinhasMetas() {
           .gte("created_at", weekAgo.toISOString());
         const notifiedGoalIds = new Set(
           (recentReminders || [])
-            .map((r: { metadata?: { goal_id?: string } }) => r.metadata?.goal_id)
+            .map((r: { metadata?: unknown }) => (r.metadata as { goal_id?: string } | null)?.goal_id)
             .filter(Boolean)
         );
         for (const goal of almostReached) {
@@ -120,7 +120,7 @@ export default function MinhasMetas() {
           .eq("type", "goal_reached");
         const reachedGoalIds = new Set(
           (existingReached || [])
-            .map((r: { metadata?: { goal_id?: string } }) => r.metadata?.goal_id)
+            .map((r: { metadata?: unknown }) => (r.metadata as { goal_id?: string } | null)?.goal_id)
             .filter(Boolean)
         );
         for (const goal of reached) {
@@ -137,7 +137,7 @@ export default function MinhasMetas() {
         }
       }
     } catch (e: unknown) {
-      console.error(e);
+      logger.error(e);
       toast.error("Erro ao carregar suas metas");
     } finally {
       setIsLoading(false);
@@ -190,7 +190,7 @@ export default function MinhasMetas() {
         .eq("user_id", profile.user_id);
       if (error) throw error;
       await refreshProfile();
-    } catch (e) {
+    } catch (_e) {
       setShowBarInHeader(!checked);
       toast.error("Erro ao salvar preferência");
     } finally {

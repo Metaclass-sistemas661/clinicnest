@@ -105,6 +105,15 @@ export interface FinancialTransaction {
   updated_at: string;
 }
 
+export interface ProductCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  created_at: string;
+}
+
+export type StockOutReasonType = "sale" | "damaged";
+
 export interface StockMovement {
   id: string;
   tenant_id: string;

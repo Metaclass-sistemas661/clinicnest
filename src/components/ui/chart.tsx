@@ -65,6 +65,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // 4.8 XSS: CSS interno (THEMES/config), não conteúdo de usuário
   return (
     <style
       dangerouslySetInnerHTML={{

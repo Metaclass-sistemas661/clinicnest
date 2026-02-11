@@ -1,5 +1,4 @@
-import { Monitor, Tablet, Smartphone, Globe, Wifi } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Monitor, Tablet, Smartphone, Globe } from "lucide-react";
 
 const devices = [
   {
@@ -49,7 +48,7 @@ export function DevicesSection() {
           <div className="hidden md:block absolute top-1/2 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-violet-200 via-fuchsia-300 to-violet-200 -translate-y-1/2" />
           
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {devices.map((device, index) => {
+            {devices.map((device, _index) => {
               const Icon = device.icon;
               return (
                 <div 

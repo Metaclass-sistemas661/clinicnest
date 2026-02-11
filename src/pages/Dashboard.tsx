@@ -1,32 +1,29 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { StatCard } from "@/components/ui/stat-card";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Package,
-  Clock,
-  Plus,
-  AlertTriangle,
-  Wallet,
-  CreditCard,
-  Users,
-  Target,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { fetchClientSpendingByPeriod } from "@/lib/clientSpending";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
+import type { SalaryPaymentRow } from "@/types/supabase-extensions";
+import { getDashboardSalaryTotals, getDashboardCommissionTotals, getDashboardProductLossTotal, getDashboardClientsCount, getProfessionalsWithSalary, getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { processNumericRpc } from "@/lib/rpc-fallback";
+import {
+  DashboardStatsGrid,
+  DashboardClientRanking,
+  DashboardGoalsCard,
+  DashboardTodayAppointments,
+  DashboardNextAppointmentCard,
+  DashboardLowStockCard,
+} from "@/components/dashboard";
 
 export default function Dashboard() {
   const { user, profile, tenant, isAdmin } = useAuth();
@@ -84,13 +81,13 @@ export default function Dashboard() {
     professionalUserId: string | null
   ): Promise<{ pending: number; paid: number }> => {
     try {
-      const { data, error } = await supabase.rpc("get_dashboard_commission_totals", {
+      const { data, error } = await getDashboardCommissionTotals({
         p_tenant_id: tenantId,
         p_is_admin: asAdmin,
         p_professional_user_id: asAdmin ? null : professionalUserId,
       });
       if (error) throw error;
-      const result = data as { pending?: number; paid?: number } | null;
+      const result = data;
       const p = Number(result?.pending ?? 0);
       const paid = Number(result?.paid ?? 0);
       return { pending: p, paid };
@@ -134,7 +131,7 @@ export default function Dashboard() {
     professionalUserId: string | null
   ): Promise<{ pending: number; paid: number }> => {
     try {
-      const { data, error } = await supabase.rpc("get_dashboard_salary_totals" as any, {
+      const { data, error } = await getDashboardSalaryTotals({
         p_tenant_id: tenantId,
         p_is_admin: asAdmin,
         p_professional_user_id: asAdmin ? null : professionalUserId,
@@ -151,7 +148,7 @@ export default function Dashboard() {
       const paid = Number(result?.paid ?? 0) || 0;
       return { pending: p, paid };
     } catch (error) {
-      console.error("Error fetching salary totals:", error);
+      logger.error("Error fetching salary totals:", error);
       // Fallback: calcular manualmente
       if (asAdmin) {
         try {
@@ -159,25 +156,25 @@ export default function Dashboard() {
           const currentYear = new Date().getFullYear();
           
           // Buscar profissionais com salário configurado
-          const profResult = await (supabase.from("professional_commissions") as any)
+          const profResult = await supabase
+            .from("professional_commissions")
             .select("user_id, salary_amount")
             .eq("tenant_id", tenantId)
             .eq("payment_type", "salary")
             .not("salary_amount", "is", null)
-            .gt("salary_amount", 0);
+            .gt("salary_amount", 0) as { data: Array<{ user_id: string; salary_amount: number }> | null; error: any };
           const professionalsData = profResult.data;
           const profError = profResult.error;
           
           if (profError) throw profError;
           
-          // Buscar salários pagos no mês
-          const paidQuery = (supabase as any).from("salary_payments");
-          const paidResult = await paidQuery
-            .select("professional_id, amount")
-            .eq("tenant_id", tenantId)
-            .eq("payment_year", currentYear)
-            .eq("payment_month", currentMonth)
-            .eq("status", "paid");
+          // Buscar salários pagos no mês (via RPC tipado)
+          const paidResult = await getSalaryPayments({
+            p_tenant_id: tenantId,
+            p_professional_id: null,
+            p_year: currentYear,
+            p_month: currentMonth,
+          });
           const paidSalaries = paidResult.data;
           const paidError = paidResult.error;
           
@@ -185,15 +182,15 @@ export default function Dashboard() {
           
           const paidSalariesArray = Array.isArray(paidSalaries) ? paidSalaries : [];
           const professionalsDataArray = Array.isArray(professionalsData) ? professionalsData : [];
-          const paidIds = new Set(paidSalariesArray.map((s: any) => s.professional_id).filter(Boolean));
+          const paidIds = new Set(paidSalariesArray.map((s: SalaryPaymentRow) => s.professional_id).filter(Boolean));
           const pending = professionalsDataArray
-            .filter((p: any) => p.user_id && !paidIds.has(p.user_id))
-            .reduce((sum: number, p: any) => sum + Number(p.salary_amount || 0), 0);
+            .filter((p: { user_id: string; salary_amount: number }) => p.user_id && !paidIds.has(p.user_id))
+            .reduce((sum: number, p: { user_id: string; salary_amount: number }) => sum + Number(p.salary_amount || 0), 0);
           const paid = paidSalariesArray
-            .reduce((sum: number, s: any) => sum + Number(s.amount || 0), 0);
+            .reduce((sum: number, s: SalaryPaymentRow) => sum + Number(s.amount || 0), 0);
           return { pending, paid };
         } catch (fallbackError) {
-          console.error("Error in salary totals fallback:", fallbackError);
+          logger.error("Error in salary totals fallback:", fallbackError);
           return { pending: 0, paid: 0 };
         }
       } else {
@@ -230,8 +227,8 @@ export default function Dashboard() {
         salaryTotalsResult,
         staffPerformanceResult,
         staffMyClientsResult,
-        professionalsWithSalaryResult,
-        salariesPaidResult,
+        _professionalsWithSalaryResult,
+        _salariesPaidResult,
         mySalaryConfigResult,
         mySalaryPaymentsResult,
       ] = await Promise.all([
@@ -292,57 +289,52 @@ export default function Dashboard() {
           isAdmin,
           isAdmin ? null : staffUserId ?? null
         ).then((r) => ({ data: r, error: null })),
-        // 7. Perdas de produtos (baixas danificadas) do mês - usar RPC como outros cards
+        // 7. Perdas de produtos (baixas danificadas) do mês - usar processNumericRpc (Seção 2.3)
         isAdmin
           ? (async (): Promise<{ data: number; error: any }> => {
-              try {
-                const { data, error } = await (supabase.rpc as any)("get_dashboard_product_loss_total", {
+              const val = await processNumericRpc(
+                await getDashboardProductLossTotal({
                   p_tenant_id: profile.tenant_id,
                   p_year: null,
                   p_month: null,
-                });
-                // Garantir que data seja um número, não um objeto
-                if (data && typeof data === 'object' && !Array.isArray(data)) {
-                  console.error("Product loss RPC returned object instead of number:", data);
-                  return { data: 0, error: new Error("Invalid RPC response format") };
-                }
-                const value = data !== null && data !== undefined ? Number(data) : 0;
-                return { data: isNaN(value) ? 0 : value, error };
-              } catch (err) {
-                return { data: 0, error: err };
-              }
+                }),
+                async () => {
+                  const { data: fallbackData } = await supabase
+                    .from("stock_movements")
+                    .select("quantity, product:products(cost)")
+                    .eq("tenant_id", profile.tenant_id)
+                    .eq("movement_type", "out")
+                    .eq("out_reason_type", "damaged")
+                    .gte("created_at", monthStart)
+                    .lte("created_at", monthEnd);
+                  if (fallbackData && Array.isArray(fallbackData)) {
+                    return fallbackData.reduce((sum: number, m: { quantity?: number; product?: { cost?: number } }) => {
+                      const qty = Math.abs(Number(m.quantity) || 0);
+                      const cost = Number(m.product?.cost || 0);
+                      return sum + (qty * cost);
+                    }, 0);
+                  }
+                  return 0;
+                },
+                "product loss"
+              );
+              return { data: val, error: null };
             })()
           : Promise.resolve({ data: 0, error: null }),
-        // 8. Total de clientes - usar RPC como outros cards para garantir precisão
+        // 8. Total de clientes - usar processNumericRpc (Seção 2.3)
         (async (): Promise<{ data: number; error: any }> => {
-          try {
-            const { data, error } = await (supabase.rpc as any)("get_dashboard_clients_count", {
-              p_tenant_id: profile.tenant_id,
-            });
-            // Garantir que data seja um número
-            if (data && typeof data === 'object' && !Array.isArray(data)) {
-              console.error("Clients count RPC returned object instead of number:", data);
-              // Fallback imediato
-              const fallback = await supabase
+          const val = await processNumericRpc(
+            await getDashboardClientsCount({ p_tenant_id: profile.tenant_id }),
+            async () => {
+              const { count } = await supabase
                 .from("clients")
                 .select("id", { count: "exact", head: true })
                 .eq("tenant_id", profile.tenant_id);
-              return { data: fallback.count ?? 0, error: null };
-            }
-            const value = data !== null && data !== undefined ? Number(data) : 0;
-            return { data: isNaN(value) ? 0 : value, error };
-          } catch (err) {
-            // Fallback: buscar e contar manualmente se RPC falhar
-            try {
-              const fallback = await supabase
-                .from("clients")
-                .select("id", { count: "exact", head: true })
-                .eq("tenant_id", profile.tenant_id);
-              return { data: fallback.count ?? 0, error: null };
-            } catch {
-              return { data: 0, error: null };
-            }
-          }
+              return count ?? 0;
+            },
+            "clients count"
+          );
+          return { data: val, error: null };
         })(),
         // 9. Salários do mês (RPC similar ao de comissões)
         isAdmin
@@ -374,13 +366,13 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 12. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
-          ? (supabase.rpc as any)("get_professionals_with_salary", {
+          ? getProfessionalsWithSalary({
               p_tenant_id: profile.tenant_id,
             })
           : Promise.resolve({ data: null }),
         // 13. Admin: salários pagos no mês
         isAdmin
-          ? (supabase.rpc as any)("get_salary_payments", {
+          ? getSalaryPayments({
               p_tenant_id: profile.tenant_id,
               p_professional_id: null,
               p_year: new Date().getFullYear(),
@@ -389,20 +381,23 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 14. Staff: configuração de salário fixo
         !isAdmin && profile?.user_id
-          ? new Promise<{ data: any; error: any }>((resolve) => {
-              (supabase.from("professional_commissions") as any)
+          ? new Promise<{ data: { salary_amount?: number; payment_type?: string } | null; error: unknown }>((resolve) => {
+              supabase
+                .from("professional_commissions")
                 .select("salary_amount, payment_type")
                 .eq("tenant_id", profile.tenant_id)
                 .eq("user_id", profile.user_id)
                 .eq("payment_type", "salary")
                 .maybeSingle()
-                .then((r: any) => resolve(r))
-                .catch(() => resolve({ data: null, error: null }));
+                .then(
+                  (r) => resolve({ data: r.data as { salary_amount?: number; payment_type?: string } | null, error: r.error }),
+                  () => resolve({ data: null, error: null })
+                );
             })
           : Promise.resolve({ data: null, error: null }),
         // 15. Staff: último pagamento de salário
         !isAdmin && profile?.user_id
-          ? supabase.rpc("get_salary_payments" as any, {
+          ? getSalaryPayments({
               p_tenant_id: profile.tenant_id,
               p_professional_id: profile.user_id,
               p_year: null,
@@ -418,97 +413,12 @@ export default function Dashboard() {
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
       const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
-      // Perdas de produtos: RPC retorna número diretamente, com fallback
-      let productLossTotalValue = 0;
-      if (productLossesResult?.error) {
-        console.error("Error fetching product loss total:", productLossesResult.error);
-        // Fallback: calcular manualmente se RPC falhar
-        try {
-          const { data: fallbackData } = await supabase
-            .from("stock_movements")
-            .select("quantity, product:products(cost)")
-            .eq("tenant_id", profile.tenant_id)
-            .eq("movement_type", "out")
-            .eq("out_reason_type", "damaged")
-            .gte("created_at", monthStart)
-            .lte("created_at", monthEnd);
-          
-          if (fallbackData && Array.isArray(fallbackData)) {
-            productLossTotalValue = fallbackData.reduce((sum: number, m: any) => {
-              const qty = Math.abs(Number(m.quantity) || 0);
-              const cost = Number(m.product?.cost || 0);
-              return sum + (qty * cost);
-            }, 0);
-          }
-        } catch (fallbackError) {
-          console.error("Fallback product loss calculation failed:", fallbackError);
-        }
-      } else {
-        const rawValue = productLossesResult?.data;
-        productLossTotalValue = rawValue !== null && rawValue !== undefined ? Number(rawValue) : 0;
-        if (isNaN(productLossTotalValue)) {
-          console.error("Invalid product loss value:", rawValue);
-          productLossTotalValue = 0;
-        }
-      }
-      
-      // Contagem de clientes: RPC retorna número diretamente, com fallback
-      let clientsCountResult = 0;
-      if (clientsResult?.error) {
-        console.error("Error fetching clients count:", clientsResult.error);
-        // Fallback: buscar e contar manualmente
-        try {
-          const { data: fallbackData, count } = await supabase
-            .from("clients")
-            .select("id", { count: "exact" })
-            .eq("tenant_id", profile.tenant_id);
-          clientsCountResult = count ?? (Array.isArray(fallbackData) ? fallbackData.length : 0);
-        } catch (fallbackError) {
-          console.error("Fallback clients count failed:", fallbackError);
-          clientsCountResult = 0;
-        }
-      } else {
-        const rawValue = clientsResult?.data;
-        clientsCountResult = rawValue !== null && rawValue !== undefined ? Number(rawValue) : 0;
-        if (isNaN(clientsCountResult) || clientsCountResult < 0) {
-          console.error("Invalid clients count value:", rawValue, "for tenant:", profile.tenant_id);
-          // Fallback: buscar e contar manualmente
-          try {
-            const { data: fallbackData, count } = await supabase
-              .from("clients")
-              .select("id", { count: "exact" })
-              .eq("tenant_id", profile.tenant_id);
-            clientsCountResult = count ?? (Array.isArray(fallbackData) ? fallbackData.length : 0);
-          } catch (fallbackError) {
-            console.error("Fallback clients count failed:", fallbackError);
-            clientsCountResult = 0;
-          }
-        }
-      }
+      // Perdas de produtos e clientes: processNumericRpc já aplica fallback (Seção 2.3)
+      const productLossTotalValue = productLossesResult?.data ?? 0;
+      const clientsCountResult = clientsResult?.data ?? 0;
       
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
       const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
-      const professionalsWithSalaryData = Array.isArray(professionalsWithSalaryResult?.data) 
-        ? (professionalsWithSalaryResult.data as Array<{
-            professional_id: string;
-            professional_name: string;
-            salary_amount: number;
-            salary_payment_day: number;
-            default_payment_method: string;
-            commission_id: string;
-          }>)
-        : [];
-      const salariesPaidData = Array.isArray(salariesPaidResult?.data)
-        ? (salariesPaidResult.data as Array<{
-            id: string;
-            professional_id: string;
-            amount: number;
-            status: string;
-            payment_date: string | null;
-            payment_month: number;
-            payment_year: number;
-          }>)
-        : [];
       const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
       const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
         id: string;
@@ -647,23 +557,17 @@ export default function Dashboard() {
           // Goals functionality disabled - table doesn't exist
           setProfessionalGoalsRanking([]);
         } catch (err) {
-          console.error("Error fetching ranking:", err);
+          logger.error("Error fetching ranking:", err);
         }
       }
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      logger.error("Error fetching dashboard data:", error);
       toast.error("Erro ao carregar painel. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const myTodayAppointments = useMemo(() => {
     if (isAdmin || !profile?.id) return todayAppointments;
@@ -679,7 +583,7 @@ export default function Dashboard() {
     return upcoming[0] ?? myTodayAppointments.find((a) => a.status !== "cancelled") ?? null;
   }, [myTodayAppointments, isAdmin]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     const styles = {
       pending: "bg-warning/20 text-warning border-warning/30",
       confirmed: "bg-info/20 text-info border-info/30",
@@ -697,7 +601,7 @@ export default function Dashboard() {
         {labels[status as keyof typeof labels]}
       </Badge>
     );
-  };
+  }, []);
 
   return (
     <MainLayout
@@ -714,477 +618,56 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-8">
-        {/* Stats Grid - skeleton enquanto carrega para layout aparecer na hora */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {isLoading ? (
-            Array.from({ length: isAdmin ? 13 : 7 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3"
-              >
-                <div className="space-y-2 flex-1 min-w-0">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-7 w-24 sm:h-8 lg:h-9" />
-                </div>
-                <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
-              </div>
-            ))
-          ) : (
-            <>
-              {isAdmin && (
-                <>
-                  <StatCard
-                    title="Saldo do Dia"
-                    value={formatCurrency(dailyBalance)}
-                    icon={DollarSign}
-                    variant={dailyBalance >= 0 ? "success" : "danger"}
-                    description="Só transações de hoje (zera à meia-noite)"
-                  />
-                  <StatCard
-                    title="Saldo do Mês"
-                    value={formatCurrency(stats.monthlyBalance)}
-                    icon={DollarSign}
-                    variant={stats.monthlyBalance >= 0 ? "success" : "danger"}
-                  />
-                  <StatCard
-                    title="Receitas"
-                    value={formatCurrency(stats.monthlyIncome)}
-                    icon={TrendingUp}
-                    variant="success"
-                  />
-                  <StatCard
-                    title="Despesas"
-                    value={formatCurrency(stats.monthlyExpenses)}
-                    icon={TrendingDown}
-                    variant="danger"
-                  />
-                  <StatCard
-                    title="Perdas de Produtos"
-                    value={formatCurrency(productLossTotal)}
-                    icon={AlertTriangle}
-                    variant="danger"
-                    description="Baixas danificadas no mês"
-                  />
-                  <StatCard
-                    title="Total de Clientes"
-                    value={clientsCount}
-                    icon={Users}
-                    description="Clientes cadastrados"
-                  />
-                  <StatCard
-                    title="Comissões a Pagar"
-                    value={formatCurrency(commissionsPending)}
-                    icon={CreditCard}
-                    variant="warning"
-                    description="Comissões pendentes do mês"
-                  />
-                  <Link to="/financeiro?tab=commissions">
-                    <StatCard
-                      title="Comissões Pagas"
-                      value={formatCurrency(commissionsPaid)}
-                      icon={Wallet}
-                      variant="success"
-                      description="Comissões pagas no mês"
-                    />
-                  </Link>
-                  <Link to="/financeiro?tab=salaries">
-                    <StatCard
-                      title="Salários a Pagar"
-                      value={formatCurrency(salariesToPay)}
-                      icon={CreditCard}
-                      variant="warning"
-                      description="Total de salários fixos configurados"
-                    />
-                  </Link>
-                  <Link to="/financeiro?tab=salaries">
-                    <StatCard
-                      title="Salários Pagos"
-                      value={formatCurrency(salariesPaid)}
-                      icon={DollarSign}
-                      variant="success"
-                      description="Salários pagos no mês"
-                    />
-                  </Link>
-                </>
-              )}
-              {!isAdmin && (
-                <>
-                  <StatCard
-                    title="Comissões a Receber"
-                    value={formatCurrency(professionalCommissionsToReceive)}
-                    icon={CreditCard}
-                    variant="warning"
-                    description="Comissões pendentes (aguardando pagamento do admin)"
-                  />
-                  <Link to="/minhas-comissoes" className="block [&:hover]:no-underline">
-                    <StatCard
-                      title="Comissões Recebidas"
-                      value={formatCurrency(professionalCommissionsReceived)}
-                      icon={Wallet}
-                      variant="success"
-                      description="Comissões já pagas neste mês"
-                    />
-                  </Link>
-                  {mySalaryAmount !== null && (
-                    <Link to="/meus-salarios" className="block [&:hover]:no-underline">
-                      <StatCard
-                        title="Meu Salário"
-                        value={formatCurrency(mySalaryAmount)}
-                        icon={DollarSign}
-                        variant="info"
-                        description={
-                          lastSalaryPayment
-                            ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
-                            : "Salário fixo configurado"
-                        }
-                      />
-                    </Link>
-                  )}
-                  <StatCard
-                    title="Meu desempenho"
-                    value={staffCompletedThisMonth}
-                    icon={TrendingUp}
-                    description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados este mês`}
-                  />
-                  <StatCard
-                    title="Clientes que atendi"
-                    value={staffMyClientsCount ?? 0}
-                    icon={Users}
-                    description="Clientes únicos nos seus atendimentos"
-                  />
-                </>
-              )}
-              <StatCard
-                title="Agendamentos Hoje"
-                value={stats.todayAppointments}
-                icon={Calendar}
-              />
-              <StatCard
-                title={isAdmin ? "Pendentes" : "Meus pendentes"}
-                value={stats.pendingAppointments}
-                icon={Clock}
-                variant={stats.pendingAppointments > 0 ? "warning" : "default"}
-                description={!isAdmin ? "Agendamentos pendentes de confirmação" : undefined}
-              />
-              {isAdmin && (
-                <StatCard
-                  title="Estoque Baixo"
-                  value={stats.lowStockProducts}
-                  icon={Package}
-                  variant={stats.lowStockProducts > 0 ? "warning" : "default"}
-                />
-              )}
-            </>
-          )}
-        </div>
+        <DashboardStatsGrid
+          isLoading={isLoading}
+          isAdmin={isAdmin}
+          dailyBalance={dailyBalance}
+          monthlyBalance={stats.monthlyBalance}
+          monthlyIncome={stats.monthlyIncome}
+          monthlyExpenses={stats.monthlyExpenses}
+          productLossTotal={productLossTotal}
+          clientsCount={clientsCount}
+          commissionsPending={commissionsPending}
+          commissionsPaid={commissionsPaid}
+          salariesToPay={salariesToPay}
+          salariesPaid={salariesPaid}
+          professionalCommissionsToReceive={professionalCommissionsToReceive}
+          professionalCommissionsReceived={professionalCommissionsReceived}
+          mySalaryAmount={mySalaryAmount}
+          lastSalaryPayment={lastSalaryPayment}
+          staffCompletedThisMonth={staffCompletedThisMonth}
+          staffValueGeneratedThisMonth={staffValueGeneratedThisMonth}
+          staffMyClientsCount={staffMyClientsCount}
+          todayAppointments={stats.todayAppointments}
+          pendingAppointments={stats.pendingAppointments}
+          lowStockProducts={stats.lowStockProducts}
+          formatCurrency={formatCurrency}
+        />
 
-        {/* Top Clientes - Admin only */}
         {isAdmin && (
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg">Ranking – Clientes que mais consomem</CardTitle>
-                <CardDescription>
-                  Gastos de hoje e do mês (atualiza automaticamente)
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/clientes">Ver todos</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {clientRanking.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Users className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">
-                    Nenhum consumo registrado neste mês
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2 md:space-y-3">
-                  {clientRanking.slice(0, 10).map((item, index) => {
-                    const rank = index + 1;
-                    const isPodium = rank <= 3;
-                    const podiumStyles = {
-                      1: {
-                        bg: "bg-amber-100 dark:bg-amber-950/50 border-amber-300 dark:border-amber-700",
-                        badge: "bg-amber-400 text-amber-950 dark:bg-amber-500 dark:text-amber-950",
-                        label: "1º lugar",
-                        emoji: "🥇",
-                      },
-                      2: {
-                        bg: "bg-slate-100 dark:bg-slate-800/50 border-slate-300 dark:border-slate-600",
-                        badge: "bg-slate-400 text-white dark:bg-slate-500 dark:text-white",
-                        label: "2º lugar",
-                        emoji: "🥈",
-                      },
-                      3: {
-                        bg: "bg-amber-100/80 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800",
-                        badge: "bg-amber-700 text-amber-100 dark:bg-amber-800 dark:text-amber-100",
-                        label: "3º lugar",
-                        emoji: "🥉",
-                      },
-                    };
-                    const style = isPodium ? podiumStyles[rank as 1 | 2 | 3] : null;
-                    return (
-                      <div
-                        key={item.client_id}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4 ${
-                          style ? `${style.bg} border-2` : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 md:gap-4">
-                          <div
-                            className={`flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full font-bold text-sm shrink-0 ${
-                              style ? `${style.badge}` : "bg-primary/10 text-primary"
-                            }`}
-                            title={style?.label}
-                          >
-                            {style?.emoji ?? rank}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm md:text-base truncate">
-                              {item.client_name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Hoje: {formatCurrency(item.today_total)} · Mês: {formatCurrency(item.month_total)}
-                            </p>
-                            {style && (
-                              <Badge variant="outline" className="mt-1 text-xs">
-                                {style.label}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right self-end sm:self-auto">
-                          <p className="text-base md:text-lg font-bold text-primary">
-                            {formatCurrency(item.month_total)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">total no mês</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <DashboardClientRanking clientRanking={clientRanking} formatCurrency={formatCurrency} />
         )}
 
-        {/* Ranking de Metas por Profissional - Admin only */}
         {isAdmin && professionalGoalsRanking.length > 0 && (
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Ranking – Metas por Profissional
-                </CardTitle>
-                <CardDescription>
-                  Profissionais ordenados pelo progresso das metas
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/metas">Ver metas</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 md:space-y-3">
-                {professionalGoalsRanking.map((item, index) => {
-                  const rank = index + 1;
-                  const isPodium = rank <= 3;
-                  const podiumStyles = {
-                    1: { bg: "bg-amber-100 dark:bg-amber-950/50 border-amber-300 dark:border-amber-700", emoji: "🥇" },
-                    2: { bg: "bg-slate-100 dark:bg-slate-800/50 border-slate-300 dark:border-slate-600", emoji: "🥈" },
-                    3: { bg: "bg-amber-100/80 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800", emoji: "🥉" },
-                  };
-                  const style = isPodium ? podiumStyles[rank as 1 | 2 | 3] : null;
-                  const isComplete = item.progress_pct >= 100;
-                  const formatVal = (v: number) =>
-                    item.goal_type === "revenue" || item.goal_type === "product_revenue"
-                      ? formatCurrency(v)
-                      : String(Math.round(v));
-                  return (
-                    <div
-                      key={`${item.professional_id}-${item.goal_name}`}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4 ${
-                        style ? `${style.bg} border-2` : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full font-bold text-sm shrink-0 bg-primary/10 text-primary">
-                          {style?.emoji ?? rank}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm md:text-base truncate">
-                            {item.professional_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">{item.goal_name}</p>
-                        </div>
-                      </div>
-                      <div className="text-right self-end sm:self-auto">
-                        <p className="text-base md:text-lg font-bold text-primary">
-                          {formatVal(item.current_value)} / {formatVal(item.target_value)}
-                        </p>
-                        <p className={`text-xs ${isComplete ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}`}>
-                          {Math.round(item.progress_pct)}% {isComplete ? "· Meta concluída!" : ""}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <DashboardGoalsCard
+            professionalGoalsRanking={professionalGoalsRanking}
+            formatCurrency={formatCurrency}
+          />
         )}
 
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          {/* Today's Appointments */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">
-                  {isAdmin ? "Agenda de Hoje" : "Meus agendamentos hoje"}
-                </CardTitle>
-                <CardDescription>
-                  {formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/agenda">Ver tudo</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {myTodayAppointments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Calendar className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">
-                    {isAdmin ? "Nenhum agendamento para hoje" : "Nenhum agendamento seu para hoje"}
-                  </p>
-                  <Button variant="link" asChild className="mt-2">
-                    <Link to="/agenda">Criar agendamento</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2 md:space-y-3">
-                  {myTodayAppointments.slice(0, 5).map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 transition-colors hover:bg-muted/50 gap-2 sm:gap-4"
-                    >
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-                          <Clock className="h-4 w-4 md:h-5 md:w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm md:text-base truncate">
-                            {appointment.client?.name || "Cliente não informado"}
-                          </p>
-                          <p className="text-xs md:text-sm text-muted-foreground truncate">
-                            {appointment.service?.name} •{" "}
-                            {formatInAppTz(appointment.scheduled_at, "HH:mm")}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="self-end sm:self-auto">
-                        {getStatusBadge(appointment.status)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Próximo atendimento - Staff only */}
+          <DashboardTodayAppointments
+            appointments={myTodayAppointments}
+            isAdmin={isAdmin}
+            getStatusBadge={getStatusBadge}
+          />
           {!isAdmin && nextAppointment && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Próximo atendimento</CardTitle>
-                <CardDescription>
-                  Seu próximo agendamento de hoje
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-                      <Clock className="h-4 w-4 md:h-5 md:w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm md:text-base truncate">
-                        {nextAppointment.client?.name || "Cliente não informado"}
-                      </p>
-                      <p className="text-xs md:text-sm text-muted-foreground truncate">
-                        {nextAppointment.service?.name} •{" "}
-                        {formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="self-end sm:self-auto">
-                    {getStatusBadge(nextAppointment.status)}
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" asChild className="mt-4">
-                  <Link to="/agenda">Ver agenda</Link>
-                </Button>
-              </CardContent>
-            </Card>
+            <DashboardNextAppointmentCard
+              nextAppointment={nextAppointment}
+              getStatusBadge={getStatusBadge}
+            />
           )}
-
-          {/* Low Stock Alert - Admin Only */}
-          {isAdmin && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Alertas de Estoque</CardTitle>
-                  <CardDescription>
-                    Produtos com estoque baixo ou zerado
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/produtos">Ver todos</Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {lowStockProducts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Package className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">
-                      Todos os produtos estão com estoque adequado
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 md:space-y-3">
-                    {lowStockProducts.slice(0, 5).map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border border-warning/30 bg-warning/5 p-3 md:p-4 gap-2"
-                      >
-                        <div className="flex items-center gap-3 md:gap-4">
-                          <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-warning/20 text-warning shrink-0">
-                            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm md:text-base truncate">{product.name}</p>
-                            <p className="text-xs md:text-sm text-muted-foreground">
-                              Mínimo: {product.min_quantity} unid.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right self-end sm:self-auto">
-                          <p className="text-base md:text-lg font-bold text-warning">
-                            {product.quantity}
-                          </p>
-                          <p className="text-xs text-muted-foreground">em estoque</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
         </div>
       </div>
     </MainLayout>

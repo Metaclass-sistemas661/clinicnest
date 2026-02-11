@@ -2,11 +2,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Package, DollarSign, User } from "lucide-react";
+import { formatCurrency } from "@/lib/formatCurrency";
 
 export interface AdminProfitData {
   professionalName: string;
@@ -21,13 +21,6 @@ interface AdminProfitCongratulationsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: AdminProfitData | null;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
 }
 
 export function AdminProfitCongratulationsDialog({

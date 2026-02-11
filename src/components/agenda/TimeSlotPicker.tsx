@@ -177,7 +177,7 @@ export function TimeSlotPicker({
           {TIME_SLOTS.map((slot) => {
             const slotInfo = slotAvailability[slot];
             const isSelected = selectedTime === slot;
-            const isHovered = hoveredSlot === slot;
+            const _isHovered = hoveredSlot === slot;
             const hasConflict = !slotInfo.available && selectedProfessional;
             const hasAlternatives = slotInfo.availableProfessionals.length > 0;
 

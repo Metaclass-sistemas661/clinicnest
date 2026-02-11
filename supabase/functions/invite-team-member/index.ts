@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logging.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
-const log = (message: string, data?: unknown) => {
-  console.log(`[invite-team-member] ${message}`, data ? JSON.stringify(data) : "");
-};
+const log = createLogger("INVITE-TEAM-MEMBER");
 
 /**
  * Envia e-mail via Resend
@@ -64,11 +65,6 @@ async function sendEmailViaResend(
   }
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface InviteBody {
   email: string;
@@ -196,10 +192,11 @@ Precisa de ajuda? Entre em contato com o administrador do sistema.
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
   log("Request recebido", { method: req.method });
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -209,7 +206,7 @@ serve(async (req) => {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -224,7 +221,7 @@ serve(async (req) => {
       log("ERROR: Sem Authorization header");
       return new Response(
         JSON.stringify({ error: "Não autorizado. Faça login." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -235,10 +232,18 @@ serve(async (req) => {
       log("ERROR: Token inválido", { error: userError?.message });
       return new Response(
         JSON.stringify({ error: "Sessão inválida ou expirada" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     log("Usuário autenticado", { userId: user.id });
+
+    const rl = await checkRateLimit(`invite:${user.id}`, 10, 60);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns minutos." }),
+        { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
 
     let body: InviteBody;
     try {
@@ -248,7 +253,7 @@ serve(async (req) => {
       log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -260,25 +265,25 @@ serve(async (req) => {
     if (!emailTrim) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (!fullNameTrim) {
       return new Response(
         JSON.stringify({ error: "Nome completo é obrigatório" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (!passwordStr || passwordStr.length < 6) {
       return new Response(
         JSON.stringify({ error: "Senha deve ter no mínimo 6 caracteres" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (role !== "staff" && role !== "admin") {
       return new Response(
         JSON.stringify({ error: "Função deve ser staff ou admin" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -293,7 +298,7 @@ serve(async (req) => {
       log("ERROR: Erro ao buscar profile", { error: profileError.message });
       return new Response(
         JSON.stringify({ error: `Erro ao buscar perfil: ${profileError.message}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -301,7 +306,7 @@ serve(async (req) => {
       log("ERROR: Profile ou tenant não encontrado");
       return new Response(
         JSON.stringify({ error: "Perfil ou tenant não encontrado" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     log("Tenant encontrado", { tenant_id: profile.tenant_id });
@@ -319,7 +324,7 @@ serve(async (req) => {
       log("ERROR: Erro ao buscar role", { error: roleError.message });
       return new Response(
         JSON.stringify({ error: `Erro ao verificar permissões: ${roleError.message}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -327,7 +332,7 @@ serve(async (req) => {
       log("ERROR: Usuário não é admin");
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem convidar membros" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     log("Usuário confirmado como admin");
@@ -355,7 +360,7 @@ serve(async (req) => {
       log("ERROR: Erro ao criar usuário", { error: createError.message, code: createError.status });
       return new Response(
         JSON.stringify({ error: msg }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -402,7 +407,7 @@ serve(async (req) => {
         message: "Membro cadastrado. Ele já pode acessar o sistema com o e-mail e a senha definidos.",
         user_id: newUser.user?.id,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -410,7 +415,7 @@ serve(async (req) => {
     log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

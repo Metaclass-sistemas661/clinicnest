@@ -35,6 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import type { Profile, UserRole, AppRole } from "@/types/database";
 
 interface TeamMember extends Profile {
@@ -172,7 +173,7 @@ export default function Equipe() {
 
       setTeam(teamData);
     } catch (error) {
-      console.error("Error fetching team:", error);
+      logger.error("Error fetching team:", error);
       toast.error("Erro ao carregar equipe. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -196,7 +197,7 @@ export default function Equipe() {
     setIsSaving(true);
 
     try {
-      console.log("[Equipe] Chamando invite-team-member com:", {
+      logger.debug("[Equipe] Chamando invite-team-member com:", {
         email: formData.email.trim(),
         full_name: formData.full_name.trim(),
         role: formData.role,
@@ -212,7 +213,7 @@ export default function Equipe() {
         },
       });
 
-      console.log("[Equipe] Resposta recebida:", { data, error });
+      logger.debug("[Equipe] Resposta recebida:", { data, error });
 
       if (error) {
         // Tentar extrair mensagem de erro do contexto
@@ -230,20 +231,20 @@ export default function Equipe() {
           }
         }
         toast.error(errorMessage);
-        console.error("[Equipe] Erro completo:", error);
+        logger.error("[Equipe] Erro completo:", error);
         return;
       }
       
       // Edge Function sempre retorna status 200, mas pode ter campo 'error'
       if (data?.error) {
         toast.error(data.error);
-        console.error("[Equipe] Erro retornado pela função:", data.error);
+        logger.error("[Equipe] Erro retornado pela função:", data.error);
         return;
       }
 
       if (!data?.success) {
         toast.error("Resposta inesperada do servidor");
-        console.error("[Equipe] Resposta inesperada:", data);
+        logger.error("[Equipe] Resposta inesperada:", data);
         return;
       }
 
@@ -261,7 +262,7 @@ export default function Equipe() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro ao cadastrar membro";
       toast.error(errorMessage);
-      console.error("[Equipe] Exceção não tratada:", error);
+      logger.error("[Equipe] Exceção não tratada:", error);
     } finally {
       setIsSaving(false);
     }
@@ -283,7 +284,7 @@ export default function Equipe() {
       fetchTeam();
     } catch (error) {
       toast.error("Erro ao atualizar função");
-      console.error(error);
+      logger.error(error);
     }
   };
 
@@ -428,7 +429,7 @@ export default function Equipe() {
       });
       fetchTeam();
     } catch (error: any) {
-      console.error("Error saving commission:", error);
+      logger.error("Error saving commission:", error);
       toast.error(error.message || "Erro ao salvar configuração");
     } finally {
       setIsSavingCommission(false);

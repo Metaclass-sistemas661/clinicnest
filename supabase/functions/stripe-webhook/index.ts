@@ -1,12 +1,18 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getWelcomeEmailHtml, getWelcomeEmailText, sendEmailViaResend } from "./email-templates.ts";
+import { createLogger } from "../_shared/logging.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
-};
+const logStep = createLogger("STRIPE-WEBHOOK");
+
+function getClientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("cf-connecting-ip")
+    || "unknown";
+}
 
 // Mapeamento de price IDs para plan keys
 const PRICE_TO_PLAN: Record<string, string> = {
@@ -16,23 +22,31 @@ const PRICE_TO_PLAN: Record<string, string> = {
 };
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
+  const jsonHeaders = { ...cors, "Content-Type": "application/json" };
+
   try {
     logStep("Webhook recebido");
+
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`webhook:${ip}`, 120, 60);
+    if (!rl.allowed) {
+      logStep("ERROR: Rate limit excedido", { ip });
+      return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: jsonHeaders });
+    }
 
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
       logStep("ERROR: Sem assinatura do Stripe");
-      return new Response(JSON.stringify({ error: "No signature" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "No signature" }), { status: 400, headers: jsonHeaders });
     }
 
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!stripeSecretKey || !webhookSecret || !supabaseUrl || !supabaseServiceRoleKey) {
+    if (!stripeSecretKey || !webhookSecret) {
       logStep("ERROR: Variáveis de ambiente faltando");
-      return new Response(JSON.stringify({ error: "Missing env vars" }), { status: 500 });
+      return new Response(JSON.stringify({ error: "Missing env vars" }), { status: 500, headers: jsonHeaders });
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: "2025-08-27.basil" });
@@ -46,16 +60,10 @@ serve(async (req) => {
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       logStep("ERROR: Assinatura inválida", { error: errMsg, bodyLength: body?.length ?? 0 });
-      return new Response(JSON.stringify({ error: "Invalid signature", details: errMsg }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Invalid signature", details: errMsg }), { status: 400, headers: jsonHeaders });
     }
 
-    // Cliente Supabase com service_role (admin)
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const supabaseAdmin = createSupabaseAdmin();
 
     // Processar eventos
     switch (event.type) {
@@ -78,11 +86,11 @@ serve(async (req) => {
         logStep("Evento não tratado", { type: event.type });
     }
 
-    return new Response(JSON.stringify({ received: true }), { status: 200 });
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers: jsonHeaders });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: jsonHeaders });
   }
 });
 
@@ -290,7 +298,7 @@ async function handleCheckoutCompleted(
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription, supabaseAdmin: any) {
   logStep("customer.subscription.updated", { subscriptionId: subscription.id });
 
-  const stripeCustomerId = subscription.customer as string;
+  const _stripeCustomerId = subscription.customer as string;
   const status = subscription.status === "active" ? "active" : subscription.status === "trialing" ? "trialing" : "inactive";
   const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
   const priceId = subscription.items.data[0]?.price.id;

@@ -19,7 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { logger } from "@/lib/logger";
 import { DollarSign, CreditCard, Calendar, Download } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
@@ -67,7 +69,7 @@ export default function MeusSalarios() {
     try {
       const [year, month] = filterMonth.split("-").map(Number);
       
-      const { data, error } = await supabase.rpc("get_salary_payments", {
+      const { data, error } = await getSalaryPayments({
         p_tenant_id: profile.tenant_id,
         p_professional_id: showAllPeriods ? null : profile.user_id,
         p_year: showAllPeriods ? null : year,
@@ -83,17 +85,10 @@ export default function MeusSalarios() {
 
       setSalaries(filteredSalaries);
     } catch (error) {
-      console.error("Error fetching salaries:", error);
+      logger.error("Error fetching salaries:", error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   const pendingTotal = salaries

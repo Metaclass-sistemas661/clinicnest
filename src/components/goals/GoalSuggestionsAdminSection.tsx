@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,7 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Send, Check, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { goalTypeLabels, periodLabels, type GoalType, type GoalPeriod } from "@/lib/goals";
 
 interface GoalSuggestion {
@@ -54,9 +57,6 @@ export function GoalSuggestionsAdminSection({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectDialog, setRejectDialog] = useState<{ suggestion: GoalSuggestion; reason: string } | null>(null);
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
-
   const fetchSuggestions = async () => {
     try {
       const { data, error } = await supabase
@@ -69,7 +69,7 @@ export function GoalSuggestionsAdminSection({
       if (error) throw error;
       setSuggestions((data || []) as GoalSuggestion[]);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       toast.error("Erro ao carregar sugestões");
     } finally {
       setIsLoading(false);
@@ -83,9 +83,7 @@ export function GoalSuggestionsAdminSection({
   const handleApprove = async (suggestion: GoalSuggestion) => {
     setActionLoading(suggestion.id);
     try {
-      const { data: goal, error: insertError } = await supabase
-        .from("goals")
-        .insert({
+      const insertData = {
           tenant_id: tenantId,
           name: suggestion.name || `Meta ${goalTypeLabels[suggestion.goal_type as GoalType]} - ${professionals.find((p) => p.id === suggestion.professional_id)?.full_name || "Profissional"}`,
           goal_type: suggestion.goal_type,
@@ -94,7 +92,11 @@ export function GoalSuggestionsAdminSection({
           professional_id: suggestion.professional_id,
           product_id: null,
           show_in_header: false,
-        })
+        };
+      const { data: goal, error: insertError } = await supabase
+        .from("goals")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- goals insert shape varies from generated types
+        .insert(insertData as any)
         .select("id")
         .single();
 

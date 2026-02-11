@@ -1,5 +1,14 @@
 # Configuração das Melhorias Implementadas
 
+## Melhorias do Diagnóstico (2025)
+
+- **Webhooks:** Doc consolidado em `docs/WEBHOOK_STRIPE_DEPLOY.md`. CORS em produção: `SUPABASE_CORS_ORIGINS` (ver `docs/SEGURANCA_ENV.md`).
+- **Contato:** Formulário salva em `contact_messages`.
+- **Validação RPCs:** `pay_salary` e `complete_appointment_with_sale` validam inputs (dias negativos, quantidade negativa).
+- **Logger:** `maskSensitive()` para dados sensíveis em logs.
+
+---
+
 ## 1. Formulário de Contato (Supabase)
 
 O formulário de contato salva mensagens na tabela `contact_messages`.

@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Scissors, Plus, Loader2, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import type { Service } from "@/types/database";
 
@@ -78,7 +79,7 @@ export default function Servicos() {
       if (error) throw error;
       setServices((data as Service[]) || []);
     } catch (error) {
-      console.error("Error fetching services:", error);
+      logger.error("Error fetching services:", error);
       toast.error("Erro ao carregar serviços. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -164,7 +165,7 @@ export default function Servicos() {
       fetchServices();
     } catch (error) {
       toast.error(editingService ? "Erro ao atualizar serviço" : "Erro ao cadastrar serviço");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -181,7 +182,7 @@ export default function Servicos() {
 
       toast.success(service.is_active ? "Serviço desativado" : "Serviço ativado");
       fetchServices();
-    } catch (error) {
+    } catch (_error) {
       toast.error("Erro ao alterar status do serviço");
     }
   };

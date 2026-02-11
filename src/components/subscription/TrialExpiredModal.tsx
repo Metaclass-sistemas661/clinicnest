@@ -13,6 +13,7 @@ import { Check, Crown, Sparkles, Loader2, LogOut } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface TrialExpiredModalProps {
   open: boolean;
@@ -57,7 +58,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
       await createCheckout(planKey);
       toast.success("Redirecionando para o checkout...");
     } catch (error) {
-      console.error("Error creating checkout:", error);
+      logger.error("Error creating checkout:", error);
       toast.error("Erro ao iniciar checkout. Tente novamente.");
     } finally {
       setLoading(null);

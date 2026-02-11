@@ -67,7 +67,7 @@ export default function Assinatura() {
   const { 
     subscribed, 
     trialing, 
-    trial_expired,
+    trial_expired: _trial_expired,
     days_remaining, 
     plan, 
     subscription_end,

@@ -2,13 +2,10 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  DollarSign,
-  TrendingUp,
   Calendar,
   Users,
   Package,
   Wallet,
-  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

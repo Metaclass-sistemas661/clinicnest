@@ -12,6 +12,7 @@ import {
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { goalTypeLabels, periodLabels, type GoalType, type GoalPeriod } from "@/lib/goals";
 
 interface GoalSuggestionFormProps {
@@ -57,7 +58,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
       setPeriod("monthly");
       onSuccess();
     } catch (e: unknown) {
-      console.error(e);
+      logger.error(e);
       toast.error((e as { message?: string })?.message || "Erro ao enviar sugestão");
     } finally {
       setIsSubmitting(false);

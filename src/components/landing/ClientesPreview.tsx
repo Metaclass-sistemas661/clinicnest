@@ -2,8 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Search, Plus, TrendingUp, ShoppingBag } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Users, Search, Plus } from "lucide-react";
 
 export function ClientesPreview() {
   return (

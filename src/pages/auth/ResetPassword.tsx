@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2, ArrowLeft, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -36,7 +37,7 @@ export default function ResetPassword() {
             });
             
             if (sessionError || !newSession) {
-              console.error("[ResetPassword] Erro ao estabelecer sessão:", sessionError);
+              logger.error("[ResetPassword] Erro ao estabelecer sessão:", sessionError);
               toast.error("Link inválido ou expirado");
               setTimeout(() => navigate("/forgot-password"), 2000);
               return;
@@ -44,7 +45,7 @@ export default function ResetPassword() {
             
             setIsValid(true);
           } catch (err) {
-            console.error("[ResetPassword] Exceção ao estabelecer sessão:", err);
+            logger.error("[ResetPassword] Exceção ao estabelecer sessão:", err);
             toast.error("Link inválido ou expirado");
             setTimeout(() => navigate("/forgot-password"), 2000);
           }
@@ -77,28 +78,28 @@ export default function ResetPassword() {
     // A Edge Function atualiza a senha usando admin.updateUserById (não envia email automático)
     // e então envia nosso email customizado
     try {
-      console.log("[ResetPassword] Iniciando atualização de senha");
-      console.log("[ResetPassword] Verificando sessão antes de chamar Edge Function");
+      logger.debug("[ResetPassword] Iniciando atualização de senha");
+      logger.debug("[ResetPassword] Verificando sessão antes de chamar Edge Function");
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.error("[ResetPassword] Nenhuma sessão encontrada!");
+        logger.error("[ResetPassword] Nenhuma sessão encontrada!");
         toast.error("Sessão expirada. Por favor, solicite um novo link de recuperação.");
         setIsLoading(false);
         return;
       }
       
-      console.log("[ResetPassword] Sessão encontrada, chamando Edge Function update-password");
+      logger.debug("[ResetPassword] Sessão encontrada, chamando Edge Function update-password");
       const { data, error } = await supabase.functions.invoke("update-password", {
         body: {
           password: password,
         },
       });
 
-      console.log("[ResetPassword] Resposta da Edge Function:", { data, error });
+      logger.debug("[ResetPassword] Resposta da Edge Function:", { data, error });
 
       if (error) {
-        console.error("[ResetPassword] Erro na Edge Function:", error);
+        logger.error("[ResetPassword] Erro na Edge Function:", error);
         // Fallback: usar método padrão se Edge Function falhar
         const { error: fallbackError } = await supabase.auth.updateUser({
           password: password,
@@ -116,7 +117,7 @@ export default function ResetPassword() {
       }
 
       if (!data?.success) {
-        console.error("[ResetPassword] Edge Function retornou erro:", data);
+        logger.error("[ResetPassword] Edge Function retornou erro:", data);
         // Fallback: usar método padrão
         const { error: fallbackError } = await supabase.auth.updateUser({
           password: password,
@@ -133,11 +134,11 @@ export default function ResetPassword() {
         return;
       }
 
-      console.log("[ResetPassword] Senha atualizada com sucesso via Edge Function");
+      logger.debug("[ResetPassword] Senha atualizada com sucesso via Edge Function");
       toast.success("Senha atualizada com sucesso!");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
-      console.error("[ResetPassword] Exceção ao atualizar senha:", err);
+      logger.error("[ResetPassword] Exceção ao atualizar senha:", err);
       // Fallback: usar método padrão
       try {
         const { error: fallbackError } = await supabase.auth.updateUser({

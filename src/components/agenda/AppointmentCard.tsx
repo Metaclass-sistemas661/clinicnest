@@ -32,6 +32,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import type { Appointment, AppointmentStatus } from "@/types/database";
 
 interface AppointmentCardProps {
@@ -88,13 +89,6 @@ export function AppointmentCard({
   const handleCancel = async () => {
     await handleStatusChange("cancelled");
     setShowCancelDialog(false);
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   if (compact) {

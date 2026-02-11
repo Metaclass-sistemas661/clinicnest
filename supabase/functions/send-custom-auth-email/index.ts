@@ -1,9 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logging.ts";
 
-const log = (message: string, data?: unknown) => {
-  console.log(`[send-custom-auth-email] ${message}`, data ? JSON.stringify(data) : "");
-};
+const log = createLogger("SEND-CUSTOM-AUTH-EMAIL");
 
 /**
  * Template HTML para email de reset de senha
@@ -393,11 +393,6 @@ async function sendEmailViaResend(
   }
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface EmailBody {
   email: string;
@@ -406,10 +401,11 @@ interface EmailBody {
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
   log("Request recebido", { method: req.method });
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -419,7 +415,7 @@ serve(async (req) => {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -451,7 +447,7 @@ serve(async (req) => {
       log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -462,14 +458,14 @@ serve(async (req) => {
     if (!emailTrim) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (type !== "password_reset" && type !== "confirmation" && type !== "password_changed") {
       return new Response(
         JSON.stringify({ error: "Tipo de email inválido. Use 'password_reset', 'confirmation' ou 'password_changed'" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -478,7 +474,7 @@ serve(async (req) => {
       log("ERROR: password_changed requer autenticação");
       return new Response(
         JSON.stringify({ error: "Autenticação necessária para este tipo de email" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -536,7 +532,7 @@ serve(async (req) => {
         log("ERROR: Erro ao gerar link", { error: linkData.error?.message });
         return new Response(
           JSON.stringify({ error: linkData.error?.message || "Erro ao gerar link" }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -569,7 +565,7 @@ serve(async (req) => {
           success: true,
           message: "Email enviado com sucesso",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     } else {
       log("WARNING: Email não foi enviado", { email: emailTrim });
@@ -578,7 +574,7 @@ serve(async (req) => {
           success: false,
           message: "Erro ao enviar email. Verifique as configurações do Resend.",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
   } catch (err) {
@@ -587,7 +583,7 @@ serve(async (req) => {
     log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

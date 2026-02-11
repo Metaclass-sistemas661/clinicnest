@@ -1,6 +1,5 @@
-import { lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Suspense } from "react";
+import { Toaster } from "@/components/ui/sonner";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,23 +14,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
-import Dashboard from "@/pages/Dashboard";
-import Agenda from "@/pages/Agenda";
-import Financeiro from "@/pages/Financeiro";
-import Produtos from "@/pages/Produtos";
-import Servicos from "@/pages/Servicos";
-import Clientes from "@/pages/Clientes";
-import Equipe from "@/pages/Equipe";
-import Configuracoes from "@/pages/Configuracoes";
-import Assinatura from "@/pages/Assinatura";
-import MinhasComissoes from "@/pages/MinhasComissoes";
-import MeusSalarios from "@/pages/MeusSalarios";
-import Metas from "@/pages/Metas";
-import MinhasMetas from "@/pages/MinhasMetas";
-import Notificacoes from "@/pages/Notificacoes";
-import MinhasConfiguracoes from "@/pages/MinhasConfiguracoes";
-
-// Lazy apenas para páginas públicas (evita flash ao navegar no dashboard)
+// Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
 const Login = lazyWithRetry(() => import("@/pages/auth/Login"));
 const Register = lazyWithRetry(() => import("@/pages/auth/Register"));
@@ -42,14 +25,36 @@ const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
 const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));
 const Contato = lazyWithRetry(() => import("@/pages/Contato"));
 
-const queryClient = new QueryClient();
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
+const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
+const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
+const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
+const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
+const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
+const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
+const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
+const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
+const MinhasComissoes = lazyWithRetry(() => import("@/pages/MinhasComissoes"));
+const MeusSalarios = lazyWithRetry(() => import("@/pages/MeusSalarios"));
+const Metas = lazyWithRetry(() => import("@/pages/Metas"));
+const MinhasMetas = lazyWithRetry(() => import("@/pages/MinhasMetas"));
+const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
+const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfiguracoes"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minuto - dados estáticos (categorias, profissionais) ficam em cache
+      gcTime: 5 * 60 * 1000, // 5 minutos (antes cacheTime)
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
         <BrowserRouter>
           <GoogleAnalytics />
           <AuthProvider>

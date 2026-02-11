@@ -109,6 +109,7 @@ export function ScreenshotsSection() {
                   src={activeScreenshot.image}
                   alt={`Tela de ${activeScreenshot.name} do VynloBella`}
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               )}
               

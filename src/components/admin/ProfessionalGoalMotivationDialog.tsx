@@ -2,14 +2,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Target, TrendingUp, Sparkles } from "lucide-react";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
-import { goalTypeLabels, type GoalType } from "@/lib/goals";
+import { goalTypeLabels } from "@/lib/goals";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -90,7 +89,7 @@ export function ProfessionalGoalMotivationDialog() {
                     <li key={goal.id} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium truncate flex-1 mr-2">
-                          {goal.name || goalTypeLabels[goal.goal_type as GoalType]}
+                          {goal.name || goalTypeLabels[goal.goal_type]}
                         </span>
                         <span className="text-muted-foreground shrink-0">
                           {formatVal(goal.current_value)} / {formatVal(goal.target_value)}

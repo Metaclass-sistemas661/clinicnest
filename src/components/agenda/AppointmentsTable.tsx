@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import type { Appointment, AppointmentStatus, Client, Service, Profile, Product } from "@/types/database";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 import {
@@ -69,6 +70,7 @@ import {
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
@@ -163,13 +165,6 @@ export function AppointmentsTable({
   const [congratsDialogOpen, setCongratsDialogOpen] = useState(false);
   const [congratsData, setCongratsData] = useState<CongratulationsCommissionData | null>(null);
   const [noCommissionDialogOpen, setNoCommissionDialogOpen] = useState(false);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const availableProducts = products.filter((product) => product.quantity > 0);
 
@@ -311,7 +306,7 @@ export function AppointmentsTable({
         }
       }
     } catch (error) {
-      console.error("Error completing appointment:", error);
+      logger.error("Error completing appointment:", error);
     } finally {
       setIsCompleting(false);
       setUpdatingId(null);
@@ -355,7 +350,7 @@ export function AppointmentsTable({
           const status = statusConfig[appointment.status];
           const StatusIcon = status.icon;
           const isUpdating = updatingId === appointment.id;
-          const canEdit = isAdmin || appointment.professional_id === currentProfileId;
+          const _canEdit = isAdmin || appointment.professional_id === currentProfileId;
 
           return (
             <div key={appointment.id} className="rounded-lg border bg-card p-4 space-y-3">
@@ -666,11 +661,11 @@ export function AppointmentsTable({
               <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground space-y-1">
                 <p>
                   <span className="font-medium text-foreground">Cliente:</span>{" "}
-                  {(appointmentToComplete as any)?.client?.name || "Não informado"}
+                  {appointmentToComplete?.client?.name ?? "Não informado"}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Serviço:</span>{" "}
-                  {(appointmentToComplete as any)?.service?.name || "Não informado"}
+                  {appointmentToComplete?.service?.name ?? "Não informado"}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Valor do serviço:</span>{" "}

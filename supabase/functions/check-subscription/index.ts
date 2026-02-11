@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logging.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const logStep = createLogger("CHECK-SUBSCRIPTION");
 
 // VynloBella pricing plans mapping
 const PRODUCT_TO_PLAN: Record<string, string> = {
@@ -14,14 +14,10 @@ const PRODUCT_TO_PLAN: Record<string, string> = {
   "prod_TuB88hjDHGS60T": "annual",
 };
 
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
-};
-
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
   const supabaseClient = createClient(
@@ -46,6 +42,14 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    const rl = await checkRateLimit(`check-sub:${user.id}`, 30, 60);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Too many requests" }),
+        { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get subscription from database first
     const { data: profileData } = await supabaseClient
       .from('profiles')
@@ -61,7 +65,7 @@ serve(async (req) => {
         trial_expired: false,
         days_remaining: 0 
       }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
         status: 200,
       });
     }
@@ -149,14 +153,14 @@ serve(async (req) => {
       subscription_end: subscriptionEnd,
       has_access: hasAccess,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
       status: 500,
     });
   }

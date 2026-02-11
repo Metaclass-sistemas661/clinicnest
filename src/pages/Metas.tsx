@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
 import {
   Target,
   Plus,
@@ -41,6 +42,8 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
   goalTypeLabels,
   periodLabels,
@@ -102,15 +105,12 @@ export default function Metas() {
   });
   const [tabValue, setTabValue] = useState("all");
 
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
-
   const fetchData = async (includeArchived = false) => {
     if (!profile?.tenant_id || !isAdmin) return;
 
     try {
       const [goalsRes, profilesRes, productsRes, templatesRes] = await Promise.all([
-        supabase.rpc("get_goals_with_progress", {
+        getGoalsWithProgress({
           p_tenant_id: profile.tenant_id,
           p_include_archived: includeArchived,
         }),
@@ -134,7 +134,7 @@ export default function Metas() {
       setProducts((productsRes.data as Product[]) || []);
       setTemplates((templatesRes.data as GoalTemplate[]) || []);
     } catch (e: unknown) {
-      console.error(e);
+      logger.error("Error fetching metas:", e);
       toast.error("Erro ao carregar metas");
     } finally {
       setIsLoading(false);
@@ -190,7 +190,7 @@ export default function Metas() {
         show_in_header: false,
       });
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error((e as { message?: string })?.message || "Erro ao criar meta");
     } finally {
       setIsSaving(false);
@@ -217,7 +217,7 @@ export default function Metas() {
       if (error) throw error;
       toast.success("Meta atualizada!");
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error((e as { message?: string })?.message || "Erro ao atualizar meta");
       throw e;
     }
@@ -235,7 +235,7 @@ export default function Metas() {
       if (error) throw error;
       toast.success("Meta arquivada");
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error("Erro ao arquivar meta");
     }
   };
@@ -258,7 +258,7 @@ export default function Metas() {
       if (error) throw error;
       toast.success("Meta duplicada!");
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error("Erro ao duplicar meta");
     }
   };
@@ -289,7 +289,7 @@ export default function Metas() {
       if (error) throw error;
       toast.success(`${inserts.length} meta(s) criada(s)!`);
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error((e as { message?: string })?.message || "Erro ao criar metas");
       throw e;
     }
@@ -348,7 +348,7 @@ export default function Metas() {
       if (error) throw error;
       toast.success("Template salvo!");
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error("Erro ao salvar template");
     }
   };
@@ -388,7 +388,7 @@ export default function Metas() {
       }
       toast.success(newVal ? "Meta exibida no cabeçalho" : "Meta removida do cabeçalho");
       fetchData(showArchived);
-    } catch (e: unknown) {
+    } catch (_e: unknown) {
       toast.error("Erro ao atualizar");
     }
   };

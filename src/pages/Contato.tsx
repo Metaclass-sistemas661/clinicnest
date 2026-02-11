@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Contato() {
   const [submitted, setSubmitted] = useState(false);
@@ -15,25 +17,30 @@ export default function Contato() {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const subject = formData.get("subject") as string;
-    const message = formData.get("message") as string;
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const subject = String(formData.get("subject") ?? "").trim();
+    const message = String(formData.get("message") ?? "").trim();
+
+    if (!name || !email || !message) {
+      toast.error("Preencha nome, e-mail e mensagem.");
+      return;
+    }
 
     setLoading(true);
     try {
-      // TODO: Criar tabela contact_messages no banco ou implementar envio por email
-      // Por enquanto, mostra sucesso simulado
-      console.log("Contato recebido:", { name, email, subject, message });
-      
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      const { error } = await supabase.from("contact_messages").insert({
+        name,
+        email,
+        subject: subject || "Sem assunto",
+        message,
+      });
+      if (error) throw error;
       setSubmitted(true);
       form.reset();
       toast.success("Mensagem enviada com sucesso!");
     } catch (err) {
-      console.error("Erro ao enviar contato:", err);
+      logger.error("Erro ao enviar contato:", err);
       toast.error("Erro ao enviar mensagem. Tente novamente ou envie para contato@vynlobella.com");
     } finally {
       setLoading(false);

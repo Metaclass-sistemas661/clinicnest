@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, User, Lock, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface NotificationPrefs {
   appointment_created: boolean;
@@ -86,7 +87,7 @@ export default function MinhasConfiguracoes() {
       refreshProfile();
     } catch (e) {
       toast.error("Erro ao salvar telefone");
-      console.error(e);
+      logger.error(e);
     } finally {
       setIsSavingProfile(false);
     }
@@ -110,7 +111,7 @@ export default function MinhasConfiguracoes() {
       toast.success("Preferências de notificação salvas!");
     } catch (e) {
       toast.error("Erro ao salvar preferências");
-      console.error(e);
+      logger.error(e);
     } finally {
       setIsSavingPrefs(false);
     }
@@ -135,7 +136,7 @@ export default function MinhasConfiguracoes() {
       setPasswordConfirm("");
     } catch (e) {
       toast.error("Erro ao alterar senha");
-      console.error(e);
+      logger.error(e);
     } finally {
       setIsSavingPassword(false);
     }

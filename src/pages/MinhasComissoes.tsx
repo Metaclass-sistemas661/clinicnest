@@ -20,9 +20,11 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, CreditCard, Calendar, Loader2, Download } from "lucide-react";
+import { Wallet, CreditCard, Calendar, Download } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { logger } from "@/lib/logger";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -88,18 +90,12 @@ export default function MinhasComissoes() {
       if (error) throw error;
       setCommissions((data || []) as CommissionPayment[]);
     } catch (error) {
-      console.error("Error fetching commissions:", error);
+      logger.error("Error fetching commissions:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const pendingTotal = commissions
     .filter((c) => c.status === "pending")

@@ -21,7 +21,7 @@ interface Notification {
   created_at: string;
 }
 
-const TYPE_LABELS: Record<string, string> = {
+const _TYPE_LABELS: Record<string, string> = {
   appointment_created: "Novo agendamento",
   appointment_completed: "Atendimento concluído",
   appointment_cancelled: "Agendamento cancelado",

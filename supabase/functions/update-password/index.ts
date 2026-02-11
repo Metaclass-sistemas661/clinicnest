@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { createLogger } from "../_shared/logging.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
-const log = (message: string, data?: unknown) => {
-  console.log(`[update-password] ${message}`, data ? JSON.stringify(data) : "");
-};
+const log = createLogger("UPDATE-PASSWORD");
 
 /**
  * Template HTML para email de confirmação de alteração de senha
@@ -176,24 +177,20 @@ async function sendEmailViaResend(
   }
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
 
 interface UpdatePasswordBody {
   password: string;
 }
 
 serve(async (req) => {
+  const cors = getCorsHeaders(req);
   log("Request recebido", { method: req.method });
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: cors });
   }
 
-  const authResult = await getAuthenticatedUser(req, corsHeaders);
+  const authResult = await getAuthenticatedUser(req, cors);
   if (authResult.error) {
     log("ERROR: Autenticação falhou");
     return authResult.error;
@@ -201,13 +198,21 @@ serve(async (req) => {
   const user = authResult.user;
   log("Usuário autenticado", { userId: user.id });
 
+  const rl = await checkRateLimit(`update-pwd:${user.id}`, 5, 60);
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns minutos." }),
+      { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+    );
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -225,7 +230,7 @@ serve(async (req) => {
       log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -233,7 +238,7 @@ serve(async (req) => {
     if (!password || typeof password !== "string" || password.length < 6) {
       return new Response(
         JSON.stringify({ error: "Senha deve ter no mínimo 6 caracteres" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -247,7 +252,7 @@ serve(async (req) => {
       log("ERROR: Erro ao atualizar senha", { error: updateError.message });
       return new Response(
         JSON.stringify({ error: updateError.message || "Erro ao atualizar senha" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -291,7 +296,7 @@ serve(async (req) => {
         message: "Senha atualizada com sucesso",
         emailSent,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -299,7 +304,7 @@ serve(async (req) => {
     log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

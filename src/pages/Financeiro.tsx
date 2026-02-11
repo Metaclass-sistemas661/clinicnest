@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -36,6 +35,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getSalaryPayments, getProfessionalsWithSalary, paySalary } from "@/lib/supabase-typed-rpc";
+import { financialTransactionFormSchema, paySalaryDaysWorkedSchema } from "@/lib/validation";
+import type { SalaryPaymentRow, ProfessionalWithSalaryRow, PaySalaryResult } from "@/types/supabase-extensions";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -48,17 +50,25 @@ import {
   ArrowRightLeft,
   Link as LinkIcon,
   Wallet,
-  CheckCircle2,
   AlertTriangle
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { notifyUser } from "@/lib/notifications";
-import { FinanceCharts } from "@/components/financeiro/FinanceCharts";
-import { CashFlowTable } from "@/components/financeiro/CashFlowTable";
+import { logger } from "@/lib/logger";
 import { ExportPdfDialog } from "@/components/financeiro/ExportPdfDialog";
-import { generateFinancialReport, DamagedProductLoss } from "@/utils/financialPdfExport";
+import {
+  FinanceiroOverviewTab,
+  FinanceiroCashFlowTab,
+  FinanceiroCommissionsTab,
+  FinanceiroTransactionsTab,
+  FinanceiroSalariesTab,
+  type SalaryRow,
+  type ProfessionalForSalary,
+} from "@/components/financeiro/tabs";
+import { generateFinancialReport, DamagedProductLoss, type CommissionPayment } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
@@ -87,11 +97,11 @@ export default function Financeiro() {
       return next;
     });
   };
-  const [commissions, setCommissions] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<CommissionPayment[]>([]);
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
-  const [salaries, setSalaries] = useState<any[]>([]);
+  const [salaries, setSalaries] = useState<SalaryRow[]>([]);
   const [isLoadingSalaries, setIsLoadingSalaries] = useState(false);
-  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [professionals, setProfessionals] = useState<ProfessionalForSalary[]>([]);
   const [isPaySalaryDialogOpen, setIsPaySalaryDialogOpen] = useState(false);
   const [selectedSalaryPayment, setSelectedSalaryPayment] = useState<{
     professionalId: string;
@@ -134,8 +144,9 @@ export default function Financeiro() {
     [transactions]
   );
 
+
   // Handle PDF export with custom date range
-  const handleExportPdf = async (startDate: Date, endDate: Date) => {
+  const handleExportPdf = useCallback(async (startDate: Date, endDate: Date) => {
     if (!profile?.tenant_id) return;
 
     try {
@@ -219,44 +230,19 @@ export default function Financeiro() {
         totalIncome: reportIncome,
         totalExpense: reportExpense,
         balance: reportBalance,
-        commissions: (commissionsData || []) as any[],
+        commissions: (commissionsData || []) as CommissionPayment[],
         damagedLosses,
         totalProductLoss,
       });
 
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      logger.error("Error generating PDF:", error);
       toast.error("Erro ao gerar o PDF");
     }
-  };
+  }, [profile?.tenant_id, profile?.full_name]);
 
-  useEffect(() => {
-    if (profile?.tenant_id && isAdmin) {
-      fetchTransactions();
-      fetchCommissions();
-      fetchSalaries();
-      fetchProfessionals();
-      fetchProductLosses();
-    }
-  }, [profile?.tenant_id, isAdmin, filterMonth]);
-
-  // Refetch ao voltar para a aba (ex.: após concluir atendimento na Agenda)
-  useEffect(() => {
-    const onFocus = () => {
-      if (profile?.tenant_id && isAdmin) {
-        fetchTransactions();
-        fetchCommissions();
-        fetchSalaries();
-        fetchProfessionals();
-        fetchProductLosses();
-      }
-    };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [profile?.tenant_id, isAdmin, filterMonth]);
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
     setIsLoading(true);
@@ -276,42 +262,36 @@ export default function Financeiro() {
       if (error) throw error;
       setTransactions((data as FinancialTransaction[]) || []);
     } catch (error) {
-      console.error("Error fetching transactions:", error);
+      logger.error("Error fetching transactions:", error);
       toast.error("Erro ao carregar transações. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profile?.tenant_id, filterMonth]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.tenant_id) return;
 
-    // Validação manual
-    if (!formData.category) {
-      toast.error("Selecione uma categoria");
+    const parsed = financialTransactionFormSchema.safeParse(formData);
+    if (!parsed.success) {
+      const first = parsed.error.flatten().fieldErrors;
+      const msg = first.category?.[0] ?? first.amount?.[0] ?? first.transaction_date?.[0] ?? "Preencha os campos corretamente";
+      toast.error(msg);
       return;
     }
-    const amount = parseFloat(formData.amount);
-    if (isNaN(amount) || amount <= 0) {
-      toast.error("Valor inválido");
-      return;
-    }
-    if (!formData.transaction_date) {
-      toast.error("Selecione uma data");
-      return;
-    }
+    const amount = parseFloat(parsed.data.amount);
 
     setIsSaving(true);
 
     try {
       const { error } = await supabase.from("financial_transactions").insert({
         tenant_id: profile.tenant_id,
-        type: formData.type,
-        category: formData.category,
-        amount: amount,
-        description: formData.description || null,
-        transaction_date: formData.transaction_date,
+        type: parsed.data.type,
+        category: parsed.data.category,
+        amount,
+        description: parsed.data.description || null,
+        transaction_date: parsed.data.transaction_date,
       });
 
       if (error) throw error;
@@ -328,13 +308,13 @@ export default function Financeiro() {
       fetchTransactions();
     } catch (error) {
       toast.error("Erro ao registrar transação");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const fetchCommissions = async () => {
+  const fetchCommissions = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
     setIsLoadingCommissions(true);
@@ -358,243 +338,107 @@ export default function Financeiro() {
 
       if (commissionsError) throw commissionsError;
 
-      // Filtrar apenas comissões (excluir salários)
-      const filteredCommissions = (commissionsData || []).filter((c: any) => {
+      type CommissionRow = { professional_id: string; commission_config?: { payment_type?: string | null } | null };
+      type ProfileRow = { user_id: string; full_name: string | null; email: string | null };
+      const commissionsList = (commissionsData || []) as CommissionRow[];
+      const filteredCommissions = commissionsList.filter((c) => {
         const paymentType = c.commission_config?.payment_type;
         return paymentType === null || paymentType === 'commission' || paymentType === undefined;
       });
 
-      // Buscar nomes dos profissionais
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
         .eq("tenant_id", profile.tenant_id);
 
-      // Mapear nomes aos registros de comissão
-      const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p]));
-      const enrichedCommissions = filteredCommissions.map((c: any) => ({
+      const profilesMap = new Map((profilesData || []).map((p: ProfileRow) => [p.user_id, p]));
+      const enrichedCommissions = filteredCommissions.map((c) => ({
         ...c,
         professional: profilesMap.get(c.professional_id) || { full_name: "Profissional", email: null },
       }));
 
-      setCommissions(enrichedCommissions);
+      setCommissions(enrichedCommissions as CommissionPayment[]);
     } catch (error) {
-      console.error("Error fetching commissions:", error);
+      logger.error("Error fetching commissions:", error);
     } finally {
       setIsLoadingCommissions(false);
     }
-  };
+  }, [profile?.tenant_id, filterMonth]);
 
-  const fetchSalaries = async () => {
+  const fetchSalaries = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
     setIsLoadingSalaries(true);
     const [year, month] = filterMonth.split("-").map(Number);
 
     try {
-      // Buscar salários já pagos
-      let paidSalaries: any[] = [];
-      try {
-        const { data, error: paidError } = await supabase.rpc("get_salary_payments" as any, {
+      // Executar ambas as queries em paralelo (evita N+1 / chamadas sequenciais)
+      const [paidResult, professionalsResult] = await Promise.all([
+        getSalaryPayments({
           p_tenant_id: profile.tenant_id,
           p_professional_id: null,
           p_year: year,
           p_month: month,
-        });
+        }),
+        getProfessionalsWithSalary({
+          p_tenant_id: profile.tenant_id,
+        }),
+      ]);
 
-        if (paidError) {
-          console.error("Error fetching paid salaries:", paidError);
-          // Se o RPC não existe, usar fallback: buscar diretamente da tabela
-          if (paidError.code === '42883' || paidError.message?.includes('does not exist')) {
-            const { data: fallbackData, error: fallbackError } = await (supabase as any)
-              .from("salary_payments")
-              .select(`
-                id,
-                professional_id,
-                payment_month,
-                payment_year,
-                amount,
-                status,
-                payment_date,
-                payment_method,
-                payment_reference,
-                notes,
-                created_at,
-                updated_at
-              `)
-              .eq("tenant_id", profile.tenant_id)
-              .eq("payment_year", year)
-              .eq("payment_month", month);
-            
-            if (!fallbackError && fallbackData) {
-              // Buscar nomes dos profissionais separadamente
-              const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))] as string[];
-              const { data: profilesData } = await supabase
-                .from("profiles")
-                .select("user_id, full_name")
-                .in("user_id", professionalIds);
-              
-              const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
-              
-              paidSalaries = fallbackData.map((s: any) => ({
-                id: s.id,
-                professional_id: s.professional_id,
-                professional_name: profilesMap.get(s.professional_id) || "—",
-                payment_month: s.payment_month,
-                payment_year: s.payment_year,
-                amount: s.amount,
-                status: s.status,
-                payment_date: s.payment_date,
-                payment_method: s.payment_method,
-                payment_reference: s.payment_reference,
-                notes: s.notes,
-                created_at: s.created_at,
-                updated_at: s.updated_at,
-              }));
-            } else {
-              throw paidError;
-            }
-          } else {
-            throw paidError;
-          }
-        } else {
-          paidSalaries = Array.isArray(data) ? data : [];
+      // Processar salários pagos (com fallback se RPC falhar)
+      let paidSalaries: SalaryPaymentRow[] = [];
+      const { data: paidData, error: paidError } = paidResult;
+      if (paidError) {
+        logger.error("Error fetching paid salaries:", paidError);
+        const err = paidError as { code?: string; message?: string };
+        if (err.code === "42883" || err.message?.includes("does not exist")) {
+          const fallback = await getSalaryPayments({
+            p_tenant_id: profile.tenant_id,
+            p_professional_id: null,
+            p_year: year,
+            p_month: month,
+          });
+          paidSalaries = Array.isArray(fallback.data) ? fallback.data : [];
         }
-      } catch (rpcError: any) {
-        console.error("RPC get_salary_payments failed, trying direct query:", rpcError);
-        // Fallback: buscar diretamente da tabela
-        const { data: fallbackData, error: fallbackError } = await (supabase as any)
-          .from("salary_payments")
-          .select(`
-            id,
-            professional_id,
-            payment_month,
-            payment_year,
-            amount,
-            status,
-            payment_date,
-            payment_method,
-            payment_reference,
-            notes,
-            created_at,
-            updated_at
-          `)
-          .eq("tenant_id", profile.tenant_id)
-          .eq("payment_year", year)
-          .eq("payment_month", month);
-        
-        if (!fallbackError && fallbackData) {
-          // Buscar nomes dos profissionais separadamente
-          const professionalIds = [...new Set(fallbackData.map((s: any) => s.professional_id))].filter((id: any): id is string => typeof id === 'string');
-          const { data: profilesData } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", professionalIds);
-          
-          const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
-          
-          paidSalaries = fallbackData.map((s: any) => ({
-            id: s.id,
-            professional_id: s.professional_id,
-            professional_name: profilesMap.get(s.professional_id) || "—",
-            payment_month: s.payment_month,
-            payment_year: s.payment_year,
-            amount: s.amount,
-            status: s.status,
-            payment_date: s.payment_date,
-            payment_method: s.payment_method,
-            payment_reference: s.payment_reference,
-            notes: s.notes,
-            created_at: s.created_at,
-            updated_at: s.updated_at,
-          }));
-        } else {
-          console.error("Fallback also failed:", fallbackError);
-          paidSalaries = [];
-        }
+      } else {
+        paidSalaries = Array.isArray(paidData) ? paidData : [];
       }
 
-      // Buscar profissionais com salário configurado
-      let professionalsWithSalary: any[] = [];
-      try {
-        const { data, error: professionalsError } = await (supabase.rpc as any)("get_professionals_with_salary", {
-          p_tenant_id: profile.tenant_id,
-        });
-
-        if (professionalsError) {
-          console.error("Error fetching professionals with salary:", professionalsError);
-          // Se o RPC não existe, usar fallback: buscar diretamente da tabela
-          if (professionalsError.code === '42883' || professionalsError.message?.includes('does not exist')) {
-            const queryResult = await (supabase.from("professional_commissions") as any)
-              .select("user_id, salary_amount, salary_payment_day, default_payment_method, id")
-              .eq("tenant_id", profile.tenant_id)
-              .eq("payment_type", "salary")
-              .not("salary_amount", "is", null)
-              .gt("salary_amount", 0);
-            const fallbackData = queryResult.data;
-            const fallbackError = queryResult.error;
-            
-            if (!fallbackError && fallbackData) {
-              // Buscar nomes dos profissionais separadamente
-              const userIds = fallbackData.map((p: any) => p.user_id);
-              const { data: profilesData } = await supabase
-                .from("profiles")
-                .select("user_id, full_name")
-                .in("user_id", userIds);
-              
-              const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
-              
-              professionalsWithSalary = fallbackData.map((p: any) => ({
-                professional_id: p.user_id,
-                professional_name: profilesMap.get(p.user_id) || "—",
-                salary_amount: p.salary_amount,
-                salary_payment_day: p.salary_payment_day,
-                default_payment_method: p.default_payment_method,
-                commission_id: p.id,
-              }));
-            } else {
-              throw professionalsError;
-            }
-          } else {
-            throw professionalsError;
+      // Processar profissionais com salário (com fallback se RPC falhar)
+      let professionalsWithSalary: ProfessionalWithSalaryRow[] = [];
+      const { data: professionalsData, error: professionalsError } = professionalsResult;
+      if (professionalsError) {
+        logger.error("Error fetching professionals with salary:", professionalsError);
+        const err = professionalsError as { code?: string; message?: string };
+        if (err.code === "42883" || err.message?.includes("does not exist")) {
+          const queryResult = await (supabase
+            .from("professional_commissions")
+            .select("user_id, salary_amount, salary_payment_day, default_payment_method, id")
+            .eq("tenant_id", profile.tenant_id)
+            .eq("payment_type", "salary")
+            .not("salary_amount", "is", null)
+            .gt("salary_amount", 0)) as { data: unknown; error: { message: string } | null };
+          type ProfessionalCommissionRow = { user_id: string; salary_amount: number; salary_payment_day: number | null; default_payment_method: string | null; id: string };
+          const fallbackData = queryResult.data as unknown as ProfessionalCommissionRow[] | null;
+          if (!queryResult.error && fallbackData?.length) {
+            const userIds = fallbackData.map((p) => p.user_id);
+            const { data: profilesData } = await supabase
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", userIds);
+            const profilesMap = new Map((profilesData || []).map((p: { user_id: string; full_name: string }) => [p.user_id, p.full_name]));
+            professionalsWithSalary = fallbackData.map((p) => ({
+              professional_id: p.user_id,
+              professional_name: profilesMap.get(p.user_id) || "—",
+              salary_amount: p.salary_amount,
+              salary_payment_day: p.salary_payment_day,
+              default_payment_method: p.default_payment_method,
+              commission_id: p.id,
+            }));
           }
-        } else {
-          professionalsWithSalary = Array.isArray(data) ? data : [];
         }
-      } catch (rpcError: any) {
-        console.error("RPC get_professionals_with_salary failed, trying direct query:", rpcError);
-        // Fallback: buscar diretamente da tabela
-        const queryResult = await (supabase.from("professional_commissions") as any)
-          .select("user_id, salary_amount, salary_payment_day, default_payment_method, id")
-          .eq("tenant_id", profile.tenant_id)
-          .eq("payment_type", "salary")
-          .not("salary_amount", "is", null)
-          .gt("salary_amount", 0);
-        const fallbackData = queryResult.data;
-        const fallbackError = queryResult.error;
-        
-        if (!fallbackError && fallbackData) {
-          // Buscar nomes dos profissionais separadamente
-          const userIds = fallbackData.map((p: any) => p.user_id);
-          const { data: profilesData } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", userIds);
-          
-          const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.full_name]));
-          
-          professionalsWithSalary = fallbackData.map((p: any) => ({
-            professional_id: p.user_id,
-            professional_name: profilesMap.get(p.user_id) || "—",
-            salary_amount: p.salary_amount,
-            salary_payment_day: p.salary_payment_day,
-            default_payment_method: p.default_payment_method,
-            commission_id: p.id,
-          }));
-        } else {
-          console.error("Fallback also failed:", fallbackError);
-          professionalsWithSalary = [];
-        }
+      } else {
+        professionalsWithSalary = Array.isArray(professionalsData) ? professionalsData : [];
       }
 
       // Criar lista combinada: salários pagos + profissionais com salário configurado (pendentes)
@@ -640,9 +484,9 @@ export default function Financeiro() {
 
       setSalaries(allSalaries);
     } catch (error: any) {
-      console.error("Error fetching salaries:", error);
+      logger.error("Error fetching salaries:", error);
       const errorMessage = error?.message || error?.toString() || "Erro desconhecido ao carregar salários";
-      console.error("Error details:", {
+      logger.error("Error details:", {
         message: errorMessage,
         code: error?.code,
         details: error?.details,
@@ -653,50 +497,40 @@ export default function Financeiro() {
     } finally {
       setIsLoadingSalaries(false);
     }
-  };
+  }, [profile?.tenant_id, filterMonth]);
 
-  const fetchProfessionals = async () => {
+  const fetchProfessionals = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
     try {
-      // Buscar profissionais com salário configurado
-      const { data: salaryData } = await supabase.rpc("get_professionals_with_salary" as any, {
+      // Uma única chamada: getProfessionalsWithSalary já retorna dados com JOIN em profiles (evita N+1)
+      const { data: salaryData } = await getProfessionalsWithSalary({
         p_tenant_id: profile.tenant_id,
       });
 
-      // Buscar todos os profissionais para fallback
-      const { data: allProfessionals } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .eq("tenant_id", profile.tenant_id)
-        .order("full_name");
-
-      // Combinar dados: profissionais com salário têm informações adicionais
-      const professionalsMap = new Map((allProfessionals || []).map((p: any) => [p.user_id, p]));
-      const enrichedProfessionals = (salaryData || []).map((sp: any) => ({
-        ...professionalsMap.get(sp.professional_id),
-        ...sp,
+      const enrichedProfessionals: ProfessionalForSalary[] = (salaryData || []).map((sp) => ({
+        user_id: sp.professional_id,
+        default_payment_method: sp.default_payment_method ?? null,
       }));
 
-      setProfessionals(enrichedProfessionals as any[]);
+      setProfessionals(enrichedProfessionals);
     } catch (error) {
-      console.error("Error fetching professionals:", error);
-      // Fallback para busca simples
+      logger.error("Error fetching professionals:", error);
       try {
         const { data } = await supabase
           .from("profiles")
           .select("user_id, full_name")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name");
-        setProfessionals((data || []) as any[]);
+        setProfessionals((data || []).map((p: { user_id: string }) => ({ user_id: p.user_id, default_payment_method: null })));
       } catch (fallbackError) {
-        console.error("Error in fallback fetch:", fallbackError);
+        logger.error("Error in fallback fetch:", fallbackError);
         toast.error("Erro ao carregar profissionais. Tente novamente.");
       }
     }
-  };
+  }, [profile?.tenant_id]);
 
-  const fetchProductLosses = async () => {
+  const fetchProductLosses = useCallback(async () => {
     if (!profile?.tenant_id) return;
 
     setIsLoadingProductLosses(true);
@@ -740,14 +574,38 @@ export default function Financeiro() {
 
       setProductLosses(mapped);
     } catch (error) {
-      console.error("Error fetching product losses:", error);
+      logger.error("Error fetching product losses:", error);
       toast.error("Erro ao carregar perdas de produtos.");
     } finally {
       setIsLoadingProductLosses(false);
     }
-  };
+  }, [profile?.tenant_id, filterMonth]);
 
-  const handleMarkAsPaid = async (commissionId: string) => {
+  useEffect(() => {
+    if (profile?.tenant_id && isAdmin) {
+      fetchTransactions();
+      fetchCommissions();
+      fetchSalaries();
+      fetchProfessionals();
+      fetchProductLosses();
+    }
+  }, [profile?.tenant_id, isAdmin, filterMonth, fetchTransactions, fetchCommissions, fetchSalaries, fetchProfessionals, fetchProductLosses]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (profile?.tenant_id && isAdmin) {
+        fetchTransactions();
+        fetchCommissions();
+        fetchSalaries();
+        fetchProfessionals();
+        fetchProductLosses();
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [profile?.tenant_id, isAdmin, filterMonth, fetchTransactions, fetchCommissions, fetchSalaries, fetchProfessionals, fetchProductLosses]);
+
+  const handleMarkAsPaid = useCallback(async (commissionId: string) => {
     if (!profile?.tenant_id) return;
 
     const commission = commissions.find((c) => c.id === commissionId);
@@ -784,12 +642,12 @@ export default function Financeiro() {
       fetchCommissions();
       fetchTransactions(); // Refresh to update totals (inclui a nova despesa)
     } catch (error) {
-      console.error("Error marking commission as paid:", error);
+      logger.error("Error marking commission as paid:", error);
       toast.error("Erro ao marcar comissão como paga");
     }
-  };
+  }, [profile?.tenant_id, commissions, fetchCommissions, fetchTransactions]);
 
-  const handleOpenPaySalaryDialog = (
+  const handleOpenPaySalaryDialog = useCallback((
     professionalId: string,
     professionalName: string,
     paymentMonth: number,
@@ -807,20 +665,26 @@ export default function Financeiro() {
     });
     setDaysWorked("");
     setIsPaySalaryDialogOpen(true);
-  };
+  }, []);
 
-  const handlePaySalary = async () => {
+  const handlePaySalary = useCallback(async () => {
     if (!profile?.tenant_id || !selectedSalaryPayment) return;
 
-    const daysWorkedNum = daysWorked ? parseInt(daysWorked) : null;
-    
-    if (daysWorkedNum !== null && (daysWorkedNum < 1 || daysWorkedNum > 31)) {
-      toast.error("Dias trabalhados deve estar entre 1 e 31");
+    const daysInMonth = new Date(selectedSalaryPayment.paymentYear, selectedSalaryPayment.paymentMonth, 0).getDate();
+    const daysWorkedParsed = paySalaryDaysWorkedSchema.safeParse(daysWorked);
+    if (!daysWorkedParsed.success) {
+      toast.error(daysWorkedParsed.error.message ?? "Dias trabalhados inválido");
+      return;
+    }
+    const daysWorkedNum = daysWorked.trim() === "" ? null : parseInt(daysWorked, 10);
+    if (daysWorkedNum !== null && daysWorkedNum > daysInMonth) {
+      toast.error(`Dias trabalhados não pode ser maior que ${daysInMonth} (dias do mês)`);
       return;
     }
 
     try {
-      const { data, error } = await supabase.rpc("pay_salary" as any, {
+      const { data, error } = await paySalary({
+        p_tenant_id: profile.tenant_id,
         p_professional_id: selectedSalaryPayment.professionalId,
         p_payment_month: selectedSalaryPayment.paymentMonth,
         p_payment_year: selectedSalaryPayment.paymentYear,
@@ -833,7 +697,7 @@ export default function Financeiro() {
       if (error) throw error;
 
       // Notificar profissional que o salário foi pago
-      const amount = Number((data as any)?.amount || 0);
+      const amount = Number((data as PaySalaryResult)?.amount || 0);
       await notifyUser(
         profile.tenant_id,
         selectedSalaryPayment.professionalId,
@@ -855,17 +719,10 @@ export default function Financeiro() {
       fetchSalaries();
       fetchTransactions();
     } catch (error: any) {
-      console.error("Error paying salary:", error);
+      logger.error("Error paying salary:", error);
       toast.error(error.message || "Erro ao pagar salário");
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  }, [profile?.tenant_id, selectedSalaryPayment, daysWorked, formatCurrency, fetchSalaries, fetchTransactions]);
 
   if (!isAdmin) {
     return (
@@ -1157,466 +1014,47 @@ export default function Financeiro() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Charts Tab */}
           <TabsContent value="overview" className="mt-6">
-            {isLoading ? (
-              <Card>
-                <CardContent className="p-6 space-y-4">
-                  <Skeleton className="h-8 w-48" />
-                  <Skeleton className="h-[280px] w-full" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-[200px]" />
-                    <Skeleton className="h-[200px]" />
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <FinanceCharts transactions={transactions} filterMonth={filterMonth} />
-            )}
+            <FinanceiroOverviewTab
+              isLoading={isLoading}
+              transactions={transactions}
+              filterMonth={filterMonth}
+            />
           </TabsContent>
 
-          {/* Cash Flow Tab */}
           <TabsContent value="cashflow" className="mt-6">
-            {isLoading ? (
-              <Card>
-                <CardContent className="p-6 space-y-3">
-                  <Skeleton className="h-6 w-40" />
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </CardContent>
-              </Card>
-            ) : (
-              <CashFlowTable transactions={transactions} filterMonth={filterMonth} />
-            )}
+            <FinanceiroCashFlowTab
+              isLoading={isLoading}
+              transactions={transactions}
+              filterMonth={filterMonth}
+            />
           </TabsContent>
 
-          {/* Commissions Tab */}
           <TabsContent value="commissions" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gerenciar Comissões</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingCommissions ? (
-                  <div className="space-y-3 p-4">
-                    <Skeleton className="h-10 w-full" />
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : commissions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <Wallet className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">Nenhuma comissão neste período</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="block md:hidden space-y-3">
-                      {commissions.map((commission) => (
-                        <div key={commission.id} className="rounded-lg border p-4 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <p className="font-medium">{commission.professional?.full_name || "—"}</p>
-                            <Badge
-                              variant="outline"
-                              className={
-                                commission.status === "paid"
-                                  ? "bg-success/20 text-success border-success/30"
-                                  : "bg-warning/20 text-warning border-warning/30"
-                              }
-                            >
-                              {commission.status === "paid" ? "Paga" : "Pendente"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {formatInAppTz(commission.created_at, "dd/MM/yyyy")} ·{" "}
-                            {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
-                          </p>
-                          <div className="flex justify-between text-sm">
-                            <span>Serviço: {formatCurrency(Number(commission.service_price))}</span>
-                            <span className="font-semibold text-primary">
-                              Comissão: {formatCurrency(Number(commission.amount))}
-                            </span>
-                          </div>
-                          {commission.status === "pending" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkAsPaid(commission.id)}
-                              className="w-full gap-1"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Marcar como Paga
-                            </Button>
-                          )}
-                          {commission.status === "paid" && commission.payment_date && (
-                            <p className="text-xs text-muted-foreground">
-                              Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hidden md:block overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Profissional</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Valor do Serviço</TableHead>
-                            <TableHead>Comissão</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {commissions.map((commission) => (
-                            <TableRow key={commission.id}>
-                              <TableCell>
-                                {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {commission.professional?.full_name || "—"}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{formatCurrency(Number(commission.service_price))}</TableCell>
-                              <TableCell className="font-semibold text-primary">
-                                {formatCurrency(Number(commission.amount))}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    commission.status === "paid"
-                                      ? "bg-success/20 text-success border-success/30"
-                                      : "bg-warning/20 text-warning border-warning/30"
-                                  }
-                                >
-                                  {commission.status === "paid" ? "Paga" : "Pendente"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {commission.status === "pending" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleMarkAsPaid(commission.id)}
-                                    className="gap-1"
-                                  >
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Marcar como Paga
-                                  </Button>
-                                )}
-                                {commission.status === "paid" && commission.payment_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Paga em {formatInAppTz(commission.payment_date, "dd/MM/yyyy")}
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <FinanceiroCommissionsTab
+              isLoading={isLoadingCommissions}
+              commissions={commissions}
+              onMarkAsPaid={handleMarkAsPaid}
+              formatCurrency={formatCurrency}
+            />
           </TabsContent>
 
-          {/* Transactions Tab */}
           <TabsContent value="transactions" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Todas as Transações</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="space-y-3 p-4">
-                    <Skeleton className="h-10 w-full" />
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : transactions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">Nenhuma transação neste período</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="block md:hidden space-y-3">
-                      {transactions.map((transaction) => (
-                        <div key={transaction.id} className="rounded-lg border p-4 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <Badge
-                              variant="outline"
-                              className={
-                                transaction.type === "income"
-                                  ? "bg-success/20 text-success border-success/30"
-                                  : "bg-destructive/20 text-destructive border-destructive/30"
-                              }
-                            >
-                              {transaction.type === "income" ? "Entrada" : "Saída"}
-                            </Badge>
-                            <span
-                              className={`font-semibold ${
-                                transaction.type === "income" ? "text-success" : "text-destructive"
-                              }`}
-                            >
-                              {transaction.type === "income" ? "+" : "-"}
-                              {formatCurrency(transaction.amount)}
-                            </span>
-                          </div>
-                          <p className="text-sm font-medium">{transaction.category}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
-                            {transaction.appointment_id && " · Agenda"}
-                          </p>
-                          {transaction.description && (
-                            <p className="text-sm text-muted-foreground truncate">{transaction.description}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hidden md:block overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Categoria</TableHead>
-                            <TableHead>Descrição</TableHead>
-                            <TableHead>Origem</TableHead>
-                            <TableHead className="text-right">Valor</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {transactions.map((transaction) => (
-                            <TableRow key={transaction.id}>
-                              <TableCell>
-                                {formatInAppTz(transaction.transaction_date, "dd/MM/yyyy")}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    transaction.type === "income"
-                                      ? "bg-success/20 text-success border-success/30"
-                                      : "bg-destructive/20 text-destructive border-destructive/30"
-                                  }
-                                >
-                                  {transaction.type === "income" ? "Entrada" : "Saída"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{transaction.category}</TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {transaction.description || "—"}
-                              </TableCell>
-                              <TableCell>
-                                {transaction.appointment_id ? (
-                                  <Badge variant="secondary" className="gap-1">
-                                    <LinkIcon className="h-3 w-3" />
-                                    Agenda
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">Manual</span>
-                                )}
-                              </TableCell>
-                              <TableCell
-                                className={`text-right font-semibold ${
-                                  transaction.type === "income" ? "text-success" : "text-destructive"
-                                }`}
-                              >
-                                {transaction.type === "income" ? "+" : "-"}
-                                {formatCurrency(transaction.amount)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <FinanceiroTransactionsTab
+              isLoading={isLoading}
+              transactions={transactions}
+              formatCurrency={formatCurrency}
+            />
           </TabsContent>
 
-          {/* Salaries Tab */}
           <TabsContent value="salaries" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gerenciar Salários</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Pagar salários fixos dos profissionais
-                </p>
-              </CardHeader>
-              <CardContent>
-                {isLoadingSalaries ? (
-                  <div className="space-y-3 p-4">
-                    <Skeleton className="h-10 w-full" />
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : salaries.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12">
-                    <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">Nenhum salário registrado neste período</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="block md:hidden space-y-3">
-                      {salaries.map((salary: any) => (
-                        <div key={salary.id} className="rounded-lg border p-4 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <p className="font-medium">{salary.professional_name || "—"}</p>
-                            <Badge
-                              variant="outline"
-                              className={
-                                salary.status === "paid"
-                                  ? "bg-success/20 text-success border-success/30"
-                                  : "bg-warning/20 text-warning border-warning/30"
-                              }
-                            >
-                              {salary.status === "paid" ? "Pago" : "Pendente"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {String(salary.payment_month).padStart(2, "0")}/{salary.payment_year}
-                          </p>
-                          <div className="flex justify-between text-sm">
-                            <span className="font-semibold text-primary">
-                              {formatCurrency(Number(salary.amount || salary.salary_amount || 0))}
-                            </span>
-                            {salary.payment_method && (
-                              <Badge variant="outline" className="text-xs">
-                                {salary.payment_method === "pix" ? "PIX" : 
-                                 salary.payment_method === "deposit" ? "Depósito" :
-                                 salary.payment_method === "cash" ? "Espécie" : "Outro"}
-                              </Badge>
-                            )}
-                          </div>
-                          {salary.status === "pending" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
-                                const defaultMethod = professional?.default_payment_method || salary.payment_method || "pix";
-                                handleOpenPaySalaryDialog(
-                                  salary.professional_id,
-                                  salary.professional_name,
-                                  salary.payment_month,
-                                  salary.payment_year,
-                                  Number(salary.amount || salary.salary_amount || 0),
-                                  defaultMethod
-                                );
-                              }}
-                              className="w-full gap-1"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Pagar Salário
-                            </Button>
-                          )}
-                          {salary.status === "paid" && salary.payment_date && (
-                            <p className="text-xs text-muted-foreground">
-                              Pago em {formatInAppTz(salary.payment_date, "dd/MM/yyyy")}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hidden md:block overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Período</TableHead>
-                            <TableHead>Profissional</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Método</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {salaries.map((salary: any) => (
-                            <TableRow key={salary.id}>
-                              <TableCell>
-                                {String(salary.payment_month).padStart(2, "0")}/{salary.payment_year}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {salary.professional_name || "—"}
-                              </TableCell>
-                              <TableCell className="font-semibold text-primary">
-                                {formatCurrency(Number(salary.amount || salary.salary_amount || 0))}
-                              </TableCell>
-                              <TableCell>
-                                {salary.payment_method ? (
-                                  <Badge variant="outline">
-                                    {salary.payment_method === "pix" ? "PIX" : 
-                                     salary.payment_method === "deposit" ? "Depósito" :
-                                     salary.payment_method === "cash" ? "Espécie" : "Outro"}
-                                  </Badge>
-                                ) : (
-                                  "—"
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    salary.status === "paid"
-                                      ? "bg-success/20 text-success border-success/30"
-                                      : "bg-warning/20 text-warning border-warning/30"
-                                  }
-                                >
-                                  {salary.status === "paid" ? "Pago" : "Pendente"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {salary.status === "pending" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      const professional = professionals.find((p: any) => p.user_id === salary.professional_id);
-                                      const defaultMethod = professional?.default_payment_method || salary.payment_method || "pix";
-                                      handleOpenPaySalaryDialog(
-                                        salary.professional_id,
-                                        salary.professional_name,
-                                        salary.payment_month,
-                                        salary.payment_year,
-                                        Number(salary.amount || salary.salary_amount || 0),
-                                        defaultMethod
-                                      );
-                                    }}
-                                    className="gap-1"
-                                  >
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Pagar
-                                  </Button>
-                                )}
-                                {salary.status === "paid" && salary.payment_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    Pago em {formatInAppTz(salary.payment_date, "dd/MM/yyyy")}
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <FinanceiroSalariesTab
+              isLoading={isLoadingSalaries}
+              salaries={salaries}
+              professionals={professionals}
+              onOpenPaySalary={handleOpenPaySalaryDialog}
+              formatCurrency={formatCurrency}
+            />
           </TabsContent>
         </Tabs>
 

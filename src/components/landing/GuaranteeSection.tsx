@@ -1,4 +1,4 @@
-import { Shield, Clock, Users, Lock, Award, Headphones } from "lucide-react";
+import { Shield, Clock, Lock, Award, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const guarantees = [

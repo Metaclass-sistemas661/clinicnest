@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "./logger";
 
 export type NotificationType =
   | "appointment_created"
@@ -53,6 +54,6 @@ export async function notifyUser(
       metadata: metadata ?? {},
     });
   } catch (e) {
-    console.warn("Erro ao enviar notificação:", e);
+    logger.warn("Erro ao enviar notificação:", e);
   }
 }

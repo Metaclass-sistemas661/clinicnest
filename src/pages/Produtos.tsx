@@ -1,46 +1,29 @@
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Plus, Loader2, AlertTriangle, ArrowUp, ArrowDown, Tag } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { Plus, AlertTriangle, ArrowUp, Tag } from "lucide-react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { formatInAppTz } from "@/lib/date";
 import type { Product, ProductCategory, StockMovement, StockOutReasonType } from "@/types/database";
+import {
+  ProductCategoryDialog,
+  StockMovementDialog,
+  ProductFormDialog,
+  ProductEditPriceDialog,
+  ProductsTable,
+  DamagedMovementsCard,
+  type ProductFormState,
+  type MovementFormState,
+  type EditPriceFormState,
+  type ProductGroup,
+  type ProductWithCategory,
+} from "@/components/produtos";
 
-type ProductWithCategory = Product & { category?: ProductCategory | null };
-type ProductGroup = { category: ProductCategory | null; products: ProductWithCategory[] };
 const NO_CATEGORY_VALUE = "__none__";
 
 export default function Produtos() {
@@ -58,31 +41,29 @@ export default function Produtos() {
   const [damagedMovements, setDamagedMovements] = useState<StockMovement[]>([]);
   const [isDamagedLoading, setIsDamagedLoading] = useState(true);
 
-  const [productForm, setProductForm] = useState({
+  const [productForm, setProductForm] = useState<ProductFormState>({
     name: "",
     description: "",
     cost: "",
     sale_price: "",
     quantity: "",
     min_quantity: "5",
-    purchased_with_company_cash: "no" as "yes" | "no",
+    purchased_with_company_cash: "no",
     category_id: NO_CATEGORY_VALUE,
   });
 
-  const [movementForm, setMovementForm] = useState({
+  const [movementForm, setMovementForm] = useState<MovementFormState>({
     product_id: "",
     quantity: "",
-    movement_type: "in" as "in" | "out",
-    out_reason_type: "" as "" | "sale" | "damaged",
-    purchased_with_company_cash: "no" as "yes" | "no",
+    movement_type: "in",
+    out_reason_type: "",
+    purchased_with_company_cash: "no",
     reason: "",
   });
 
-  const [categoryForm, setCategoryForm] = useState({
-    name: "",
-  });
+  const [categoryForm, setCategoryForm] = useState({ name: "" });
 
-  const [editPriceForm, setEditPriceForm] = useState({
+  const [editPriceForm, setEditPriceForm] = useState<EditPriceFormState>({
     cost: "",
     sale_price: "",
     category_id: NO_CATEGORY_VALUE,
@@ -109,7 +90,7 @@ export default function Produtos() {
       if (error) throw error;
       setCategories((data as ProductCategory[]) || []);
     } catch (error) {
-      console.error("Error fetching categories:", error);
+      logger.error("Error fetching categories:", error);
       toast.error("Erro ao carregar categorias de produto.");
     }
   };
@@ -127,7 +108,7 @@ export default function Produtos() {
       if (error) throw error;
       setProducts((data as ProductWithCategory[]) || []);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      logger.error("Error fetching products:", error);
       toast.error("Erro ao carregar produtos. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -150,7 +131,7 @@ export default function Produtos() {
       if (error) throw error;
       setDamagedMovements((data as StockMovement[]) || []);
     } catch (error) {
-      console.error("Error fetching damaged movements:", error);
+      logger.error("Error fetching damaged movements:", error);
       toast.error("Não foi possível carregar o histórico de baixas danificadas.");
     } finally {
       setIsDamagedLoading(false);
@@ -197,7 +178,7 @@ export default function Produtos() {
         }));
       }
     } catch (error) {
-      console.error("Error creating category:", error);
+      logger.error("Error creating category:", error);
       toast.error("Erro ao criar categoria");
     } finally {
       setIsSavingCategory(false);
@@ -245,7 +226,7 @@ export default function Produtos() {
           product_id: newProduct.id,
         });
         if (txError) {
-          console.error("Erro ao registrar despesa da compra:", txError);
+          logger.error("Erro ao registrar despesa da compra:", txError);
           toast.error("Produto salvo, mas a despesa não foi registrada.");
         }
       }
@@ -265,7 +246,7 @@ export default function Produtos() {
       fetchProducts();
     } catch (error) {
       toast.error("Erro ao cadastrar produto");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -334,7 +315,7 @@ export default function Produtos() {
             product_id: product.id,
           });
           if (txError) {
-            console.error("Erro ao registrar receita da venda:", txError);
+            logger.error("Erro ao registrar receita da venda:", txError);
             toast.error("Saída registrada, mas a receita não foi lançada.");
           }
         }
@@ -353,7 +334,7 @@ export default function Produtos() {
             product_id: product.id,
           });
           if (txError) {
-            console.error("Erro ao registrar despesa da compra:", txError);
+            logger.error("Erro ao registrar despesa da compra:", txError);
             toast.error("Entrada registrada, mas a despesa não foi lançada.");
           }
         }
@@ -379,17 +360,10 @@ export default function Produtos() {
       fetchDamagedMovements();
     } catch (error) {
       toast.error("Erro ao registrar movimentação");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
   };
 
   const groupedProducts = useMemo<ProductGroup[]>(() => {
@@ -462,7 +436,7 @@ export default function Produtos() {
       fetchProducts();
     } catch (error) {
       toast.error("Erro ao atualizar preços");
-      console.error(error);
+      logger.error(error);
     } finally {
       setIsSaving(false);
     }
@@ -477,483 +451,71 @@ export default function Produtos() {
       actions={
         isAdmin ? (
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-end">
-          <Dialog
+          <ProductCategoryDialog
             open={isCategoryDialogOpen}
             onOpenChange={(open) => {
               setIsCategoryDialogOpen(open);
-              if (!open) {
-                setCategoryForm({ name: "" });
-              }
+              if (!open) setCategoryForm({ name: "" });
             }}
-          >
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Tag className="mr-2 h-4 w-4" />
-                Nova Categoria
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Nova Categoria de Produto</DialogTitle>
-                <DialogDescription>Organize seus produtos por categorias.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateCategory}>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Nome da Categoria</Label>
-                    <Input
-                      value={categoryForm.name}
-                      onChange={(e) => setCategoryForm({ name: e.target.value })}
-                      placeholder="Ex: Hair Care"
-                      required
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCategoryDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSavingCategory}
-                    className="gradient-primary text-primary-foreground"
-                  >
-                    {isSavingCategory ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando...
-                      </>
-                    ) : (
-                      "Criar"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            name={categoryForm.name}
+            onNameChange={(name) => setCategoryForm({ name })}
+            onSubmit={handleCreateCategory}
+            isSaving={isSavingCategory}
+          />
+          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+            <Tag className="mr-2 h-4 w-4" />
+            Nova Categoria
+          </Button>
 
-          <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <ArrowUp className="mr-2 h-4 w-4" />
-                Entrada/Saída
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Movimentação de Estoque</DialogTitle>
-                <DialogDescription>Registre entrada ou saída de produtos</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleStockMovement}>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Produto</Label>
-                    <Select
-                      value={movementForm.product_id}
-                      onValueChange={(v) => setMovementForm({ ...movementForm, product_id: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o produto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.quantity} em estoque)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={movementForm.movement_type}
-                      onValueChange={(v) =>
-                        setMovementForm({
-                          ...movementForm,
-                          movement_type: v as "in" | "out",
-                          out_reason_type: v === "in" ? "" : movementForm.out_reason_type,
-                          purchased_with_company_cash: v === "out" ? "no" : movementForm.purchased_with_company_cash,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="in">
-                          <span className="flex items-center gap-2">
-                            <ArrowUp className="h-4 w-4 text-success" /> Entrada
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="out">
-                          <span className="flex items-center gap-2">
-                            <ArrowDown className="h-4 w-4 text-destructive" /> Saída
-                          </span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantidade</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={movementForm.quantity}
-                      onChange={(e) => setMovementForm({ ...movementForm, quantity: e.target.value })}
-                      required
-                    />
-                  </div>
-                  {movementForm.movement_type === "in" && (
-                    <div className="space-y-3">
-                      <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
-                      <RadioGroup
-                        value={movementForm.purchased_with_company_cash}
-                        onValueChange={(v) =>
-                          setMovementForm({ ...movementForm, purchased_with_company_cash: v as "yes" | "no" })
-                        }
-                        className="flex gap-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="yes" id="movement-cash-yes" />
-                          <Label htmlFor="movement-cash-yes" className="font-normal cursor-pointer">Sim</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="no" id="movement-cash-no" />
-                          <Label htmlFor="movement-cash-no" className="font-normal cursor-pointer">Não</Label>
-                        </div>
-                      </RadioGroup>
-                      <p className="text-xs text-muted-foreground">
-                        Se sim, a entrada será registrada como despesa no financeiro.
-                      </p>
-                    </div>
-                  )}
-                  {movementForm.movement_type === "out" && (
-                    <div className="space-y-3">
-                      <Label>Você está registrando essa saída como venda ou baixa danificado?</Label>
-                      <RadioGroup
-                        value={movementForm.out_reason_type}
-                        onValueChange={(v) =>
-                          setMovementForm({ ...movementForm, out_reason_type: v as "sale" | "damaged" })
-                        }
-                        className="flex gap-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="sale" id="out-sale" />
-                          <Label htmlFor="out-sale" className="font-normal cursor-pointer">Venda</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="damaged" id="out-damaged" />
-                          <Label htmlFor="out-damaged" className="font-normal cursor-pointer">Baixa danificado</Label>
-                        </div>
-                      </RadioGroup>
-                      <p className="text-xs text-muted-foreground">
-                        Venda gera receita no financeiro. Baixa danificado apenas registra histórico para conferência.
-                      </p>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label>Motivo</Label>
-                    <Input
-                      value={movementForm.reason}
-                      onChange={(e) => setMovementForm({ ...movementForm, reason: e.target.value })}
-                      placeholder="Ex: Compra de fornecedor, uso em serviço..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsMovementDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registrando...
-                      </>
-                    ) : (
-                      "Registrar"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
+            <ArrowUp className="mr-2 h-4 w-4" />
+            Entrada/Saída
+          </Button>
+          <StockMovementDialog
+            open={isMovementDialogOpen}
+            onOpenChange={setIsMovementDialogOpen}
+            form={movementForm}
+            setForm={setMovementForm}
+            products={products as (Product & { quantity: number })[]}
+            onSubmit={handleStockMovement}
+            isSaving={isSaving}
+          />
 
-          <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Produto
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Novo Produto</DialogTitle>
-                <DialogDescription>Cadastre um novo produto no estoque</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateProduct}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Nome</Label>
-                    <Input
-                      value={productForm.name}
-                      onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                      placeholder="Ex: Shampoo Profissional"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Input
-                      value={productForm.description}
-                      onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                      placeholder="Descrição opcional..."
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={productForm.category_id}
-                      onValueChange={(value) => setProductForm({ ...productForm, category_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_CATEGORY_VALUE}>Sem categoria</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="px-0 text-sm"
-                      onClick={() => setIsCategoryDialogOpen(true)}
-                    >
-                      Criar nova categoria
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 sm:col-span-2">
-                    <div className="space-y-2">
-                      <Label>Custo (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={productForm.cost}
-                        onChange={(e) => setProductForm({ ...productForm, cost: e.target.value })}
-                        placeholder="0,00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Preço de Venda (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={productForm.sale_price}
-                        onChange={(e) => setProductForm({ ...productForm, sale_price: e.target.value })}
-                        placeholder="0,00"
-                      />
-                    </div>
-                  </div>
-                  {(() => {
-                    const cost = parseFloat(productForm.cost) || 0;
-                    const salePrice = parseFloat(productForm.sale_price) || 0;
-                    const profit = salePrice - cost;
-                    const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-                    const profitPercent = cost > 0 ? (profit / cost) * 100 : 0;
-                    if (cost > 0 || salePrice > 0) {
-                      return (
-                        <div className="rounded-lg border bg-muted/30 p-3 text-sm sm:col-span-2">
-                          <p className="font-medium text-muted-foreground">Margem de lucro</p>
-                          <div className="mt-1 flex flex-wrap gap-4">
-                            <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>
-                            <span><strong>Margem (%):</strong> {marginPercent.toFixed(1)}%</span>
-                            <span><strong>Markup (%):</strong> {profitPercent.toFixed(1)}%</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <div className="grid grid-cols-2 gap-4 sm:col-span-2">
-                    <div className="space-y-2">
-                      <Label>Quantidade Inicial</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={productForm.quantity}
-                        onChange={(e) => setProductForm({ ...productForm, quantity: e.target.value })}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Quantidade Mínima</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={productForm.min_quantity}
-                        onChange={(e) => setProductForm({ ...productForm, min_quantity: e.target.value })}
-                        placeholder="5"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground sm:col-span-2">
-                    Alerta será exibido quando estoque atingir a quantidade mínima
-                  </p>
-                  <div className="space-y-3 sm:col-span-2">
-                    <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
-                    <RadioGroup
-                      value={productForm.purchased_with_company_cash}
-                      onValueChange={(v) =>
-                        setProductForm({ ...productForm, purchased_with_company_cash: v as "yes" | "no" })
-                      }
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="yes" id="cash-yes" />
-                        <Label htmlFor="cash-yes" className="font-normal cursor-pointer">Sim</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="no" id="cash-no" />
-                        <Label htmlFor="cash-no" className="font-normal cursor-pointer">Não</Label>
-                      </div>
-                    </RadioGroup>
-                    <p className="text-xs text-muted-foreground">
-                      Se sim, a compra será registrada como despesa no financeiro.
-                    </p>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Cadastrar"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button className="gradient-primary text-primary-foreground" onClick={() => setIsProductDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Produto
+          </Button>
+          <ProductFormDialog
+            open={isProductDialogOpen}
+            onOpenChange={setIsProductDialogOpen}
+            form={productForm}
+            setForm={setProductForm}
+            categories={categories}
+            noCategoryValue={NO_CATEGORY_VALUE}
+            onSubmit={handleCreateProduct}
+            isSaving={isSaving}
+            onOpenCategoryDialog={() => setIsCategoryDialogOpen(true)}
+            formatCurrency={formatCurrency}
+          />
 
-          <Dialog
+          <ProductEditPriceDialog
             open={isEditPriceDialogOpen}
             onOpenChange={(open) => {
-              setIsEditPriceDialogOpen(open);
               if (!open) {
                 setSelectedProduct(null);
-                setEditPriceForm({ cost: "", sale_price: "", category_id: "" });
+                setEditPriceForm({ cost: "", sale_price: "", category_id: NO_CATEGORY_VALUE });
               }
+              setIsEditPriceDialogOpen(open);
             }}
-          >
-            <DialogContent className="sm:max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Atualizar Preços</DialogTitle>
-                <DialogDescription>
-                  Ajuste o custo e o preço de venda do produto
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpdateProductPrices}>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Produto</Label>
-                    <Input value={selectedProduct?.name || ""} disabled />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select
-                      value={editPriceForm.category_id}
-                      onValueChange={(value) => setEditPriceForm({ ...editPriceForm, category_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_CATEGORY_VALUE}>Sem categoria</SelectItem>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Custo (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editPriceForm.cost}
-                        onChange={(e) => setEditPriceForm({ ...editPriceForm, cost: e.target.value })}
-                        placeholder="0,00"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Preço de Venda (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editPriceForm.sale_price}
-                        onChange={(e) => setEditPriceForm({ ...editPriceForm, sale_price: e.target.value })}
-                        placeholder="0,00"
-                        required
-                      />
-                    </div>
-                  </div>
-                  {(() => {
-                    const cost = parseFloat(editPriceForm.cost) || 0;
-                    const salePrice = parseFloat(editPriceForm.sale_price) || 0;
-                    const profit = salePrice - cost;
-                    const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-                    if (cost > 0 || salePrice > 0) {
-                      return (
-                        <div className="rounded-lg border bg-muted/30 p-3 text-sm sm:col-span-2">
-                          <p className="font-medium text-muted-foreground">Margem de lucro</p>
-                          <div className="mt-1 flex flex-wrap gap-4">
-                            <span><strong>Lucro (R$):</strong> {formatCurrency(profit)}</span>
-                            <span><strong>Margem (%):</strong> {marginPercent.toFixed(1)}%</span>
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsEditPriceDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Salvar"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            product={selectedProduct}
+            form={editPriceForm}
+            setForm={setEditPriceForm}
+            categories={categories}
+            noCategoryValue={NO_CATEGORY_VALUE}
+            onSubmit={handleUpdateProductPrices}
+            isSaving={isSaving}
+            formatCurrency={formatCurrency}
+          />
         </div>
         ) : null
       }
@@ -975,252 +537,21 @@ export default function Produtos() {
         </Card>
       )}
 
-      {/* Products Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Produtos Cadastrados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3 p-4">
-              <Skeleton className="h-10 w-full" />
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <EmptyState
-              icon={Package}
-              title="Nenhum produto cadastrado"
-              description="Cadastre os produtos em estoque para controlar vendas e baixas."
-              action={
-                <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Produto
-                </Button>
-              }
-            />
-          ) : (
-            <>
-              {/* Mobile: Card Layout */}
-              <div className="block md:hidden space-y-4">
-                {groupedProducts.map((group) => (
-                  <div key={group.category?.id ?? "uncategorized"}>
-                    <p className="text-sm font-semibold text-muted-foreground mb-2">
-                      {group.category ? group.category.name : "Sem categoria"} ({group.products.length})
-                    </p>
-                    <div className="space-y-3">
-                      {group.products.map((product) => {
-                        const isLowStock = product.quantity <= product.min_quantity;
-                        const salePrice = product.sale_price ?? 0;
-                        const cost = product.cost ?? 0;
-                        const profit = salePrice - cost;
-                        const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-                        return (
-                          <div key={product.id} className="rounded-lg border p-4 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">{product.name}</p>
-                                {product.description && (
-                                  <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
-                                )}
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  isLowStock
-                                    ? "bg-warning/20 text-warning border-warning/30"
-                                    : "bg-success/20 text-success border-success/30"
-                                }
-                              >
-                                {isLowStock ? "Baixo" : "Normal"}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <span className="text-muted-foreground">Custo:</span>
-                              <span>{formatCurrency(product.cost)}</span>
-                              <span className="text-muted-foreground">Venda:</span>
-                              <span>{formatCurrency(salePrice)}</span>
-                              <span className="text-muted-foreground">Margem:</span>
-                              <span>{marginPercent.toFixed(1)}%</span>
-                              <span className="text-muted-foreground">Estoque:</span>
-                              <span className={isLowStock ? "font-bold text-warning" : ""}>{product.quantity}</span>
-                            </div>
-                            {isAdmin && (
-                              <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => openEditPriceDialog(product)}>
-                                Editar detalhes
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <ProductsTable
+        groupedProducts={groupedProducts}
+        isLoading={isLoading}
+        formatCurrency={formatCurrency}
+        onEditPrice={openEditPriceDialog}
+        isAdmin={!!isAdmin}
+        onAddProduct={() => setIsProductDialogOpen(true)}
+      />
 
-              {/* Desktop: Table Layout */}
-              <div className="hidden md:block overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Custo</TableHead>
-                  <TableHead>Preço Venda</TableHead>
-                  <TableHead className="text-center">Margem %</TableHead>
-                  <TableHead>Lucro (R$)</TableHead>
-                  <TableHead className="text-center">Estoque</TableHead>
-                  <TableHead className="text-center">Mínimo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedProducts.map((group) => (
-                  <Fragment key={group.category?.id ?? "uncategorized"}>
-                    <TableRow className="bg-muted/40">
-                      <TableCell colSpan={9} className="font-semibold">
-                        {group.category ? group.category.name : "Sem categoria"}{" "}
-                        <span className="text-sm text-muted-foreground">
-                          ({group.products.length} produto{group.products.length === 1 ? "" : "s"})
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                    {group.products.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center text-muted-foreground">
-                          Nenhum produto nesta categoria
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      group.products.map((product) => {
-                        const isLowStock = product.quantity <= product.min_quantity;
-                        const salePrice = product.sale_price ?? 0;
-                        const cost = product.cost ?? 0;
-                        const profit = salePrice - cost;
-                        const marginPercent = salePrice > 0 ? (profit / salePrice) * 100 : 0;
-                        return (
-                          <TableRow key={product.id}>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <p className="font-medium">{product.name}</p>
-                                {product.description && (
-                                  <p className="text-sm text-muted-foreground">{product.description}</p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>{formatCurrency(product.cost)}</TableCell>
-                            <TableCell>{formatCurrency(salePrice)}</TableCell>
-                            <TableCell className="text-center">{marginPercent.toFixed(1)}%</TableCell>
-                            <TableCell>{formatCurrency(profit)}</TableCell>
-                            <TableCell className="text-center">
-                              <span className={isLowStock ? "font-bold text-warning" : ""}>
-                                {product.quantity}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center">{product.min_quantity}</TableCell>
-                            <TableCell>
-                              {isLowStock ? (
-                                <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
-                                  <AlertTriangle className="mr-1 h-3 w-3" />
-                                  Baixo
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-success/20 text-success border-success/30">
-                                  Normal
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {isAdmin && (
-                                <Button variant="outline" size="sm" onClick={() => openEditPriceDialog(product)}>
-                                  Editar detalhes
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Damaged Products History - Admin only */}
       {isAdmin && (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Histórico de Baixas (danificados)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isDamagedLoading ? (
-            <div className="space-y-3 p-4">
-              <Skeleton className="h-10 w-full" />
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : damagedMovements.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma baixa de produto danificado registrada até o momento.
-            </p>
-          ) : (
-            <>
-              <div className="block md:hidden space-y-3">
-                {damagedMovements.map((movement) => {
-                  const product = products.find((p) => p.id === movement.product_id);
-                  const productName = product?.name ?? "Produto removido";
-                  const quantity = Math.abs(movement.quantity);
-                  return (
-                    <div key={movement.id} className="rounded-lg border p-4 space-y-1">
-                      <p className="font-medium">{productName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")} · Qtd: {quantity}
-                      </p>
-                      {movement.reason && <p className="text-sm">{movement.reason}</p>}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="text-center">Quantidade</TableHead>
-                      <TableHead>Motivo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {damagedMovements.map((movement) => {
-                      const product = products.find((p) => p.id === movement.product_id);
-                      const productName = product?.name ?? "Produto removido";
-                      const quantity = Math.abs(movement.quantity);
-                      return (
-                        <TableRow key={movement.id}>
-                          <TableCell>
-                            {formatInAppTz(movement.created_at, "dd/MM/yyyy HH:mm")}
-                          </TableCell>
-                          <TableCell>{productName}</TableCell>
-                          <TableCell className="text-center">{quantity}</TableCell>
-                          <TableCell>{movement.reason || "—"}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+        <DamagedMovementsCard
+          movements={damagedMovements}
+          products={products.map((p) => ({ id: p.id, name: p.name }))}
+          isLoading={isDamagedLoading}
+        />
       )}
     </MainLayout>
   );
