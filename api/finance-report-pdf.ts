@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
+import path from "node:path";
 
 type Json = Record<string, unknown>;
 
@@ -161,25 +162,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       transaction_date: string;
     }>;
 
-    const commissions = (commissionsResult.data ?? []) as Array<{
-      id: string;
-      professional_id: string;
-      professional?: { full_name: string } | null;
-      amount: number;
-      service_price: number;
-      commission_type: "percentage" | "fixed";
-      status: "pending" | "paid" | "cancelled";
-      created_at: string;
-      payment_date?: string | null;
-    }>;
+    // Supabase join fields can come as arrays depending on relationship/cardinality.
+    // Normalize here to keep types stable for the PDF template.
+    const commissions = ((commissionsResult.data ?? []) as Array<{
+      id: any;
+      professional_id: any;
+      amount: any;
+      service_price: any;
+      commission_type: any;
+      status: any;
+      created_at: any;
+      payment_date?: any;
+      professional?: Array<{ full_name: any }> | { full_name: any } | null;
+    }>).map((c) => {
+      const prof = Array.isArray(c.professional) ? c.professional[0] : c.professional;
+      return {
+        id: String(c.id),
+        professional_id: String(c.professional_id),
+        professional: prof?.full_name ? { full_name: String(prof.full_name) } : null,
+        amount: Number(c.amount) || 0,
+        service_price: Number(c.service_price) || 0,
+        commission_type: (c.commission_type as "percentage" | "fixed") ?? "fixed",
+        status: (c.status as "pending" | "paid" | "cancelled") ?? "pending",
+        created_at: String(c.created_at),
+        payment_date: c.payment_date ? String(c.payment_date) : null,
+      };
+    });
 
-    const damagedLosses = (damagedResult.data ?? []) as Array<{
-      id: string;
-      quantity: number;
-      reason: string | null;
-      created_at: string;
-      product?: { name: string; cost: number } | null;
-    }>;
+    const damagedLosses = ((damagedResult.data ?? []) as Array<{
+      id: any;
+      quantity: any;
+      reason: any;
+      created_at: any;
+      product?: Array<{ name: any; cost: any }> | { name: any; cost: any } | null;
+    }>).map((m) => {
+      const product = Array.isArray(m.product) ? m.product[0] : m.product;
+      return {
+        id: String(m.id),
+        quantity: Number(m.quantity) || 0,
+        reason: m.reason ? String(m.reason) : null,
+        created_at: String(m.created_at),
+        product: product?.name
+          ? { name: String(product.name), cost: Number(product.cost) || 0 }
+          : null,
+      };
+    });
 
     const salaryPaid = (salaryPaidResult.data ?? []) as Array<{
       id: string;
@@ -423,17 +450,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const executablePath = await chromium.executablePath();
 
-    // Vercel/AWS Lambda-like environments may require LD_LIBRARY_PATH to include
-    // the folder where @sparticuz/chromium extracts shared libraries.
-    // executablePath is usually "/tmp/chromium" and libs are in "/tmp/lib".
-    const extractedLibPath = executablePath.replace(/\/chromium$/, "/lib");
+    // Ensure shared libraries shipped with @sparticuz/chromium are discoverable.
+    // In serverless runtimes these are extracted under /tmp (commonly /tmp/lib and /tmp/lib64).
+    const extractedBaseDir = path.dirname(executablePath); // e.g. /tmp
+    const libPaths = [
+      path.join(extractedBaseDir, "lib"),
+      path.join(extractedBaseDir, "lib64"),
+      "/tmp/lib",
+      "/tmp/lib64",
+      "/usr/lib",
+      "/lib",
+    ];
     const currentLd = process.env.LD_LIBRARY_PATH;
-    process.env.LD_LIBRARY_PATH = currentLd
-      ? `${currentLd}:${extractedLibPath}`
-      : extractedLibPath;
+    const nextLd = [...libPaths, currentLd].filter(Boolean).join(":");
+    process.env.LD_LIBRARY_PATH = nextLd;
 
     const browser = await puppeteer.launch({
-      args: [...chromium.args, "--disable-dev-shm-usage"],
+      args: [...chromium.args, "--disable-dev-shm-usage", "--no-zygote"],
       defaultViewport: chromium.defaultViewport,
       executablePath,
       headless: chromium.headless,
