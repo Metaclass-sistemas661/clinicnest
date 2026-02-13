@@ -160,6 +160,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
+    const salaryRefMonth = start.getMonth() + 1;
+    const salaryRefYear = start.getFullYear();
+
     const supabaseUrl = getEnv("SUPABASE_URL");
     const serviceRole = getEnv("SUPABASE_SERVICE_ROLE_KEY");
     const supabaseAdmin = createClient(supabaseUrl, serviceRole, {
@@ -229,8 +232,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       supabaseAdmin.rpc("get_salary_payments", {
         p_tenant_id: tenantId,
         p_professional_id: null,
-        p_year: end.getFullYear(),
-        p_month: end.getMonth() + 1,
+        p_year: salaryRefYear,
+        p_month: salaryRefMonth,
       }),
       supabaseAdmin.rpc("get_professionals_with_salary", { p_tenant_id: tenantId }),
     ]);
@@ -523,7 +526,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <div class="section">
     <div class="sectionHeader">
       <div class="h2">Salários</div>
-      <div class="hint">Mês ref.: ${end.getMonth() + 1}/${end.getFullYear()}</div>
+      <div class="hint">Mês ref.: ${salaryRefMonth}/${salaryRefYear}</div>
     </div>
     <div class="kpiRow">
       <div class="card">
@@ -539,7 +542,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     <div style="margin-top:10px">
       <div class="sectionHeader" style="margin: 14px 0 8px 0">
         <div class="h2" style="font-size: 11px">Detalhamento</div>
-        <div class="hint">Pagos e pendentes</div>
+        <div class="hint">Pagos</div>
       </div>
       <div class="tableWrap">
         <table>
@@ -569,13 +572,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 </tr>`;
               })
               .join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        Observação: salários pendentes são calculados a partir dos profissionais com salário configurado que ainda não constam como pagos no mês de referência.
+      </div>
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="sectionHeader" style="margin: 14px 0 8px 0">
+        <div class="h2" style="font-size: 11px">Pendentes</div>
+        <div class="hint">Profissionais com salário configurado</div>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Profissional</th>
+              <th>Mês/Ano</th>
+              <th>Status</th>
+              <th class="right">Valor</th>
+              <th>Data pgto</th>
+              <th>Forma</th>
+            </tr>
+          </thead>
+          <tbody>
             ${professionalsWithSalary
               .filter((p) => p.professional_id && !paidIds.has(p.professional_id) && Number(p.salary_amount || 0) > 0)
               .map((p) => {
                 const statusPill = `<span class="pill bad">Pendente</span>`;
                 return `<tr>
                   <td>${escapeHtml(p.professional_name || "—")}</td>
-                  <td>${escapeHtml(String(end.getMonth() + 1))}/${escapeHtml(String(end.getFullYear()))}</td>
+                  <td>${escapeHtml(String(salaryRefMonth))}/${escapeHtml(String(salaryRefYear))}</td>
                   <td>${statusPill}</td>
                   <td class="right">${escapeHtml(formatCurrencyBRL(Number(p.salary_amount)))}</td>
                   <td>—</td>
@@ -586,23 +615,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           </tbody>
         </table>
       </div>
-      <div class="note">
-        Observação: salários pendentes são calculados a partir dos profissionais com salário configurado que ainda não constam como pagos no mês de referência.
-      </div>
     </div>
   </div>
 
   <div class="section">
     <div class="sectionHeader">
-      <div class="h2">Transações</div>
-      <div class="hint">Período selecionado</div>
+      <div class="h2">Receitas</div>
+      <div class="hint">Transações de entrada no período</div>
     </div>
     <div class="tableWrap">
       <table>
         <thead>
           <tr>
             <th style="width: 88px">Data</th>
-            <th style="width: 66px">Tipo</th>
             <th style="width: 110px">Categoria</th>
             <th>Descrição</th>
             <th class="right" style="width: 92px">Valor</th>
@@ -610,14 +635,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         </thead>
         <tbody>
           ${transactions
-            .slice(0, 150)
+            .filter((t) => t.type === "income")
+            .slice(0, 120)
             .map((t) => {
               const d = new Date(t.transaction_date);
-              const typeLabel = t.type === "income" ? "Entrada" : "Saída";
-              const signed = (t.type === "income" ? "+" : "-") + formatCurrencyBRL(Number(t.amount));
+              const signed = "+" + formatCurrencyBRL(Number(t.amount));
               return `<tr>
                 <td>${escapeHtml(formatDateBR(d))}</td>
-                <td>${escapeHtml(typeLabel)}</td>
                 <td>${escapeHtml(t.category || "—")}</td>
                 <td>${escapeHtml(t.description || "—")}</td>
                 <td class="right">${escapeHtml(signed)}</td>
@@ -627,7 +651,145 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         </tbody>
       </table>
     </div>
-    <div class="note">Mostrando até 150 linhas para manter o PDF leve.</div>
+  </div>
+
+  <div class="section">
+    <div class="sectionHeader">
+      <div class="h2">Despesas</div>
+      <div class="hint">Transações de saída no período</div>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 88px">Data</th>
+            <th style="width: 110px">Categoria</th>
+            <th>Descrição</th>
+            <th class="right" style="width: 92px">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${transactions
+            .filter((t) => t.type === "expense")
+            .slice(0, 120)
+            .map((t) => {
+              const d = new Date(t.transaction_date);
+              const signed = "-" + formatCurrencyBRL(Number(t.amount));
+              return `<tr>
+                <td>${escapeHtml(formatDateBR(d))}</td>
+                <td>${escapeHtml(t.category || "—")}</td>
+                <td>${escapeHtml(t.description || "—")}</td>
+                <td class="right">${escapeHtml(signed)}</td>
+              </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Mostrando até 120 linhas por seção para manter o PDF leve.</div>
+  </div>
+
+  <div class="section">
+    <div class="sectionHeader">
+      <div class="h2">Perdas (danificados)</div>
+      <div class="hint">Saídas por dano</div>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 88px">Data</th>
+            <th>Produto</th>
+            <th class="right" style="width: 72px">Qtd</th>
+            <th class="right" style="width: 92px">Custo</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${damagedLosses
+            .slice(0, 80)
+            .map((m) => {
+              const d = new Date(m.created_at);
+              return `<tr>
+                <td>${escapeHtml(formatDateBR(d))}</td>
+                <td>${escapeHtml(m.product?.name || "—")}</td>
+                <td class="right">${escapeHtml(String(Math.abs(Number(m.quantity) || 0)))}</td>
+                <td class="right">${escapeHtml(formatCurrencyBRL(Number(m.product?.cost ?? 0)))}</td>
+                <td>${escapeHtml(m.reason || "—")}</td>
+              </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sectionHeader">
+      <div class="h2">Comissões pagas</div>
+      <div class="hint">Pagamentos efetivados</div>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 88px">Data</th>
+            <th>Profissional</th>
+            <th>Status</th>
+            <th class="right" style="width: 92px">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${commissions
+            .filter((c) => c.status === "paid")
+            .slice(0, 100)
+            .map((c) => {
+              const d = new Date(c.payment_date || c.created_at);
+              return `<tr>
+                <td>${escapeHtml(formatDateBR(d))}</td>
+                <td>${escapeHtml(c.professional?.full_name || "—")}</td>
+                <td><span class="pill ok">Pago</span></td>
+                <td class="right">${escapeHtml(formatCurrencyBRL(Number(c.amount)))}</td>
+              </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sectionHeader">
+      <div class="h2">Comissões pendentes</div>
+      <div class="hint">A liquidar</div>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 88px">Data</th>
+            <th>Profissional</th>
+            <th>Status</th>
+            <th class="right" style="width: 92px">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${commissions
+            .filter((c) => c.status === "pending")
+            .slice(0, 100)
+            .map((c) => {
+              const d = new Date(c.created_at);
+              return `<tr>
+                <td>${escapeHtml(formatDateBR(d))}</td>
+                <td>${escapeHtml(c.professional?.full_name || "—")}</td>
+                <td><span class="pill bad">Pendente</span></td>
+                <td class="right">${escapeHtml(formatCurrencyBRL(Number(c.amount)))}</td>
+              </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
   </div>
   </div>
 </body>
