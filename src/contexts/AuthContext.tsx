@@ -18,6 +18,7 @@ interface AuthContextType {
     password: string,
     fullName: string,
     salonName: string,
+    phone: string,
     legalAcceptedAt?: string
   ) => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -143,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     fullName: string,
     salonName: string,
+    phone: string,
     legalAcceptedAt?: string
   ) => {
     // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
@@ -156,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: fullName,
           salon_name: salonName,
+          phone,
           terms_accepted: true,
           privacy_policy_accepted: true,
           legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
