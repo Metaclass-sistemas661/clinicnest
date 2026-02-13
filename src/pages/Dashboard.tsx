@@ -6,8 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
-import { formatInAppTz } from "@/lib/date";
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
+import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
+import { fromZonedTime } from "date-fns-tz";
 import { fetchClientSpendingByPeriod } from "@/lib/clientSpending";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -74,6 +75,34 @@ export default function Dashboard() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [profile?.tenant_id]);
+
+  // Garantir que o "Saldo do Dia" zere à meia-noite, mesmo com a página aberta.
+  // Sem isso, o card pode ficar mostrando o dia anterior até o usuário dar refresh ou mudar de página.
+  useEffect(() => {
+    const hasStaffId = profile?.user_id ?? user?.id;
+    const canFetch = profile?.tenant_id && (isAdmin || (hasStaffId && profile?.id));
+    if (!canFetch) return;
+
+    let timeoutId: number | undefined;
+
+    const schedule = () => {
+      const now = new Date();
+      const tomorrowStr = formatInAppTz(addDays(now, 1), "yyyy-MM-dd");
+      const nextMidnight = fromZonedTime(`${tomorrowStr}T00:00:00`, APP_TIMEZONE);
+      const ms = nextMidnight.getTime() - now.getTime();
+
+      timeoutId = window.setTimeout(() => {
+        fetchDashboardData();
+        schedule();
+      }, Math.max(1000, ms));
+    };
+
+    schedule();
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [profile?.tenant_id, profile?.user_id, profile?.id, user?.id, isAdmin]);
 
   const fetchCommissionTotals = async (
     tenantId: string,
