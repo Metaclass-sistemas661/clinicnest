@@ -591,6 +591,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message } as Json);
+    res
+      .status(500)
+      .json({ error: message, remoteBrowser: sanitizeWsEndpoint(getRemoteBrowserWSEndpoint()) } as Json);
   }
 }
