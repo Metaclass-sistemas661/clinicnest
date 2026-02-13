@@ -347,13 +347,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${salaryPaid
             .filter((s) => s.status === "paid")
             .map((s) => {
-              const statusPill = `<span class=\"pill ok\">Pago</span>`;
+              const statusPill = `<span class="pill ok">Pago</span>`;
               const paymentDate = s.payment_date ? escapeHtml(formatDateBR(new Date(s.payment_date))) : "—";
               return `<tr>
                 <td>${escapeHtml(s.professional_name || "—")}</td>
                 <td>${escapeHtml(String(s.payment_month))}/${escapeHtml(String(s.payment_year))}</td>
                 <td>${statusPill}</td>
-                <td class=\"right\">${escapeHtml(formatCurrencyBRL(Number(s.amount)))}</td>
+                <td class="right">${escapeHtml(formatCurrencyBRL(Number(s.amount)))}</td>
                 <td>${paymentDate}</td>
                 <td>${escapeHtml(s.payment_method || "—")}</td>
               </tr>`;
@@ -362,12 +362,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${professionalsWithSalary
             .filter((p) => p.professional_id && !paidIds.has(p.professional_id) && Number(p.salary_amount || 0) > 0)
             .map((p) => {
-              const statusPill = `<span class=\"pill bad\">Pendente</span>`;
+              const statusPill = `<span class="pill bad">Pendente</span>`;
               return `<tr>
                 <td>${escapeHtml(p.professional_name || "—")}</td>
                 <td>${escapeHtml(String(end.getMonth() + 1))}/${escapeHtml(String(end.getFullYear()))}</td>
                 <td>${statusPill}</td>
-                <td class=\"right\">${escapeHtml(formatCurrencyBRL(Number(p.salary_amount)))}</td>
+                <td class="right">${escapeHtml(formatCurrencyBRL(Number(p.salary_amount)))}</td>
                 <td>—</td>
                 <td>${escapeHtml(p.default_payment_method || "—")}</td>
               </tr>`;
@@ -405,7 +405,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               <td>${escapeHtml(typeLabel)}</td>
               <td>${escapeHtml(t.category || "—")}</td>
               <td>${escapeHtml(t.description || "—")}</td>
-              <td class=\"right\">${escapeHtml(signed)}</td>
+              <td class="right">${escapeHtml(signed)}</td>
             </tr>`;
           })
           .join("")}
@@ -440,7 +440,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const filename = `relatorio-financeiro-${startDateOnly}-${endDateOnly}.pdf`;
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=\"${filename}\"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.status(200).send(Buffer.from(pdfBuffer));
     } finally {
       await browser.close();
