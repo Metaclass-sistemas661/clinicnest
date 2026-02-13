@@ -461,7 +461,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       path.join(extractedBaseDir, "lib64"),
       "/tmp/lib",
       "/tmp/lib64",
+      "/usr/lib64",
       "/usr/lib",
+      "/lib64",
       "/lib",
     ];
     const currentLd = process.env.LD_LIBRARY_PATH;
