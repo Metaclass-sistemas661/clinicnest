@@ -563,6 +563,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const browser = remoteWsEndpoint
       ? await puppeteer.connect({
           browserWSEndpoint: remoteWsEndpoint,
+          protocolTimeout: 120_000,
         })
       : await puppeteer.launch({
           args: [...chromium.args, "--disable-dev-shm-usage", "--no-zygote"],
@@ -573,7 +574,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
       const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0" });
+
+      page.setDefaultTimeout(120_000);
+      page.setDefaultNavigationTimeout(120_000);
+
+      // networkidle0 can hang indefinitely on remote Chrome providers.
+      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 120_000 });
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
