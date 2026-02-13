@@ -2,6 +2,13 @@ import { useState } from "react";
 import { LandingLayout } from "@/components/landing/LandingLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
@@ -14,6 +21,7 @@ export default function Contato() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [consentAccepted, setConsentAccepted] = useState(false);
+  const [subject, setSubject] = useState<string>("support");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,12 +30,16 @@ export default function Contato() {
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
-    const subject = String(formData.get("subject") ?? "").trim();
     const message = String(formData.get("message") ?? "").trim();
     const phoneDigits = phone.replace(/\D/g, "");
 
     if (!name || !phone || !email || !message) {
       toast.error("Preencha nome, telefone, e-mail e mensagem.");
+      return;
+    }
+
+    if (!subject) {
+      toast.error("Selecione um assunto.");
       return;
     }
 
@@ -50,7 +62,7 @@ export default function Contato() {
             name,
             phone,
             email,
-            subject: subject || "Sem assunto",
+            subject,
             message,
             channel: "contact",
             termsAccepted: consentAccepted,
@@ -69,7 +81,7 @@ export default function Contato() {
         const { error: fallbackError } = await supabase.from("contact_messages").insert({
           name,
           email,
-          subject: subject || "Sem assunto",
+          subject,
           message: `Telefone: ${phone}\n\n${message}`,
           terms_accepted: true,
           privacy_accepted: true,
@@ -227,13 +239,23 @@ export default function Contato() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="subject">Assunto</Label>
-                          <Input
-                            id="subject"
-                            name="subject"
-                            placeholder="Ex: Suporte, Parceria, Dúvida"
-                            required
-                            className="border-violet-100 focus:ring-violet-500"
-                          />
+                          <input type="hidden" name="subject" value={subject} />
+                          <Select value={subject} onValueChange={setSubject}>
+                            <SelectTrigger
+                              id="subject"
+                              className="border-violet-100 focus:ring-violet-500"
+                            >
+                              <SelectValue placeholder="Selecione um assunto" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="support">Suporte técnico</SelectItem>
+                              <SelectItem value="commercial">Dúvidas comerciais / Planos</SelectItem>
+                              <SelectItem value="billing">Cobrança / Pagamentos</SelectItem>
+                              <SelectItem value="partnership">Parcerias</SelectItem>
+                              <SelectItem value="feedback">Sugestões / Feedback</SelectItem>
+                              <SelectItem value="bug">Reportar um problema</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="message">Mensagem</Label>
