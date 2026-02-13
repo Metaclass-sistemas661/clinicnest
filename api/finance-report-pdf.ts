@@ -4,6 +4,7 @@ import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 import fs from "node:fs";
 import path from "node:path";
+import { URL } from "node:url";
 
 type Json = Record<string, unknown>;
 
@@ -63,6 +64,26 @@ function getRemoteBrowserWSEndpoint(): string | null {
   );
 }
 
+function sanitizeWsEndpoint(endpoint: string | null):
+  | { present: false }
+  | { present: true; origin: string; hasTokenParam: boolean } {
+  if (!endpoint) return { present: false };
+  try {
+    const u = new URL(endpoint);
+    return {
+      present: true,
+      origin: `${u.protocol}//${u.host}${u.pathname === "/" ? "" : u.pathname}`,
+      hasTokenParam: u.searchParams.has("token"),
+    };
+  } catch {
+    return {
+      present: true,
+      origin: "(invalid url)",
+      hasTokenParam: endpoint.includes("token="),
+    };
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -73,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Diagnostics mode (useful when Vercel runtime logs are not visible).
     // Runs without auth/token to avoid leaking sessions while troubleshooting.
     if (String((req.query as any)?.debug ?? "") === "1") {
+      const remoteWsEndpoint = getRemoteBrowserWSEndpoint();
       const executablePath = await chromium.executablePath();
 
       const extractedBaseDir = path.dirname(executablePath); // e.g. /tmp
@@ -110,6 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         node: process.version,
         platform: process.platform,
         arch: process.arch,
+        remoteBrowser: sanitizeWsEndpoint(remoteWsEndpoint),
         executablePath,
         extractedBaseDir,
         ldLibraryPath: process.env.LD_LIBRARY_PATH,
