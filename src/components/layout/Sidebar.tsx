@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -80,13 +80,15 @@ function SidebarContent({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const auth = useAuth();
   const { profile, tenant, signOut } = auth;
   const isAdmin = auth?.isAdmin ?? false;
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     onNavigate?.();
-    signOut();
+    await signOut();
+    navigate("/", { replace: true });
   };
 
   return (

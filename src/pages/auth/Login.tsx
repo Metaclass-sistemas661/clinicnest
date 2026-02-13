@@ -30,7 +30,7 @@ export default function Login() {
     }
 
     toast.success("Login realizado com sucesso!");
-    navigate("/dashboard");
+    navigate("/dashboard", { replace: true });
   };
 
   return (
