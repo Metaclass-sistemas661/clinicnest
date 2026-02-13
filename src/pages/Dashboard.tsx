@@ -61,6 +61,41 @@ export default function Dashboard() {
   const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
 
   useEffect(() => {
+    if (!profile?.tenant_id) return;
+
+    const prefetch = () => {
+      void import("@/pages/Agenda");
+      void import("@/pages/Produtos");
+      void import("@/pages/Servicos");
+      void import("@/pages/Clientes");
+      void import("@/pages/Notificacoes");
+      void import("@/pages/MinhasConfiguracoes");
+
+      if (isAdmin) {
+        void import("@/pages/Financeiro");
+        void import("@/pages/Equipe");
+        void import("@/pages/Configuracoes");
+        void import("@/pages/Assinatura");
+        void import("@/pages/Metas");
+      } else {
+        void import("@/pages/MinhasComissoes");
+        void import("@/pages/MeusSalarios");
+        void import("@/pages/MinhasMetas");
+      }
+
+      return undefined;
+    };
+
+    if ("requestIdleCallback" in window) {
+      const id = (window as any).requestIdleCallback(prefetch, { timeout: 800 });
+      return () => (window as any).cancelIdleCallback?.(id);
+    }
+
+    const t = window.setTimeout(prefetch, 0);
+    return () => window.clearTimeout(t);
+  }, [profile?.tenant_id, isAdmin]);
+
+  useEffect(() => {
     const hasStaffId = profile?.user_id ?? user?.id;
     if (profile?.tenant_id && (isAdmin || (hasStaffId && profile?.id))) {
       fetchDashboardData();
