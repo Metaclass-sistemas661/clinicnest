@@ -31,6 +31,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -38,6 +39,14 @@ export default function Register() {
   const isPhoneValid = phoneDigits.length >= 10;
   const isPasswordValid = password.length >= 6;
   const isConfirmValid = confirmPassword.length > 0 && password === confirmPassword;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canContinueStep1 =
+    !!fullName.trim() &&
+    !!salonName.trim() &&
+    !!phone.trim() &&
+    isPhoneValid &&
+    !!email.trim() &&
+    isEmailValid;
   const canSubmit =
     !isLoading &&
     !!fullName.trim() &&
@@ -45,9 +54,29 @@ export default function Register() {
     !!email.trim() &&
     !!phone.trim() &&
     isPhoneValid &&
+    isEmailValid &&
     isPasswordValid &&
     isConfirmValid &&
     legalAccepted;
+
+  const handleContinue = () => {
+    if (!fullName.trim() || !salonName.trim() || !phone.trim() || !email.trim()) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (!isPhoneValid) {
+      toast.error("Informe um telefone válido.");
+      return;
+    }
+
+    if (!isEmailValid) {
+      toast.error("Informe um e-mail válido.");
+      return;
+    }
+
+    setStep(2);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,150 +241,190 @@ export default function Register() {
               ) : (
                 <form onSubmit={handleSubmit}>
                   <CardContent className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-medium">Seu nome</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Maria Silva"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="salonName" className="text-sm font-medium">Nome do salão</Label>
-                <Input
-                  id="salonName"
-                  type="text"
-                  placeholder="Salão Beleza & Estilo"
-                  value={salonName}
-                  onChange={(e) => setSalonName(e.target.value)}
-                  required
-                  className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Telefone / Celular</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  placeholder="(11) 99999-9999"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  onInput={(e) => {
-                    const input = e.currentTarget;
-                    input.value = input.value.replace(/[^0-9()\-\s]/g, "");
-                  }}
-                  required
-                  className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                  className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="new-password"
-                      required
-                      className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      autoComplete="new-password"
-                      required
-                      className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
-                    />
-                    <button
-                      type="button"
-                      aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-                      onClick={() => setShowConfirmPassword((v) => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
-                <label htmlFor="legalAccepted" className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <input
-                    id="legalAccepted"
-                    type="checkbox"
-                    checked={legalAccepted}
-                    onChange={(e) => setLegalAccepted(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-violet-200"
-                    required
-                  />
-                  <span>
-                    Li e aceito os{" "}
-                    <Link to="/termos-de-uso" className="font-medium text-primary hover:text-accent underline underline-offset-2">
-                      Termos de Uso
-                    </Link>
-                    {" "+"e a"+" "}
-                    <Link to="/politica-de-privacidade" className="font-medium text-primary hover:text-accent underline underline-offset-2">
-                      Política de Privacidade
-                    </Link>
-                    .
-                  </span>
-                </label>
-              </div>
-            </CardContent>
+                    <div className="flex items-center justify-center gap-2 pb-1 text-xs text-muted-foreground">
+                      <span className={step === 1 ? "font-medium text-foreground" : ""}>1. Dados</span>
+                      <span className="opacity-40">›</span>
+                      <span className={step === 2 ? "font-medium text-foreground" : ""}>2. Acesso</span>
+                    </div>
+
+                    {step === 1 ? (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="fullName" className="text-sm font-medium">Seu nome</Label>
+                          <Input
+                            id="fullName"
+                            type="text"
+                            placeholder="Maria Silva"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            required
+                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="salonName" className="text-sm font-medium">Nome do salão</Label>
+                          <Input
+                            id="salonName"
+                            type="text"
+                            placeholder="Salão Beleza & Estilo"
+                            value={salonName}
+                            onChange={(e) => setSalonName(e.target.value)}
+                            required
+                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone" className="text-sm font-medium">Telefone / Celular</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            inputMode="tel"
+                            placeholder="(11) 99999-9999"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            onInput={(e) => {
+                              const input = e.currentTarget;
+                              input.value = input.value.replace(/[^0-9()\-\s]/g, "");
+                            }}
+                            required
+                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="seu@email.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
+                            required
+                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
+                            <div className="relative">
+                              <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="new-password"
+                                required
+                                className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
+                              />
+                              <button
+                                type="button"
+                                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar</Label>
+                            <div className="relative">
+                              <Input
+                                id="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                autoComplete="new-password"
+                                required
+                                className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
+                              />
+                              <button
+                                type="button"
+                                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                                onClick={() => setShowConfirmPassword((v) => !v)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
+                          <label htmlFor="legalAccepted" className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <input
+                              id="legalAccepted"
+                              type="checkbox"
+                              checked={legalAccepted}
+                              onChange={(e) => setLegalAccepted(e.target.checked)}
+                              className="mt-0.5 h-4 w-4 rounded border-violet-200"
+                              required
+                            />
+                            <span>
+                              Li e aceito os{" "}
+                              <Link to="/termos-de-uso" className="font-medium text-primary hover:text-accent underline underline-offset-2">
+                                Termos de Uso
+                              </Link>
+                              {" "+"e a"+" "}
+                              <Link to="/politica-de-privacidade" className="font-medium text-primary hover:text-accent underline underline-offset-2">
+                                Política de Privacidade
+                              </Link>
+                              .
+                            </span>
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+
                   <CardFooter className="flex flex-col gap-4 pt-2">
-                    <Button
-                      type="submit"
-                      className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
-                      disabled={!canSubmit}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Criando conta...
-                        </>
-                      ) : (
-                        <>
-                          Criar conta
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
+                    {step === 1 ? (
+                      <Button
+                        type="button"
+                        className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
+                        onClick={handleContinue}
+                        disabled={isLoading || !canContinueStep1}
+                      >
+                        Continuar
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    ) : (
+                      <>
+                        <div className="grid w-full grid-cols-2 gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-12 w-full rounded-xl"
+                            onClick={() => setStep(1)}
+                            disabled={isLoading}
+                          >
+                            Voltar
+                          </Button>
+                          <Button
+                            type="submit"
+                            className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
+                            disabled={!canSubmit}
+                          >
+                            {isLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Criando...
+                              </>
+                            ) : (
+                              <>
+                                Criar conta
+                                <ArrowRight className="ml-2 h-5 w-5" />
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
                     <p className="text-center text-sm text-muted-foreground">
                       Já tem uma conta?{" "}
                       <Link
