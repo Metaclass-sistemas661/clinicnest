@@ -59,7 +59,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-white to-violet-50/40 p-4">
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
@@ -130,7 +130,7 @@ export default function Login() {
               <p className="mt-2 text-muted-foreground">Gestão profissional para seu salão</p>
             </div>
 
-            <Card className="glass border-white/20 shadow-2xl">
+            <Card className="border-violet-100/60 bg-white/80 shadow-2xl backdrop-blur-md">
               <CardHeader className="space-y-2 text-center pb-2">
                 <CardTitle className="text-2xl font-display">Bem-vindo de volta</CardTitle>
                 <CardDescription>
