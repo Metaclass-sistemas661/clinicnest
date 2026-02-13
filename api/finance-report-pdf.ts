@@ -453,7 +453,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Ensure shared libraries shipped with @sparticuz/chromium are discoverable.
     // In serverless runtimes these are extracted under /tmp (commonly /tmp/lib and /tmp/lib64).
     const extractedBaseDir = path.dirname(executablePath); // e.g. /tmp
+    const extractedChromiumDir = path.join(extractedBaseDir, "chromium");
     const libPaths = [
+      path.join(extractedChromiumDir, "lib"),
+      path.join(extractedChromiumDir, "lib64"),
       path.join(extractedBaseDir, "lib"),
       path.join(extractedBaseDir, "lib64"),
       "/tmp/lib",
