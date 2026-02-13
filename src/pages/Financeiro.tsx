@@ -68,7 +68,7 @@ import {
   type SalaryRow,
   type ProfessionalForSalary,
 } from "@/components/financeiro/tabs";
-import { generateFinancialReport, DamagedProductLoss, type CommissionPayment } from "@/utils/financialPdfExport";
+import { DamagedProductLoss, type CommissionPayment } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 
 const categories = {
@@ -147,93 +147,49 @@ export default function Financeiro() {
 
   // Handle PDF export with custom date range
   const handleExportPdf = useCallback(async (startDate: Date, endDate: Date) => {
-    if (!profile?.tenant_id) return;
-
     try {
-      // Fetch transactions for the selected date range
-      const { data, error } = await supabase
-        .from("financial_transactions")
-        .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
-        .eq("tenant_id", profile.tenant_id)
-        .gte("transaction_date", format(startDate, "yyyy-MM-dd"))
-        .lte("transaction_date", format(endDate, "yyyy-MM-dd"))
-        .order("transaction_date", { ascending: false });
-
+      const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
 
-      const reportTransactions = (data as FinancialTransaction[]) || [];
-
-      // Calculate totals for the report
-      const reportIncome = reportTransactions
-        .filter((t) => t.type === "income")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      const reportExpense = reportTransactions
-        .filter((t) => t.type === "expense")
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      const reportBalance = reportIncome - reportExpense;
-
-      const { data: damagedData, error: damagedError } = await supabase
-        .from("stock_movements")
-        .select(
-          `
-            id,
-            product_id,
-            quantity,
-            reason,
-            created_at,
-            movement_type,
-            out_reason_type,
-            product:products(name, cost)
-          `
-        )
-        .eq("tenant_id", profile.tenant_id)
-        .eq("movement_type", "out")
-        .eq("out_reason_type", "damaged")
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString())
-        .order("created_at", { ascending: false });
-
-      if (damagedError) throw damagedError;
-
-      const damagedLosses: DamagedProductLoss[] = (damagedData || []).map((movement: any) => {
-        const quantity = Math.abs(Number(movement.quantity) || 0);
-        const unitCost = Number(movement.product?.cost) || 0;
-        return {
-          id: movement.id,
-          productName: movement.product?.name || "Produto removido",
-          quantity,
-          unitCost,
-          totalLoss: unitCost * quantity,
-          reason: movement.reason,
-          created_at: movement.created_at,
-        };
+      const resp = await fetch("/api/finance-report-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }),
       });
-      const totalProductLoss = damagedLosses.reduce((sum, loss) => sum + loss.totalLoss, 0);
 
-      // Fetch commissions for the selected date range
-      const { data: commissionsData } = await supabase
-        .from("commission_payments")
-        .select(`
-          *,
-          professional:profiles!commission_payments_professional_id_fkey(full_name, email)
-        `)
-        .eq("tenant_id", profile.tenant_id)
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString())
-        .order("created_at", { ascending: false });
+      if (!resp.ok) {
+        let message = "Erro ao gerar o PDF";
+        try {
+          const j = await resp.json();
+          if (j?.error) message = String(j.error);
+        } catch {
+          // ignore
+        }
+        throw new Error(message);
+      }
 
-      await generateFinancialReport({
-        transactions: reportTransactions,
-        startDate,
-        endDate,
-        tenantName: profile?.full_name ? `Relatório de ${profile.full_name}` : undefined,
-        totalIncome: reportIncome,
-        totalExpense: reportExpense,
-        balance: reportBalance,
-        commissions: (commissionsData || []) as CommissionPayment[],
-        damagedLosses,
-        totalProductLoss,
-      });
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const fileName = `relatorio-financeiro-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.pdf`;
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
 
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
