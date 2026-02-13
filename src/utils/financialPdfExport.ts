@@ -77,6 +77,27 @@ interface EvolutionPoint {
   balance: number;
 }
 
+const downsampleEvolutionData = (data: EvolutionPoint[], maxPoints: number): EvolutionPoint[] => {
+  if (!Array.isArray(data) || data.length <= maxPoints) return data;
+  const result: EvolutionPoint[] = [];
+  const lastIdx = data.length - 1;
+  for (let i = 0; i < maxPoints; i++) {
+    const idx = Math.round((i * lastIdx) / (maxPoints - 1));
+    result.push(data[idx]);
+  }
+  // Ensure uniqueness when rounding causes duplicates
+  const unique: EvolutionPoint[] = [];
+  const seen = new Set<string>();
+  for (const p of result) {
+    const key = `${p.label}-${p.balance}-${p.income}-${p.expense}`;
+    if (!seen.has(key)) {
+      unique.push(p);
+      seen.add(key);
+    }
+  }
+  return unique.length >= 2 ? unique : [data[0], data[lastIdx]];
+};
+
 const generateEvolutionData = (
   transactions: FinancialTransaction[],
   startDate: Date,
@@ -174,6 +195,14 @@ const drawBarChart = (
   const chartY = y + 20;
   const chartBottom = chartY + chartHeight;
 
+  // Baseline
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.2);
+  doc.line(chartX, chartBottom, chartX + chartWidth, chartBottom);
+
+  const maxLabels = 6;
+  const labelStep = Math.max(1, Math.ceil(data.length / maxLabels));
+
   // Draw bars
   data.forEach((point, i) => {
     const groupX = chartX + i * barGroupWidth;
@@ -188,10 +217,15 @@ const drawBarChart = (
     doc.setFillColor(...colors.expense);
     doc.rect(groupX + barWidth + 4, chartBottom - expenseHeight, barWidth, expenseHeight, "F");
 
-    // Label
-    doc.setFontSize(6);
-    doc.setTextColor(107, 114, 128);
-    doc.text(point.label, groupX + barGroupWidth / 2, chartBottom + 8, { align: "center" });
+    // Label (reduce clutter)
+    if (i % labelStep === 0 || i === data.length - 1) {
+      doc.setFontSize(6);
+      doc.setTextColor(107, 114, 128);
+      doc.text(point.label, groupX + barGroupWidth / 2, chartBottom + 10, {
+        align: "center",
+        angle: data.length > 8 ? 45 : 0,
+      });
+    }
   });
 
   // Legend
@@ -243,9 +277,6 @@ const drawLineChart = (
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
     doc.line(chartX, zeroY, chartX + chartWidth, zeroY);
-    doc.setFontSize(6);
-    doc.setTextColor(150, 150, 150);
-    doc.text("R$ 0", chartX - 2, zeroY, { align: "right" });
   }
 
   // Draw line
@@ -253,6 +284,9 @@ const drawLineChart = (
   doc.setLineWidth(1.5);
 
   const pointSpacing = chartWidth / (data.length - 1 || 1);
+
+  const maxLabels = 6;
+  const labelStep = Math.max(1, Math.ceil(data.length / maxLabels));
 
   data.forEach((point, i) => {
     const px = chartX + i * pointSpacing;
@@ -269,10 +303,15 @@ const drawLineChart = (
       doc.line(px, py, nextPx, nextPy);
     }
 
-    // Label
-    doc.setFontSize(6);
-    doc.setTextColor(107, 114, 128);
-    doc.text(point.label, px, chartBottom + 8, { align: "center" });
+    // Label (reduce clutter)
+    if (i % labelStep === 0 || i === data.length - 1) {
+      doc.setFontSize(6);
+      doc.setTextColor(107, 114, 128);
+      doc.text(point.label, px, chartBottom + 10, {
+        align: "center",
+        angle: data.length > 8 ? 45 : 0,
+      });
+    }
   });
 
   // Show final value
@@ -317,7 +356,6 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   const headerHeight = 28;
   const footerHeight = 15;
   const contentTop = headerHeight + 14;
-  const contentBottom = pageHeight - footerHeight - 8;
   const periodText = formatPeriod(startDate, endDate);
 
   const drawHeader = (title: string) => {
@@ -490,7 +528,10 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   }
 
   // ==================== EVOLUTION CHARTS ====================
-  const evolutionData = generateEvolutionData(transactions, startDate, endDate);
+  const evolutionData = downsampleEvolutionData(
+    generateEvolutionData(transactions, startDate, endDate),
+    8
+  );
 
   if (evolutionData.length > 1) {
     doc.setFontSize(14);
