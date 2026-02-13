@@ -239,6 +239,21 @@ EXCEPTION WHEN OTHERS THEN
   NULL;
 END $$;
 
+DROP POLICY IF EXISTS "Staff can view own commissions" ON public.commission_payments;
+CREATE POLICY "Staff can view own commissions"
+ON public.commission_payments FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.user_id = auth.uid() AND p.tenant_id = commission_payments.tenant_id
+  )
+  AND (
+    professional_id = auth.uid()
+    OR public.is_tenant_admin(auth.uid(), tenant_id)
+  )
+  AND public.tenant_has_access(tenant_id)
+);
+
 DROP POLICY IF EXISTS "Admins can create commissions" ON public.commission_payments;
 CREATE POLICY "Admins can create commissions"
 ON public.commission_payments FOR INSERT
