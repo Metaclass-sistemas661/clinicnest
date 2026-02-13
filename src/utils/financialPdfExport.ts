@@ -314,29 +314,80 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   const grayColor: [number, number, number] = [107, 114, 128];
   const lightGray: [number, number, number] = [243, 244, 246];
 
-  // ==================== HEADER ====================
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 45, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
-  doc.text(tenantName || "Relatório Financeiro", margin, 22);
-
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text("Relatório Financeiro Detalhado", margin, 32);
-
-  // Period badge
+  const headerHeight = 28;
+  const footerHeight = 15;
+  const contentTop = headerHeight + 14;
+  const contentBottom = pageHeight - footerHeight - 8;
   const periodText = formatPeriod(startDate, endDate);
-  doc.setFontSize(9);
-  const periodWidth = doc.getTextWidth(periodText) + 16;
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(pageWidth - margin - periodWidth, 15, periodWidth, 18, 4, 4, "F");
-  doc.setTextColor(...primaryColor);
-  doc.text(periodText, pageWidth - margin - periodWidth + 8, 27);
 
-  yPos = 60;
+  const drawHeader = (title: string) => {
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, headerHeight, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("VynloBella", margin, 17);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    if (tenantName) {
+      doc.text(tenantName, margin, 23);
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(title, pageWidth - margin, 17, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(periodText, pageWidth - margin, 23, { align: "right" });
+  };
+
+  const drawFooter = (pageNumber: number, totalPages: number) => {
+    doc.setDrawColor(...lightGray);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pageHeight - footerHeight, pageWidth - margin, pageHeight - footerHeight);
+
+    doc.setFontSize(8);
+    doc.setTextColor(...grayColor);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Gerado em ${formatInAppTz(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
+      margin,
+      pageHeight - 6
+    );
+    doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, pageHeight - 6, { align: "right" });
+  };
+
+  const baseTableStyles = {
+    styles: {
+      font: "helvetica",
+      fontSize: 8,
+      cellPadding: 2,
+      lineWidth: 0.1,
+      lineColor: [229, 231, 235] as [number, number, number],
+      valign: "middle" as const,
+    },
+    headStyles: {
+      fillColor: primaryColor,
+      textColor: [255, 255, 255] as [number, number, number],
+      fontStyle: "bold" as const,
+      fontSize: 9,
+      cellPadding: 2.2,
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251] as [number, number, number],
+    },
+    margin: { left: margin, right: margin, top: contentTop, bottom: footerHeight },
+    tableWidth: pageWidth - margin * 2,
+    didDrawPage: () => {
+      drawHeader("Relatório Financeiro");
+    },
+  };
+
+  drawHeader("Relatório Financeiro");
+  yPos = contentTop;
 
   // ==================== SUMMARY CARDS ====================
   doc.setTextColor(0, 0, 0);
@@ -413,7 +464,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
     yPos += 8;
 
     autoTable(doc, {
-      startY: yPos,
+      startY: Math.max(yPos, contentTop),
       head: [["Data", "Produto", "Qtd", "Custo Unit.", "Total Perda", "Motivo"]],
       body: damagedLosses.map((loss) => [
         formatInAppTz(loss.created_at, "dd/MM/yyyy"),
@@ -423,16 +474,8 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         formatCurrency(loss.totalLoss),
         loss.reason || "—",
       ]),
-      theme: "striped",
-      headStyles: {
-        fillColor: dangerColor,
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 9,
-      },
-      bodyStyles: {
-        fontSize: 8,
-      },
+      ...baseTableStyles,
+      headStyles: { ...baseTableStyles.headStyles, fillColor: dangerColor },
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 45 },
@@ -441,8 +484,6 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         4: { cellWidth: 28, halign: "right", fontStyle: "bold" },
         5: { cellWidth: 40 },
       },
-      margin: { left: margin, right: margin },
-      tableWidth: pageWidth - margin * 2,
     });
 
     yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
@@ -581,19 +622,11 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   // ==================== TRANSACTIONS TABLE (NEW PAGE) ====================
   if (transactions.length > 0) {
     doc.addPage();
-    yPos = margin;
-
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 30, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Extrato de Transações", margin, 20);
-
-    yPos = 45;
+    drawHeader("Extrato de Transações");
+    yPos = contentTop;
 
     autoTable(doc, {
-      startY: yPos,
+      startY: Math.max(yPos, contentTop),
       head: [["Data", "Tipo", "Categoria", "Descrição", "Origem", "Valor"]],
       body: transactions.map((t) => [
         formatInAppTz(t.transaction_date, "dd/MM/yyyy"),
@@ -603,16 +636,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         t.appointment_id ? "Agenda" : "Manual",
         (t.type === "income" ? "+" : "-") + formatCurrency(t.amount),
       ]),
-      theme: "striped",
-      headStyles: {
-        fillColor: primaryColor,
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 9,
-      },
-      bodyStyles: {
-        fontSize: 8,
-      },
+      ...baseTableStyles,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 20 },
@@ -621,7 +645,6 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         4: { cellWidth: 20, halign: "center" },
         5: { cellWidth: 30, halign: "right", fontStyle: "bold" },
       },
-      margin: { left: margin, right: margin },
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index === 5) {
           const value = String(data.cell.raw);
@@ -640,22 +663,17 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
           }
         }
       },
+      didDrawPage: () => {
+        drawHeader("Extrato de Transações");
+      },
     });
   }
 
   // ==================== COMMISSIONS TABLE (NEW PAGE IF NEEDED) ====================
   if (commissions.length > 0) {
     doc.addPage();
-    yPos = margin;
-
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 30, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("Comissões de Profissionais", margin, 20);
-
-    yPos = 45;
+    drawHeader("Comissões");
+    yPos = contentTop;
 
     const paidCommissions = commissions.filter((c) => c.status === "paid");
     const pendingCommissions = commissions.filter((c) => c.status === "pending");
@@ -680,7 +698,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
 
     // Commissions table
     autoTable(doc, {
-      startY: yPos,
+      startY: Math.max(yPos, contentTop),
       head: [["Data", "Profissional", "Tipo", "Valor Serviço", "Comissão", "Status"]],
       body: commissions.map((c) => [
         formatInAppTz(c.created_at, "dd/MM/yyyy"),
@@ -690,16 +708,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         formatCurrency(Number(c.amount)),
         c.status === "paid" ? "Paga" : "Pendente",
       ]),
-      theme: "striped",
-      headStyles: {
-        fillColor: primaryColor,
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 9,
-      },
-      bodyStyles: {
-        fontSize: 8,
-      },
+      ...baseTableStyles,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 40 },
@@ -708,7 +717,6 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         4: { cellWidth: 30, halign: "right", fontStyle: "bold" },
         5: { cellWidth: 25, halign: "center" },
       },
-      margin: { left: margin, right: margin },
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index === 5) {
           const status = data.cell.text[0];
@@ -719,6 +727,9 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
           }
         }
       },
+      didDrawPage: () => {
+        drawHeader("Comissões");
+      },
     });
   }
 
@@ -727,19 +738,11 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    doc.setDrawColor(...lightGray);
-    doc.setLineWidth(0.5);
-    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+    if (i === 1) {
+      drawHeader("Relatório Financeiro");
+    }
 
-    doc.setFontSize(8);
-    doc.setTextColor(...grayColor);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      `Gerado em ${formatInAppTz(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
-      margin,
-      pageHeight - 8
-    );
-    doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin - 25, pageHeight - 8);
+    drawFooter(i, totalPages);
   }
 
   // Save the PDF
