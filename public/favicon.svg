@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#g)"/>
+  <path d="M150 192c28-42 72-66 122-66 50 0 94 24 122 66-20 0-38 4-54 12-18-22-42-34-68-34-26 0-50 12-68 34-16-8-34-12-54-12z" fill="#fff" fill-opacity="0.18"/>
+  <text x="256" y="318" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="200" font-weight="800" letter-spacing="-10" fill="#ffffff">VB</text>
+</svg>
