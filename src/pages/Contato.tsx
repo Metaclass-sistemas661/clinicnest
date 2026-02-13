@@ -24,9 +24,15 @@ export default function Contato() {
     const email = String(formData.get("email") ?? "").trim();
     const subject = String(formData.get("subject") ?? "").trim();
     const message = String(formData.get("message") ?? "").trim();
+    const phoneDigits = phone.replace(/\D/g, "");
 
     if (!name || !phone || !email || !message) {
       toast.error("Preencha nome, telefone, e-mail e mensagem.");
+      return;
+    }
+
+    if (phoneDigits.length < 10) {
+      toast.error("Informe um telefone válido.");
       return;
     }
 
@@ -212,6 +218,10 @@ export default function Contato() {
                             inputMode="tel"
                             placeholder="(11) 99999-9999"
                             required
+                            onInput={(e) => {
+                              const input = e.currentTarget;
+                              input.value = input.value.replace(/[^0-9()\-\s+]/g, "");
+                            }}
                             className="border-violet-100 focus:ring-violet-500"
                           />
                         </div>
