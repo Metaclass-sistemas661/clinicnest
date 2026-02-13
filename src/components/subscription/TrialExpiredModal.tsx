@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ const plans = [
 export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalProps) {
   const { createCheckout } = useSubscription();
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleSelectPlan = async (planKey: "monthly" | "quarterly" | "annual") => {
@@ -67,6 +69,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
 
   const handleSair = async () => {
     await signOut();
+    navigate("/", { replace: true });
   };
 
   return (
