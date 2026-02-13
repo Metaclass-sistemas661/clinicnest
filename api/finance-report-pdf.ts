@@ -54,6 +54,15 @@ function exists(filePath: string): boolean {
   }
 }
 
+function getRemoteBrowserWSEndpoint(): string | null {
+  return (
+    process.env.BROWSERLESS_WS_ENDPOINT ??
+    process.env.CHROME_WS_ENDPOINT ??
+    process.env.PUPPETEER_WS_ENDPOINT ??
+    null
+  );
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -527,12 +536,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nextLd = [...libPaths, currentLd].filter(Boolean).join(":");
     process.env.LD_LIBRARY_PATH = nextLd;
 
-    const browser = await puppeteer.launch({
-      args: [...chromium.args, "--disable-dev-shm-usage", "--no-zygote"],
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless,
-    });
+    const remoteWsEndpoint = getRemoteBrowserWSEndpoint();
+    const browser = remoteWsEndpoint
+      ? await puppeteer.connect({
+          browserWSEndpoint: remoteWsEndpoint,
+        })
+      : await puppeteer.launch({
+          args: [...chromium.args, "--disable-dev-shm-usage", "--no-zygote"],
+          defaultViewport: chromium.defaultViewport,
+          executablePath,
+          headless: chromium.headless,
+        });
 
     try {
       const page = await browser.newPage();
@@ -548,7 +562,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.status(200).send(Buffer.from(pdfBuffer));
     } finally {
-      await browser.close();
+      // connect() uses disconnect(), launch() uses close()
+      if (remoteWsEndpoint) browser.disconnect();
+      else await browser.close();
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
