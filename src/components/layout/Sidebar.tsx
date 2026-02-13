@@ -72,6 +72,32 @@ const navCategories: NavCategory[] = [
   },
 ];
 
+const prefetchByHref: Record<string, () => void> = {
+  "/dashboard": () => void import("@/pages/Dashboard"),
+  "/agenda": () => void import("@/pages/Agenda"),
+  "/servicos": () => void import("@/pages/Servicos"),
+  "/clientes": () => void import("@/pages/Clientes"),
+  "/financeiro": () => void import("@/pages/Financeiro"),
+  "/produtos": () => void import("@/pages/Produtos"),
+  "/metas": () => void import("@/pages/Metas"),
+  "/minhas-metas": () => void import("@/pages/MinhasMetas"),
+  "/equipe": () => void import("@/pages/Equipe"),
+  "/configuracoes": () => void import("@/pages/Configuracoes"),
+  "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),
+  "/notificacoes": () => void import("@/pages/Notificacoes"),
+  "/assinatura": () => void import("@/pages/Assinatura"),
+  "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
+  "/meus-salarios": () => void import("@/pages/MeusSalarios"),
+};
+
+function prefetchRoute(href: string) {
+  try {
+    prefetchByHref[href]?.();
+  } catch {
+    // no-op
+  }
+}
+
 function SidebarContent({ 
   isCollapsed, 
   onNavigate 
@@ -139,6 +165,7 @@ function SidebarContent({
                       key={item.href}
                       to={item.href}
                       onClick={onNavigate}
+                      onMouseEnter={() => prefetchRoute(item.href)}
                       className={cn(
                         "group flex items-center gap-3 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium transition-all duration-200",
                         isActive

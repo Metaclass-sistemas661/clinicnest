@@ -26,6 +26,24 @@ export default function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
+  const prefetchMainRoutes = () => {
+    void import("@/pages/Dashboard");
+    void import("@/pages/Agenda");
+    void import("@/pages/Clientes");
+    void import("@/pages/Servicos");
+    void import("@/pages/Produtos");
+    void import("@/pages/Notificacoes");
+    void import("@/pages/MinhasConfiguracoes");
+    void import("@/pages/Financeiro");
+    void import("@/pages/Assinatura");
+    void import("@/pages/Equipe");
+    void import("@/pages/Configuracoes");
+    void import("@/pages/Metas");
+    void import("@/pages/MinhasComissoes");
+    void import("@/pages/MeusSalarios");
+    void import("@/pages/MinhasMetas");
+  };
+
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
     if (m.includes("invalid login credentials")) {
@@ -55,6 +73,7 @@ export default function Login() {
     }
 
     toast.success("Login realizado com sucesso!");
+    prefetchMainRoutes();
     navigate("/dashboard", { replace: true });
   };
 
