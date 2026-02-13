@@ -62,9 +62,8 @@ export default function Login() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
       {/* Background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/15 blur-3xl" />
-        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-accent/15 blur-3xl" />
-        <div className="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-6xl animate-slide-up">
