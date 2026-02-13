@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
+import fs from "node:fs";
 import path from "node:path";
 
 type Json = Record<string, unknown>;
@@ -43,6 +44,14 @@ function escapeHtml(input: string): string {
 
 function sum(numbers: Array<number | null | undefined>): number {
   return numbers.reduce((acc, v) => acc + Number(v ?? 0), 0);
+}
+
+function exists(filePath: string): boolean {
+  try {
+    return fs.existsSync(filePath);
+  } catch {
+    return false;
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -469,6 +478,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentLd = process.env.LD_LIBRARY_PATH;
     const nextLd = [...libPaths, currentLd].filter(Boolean).join(":");
     process.env.LD_LIBRARY_PATH = nextLd;
+
+    // Diagnostics mode (useful when Vercel runtime logs are not visible)
+    if (String((req.query as any)?.debug ?? "") === "1") {
+      const probePaths = [
+        "/tmp/lib/libnss3.so",
+        "/tmp/lib64/libnss3.so",
+        "/tmp/chromium/lib/libnss3.so",
+        "/tmp/chromium/lib64/libnss3.so",
+        "/usr/lib/libnss3.so",
+        "/usr/lib64/libnss3.so",
+        "/lib/libnss3.so",
+        "/lib64/libnss3.so",
+      ];
+      res.status(200).json({
+        ok: false,
+        debug: true,
+        node: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        executablePath,
+        extractedBaseDir,
+        ldLibraryPath: process.env.LD_LIBRARY_PATH,
+        libProbe: probePaths.map((p) => ({ path: p, exists: exists(p) })),
+      });
+      return;
+    }
 
     const browser = await puppeteer.launch({
       args: [...chromium.args, "--disable-dev-shm-usage", "--no-zygote"],
