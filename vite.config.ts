@@ -6,6 +6,16 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    __BUILD_COMMIT__: JSON.stringify(
+      process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? "dev"
+    ),
+    __BUILD_REF__: JSON.stringify(
+      process.env.VERCEL_GIT_COMMIT_REF ?? process.env.GITHUB_REF_NAME ?? "local"
+    ),
+    __BUILD_ENV__: JSON.stringify(process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? mode),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   build: {
     chunkSizeWarningLimit: 1000,
   },
