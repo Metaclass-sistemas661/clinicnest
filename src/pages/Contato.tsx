@@ -293,7 +293,7 @@ export default function Contato() {
                         </div>
                         <Button
                           type="submit"
-                          disabled={loading}
+                          disabled={loading || !consentAccepted}
                           className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30"
                         >
                           {loading ? (
