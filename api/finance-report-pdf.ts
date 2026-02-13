@@ -422,8 +422,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 </html>`;
 
     const executablePath = await chromium.executablePath();
+
+    // Vercel/AWS Lambda-like environments may require LD_LIBRARY_PATH to include
+    // the folder where @sparticuz/chromium extracts shared libraries.
+    // executablePath is usually "/tmp/chromium" and libs are in "/tmp/lib".
+    const extractedLibPath = executablePath.replace(/\/chromium$/, "/lib");
+    const currentLd = process.env.LD_LIBRARY_PATH;
+    process.env.LD_LIBRARY_PATH = currentLd
+      ? `${currentLd}:${extractedLibPath}`
+      : extractedLibPath;
+
     const browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, "--disable-dev-shm-usage"],
       defaultViewport: chromium.defaultViewport,
       executablePath,
       headless: chromium.headless,
