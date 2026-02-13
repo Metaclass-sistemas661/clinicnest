@@ -20,12 +20,19 @@ export default function Contato() {
     const form = e.currentTarget;
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const subject = String(formData.get("subject") ?? "").trim();
     const message = String(formData.get("message") ?? "").trim();
+    const phoneDigits = phone.replace(/\D/g, "");
 
-    if (!name || !email || !message) {
-      toast.error("Preencha nome, e-mail e mensagem.");
+    if (!name || !phone || !email || !message) {
+      toast.error("Preencha nome, telefone, e-mail e mensagem.");
+      return;
+    }
+
+    if (phoneDigits.length < 10) {
+      toast.error("Informe um telefone válido.");
       return;
     }
 
@@ -41,6 +48,7 @@ export default function Contato() {
         const { data, error } = await supabase.functions.invoke("submit-contact-message", {
           body: {
             name,
+            phone,
             email,
             subject: subject || "Sem assunto",
             message,
@@ -62,7 +70,7 @@ export default function Contato() {
           name,
           email,
           subject: subject || "Sem assunto",
-          message,
+          message: `Telefone: ${phone}\n\n${message}`,
           terms_accepted: true,
           privacy_accepted: true,
           consented_at: new Date().toISOString(),
@@ -200,6 +208,22 @@ export default function Contato() {
                               className="border-violet-100 focus:ring-violet-500"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Telefone / Celular</Label>
+                          <Input
+                            id="phone"
+                            name="phone"
+                            type="tel"
+                            inputMode="tel"
+                            placeholder="(11) 99999-9999"
+                            required
+                            onInput={(e) => {
+                              const input = e.currentTarget;
+                              input.value = input.value.replace(/[^0-9()\-\s+]/g, "");
+                            }}
+                            className="border-violet-100 focus:ring-violet-500"
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="subject">Assunto</Label>
