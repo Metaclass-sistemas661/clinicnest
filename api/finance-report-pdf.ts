@@ -346,6 +346,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .map((p) => Number(p.salary_amount || 0))
     );
 
+    const balanceTone = balance >= 0 ? "pos" : "neg";
+    const generatedAt = new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date());
+
     const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -354,77 +361,157 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <title>Relatório Financeiro</title>
   <style>
     @page { size: A4; margin: 18mm 14mm 18mm 14mm; }
+    :root {
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --surface: #ffffff;
+      --bg: #f8fafc;
+      --brand: #7c3aed;
+      --brand-2: #4f46e5;
+      --pos: #16a34a;
+      --neg: #dc2626;
+      --shadow: 0 10px 28px rgba(2, 6, 23, 0.06);
+    }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; }
-    .header { display:flex; align-items:center; justify-content:space-between; background: #7c3aed; color: white; padding: 14px 16px; border-radius: 10px; }
-    .brand { font-weight: 800; letter-spacing: .4px; font-size: 16px; }
-    .meta { text-align:right; font-size: 11px; opacity: .95; }
-    .meta strong { display:block; font-size: 12px; }
-    .section { margin-top: 14px; }
-    .h2 { font-size: 13px; font-weight: 800; margin: 0 0 8px 0; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .sheet {
+      width: 100%;
+    }
+
+    .hero {
+      border: 1px solid rgba(255,255,255,.35);
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: #fff;
+      border-radius: 16px;
+      padding: 18px 18px 16px 18px;
+      box-shadow: var(--shadow);
+    }
+    .heroTop { display:flex; align-items:flex-start; justify-content:space-between; gap: 12px; }
+    .brand { font-weight: 800; letter-spacing: .2px; font-size: 16px; line-height: 1.15; }
+    .reportTitle { margin-top: 6px; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+    .heroMeta { text-align:right; font-size: 11px; opacity: .95; }
+    .heroMeta strong { display:block; font-size: 12px; }
+    .heroSub { margin-top: 10px; font-size: 11px; opacity: .95; }
+
+    .section { margin-top: 16px; }
+    .sectionHeader { display:flex; align-items:baseline; justify-content:space-between; gap: 12px; margin-bottom: 8px; }
+    .h2 { font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; margin: 0; }
+    .hint { font-size: 10px; color: rgba(100,116,139,.95); }
+
     .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #ffffff; }
-    .card .label { font-size: 10px; letter-spacing: .08em; color: #64748b; font-weight: 700; }
-    .card .value { margin-top: 6px; font-size: 14px; font-weight: 800; }
-    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; }
-    .pill.ok { background: #dcfce7; color: #166534; }
-    .pill.bad { background: #fee2e2; color: #991b1b; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 12px;
+      background: var(--surface);
+      box-shadow: 0 1px 0 rgba(2, 6, 23, 0.03);
+    }
+    .card .label { font-size: 10px; letter-spacing: .10em; color: var(--muted); font-weight: 800; text-transform: uppercase; }
+    .card .value { margin-top: 6px; font-size: 18px; font-weight: 900; letter-spacing: -.01em; }
+    .card .sub { margin-top: 4px; font-size: 10px; color: var(--muted); }
+    .value.pos { color: var(--pos); }
+    .value.neg { color: var(--neg); }
+
+    .kpiRow { display:grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+    .pill { display:inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+    .pill.ok { background: rgba(34,197,94,.12); color: #166534; border: 1px solid rgba(34,197,94,.25); }
+    .pill.bad { background: rgba(239,68,68,.10); color: #991b1b; border: 1px solid rgba(239,68,68,.22); }
+
+    .tableWrap { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
     table { width: 100%; border-collapse: collapse; }
-    th { text-align:left; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; padding: 8px 8px; color: #475569; border-bottom: 1px solid #e5e7eb; }
-    td { padding: 8px 8px; font-size: 11px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    thead th {
+      background: #f1f5f9;
+      text-align:left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .10em;
+      padding: 9px 10px;
+      color: #475569;
+      border-bottom: 1px solid var(--line);
+    }
+    tbody td {
+      padding: 9px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
     tbody tr:nth-child(even) td { background: #fafafa; }
-    .right { text-align:right; }
-    .muted { color:#64748b; }
-    .small { font-size: 10px; }
-    .footer { margin-top: 10px; font-size: 10px; color: #64748b; display:flex; justify-content: space-between; }
-    .kpiRow { display:flex; gap:10px; flex-wrap:wrap; }
-    .kpiRow .card { flex: 1; min-width: 150px; }
+    tbody tr:last-child td { border-bottom: none; }
+    .right { text-align:right; font-variant-numeric: tabular-nums; }
+    .mono { font-variant-numeric: tabular-nums; }
+
+    .note { margin-top: 8px; font-size: 10px; color: var(--muted); }
+    .pageBreak { page-break-before: always; }
+
+    /* Avoid breaking inside cards/tables when possible */
+    .card, .tableWrap { break-inside: avoid; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div>
-      <div class="brand">VynloBella</div>
-      <div class="small" style="opacity:.95">${escapeHtml(tenantLabel)}</div>
+  <div class="sheet">
+    <div class="hero">
+      <div class="heroTop">
+        <div>
+          <div class="brand">VynloBella</div>
+          <div class="reportTitle">Relatório Financeiro</div>
+        </div>
+        <div class="heroMeta">
+          <strong>${escapeHtml(tenantLabel)}</strong>
+          <span class="mono">${escapeHtml(formatDateBR(start))} a ${escapeHtml(formatDateBR(end))}</span>
+        </div>
+      </div>
+      <div class="heroSub">Resumo executivo, salários, comissões, perdas e transações do período selecionado.</div>
     </div>
-    <div class="meta">
-      <strong>Relatório Financeiro</strong>
-      ${escapeHtml(formatDateBR(start))} a ${escapeHtml(formatDateBR(end))}
-    </div>
-  </div>
 
   <div class="section">
-    <div class="h2">Resumo Executivo</div>
+    <div class="sectionHeader">
+      <div class="h2">Resumo Executivo</div>
+      <div class="hint">Valores em BRL</div>
+    </div>
     <div class="grid">
       <div class="card">
         <div class="label">Saldo</div>
-        <div class="value">${escapeHtml(formatCurrencyBRL(balance))}</div>
-        <div class="small muted">${balance >= 0 ? "Positivo" : "Negativo"}</div>
+        <div class="value ${balanceTone}">${escapeHtml(formatCurrencyBRL(balance))}</div>
+        <div class="sub">${balance >= 0 ? "Resultado positivo" : "Resultado negativo"}</div>
       </div>
       <div class="card">
         <div class="label">Receitas</div>
-        <div class="value">${escapeHtml(formatCurrencyBRL(incomeTotal))}</div>
-        <div class="small muted">No período</div>
+        <div class="value pos">${escapeHtml(formatCurrencyBRL(incomeTotal))}</div>
+        <div class="sub">No período</div>
       </div>
       <div class="card">
         <div class="label">Despesas</div>
-        <div class="value">${escapeHtml(formatCurrencyBRL(expenseTotal))}</div>
-        <div class="small muted">No período</div>
+        <div class="value neg">${escapeHtml(formatCurrencyBRL(expenseTotal))}</div>
+        <div class="sub">No período</div>
       </div>
       <div class="card">
         <div class="label">Perdas (danificados)</div>
         <div class="value">${escapeHtml(formatCurrencyBRL(productLossTotal))}</div>
-        <div class="small muted">No período</div>
+        <div class="sub">No período</div>
       </div>
     </div>
   </div>
 
   <div class="section">
-    <div class="h2">Comissões</div>
+    <div class="sectionHeader">
+      <div class="h2">Comissões</div>
+      <div class="hint">Pagas vs. pendentes</div>
+    </div>
     <div class="kpiRow">
       <div class="card">
         <div class="label">Pagas</div>
-        <div class="value">${escapeHtml(formatCurrencyBRL(commissionsPaidTotal))}</div>
+        <div class="value pos">${escapeHtml(formatCurrencyBRL(commissionsPaidTotal))}</div>
       </div>
       <div class="card">
         <div class="label">Pendentes</div>
@@ -434,11 +521,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   </div>
 
   <div class="section">
-    <div class="h2">Salários (mês de referência: ${end.getMonth() + 1}/${end.getFullYear()})</div>
+    <div class="sectionHeader">
+      <div class="h2">Salários</div>
+      <div class="hint">Mês ref.: ${end.getMonth() + 1}/${end.getFullYear()}</div>
+    </div>
     <div class="kpiRow">
       <div class="card">
         <div class="label">Pagos</div>
-        <div class="value">${escapeHtml(formatCurrencyBRL(paidSalaryTotal))}</div>
+        <div class="value pos">${escapeHtml(formatCurrencyBRL(paidSalaryTotal))}</div>
       </div>
       <div class="card">
         <div class="label">Pendentes</div>
@@ -447,92 +537,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     </div>
 
     <div style="margin-top:10px">
-      <div class="h2" style="font-size:12px">Detalhamento</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Profissional</th>
-            <th>Mês/Ano</th>
-            <th>Status</th>
-            <th class="right">Valor</th>
-            <th>Data pgto</th>
-            <th>Forma</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${salaryPaid
-            .filter((s) => s.status === "paid")
-            .map((s) => {
-              const statusPill = `<span class="pill ok">Pago</span>`;
-              const paymentDate = s.payment_date ? escapeHtml(formatDateBR(new Date(s.payment_date))) : "—";
-              return `<tr>
-                <td>${escapeHtml(s.professional_name || "—")}</td>
-                <td>${escapeHtml(String(s.payment_month))}/${escapeHtml(String(s.payment_year))}</td>
-                <td>${statusPill}</td>
-                <td class="right">${escapeHtml(formatCurrencyBRL(Number(s.amount)))}</td>
-                <td>${paymentDate}</td>
-                <td>${escapeHtml(s.payment_method || "—")}</td>
-              </tr>`;
-            })
-            .join("")}
-          ${professionalsWithSalary
-            .filter((p) => p.professional_id && !paidIds.has(p.professional_id) && Number(p.salary_amount || 0) > 0)
-            .map((p) => {
-              const statusPill = `<span class="pill bad">Pendente</span>`;
-              return `<tr>
-                <td>${escapeHtml(p.professional_name || "—")}</td>
-                <td>${escapeHtml(String(end.getMonth() + 1))}/${escapeHtml(String(end.getFullYear()))}</td>
-                <td>${statusPill}</td>
-                <td class="right">${escapeHtml(formatCurrencyBRL(Number(p.salary_amount)))}</td>
-                <td>—</td>
-                <td>${escapeHtml(p.default_payment_method || "—")}</td>
-              </tr>`;
-            })
-            .join("")}
-        </tbody>
-      </table>
-      <div class="small muted" style="margin-top:6px">
+      <div class="sectionHeader" style="margin: 14px 0 8px 0">
+        <div class="h2" style="font-size: 11px">Detalhamento</div>
+        <div class="hint">Pagos e pendentes</div>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Profissional</th>
+              <th>Mês/Ano</th>
+              <th>Status</th>
+              <th class="right">Valor</th>
+              <th>Data pgto</th>
+              <th>Forma</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${salaryPaid
+              .filter((s) => s.status === "paid")
+              .map((s) => {
+                const statusPill = `<span class="pill ok">Pago</span>`;
+                const paymentDate = s.payment_date ? escapeHtml(formatDateBR(new Date(s.payment_date))) : "—";
+                return `<tr>
+                  <td>${escapeHtml(s.professional_name || "—")}</td>
+                  <td>${escapeHtml(String(s.payment_month))}/${escapeHtml(String(s.payment_year))}</td>
+                  <td>${statusPill}</td>
+                  <td class="right">${escapeHtml(formatCurrencyBRL(Number(s.amount)))}</td>
+                  <td>${paymentDate}</td>
+                  <td>${escapeHtml(s.payment_method || "—")}</td>
+                </tr>`;
+              })
+              .join("")}
+            ${professionalsWithSalary
+              .filter((p) => p.professional_id && !paidIds.has(p.professional_id) && Number(p.salary_amount || 0) > 0)
+              .map((p) => {
+                const statusPill = `<span class="pill bad">Pendente</span>`;
+                return `<tr>
+                  <td>${escapeHtml(p.professional_name || "—")}</td>
+                  <td>${escapeHtml(String(end.getMonth() + 1))}/${escapeHtml(String(end.getFullYear()))}</td>
+                  <td>${statusPill}</td>
+                  <td class="right">${escapeHtml(formatCurrencyBRL(Number(p.salary_amount)))}</td>
+                  <td>—</td>
+                  <td>${escapeHtml(p.default_payment_method || "—")}</td>
+                </tr>`;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
         Observação: salários pendentes são calculados a partir dos profissionais com salário configurado que ainda não constam como pagos no mês de referência.
       </div>
     </div>
   </div>
 
   <div class="section">
-    <div class="h2">Transações (período)</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Tipo</th>
-          <th>Categoria</th>
-          <th>Descrição</th>
-          <th class="right">Valor</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${transactions
-          .slice(0, 150)
-          .map((t) => {
-            const d = new Date(t.transaction_date);
-            const typeLabel = t.type === "income" ? "Entrada" : "Saída";
-            const signed = (t.type === "income" ? "+" : "-") + formatCurrencyBRL(Number(t.amount));
-            return `<tr>
-              <td>${escapeHtml(formatDateBR(d))}</td>
-              <td>${escapeHtml(typeLabel)}</td>
-              <td>${escapeHtml(t.category || "—")}</td>
-              <td>${escapeHtml(t.description || "—")}</td>
-              <td class="right">${escapeHtml(signed)}</td>
-            </tr>`;
-          })
-          .join("")}
-      </tbody>
-    </table>
-    <div class="small muted" style="margin-top:6px">Mostrando até 150 linhas para manter o PDF leve.</div>
+    <div class="sectionHeader">
+      <div class="h2">Transações</div>
+      <div class="hint">Período selecionado</div>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 88px">Data</th>
+            <th style="width: 66px">Tipo</th>
+            <th style="width: 110px">Categoria</th>
+            <th>Descrição</th>
+            <th class="right" style="width: 92px">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${transactions
+            .slice(0, 150)
+            .map((t) => {
+              const d = new Date(t.transaction_date);
+              const typeLabel = t.type === "income" ? "Entrada" : "Saída";
+              const signed = (t.type === "income" ? "+" : "-") + formatCurrencyBRL(Number(t.amount));
+              return `<tr>
+                <td>${escapeHtml(formatDateBR(d))}</td>
+                <td>${escapeHtml(typeLabel)}</td>
+                <td>${escapeHtml(t.category || "—")}</td>
+                <td>${escapeHtml(t.description || "—")}</td>
+                <td class="right">${escapeHtml(signed)}</td>
+              </tr>`;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="note">Mostrando até 150 linhas para manter o PDF leve.</div>
   </div>
-
-  <div class="footer">
-    <div>Gerado em ${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date()))}</div>
-    <div class="muted">Tenant: ${escapeHtml(tenantId)}</div>
   </div>
 </body>
 </html>`;
@@ -583,7 +679,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
-        margin: { top: "18mm", right: "14mm", bottom: "18mm", left: "14mm" },
+        margin: { top: "24mm", right: "14mm", bottom: "18mm", left: "14mm" },
+        displayHeaderFooter: true,
+        headerTemplate: `
+          <div style="
+            width: 100%;
+            padding: 0 14mm;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            font-size: 9px;
+            color: #334155;
+          ">
+            <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
+              <div style="font-weight: 800; letter-spacing: .2px;">VynloBella</div>
+              <div style="text-align:right;">
+                <span style="font-weight: 700;">Relatório Financeiro</span>
+                <span style="color:#64748b; margin-left: 8px;">${escapeHtml(formatDateBR(start))} a ${escapeHtml(
+          formatDateBR(end)
+        )}</span>
+              </div>
+            </div>
+            <div style="height: 1px; background: #e5e7eb; margin-top: 6px;"></div>
+          </div>
+        `,
+        footerTemplate: `
+          <div style="
+            width: 100%;
+            padding: 0 14mm;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            font-size: 9px;
+            color: #64748b;
+          ">
+            <div style="height: 1px; background: #e5e7eb; margin-bottom: 6px;"></div>
+            <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
+              <div>Gerado em ${escapeHtml(generatedAt)}</div>
+              <div>Página <span class="pageNumber"></span> de <span class="totalPages"></span></div>
+            </div>
+          </div>
+        `,
       });
 
       const filename = `relatorio-financeiro-${startDateOnly}-${endDateOnly}.pdf`;
