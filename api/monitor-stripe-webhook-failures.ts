@@ -15,6 +15,12 @@ function parseBearerToken(req: VercelRequest): string | null {
   return match?.[1] ?? null;
 }
 
+function parseCronSecretFallback(req: VercelRequest): string | null {
+  const h = req.headers["x-cron-secret"];
+  if (!h) return null;
+  return Array.isArray(h) ? h[0] ?? null : h;
+}
+
 async function sendEmailViaResend(params: { to: string; subject: string; html: string; text: string }): Promise<void> {
   const resendApiKey = getEnv("RESEND_API_KEY");
   const from = getEnv("ALERT_EMAIL_FROM");
@@ -48,9 +54,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
-    const token = parseBearerToken(req);
-    if (!token || token !== cronSecret) {
-      res.status(401).json({ error: "Unauthorized" });
+    const bearer = parseBearerToken(req);
+    const fallback = parseCronSecretFallback(req);
+    const token = bearer ?? fallback;
+
+    if (!token) {
+      res.status(401).json({ error: "Unauthorized", detail: "Missing auth token" });
+      return;
+    }
+
+    if (token !== cronSecret) {
+      res.status(401).json({ error: "Unauthorized", detail: "Invalid auth token" });
       return;
     }
   }
