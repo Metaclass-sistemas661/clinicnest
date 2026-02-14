@@ -65,25 +65,48 @@ serve(async (req) => {
 
     const supabaseAdmin = createSupabaseAdmin();
 
-    // Processar eventos
-    switch (event.type) {
-      case "checkout.session.completed": {
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, stripe, supabaseAdmin);
-        break;
+    const alreadyProcessed = await ensureWebhookEventRow(supabaseAdmin, event);
+    if (alreadyProcessed) {
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    try {
+      // Processar eventos
+      switch (event.type) {
+        case "checkout.session.completed": {
+          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session, stripe, supabaseAdmin);
+          break;
+        }
+
+        case "customer.subscription.updated": {
+          await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, supabaseAdmin);
+          break;
+        }
+
+        case "customer.subscription.deleted": {
+          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, supabaseAdmin);
+          break;
+        }
+
+        default:
+          logStep("Evento não tratado", { type: event.type });
       }
 
-      case "customer.subscription.updated": {
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, supabaseAdmin);
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, supabaseAdmin);
-        break;
-      }
-
-      default:
-        logStep("Evento não tratado", { type: event.type });
+      await supabaseAdmin
+        .from("stripe_webhook_events")
+        .update({ status: "processed", processed_at: new Date().toISOString() })
+        .eq("stripe_event_id", event.id);
+    } catch (handlerError) {
+      const msg = handlerError instanceof Error ? handlerError.message : String(handlerError);
+      logStep("ERROR: Falha ao processar evento", { stripeEventId: event.id, type: event.type, error: msg });
+      await supabaseAdmin
+        .from("stripe_webhook_events")
+        .update({ status: "failed", last_error: msg })
+        .eq("stripe_event_id", event.id);
+      throw handlerError;
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200, headers: jsonHeaders });
@@ -93,6 +116,57 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: jsonHeaders });
   }
 });
+
+async function ensureWebhookEventRow(supabaseAdmin: any, event: Stripe.Event): Promise<boolean> {
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .select("status, attempts")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+
+  if (existingError) {
+    logStep("WARN: Não foi possível consultar stripe_webhook_events", { error: existingError.message });
+  }
+
+  if (existing?.status === "processed") {
+    logStep("Evento já processado (idempotência)", { stripeEventId: event.id, type: event.type });
+    return true;
+  }
+
+  if (!existing) {
+    const { error: insertError } = await supabaseAdmin
+      .from("stripe_webhook_events")
+      .insert({
+        stripe_event_id: event.id,
+        type: event.type,
+        livemode: event.livemode,
+        api_version: (event as any).api_version ?? null,
+        received_at: new Date().toISOString(),
+        status: "processing",
+        attempts: 1,
+        payload: event,
+      });
+
+    if (insertError) {
+      // Se outro worker inseriu ao mesmo tempo, seguimos fluxo normal.
+      logStep("WARN: Falha ao inserir stripe_webhook_events", { error: insertError.message, stripeEventId: event.id });
+    }
+
+    return false;
+  }
+
+  const nextAttempts = (existing?.attempts ?? 0) + 1;
+  const { error: updateError } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .update({ status: "processing", attempts: nextAttempts })
+    .eq("stripe_event_id", event.id);
+
+  if (updateError) {
+    logStep("WARN: Falha ao atualizar attempts/status", { error: updateError.message, stripeEventId: event.id });
+  }
+
+  return false;
+}
 
 // ========== HANDLERS DE EVENTOS ==========
 

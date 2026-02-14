@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
@@ -35,40 +36,46 @@ serve(async (req) => {
     return new Response(null, { headers: cors });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
+  const authResult = await getAuthenticatedUser(req, cors);
+  if (authResult.error) return authResult.error;
+  const user = authResult.user;
 
   try {
     logStep("Function started");
 
     const { planKey } = await req.json();
     if (!planKey || !PLANS[planKey as keyof typeof PLANS]) {
-      throw new Error("Invalid plan selected");
+      return new Response(JSON.stringify({ error: "Plano inválido" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     const plan = PLANS[planKey as keyof typeof PLANS];
     logStep("Plan selected", { planKey, priceId: plan.priceId });
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user?.email) {
+      return new Response(JSON.stringify({ error: "Usuário sem e-mail" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 403,
+      });
+    }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const rl = await checkRateLimit(`checkout:${user.id}`, 5, 60);
     if (!rl.allowed) {
-      throw new Error("Muitas requisições. Tente novamente em alguns minutos.");
+      return new Response(
+        JSON.stringify({ error: "Muitas requisições. Tente novamente em alguns minutos." }),
+        { status: 429, headers: { ...cors, "Content-Type": "application/json" } }
+      );
     }
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey || !stripeKey.startsWith("sk_")) {
-      throw new Error("STRIPE_SECRET_KEY não configurada ou inválida");
+      return new Response(
+        JSON.stringify({ error: "STRIPE_SECRET_KEY não configurada ou inválida" }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
+      );
     }
 
     const stripe = new Stripe(stripeKey);
@@ -81,14 +88,34 @@ serve(async (req) => {
       logStep("Found existing customer", { customerId });
     }
 
-    // Get tenant_id from profile
-    const { data: profileData } = await supabaseClient
-      .from('profiles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: "Configuração do servidor incompleta" }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
 
-    const tenantId = profileData?.tenant_id;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      logStep("ERROR", { message: profileError.message });
+      return new Response(JSON.stringify({ error: "Erro ao buscar tenant" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    const tenantId = profileData?.tenant_id ?? "";
     logStep("Got tenant", { tenantId });
 
     const baseUrl = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "https://vynlobella.com";
@@ -124,7 +151,7 @@ serve(async (req) => {
       JSON.stringify({ error: errorMessage }),
       {
         headers: { ...cors, "Content-Type": "application/json" },
-        status: 200,
+        status: 500,
       }
     );
   }

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
@@ -199,6 +200,11 @@ serve(async (req) => {
     return new Response(null, { headers: cors });
   }
 
+  const authResult = await getAuthenticatedUserWithTenant(req, cors);
+  if (authResult.error) return authResult.error;
+  const user = authResult.user;
+  const tenantId = authResult.tenantId;
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -206,7 +212,7 @@ serve(async (req) => {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -216,26 +222,7 @@ serve(async (req) => {
 
   try {
     log("Iniciando processamento");
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      log("ERROR: Sem Authorization header");
-      return new Response(
-        JSON.stringify({ error: "Não autorizado. Faça login." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    log("Validando token");
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError || !user) {
-      log("ERROR: Token inválido", { error: userError?.message });
-      return new Response(
-        JSON.stringify({ error: "Sessão inválida ou expirada" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
-      );
-    }
-    log("Usuário autenticado", { userId: user.id });
+    log("Usuário autenticado", { userId: user.id, tenantId });
 
     const rl = await checkRateLimit(`invite:${user.id}`, 10, 60);
     if (!rl.allowed) {
@@ -253,7 +240,7 @@ serve(async (req) => {
       log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -265,58 +252,36 @@ serve(async (req) => {
     if (!emailTrim) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (!fullNameTrim) {
       return new Response(
         JSON.stringify({ error: "Nome completo é obrigatório" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (!passwordStr || passwordStr.length < 6) {
       return new Response(
         JSON.stringify({ error: "Senha deve ter no mínimo 6 caracteres" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     if (role !== "staff" && role !== "admin") {
       return new Response(
         JSON.stringify({ error: "Função deve ser staff ou admin" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    log("Buscando profile do usuário");
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (profileError) {
-      log("ERROR: Erro ao buscar profile", { error: profileError.message });
-      return new Response(
-        JSON.stringify({ error: `Erro ao buscar perfil: ${profileError.message}` }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!profile?.tenant_id) {
-      log("ERROR: Profile ou tenant não encontrado");
-      return new Response(
-        JSON.stringify({ error: "Perfil ou tenant não encontrado" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
-      );
-    }
-    log("Tenant encontrado", { tenant_id: profile.tenant_id });
+    log("Tenant encontrado", { tenant_id: tenantId });
 
     log("Verificando se usuário é admin");
     const { data: roleRow, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("tenant_id", profile.tenant_id)
+      .eq("tenant_id", tenantId)
       .eq("role", "admin")
       .single();
 
@@ -324,7 +289,7 @@ serve(async (req) => {
       log("ERROR: Erro ao buscar role", { error: roleError.message });
       return new Response(
         JSON.stringify({ error: `Erro ao verificar permissões: ${roleError.message}` }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -332,19 +297,19 @@ serve(async (req) => {
       log("ERROR: Usuário não é admin");
       return new Response(
         JSON.stringify({ error: "Apenas administradores podem convidar membros" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
     log("Usuário confirmado como admin");
 
-    log("Criando novo usuário", { email: emailTrim, tenant_id: profile.tenant_id });
+    log("Criando novo usuário", { email: emailTrim, tenant_id: tenantId });
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: emailTrim,
       password: passwordStr,
       email_confirm: true,
       user_metadata: {
         source: "admin_invite",
-        tenant_id: profile.tenant_id,
+        tenant_id: tenantId,
         full_name: fullNameTrim,
         phone: typeof phone === "string" ? phone.trim() || null : null,
         role,
@@ -360,7 +325,7 @@ serve(async (req) => {
       log("ERROR: Erro ao criar usuário", { error: createError.message, code: createError.status });
       return new Response(
         JSON.stringify({ error: msg }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -415,7 +380,7 @@ serve(async (req) => {
     log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

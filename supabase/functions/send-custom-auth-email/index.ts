@@ -416,7 +416,7 @@ serve(async (req) => {
     log("ERROR: Variáveis de ambiente faltando");
     return new Response(
       JSON.stringify({ error: "Configuração do servidor incompleta" }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -448,7 +448,7 @@ serve(async (req) => {
       log("ERROR: Erro ao parsear body", { error: err });
       return new Response(
         JSON.stringify({ error: "Corpo da requisição inválido" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -463,14 +463,14 @@ serve(async (req) => {
     if (!emailTrim) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (type !== "password_reset" && type !== "confirmation" && type !== "password_changed") {
       return new Response(
         JSON.stringify({ error: "Tipo de email inválido. Use 'password_reset', 'confirmation' ou 'password_changed'" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -491,7 +491,7 @@ serve(async (req) => {
       log("ERROR: tipo de email requer autenticação", { type });
       return new Response(
         JSON.stringify({ error: "Autenticação necessária para este tipo de email" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 401, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -559,7 +559,7 @@ serve(async (req) => {
         }
         return new Response(
           JSON.stringify({ error: linkData.error?.message || "Erro ao gerar link" }),
-          { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+          { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
         );
       }
 
@@ -601,7 +601,7 @@ serve(async (req) => {
           success: false,
           message: "Erro ao enviar email. Verifique as configurações do Resend.",
         }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
   } catch (err) {
@@ -610,7 +610,7 @@ serve(async (req) => {
     log("ERROR: Exceção não tratada", { message, stack });
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
@@ -20,11 +21,9 @@ serve(async (req) => {
     return new Response(null, { headers: cors });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
+  const authResult = await getAuthenticatedUser(req, cors);
+  if (authResult.error) return authResult.error;
+  const user = authResult.user;
 
   try {
     logStep("Function started");
@@ -32,15 +31,21 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: "Configuração do servidor incompleta" }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: { persistSession: false },
+    });
 
     const rl = await checkRateLimit(`check-sub:${user.id}`, 30, 60);
     if (!rl.allowed) {
@@ -51,10 +56,10 @@ serve(async (req) => {
     }
 
     // Get subscription from database first
-    const { data: profileData } = await supabaseClient
-      .from('profiles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
+    const { data: profileData } = await supabaseAdmin
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", user.id)
       .single();
 
     if (!profileData?.tenant_id) {
@@ -70,10 +75,10 @@ serve(async (req) => {
       });
     }
 
-    const { data: subscriptionData } = await supabaseClient
-      .from('subscriptions')
-      .select('*')
-      .eq('tenant_id', profileData.tenant_id)
+    const { data: subscriptionData } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("tenant_id", profileData.tenant_id)
       .single();
 
     logStep("Subscription data from DB", subscriptionData);
@@ -119,17 +124,17 @@ serve(async (req) => {
         logStep("Active subscription found", { subscriptionId: subscription.id, productId, planKey });
 
         // Update subscription in database
-        await supabaseClient
-          .from('subscriptions')
+        await supabaseAdmin
+          .from("subscriptions")
           .update({
-            status: 'active',
+            status: "active",
             stripe_customer_id: stripeCustomerId,
             stripe_subscription_id: stripeSubscriptionId,
             plan: planKey,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: subscriptionEnd,
           })
-          .eq('tenant_id', profileData.tenant_id);
+          .eq("tenant_id", profileData.tenant_id);
       }
     }
 

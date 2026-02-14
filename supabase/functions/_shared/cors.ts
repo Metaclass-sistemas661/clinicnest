@@ -1,24 +1,30 @@
 /**
  * CORS headers compartilhados para todas as Edge Functions.
- * Em produção: defina SUPABASE_CORS_ORIGINS (vírgula separada) para restringir origens.
- * Ex.: SUPABASE_CORS_ORIGINS=https://vynlobella.com,https://www.vynlobella.com
+ * Em produção: defina CORS_ALLOWED_ORIGINS (vírgula separada) para restringir origens.
+ * Ex.: CORS_ALLOWED_ORIGINS=https://vynlobella.com,https://www.vynlobella.com
  * Se não definido, usa "*" (desenvolvimento).
  */
-const allowedOriginsEnv = Deno.env.get("SUPABASE_CORS_ORIGINS");
+const allowedOriginsEnv = Deno.env.get("CORS_ALLOWED_ORIGINS");
 const allowedOrigins = allowedOriginsEnv
   ? allowedOriginsEnv.split(",").map((o) => o.trim()).filter(Boolean)
   : [];
 
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
-  const allowOrigin =
-    allowedOrigins.length > 0
-      ? allowedOrigins.includes(origin)
-        ? origin
-        : allowedOrigins[0]
-      : "*";
+  const allowOrigin = (() => {
+    if (allowedOrigins.length > 0) {
+      return allowedOrigins.includes(origin) ? origin : "";
+    }
+
+    if (!origin) return "*";
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return origin;
+
+    return "*";
+  })();
   return {
-    "Access-Control-Allow-Origin": allowOrigin,
+    ...(allowOrigin ? { "Access-Control-Allow-Origin": allowOrigin } : {}),
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   };

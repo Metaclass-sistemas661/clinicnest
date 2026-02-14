@@ -333,7 +333,7 @@ serve(async (req) => {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     return new Response(
       JSON.stringify({ success: false, error: "Configuracao do servidor incompleta" }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -348,7 +348,7 @@ serve(async (req) => {
     } catch {
       return new Response(
         JSON.stringify({ success: false, error: "Corpo da requisicao invalido" }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -365,21 +365,21 @@ serve(async (req) => {
     if (!name || !email || !message) {
       return new Response(
         JSON.stringify({ success: false, error: "Preencha nome, e-mail e mensagem." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (channel === "lgpd" && !phone) {
       return new Response(
         JSON.stringify({ success: false, error: "Preencha nome, celular, e-mail e mensagem." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (!isValidEmail(email)) {
       return new Response(
         JSON.stringify({ success: false, error: "E-mail invalido." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -389,7 +389,7 @@ serve(async (req) => {
           success: false,
           error: "Aceite de Termos de Uso e Politica de Privacidade e obrigatorio.",
         }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -429,7 +429,7 @@ serve(async (req) => {
       log("ERROR: falha ao salvar mensagem", { error: insertError.message, channel });
       return new Response(
         JSON.stringify({ success: false, error: "Erro ao registrar mensagem." }),
-        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
@@ -523,7 +523,7 @@ serve(async (req) => {
     });
     return new Response(
       JSON.stringify({ success: false, error: "Erro interno ao processar solicitacao." }),
-      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 });
