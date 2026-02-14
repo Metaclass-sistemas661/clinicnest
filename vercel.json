@@ -1,6 +1,12 @@
 {
   "installCommand": "npm ci",
   "buildCommand": "npm run build:vercel",
+  "crons": [
+    {
+      "path": "/api/monitor-stripe-webhook-failures",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "functions": {
     "api/finance-report-pdf.ts": {
       "includeFiles": "node_modules/@sparticuz/chromium/**"
