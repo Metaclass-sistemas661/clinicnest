@@ -165,10 +165,21 @@ serve(async (req) => {
       });
     }
 
-    const baseUrl = req.headers.get("origin")
-      || req.headers.get("referer")?.replace(/\/$/, "")
-      || Deno.env.get("SITE_URL")
-      || "https://vynlobella.com";
+    const baseUrl = (() => {
+      const origin = req.headers.get("origin");
+      if (origin) return origin;
+
+      const referer = req.headers.get("referer");
+      if (referer) {
+        try {
+          return new URL(referer).origin;
+        } catch {
+          // ignore
+        }
+      }
+
+      return Deno.env.get("SITE_URL") || "https://vynlobella.com";
+    })();
 
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
     logStep("Asaas request prepared", { apiBase });
