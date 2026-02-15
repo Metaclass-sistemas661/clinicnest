@@ -30,23 +30,6 @@ function sanitizeCpfCnpj(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
 
-function safeJsonParse(input: string): unknown {
-  try {
-    return JSON.parse(input);
-  } catch {
-    return null;
-  }
-}
-
-function pickFirstCustomerId(payload: unknown): string | null {
-  const p = payload as any;
-  // Asaas list responses are usually { data: [...] }
-  const arr = Array.isArray(p?.data) ? p.data : Array.isArray(p) ? p : [];
-  const first = arr?.[0];
-  const id = first?.id;
-  return typeof id === "string" && id ? id : null;
-}
-
 function sanitizePhoneNumber(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
@@ -234,59 +217,9 @@ serve(async (req) => {
       : "https://www.asaas.com";
     logStep("Asaas request prepared", { apiBase: normalizedApiBase, checkoutBaseUrl });
 
-    // Create a Customer in Asaas with externalReference=tenantId.
-    // This guarantees we can map webhook payment.customer -> tenantId even if subscription.externalReference is empty.
-    const customerPayload = {
-      name: tenantData?.name || "Cliente",
-      cpfCnpj,
-      email: tenantData?.email || user.email,
-      externalReference: tenantId,
-    };
-
-    let asaasCustomerId: string | null = null;
-
-    // Try to reuse an existing customer for this tenant.
-    const listUrl = `${normalizedApiBase}/v3/customers?externalReference=${encodeURIComponent(tenantId)}&limit=1`;
-    logStep("Searching Asaas customer", { by: "externalReference" });
-    const listRes = await asaasFetch({ url: listUrl, method: "GET", apiKey: asaasApiKey });
-    if (listRes.status >= 200 && listRes.status < 300) {
-      asaasCustomerId = pickFirstCustomerId(safeJsonParse(listRes.text));
-    }
-
-    if (asaasCustomerId) {
-      logStep("Asaas customer reused", { asaasCustomerId });
-    } else {
-      logStep("Creating Asaas customer");
-      const customerRes = await asaasFetch({
-        url: `${normalizedApiBase}/v3/customers`,
-        method: "POST",
-        apiKey: asaasApiKey,
-        body: customerPayload,
-      });
-
-      if (customerRes.status < 200 || customerRes.status >= 300) {
-        logStep("ERROR: Asaas customer create failed", { status: customerRes.status, body: customerRes.text.slice(0, 500) });
-        return new Response(
-          JSON.stringify({ error: `Erro ao criar cliente no Asaas (${customerRes.status})` }),
-          { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
-        );
-      }
-
-      const customerJson = safeJsonParse(customerRes.text) as any;
-      asaasCustomerId = typeof customerJson?.id === "string" ? customerJson.id : null;
-      if (!asaasCustomerId) {
-        logStep("ERROR: Asaas customer response missing id", { body: customerRes.text.slice(0, 500) });
-        return new Response(JSON.stringify({ error: "Resposta inesperada ao criar cliente no Asaas" }), {
-          headers: { ...cors, "Content-Type": "application/json" },
-          status: 500,
-        });
-      }
-
-      logStep("Asaas customer created", { asaasCustomerId });
-    }
-
-    // Important: Asaas may enforce strict validation when customerData is provided.
-    // To rely on the hosted checkout to collect payer data, do not send customerData.
+    // Important: do not pass customer/customerData.
+    // For recurring checkouts, Asaas may require full address/phone if customer is provided.
+    // We'll correlate payments to tenant using payment.checkoutSession + our own mapping table.
 
     const checkoutRequest = {
       // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
@@ -307,7 +240,6 @@ serve(async (req) => {
           value: Number((plan.amount / 100).toFixed(2)),
         },
       ],
-      customer: asaasCustomerId,
       subscription: {
         cycle: plan.cycle,
         nextDueDate: toDueDate(0),
@@ -347,6 +279,18 @@ serve(async (req) => {
     if (!checkoutId || typeof checkoutId !== "string") {
       logStep("ERROR: Asaas response missing checkout id", { body: checkoutText.slice(0, 500) });
       return new Response(JSON.stringify({ error: "Resposta inesperada do Asaas" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    const { error: mapError } = await supabaseAdmin
+      .from("asaas_checkout_sessions")
+      .upsert({ checkout_session_id: checkoutId, tenant_id: tenantId }, { onConflict: "checkout_session_id" });
+
+    if (mapError) {
+      logStep("ERROR: Failed to persist checkout mapping", { message: mapError.message });
+      return new Response(JSON.stringify({ error: "Erro ao preparar checkout" }), {
         headers: { ...cors, "Content-Type": "application/json" },
         status: 500,
       });

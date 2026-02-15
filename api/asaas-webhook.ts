@@ -238,6 +238,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? subscriptionFromPayload.externalReference
           : null;
 
+      const checkoutSessionIdFromPayment: string | null =
+        paymentFromPayload && typeof paymentFromPayload.checkoutSession === "string"
+          ? paymentFromPayload.checkoutSession
+          : null;
+
       if (asaasSubscriptionId) {
         // Fetch latest subscription state from Asaas on important events
         const shouldFetch = Boolean(
@@ -270,6 +275,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
             tenantId = isValidNonZeroUuid(customer?.externalReference) ? customer.externalReference : null;
           }
+        }
+
+        if (!tenantId && checkoutSessionIdFromPayment) {
+          const { data: mapping, error: mappingError } = await supabaseAdmin
+            .from("asaas_checkout_sessions")
+            .select("tenant_id")
+            .eq("checkout_session_id", checkoutSessionIdFromPayment)
+            .maybeSingle();
+
+          if (mappingError) throw mappingError;
+          tenantId = mapping?.tenant_id ?? null;
         }
 
         const asaasCustomerId = sub && typeof sub.customer === "string" ? sub.customer : null;
