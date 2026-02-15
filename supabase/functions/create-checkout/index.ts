@@ -91,22 +91,33 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const { planKey } = await req.json();
-    if (!planKey || !PLANS[planKey as keyof typeof PLANS]) {
+    const body = await req.json();
+    const planKey = body?.planKey as keyof typeof PLANS | "test_once";
+
+    if (!planKey) {
+      return new Response(JSON.stringify({ error: "Plano não informado" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    const isTestOnce = planKey === "test_once";
+    const plan = isTestOnce ? null : PLANS[planKey as keyof typeof PLANS];
+    if (!isTestOnce && !plan) {
       return new Response(JSON.stringify({ error: "Plano inválido" }), {
         headers: { ...cors, "Content-Type": "application/json" },
         status: 400,
       });
     }
 
-    const plan = PLANS[planKey as keyof typeof PLANS];
-    logStep("Plan selected", { planKey, cycle: plan.cycle });
-
-    if (!user?.email) {
-      return new Response(JSON.stringify({ error: "Usuário sem e-mail" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 403,
-      });
+    if (isTestOnce) {
+      const allow = (Deno.env.get("ALLOW_TEST_CHECKOUT") || "").toLowerCase() === "true";
+      if (!allow) {
+        return new Response(JSON.stringify({ error: "Checkout de teste desativado" }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
@@ -221,31 +232,50 @@ serve(async (req) => {
     // For recurring checkouts, Asaas may require full address/phone if customer is provided.
     // We'll correlate payments to tenant using payment.checkoutSession + our own mapping table.
 
-    const checkoutRequest = {
-      // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
-      // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
-      billingTypes: ["CREDIT_CARD"],
-      chargeTypes: ["RECURRENT"],
-      minutesToExpire: 60,
-      callback: {
-        cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
-        expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
-        successUrl: `${baseUrl}/dashboard?subscription=success`,
-      },
-      items: [
-        {
-          name: `Plano ${plan.name}`,
-          description: `Assinatura ${plan.name}`,
-          quantity: 1,
-          value: Number((plan.amount / 100).toFixed(2)),
+    const checkoutRequest = isTestOnce
+      ? {
+        billingTypes: ["PIX", "CREDIT_CARD"],
+        chargeTypes: ["DETACHED"],
+        minutesToExpire: 60,
+        callback: {
+          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
+          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
+          successUrl: `${baseUrl}/dashboard?subscription=success`,
         },
-      ],
-      subscription: {
-        cycle: plan.cycle,
-        nextDueDate: toDueDate(0),
-        externalReference: tenantId,
-      },
-    };
+        items: [
+          {
+            name: "Teste - Pagamento Único",
+            description: "Pagamento único de teste (R$ 1,00)",
+            quantity: 1,
+            value: 1.0,
+          },
+        ],
+      }
+      : {
+        // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
+        // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
+        billingTypes: ["CREDIT_CARD"],
+        chargeTypes: ["RECURRENT"],
+        minutesToExpire: 60,
+        callback: {
+          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
+          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
+          successUrl: `${baseUrl}/dashboard?subscription=success`,
+        },
+        items: [
+          {
+            name: `Plano ${plan!.name}`,
+            description: `Assinatura ${plan!.name}`,
+            quantity: 1,
+            value: Number(((plan!.amount) / 100).toFixed(2)),
+          },
+        ],
+        subscription: {
+          cycle: plan!.cycle,
+          nextDueDate: toDueDate(0),
+          externalReference: tenantId,
+        },
+      };
 
     logStep("Calling Asaas /v3/checkouts");
     const checkoutRes = await asaasFetch({
