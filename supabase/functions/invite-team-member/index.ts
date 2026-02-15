@@ -75,6 +75,27 @@ interface InviteBody {
   role?: "staff" | "admin";
 }
 
+type TierKey = "basic" | "pro" | "premium";
+
+const TEAM_LIMIT_ADDITIONAL: Record<TierKey, number> = {
+  basic: 1,
+  pro: 4,
+  premium: Number.POSITIVE_INFINITY,
+};
+
+function parseTierFromPlan(plan: unknown): TierKey {
+  if (typeof plan !== "string") return "basic";
+  const s = plan.trim();
+  if (!s) return "basic";
+
+  // Legacy: "monthly" | "quarterly" | "annual" used as "basic".
+  if (s === "monthly" || s === "quarterly" || s === "annual") return "basic";
+
+  const [tierRaw] = s.split("_");
+  if (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") return tierRaw;
+  return "basic";
+}
+
 function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: string, role: string): string {
   const roleLabel = role === "admin" ? "Administrador" : "Profissional";
   return `
@@ -301,6 +322,45 @@ serve(async (req) => {
       );
     }
     log("Usuário confirmado como admin");
+
+    // Enforce team limits by plan tier (do not block operations; only block new invites).
+    // Rule: 1st admin does not count. Everyone else counts.
+    try {
+      const { data: subRow, error: subErr } = await supabaseAdmin
+        .from("subscriptions")
+        .select("plan")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (subErr) throw subErr;
+
+      const tier = parseTierFromPlan(subRow?.plan);
+      const additionalLimit = TEAM_LIMIT_ADDITIONAL[tier];
+
+      const { count: totalProfiles, error: countErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId);
+      if (countErr) throw countErr;
+
+      const totalUsers = Number(totalProfiles ?? 0);
+      const effectiveUsers = Math.max(0, totalUsers - 1);
+
+      if (effectiveUsers >= additionalLimit) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Você atingiu o limite de usuários do seu plano. Faça upgrade em Assinatura para adicionar mais membros.",
+          }),
+          { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
+        );
+      }
+    } catch (limitErr) {
+      // Fail-safe: if we can't validate limits due to infra errors, do not block invites.
+      // We still log for observability.
+      log("WARNING: Falha ao validar limite de equipe", {
+        error: limitErr instanceof Error ? limitErr.message : String(limitErr),
+      });
+    }
 
     log("Criando novo usuário", { email: emailTrim, tenant_id: tenantId });
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({

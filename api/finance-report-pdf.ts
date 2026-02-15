@@ -44,7 +44,7 @@ function escapeHtml(input: string): string {
 }
 
 function sum(numbers: Array<number | null | undefined>): number {
-  return numbers.reduce((acc, v) => acc + Number(v ?? 0), 0);
+  return numbers.reduce<number>((acc, v) => acc + Number(v ?? 0), 0);
 }
 
 function exists(filePath: string): boolean {
@@ -190,6 +190,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const tenantId = profile.tenant_id as string;
     const tenantLabel = profile.full_name ? `Relatório de ${profile.full_name}` : "Relatório Financeiro";
+
+    // Feature gating: PDF export is available only for Pro/Premium.
+    try {
+      const { data: hasPdf, error: hasPdfError } = await supabaseAdmin.rpc("tenant_has_feature", {
+        p_tenant_id: tenantId,
+        p_feature: "pdf_export",
+      });
+      if (hasPdfError) throw hasPdfError;
+
+      if (!hasPdf) {
+        res.status(403).json({
+          error: "Exportação em PDF disponível apenas nos planos Pro e Premium. Faça upgrade em Assinatura para liberar.",
+        });
+        return;
+      }
+    } catch {
+      // Fail-safe: if we can't check plan due to infra errors, do not block PDF generation.
+      // (We prefer availability over false negative blocks.)
+    }
 
     const startDateOnly = toIsoDate(start);
     const endDateOnly = toIsoDate(end);

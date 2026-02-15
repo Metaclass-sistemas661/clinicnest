@@ -32,11 +32,41 @@ type SubscriptionRow = {
   asaas_subscription_id?: string | null;
 };
 
-const planNames: Record<string, string> = {
+type TierKey = "basic" | "pro" | "premium";
+type IntervalKey = "monthly" | "quarterly" | "annual";
+
+const tierNames: Record<TierKey, string> = {
+  basic: "Básico",
+  pro: "Pro",
+  premium: "Premium",
+};
+
+const intervalNames: Record<IntervalKey, string> = {
   monthly: "Mensal",
   quarterly: "Trimestral",
   annual: "Anual",
 };
+
+function formatPlanLabel(plan: string | null): string {
+  if (!plan) return "-";
+  const s = plan.trim();
+  if (!s) return "-";
+
+  // Legacy format: "monthly" | "quarterly" | "annual"
+  if (s === "monthly" || s === "quarterly" || s === "annual") {
+    return `Básico (${intervalNames[s]})`;
+  }
+
+  const [tierRaw, intervalRaw] = s.split("_");
+  if (
+    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
+    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
+  ) {
+    return `${tierNames[tierRaw]} (${intervalNames[intervalRaw]})`;
+  }
+
+  return s;
+}
 
 export default function GerenciarAssinatura() {
   const navigate = useNavigate();
@@ -186,7 +216,7 @@ export default function GerenciarAssinatura() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Plano</p>
-                    <p className="font-medium">{planNames[subscription.plan || ""] || subscription.plan || "-"}</p>
+                    <p className="font-medium">{formatPlanLabel(subscription.plan)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Renovação / fim do período</p>

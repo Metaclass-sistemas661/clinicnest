@@ -14,6 +14,36 @@ export interface SubscriptionStatus {
   error: string | null;
 }
 
+export type SubscriptionTier = "basic" | "pro" | "premium";
+export type SubscriptionInterval = "monthly" | "quarterly" | "annual";
+
+export function normalizePlanKey(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const s = input.trim();
+  return s ? s : null;
+}
+
+export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interval: SubscriptionInterval } | null {
+  const key = normalizePlanKey(planKey);
+  if (!key) return null;
+
+  // Legacy format: "monthly" | "quarterly" | "annual"
+  if (key === "monthly" || key === "quarterly" || key === "annual") {
+    return { tier: "basic", interval: key };
+  }
+
+  // New format: "basic_monthly" | "pro_annual" ...
+  const [tierRaw, intervalRaw] = key.split("_");
+  if (
+    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
+    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
+  ) {
+    return { tier: tierRaw, interval: intervalRaw };
+  }
+
+  return null;
+}
+
 export function useSubscription() {
   const { session, user } = useAuth();
   const hasLoadedOnce = useRef(false);
@@ -115,13 +145,27 @@ export function useSubscription() {
     }
   }, [session?.access_token, user]);
 
-  const createCheckout = async (planKey: 'monthly' | 'quarterly' | 'annual') => {
+  const createCheckout = async (
+    input:
+      | { tier: SubscriptionTier; interval: SubscriptionInterval }
+      | SubscriptionInterval
+  ) => {
     if (!session?.access_token) {
       throw new Error('Not authenticated');
     }
 
+    const payload = (() => {
+      // Backward compat: createCheckout('monthly')
+      if (typeof input === "string") {
+        return { planKey: input };
+      }
+
+      const { tier, interval } = input;
+      return { tier, interval };
+    })();
+
     const { data, error } = await supabase.functions.invoke('create-checkout', {
-      body: { planKey },
+      body: payload,
       headers: {
         Authorization: `Bearer ${session.access_token}`,
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,

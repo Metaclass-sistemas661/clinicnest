@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Check, Crown, Sparkles, Loader2, LogOut } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,30 +22,46 @@ interface TrialExpiredModalProps {
   isStaff?: boolean;
 }
 
-const plans = [
+type TierKey = "basic" | "pro" | "premium";
+type IntervalKey = "monthly" | "quarterly" | "annual";
+
+const PRICING: Record<TierKey, Record<IntervalKey, { label: string; savings?: string }>> = {
+  basic: {
+    monthly: { label: "R$79,90" },
+    quarterly: { label: "R$219,90", savings: "Economize ~8%" },
+    annual: { label: "R$719,00", savings: "Economize ~25%" },
+  },
+  pro: {
+    monthly: { label: "R$119,90" },
+    quarterly: { label: "R$329,90", savings: "Economize ~8%" },
+    annual: { label: "R$1.079,00", savings: "Economize ~25%" },
+  },
+  premium: {
+    monthly: { label: "R$169,90" },
+    quarterly: { label: "R$469,90", savings: "Economize ~8%" },
+    annual: { label: "R$1.499,00", savings: "Economize ~25%" },
+  },
+};
+
+const tiers: Array<{ key: TierKey; name: string; description: string; popular?: boolean; features: string[] }> = [
   {
-    key: "monthly" as const,
-    name: "Mensal",
-    price: "79,90",
-    period: "/mês",
-    features: ["Agendamentos ilimitados", "Gestão de clientes", "Controle financeiro"],
+    key: "basic",
+    name: "Básico",
+    description: "Essencial para começar",
+    features: ["Equipe: 2 usuários (inclui 1 admin)", "Clientes: até 300", "Histórico: 6 meses"],
   },
   {
-    key: "quarterly" as const,
-    name: "Trimestral",
-    price: "69,90",
-    period: "/mês",
+    key: "pro",
+    name: "Pro",
+    description: "Para crescer com controle",
     popular: true,
-    savings: "Economize R$30",
-    features: ["Tudo do mensal", "Relatórios avançados", "Suporte prioritário"],
+    features: ["Equipe: 5 usuários (inclui 1 admin)", "Clientes: até 2.000", "Histórico: 24 meses"],
   },
   {
-    key: "annual" as const,
-    name: "Anual",
-    price: "49,90",
-    period: "/mês",
-    savings: "Economize R$360",
-    features: ["Tudo do trimestral", "Treinamento exclusivo", "Consultoria mensal"],
+    key: "premium",
+    name: "Premium",
+    description: "Tudo liberado",
+    features: ["Equipe ilimitada (inclui 1 admin)", "Clientes ilimitados", "Histórico ilimitado"],
   },
 ];
 
@@ -54,10 +71,18 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
   const navigate = useNavigate();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleSelectPlan = async (planKey: "monthly" | "quarterly" | "annual") => {
+  const [selectedInterval, setSelectedInterval] = useState<Record<TierKey, IntervalKey>>({
+    basic: "monthly",
+    pro: "annual",
+    premium: "annual",
+  });
+
+  const handleSelectPlan = async (tier: TierKey) => {
     try {
-      setLoading(planKey);
-      await createCheckout(planKey);
+      const interval = selectedInterval[tier];
+      const loadingKey = `${tier}_${interval}`;
+      setLoading(loadingKey);
+      await createCheckout({ tier, interval });
       toast.success("Redirecionando para o checkout...");
     } catch (error) {
       logger.error("Error creating checkout:", error);
@@ -119,16 +144,21 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
         </DialogHeader>
 
         <div className="grid md:grid-cols-3 gap-4 mt-6">
-          {plans.map((plan) => (
+          {tiers.map((tier) => {
+            const interval = selectedInterval[tier.key];
+            const price = PRICING[tier.key][interval];
+            const loadingKey = `${tier.key}_${interval}`;
+
+            return (
             <Card
-              key={plan.key}
+              key={tier.key}
               className={`relative p-5 flex flex-col ${
-                plan.popular
+                tier.popular
                   ? "border-2 border-violet-500 shadow-lg shadow-violet-500/20"
                   : "border"
               }`}
             >
-              {plan.popular && (
+              {tier.popular && (
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white">
                   <Sparkles className="h-3 w-3 mr-1" />
                   Mais Popular
@@ -136,20 +166,40 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
               )}
 
               <div className="text-center mb-4">
-                <h3 className="font-semibold text-lg">{plan.name}</h3>
-                <div className="mt-2">
-                  <span className="text-3xl font-bold">R${plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
+                <h3 className="font-semibold text-lg">{tier.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{tier.description}</p>
+
+                <div className="mt-3 flex justify-center">
+                  <ToggleGroup
+                    type="single"
+                    value={interval}
+                    onValueChange={(v) => {
+                      if (!v) return;
+                      if (v !== "monthly" && v !== "quarterly" && v !== "annual") return;
+                      setSelectedInterval((prev) => ({ ...prev, [tier.key]: v }));
+                    }}
+                  >
+                    <ToggleGroupItem value="monthly">Mensal</ToggleGroupItem>
+                    <ToggleGroupItem value="quarterly">Trimestral</ToggleGroupItem>
+                    <ToggleGroupItem value="annual">Anual</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
-                {plan.savings && (
+
+                <div className="mt-2">
+                  <span className="text-3xl font-bold">{price.label}</span>
+                  <span className="text-muted-foreground">
+                    {interval === "monthly" ? "/mês" : interval === "quarterly" ? "/trimestre" : "/ano"}
+                  </span>
+                </div>
+                {price.savings && (
                   <Badge variant="secondary" className="mt-2 bg-green-100 text-green-700">
-                    {plan.savings}
+                    {price.savings}
                   </Badge>
                 )}
               </div>
 
               <ul className="space-y-2 flex-1 mb-4">
-                {plan.features.map((feature) => (
+                {tier.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-sm">
                     <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                     <span>{feature}</span>
@@ -158,16 +208,16 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
               </ul>
 
               <Button
-                onClick={() => handleSelectPlan(plan.key)}
+                onClick={() => handleSelectPlan(tier.key)}
                 disabled={loading !== null}
                 className={
-                  plan.popular
+                  tier.popular
                     ? "w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:opacity-90"
                     : "w-full"
                 }
-                variant={plan.popular ? "default" : "outline"}
+                variant={tier.popular ? "default" : "outline"}
               >
-                {loading === plan.key ? (
+                {loading === loadingKey ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processando...
@@ -177,11 +227,12 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
                 )}
               </Button>
             </Card>
-          ))}
+          );
+          })}
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Pagamento seguro via Stripe. Cancele quando quiser.
+          Pagamento seguro via Asaas. Cancele quando quiser.
         </p>
         </>
         )}

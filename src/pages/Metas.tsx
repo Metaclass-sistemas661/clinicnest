@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
+import { useNavigate } from "react-router-dom";
 import {
   Target,
   Plus,
@@ -81,10 +82,13 @@ type SortOption = "progress_desc" | "progress_asc" | "name" | "days_remaining";
 
 export default function Metas() {
   const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdvancedBlocked, setIsAdvancedBlocked] = useState(false);
+  const [advancedBlockedMessage, setAdvancedBlockedMessage] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -109,6 +113,9 @@ export default function Metas() {
     if (!profile?.tenant_id || !isAdmin) return;
 
     try {
+      setIsAdvancedBlocked(false);
+      setAdvancedBlockedMessage(null);
+
       const [goalsRes, profilesRes, productsRes, templatesRes] = await Promise.all([
         getGoalsWithProgress({
           p_tenant_id: profile.tenant_id,
@@ -134,6 +141,16 @@ export default function Metas() {
       setProducts((productsRes.data as Product[]) || []);
       setTemplates((templatesRes.data as GoalTemplate[]) || []);
     } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message;
+      if (typeof msg === "string" && msg.toLowerCase().includes("relatórios avançados")) {
+        setIsAdvancedBlocked(true);
+        setAdvancedBlockedMessage(msg);
+        setGoals([]);
+        setProfessionals([]);
+        setProducts([]);
+        setTemplates([]);
+        return;
+      }
       logger.error("Error fetching metas:", e);
       toast.error("Erro ao carregar metas");
     } finally {
@@ -483,6 +500,33 @@ export default function Metas() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Target className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <p className="text-muted-foreground">Apenas administradores podem gerenciar metas</p>
+          </CardContent>
+        </Card>
+      </MainLayout>
+    );
+  }
+
+  if (isAdvancedBlocked) {
+    return (
+      <MainLayout
+        title="Metas"
+        subtitle="Relatórios avançados"
+      >
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <BarChart3 className="mb-4 h-12 w-12 text-muted-foreground/50" />
+            <p className="font-medium">Este recurso está disponível apenas nos planos Pro e Premium</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[520px]">
+              {advancedBlockedMessage || "Faça upgrade em Assinatura para liberar relatórios avançados."}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2 justify-center">
+              <Button className="gradient-primary text-primary-foreground" onClick={() => navigate("/assinatura")}> 
+                Ver planos
+              </Button>
+              <Button variant="outline" onClick={() => fetchData(showArchived)}>
+                Tentar novamente
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </MainLayout>

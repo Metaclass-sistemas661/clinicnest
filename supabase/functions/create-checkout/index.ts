@@ -7,24 +7,63 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const logStep = createLogger("CREATE-CHECKOUT");
 
-// VynloBella pricing plans
-const PLANS = {
-  monthly: {
-    name: "Mensal",
-    amount: 7990,
-    cycle: "MONTHLY",
+type TierKey = "basic" | "pro" | "premium";
+type IntervalKey = "monthly" | "quarterly" | "annual";
+
+const tierNames: Record<TierKey, string> = {
+  basic: "Básico",
+  pro: "Pro",
+  premium: "Premium",
+};
+
+const intervalNames: Record<IntervalKey, string> = {
+  monthly: "Mensal",
+  quarterly: "Trimestral",
+  annual: "Anual",
+};
+
+const intervalToCycle: Record<IntervalKey, "MONTHLY" | "QUARTERLY" | "YEARLY"> = {
+  monthly: "MONTHLY",
+  quarterly: "QUARTERLY",
+  annual: "YEARLY",
+};
+
+// Pricing matrix (amount in cents)
+const PRICING: Record<TierKey, Record<IntervalKey, number>> = {
+  basic: {
+    monthly: 7990,
+    quarterly: 21990,
+    annual: 71900,
   },
-  quarterly: {
-    name: "Trimestral",
-    amount: 20970,
-    cycle: "QUARTERLY",
+  pro: {
+    monthly: 11990,
+    quarterly: 32990,
+    annual: 107900,
   },
-  annual: {
-    name: "Anual",
-    amount: 59880,
-    cycle: "YEARLY",
+  premium: {
+    monthly: 16990,
+    quarterly: 46990,
+    annual: 149900,
   },
 };
+
+function parseLegacyPlanKey(planKey: unknown): { tier: TierKey; interval: IntervalKey } | null {
+  if (typeof planKey !== "string") return null;
+  const s = planKey.trim();
+  if (s === "monthly" || s === "quarterly" || s === "annual") {
+    return { tier: "basic", interval: s };
+  }
+  return null;
+}
+
+function parseTierInterval(body: any): { tier: TierKey; interval: IntervalKey } | null {
+  const tier = body?.tier;
+  const interval = body?.interval;
+  if ((tier === "basic" || tier === "pro" || tier === "premium") && (interval === "monthly" || interval === "quarterly" || interval === "annual")) {
+    return { tier, interval };
+  }
+  return null;
+}
 
 function sanitizeCpfCnpj(input: string): string {
   return String(input || "").replace(/\D/g, "");
@@ -92,22 +131,19 @@ serve(async (req) => {
     logStep("Function started");
 
     const body = await req.json();
-    const planKey = body?.planKey as keyof typeof PLANS;
 
-    if (!planKey) {
+    const parsed = parseTierInterval(body) ?? parseLegacyPlanKey(body?.planKey);
+    if (!parsed) {
       return new Response(JSON.stringify({ error: "Plano não informado" }), {
         headers: { ...cors, "Content-Type": "application/json" },
         status: 400,
       });
     }
 
-    const plan = PLANS[planKey];
-    if (!plan) {
-      return new Response(JSON.stringify({ error: "Plano inválido" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
+    const { tier, interval } = parsed;
+    const amountCents = PRICING[tier][interval];
+    const cycle = intervalToCycle[interval];
+    const internalPlanKey = `${tier}_${interval}`;
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const rl = await checkRateLimit(`checkout:${user.id}`, 5, 60);
@@ -146,7 +182,7 @@ serve(async (req) => {
     }
 
     const tenantId = profileData?.tenant_id ?? "";
-    logStep("Plan selected", { planKey, cycle: plan.cycle });
+    logStep("Plan selected", { planKey: internalPlanKey, cycle });
 
     if (!tenantId) {
       return new Response(JSON.stringify({ error: "Tenant não encontrado" }), {
@@ -234,14 +270,14 @@ serve(async (req) => {
       },
       items: [
         {
-          name: `Plano ${plan.name}`,
-          description: `Assinatura ${plan.name}`,
+          name: `Plano ${tierNames[tier]} (${intervalNames[interval]})`,
+          description: `Assinatura ${tierNames[tier]} (${intervalNames[interval]})`,
           quantity: 1,
-          value: Number((plan.amount / 100).toFixed(2)),
+          value: Number((amountCents / 100).toFixed(2)),
         },
       ],
       subscription: {
-        cycle: plan.cycle,
+        cycle,
         nextDueDate: toDueDate(0),
         externalReference: tenantId,
       },

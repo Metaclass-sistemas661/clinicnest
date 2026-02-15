@@ -133,16 +133,36 @@ function mapAsaasPlan(cycle: unknown, value: unknown): string | null {
   if (typeof cycle !== "string") return null;
   const c = cycle.toUpperCase();
   const v = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  const approx = (a: number, b: number) => Math.abs(a - b) <= 0.01;
+  const approx = (a: number, b: number) => Math.abs(a - b) <= 0.05;
 
-  if (c === "MONTHLY" && Number.isFinite(v) && approx(v, 79.9)) return "monthly";
-  if (c === "QUARTERLY" && Number.isFinite(v) && approx(v, 209.7)) return "quarterly";
-  if (c === "YEARLY" && Number.isFinite(v) && approx(v, 598.8)) return "annual";
+  const interval = (() => {
+    if (c === "MONTHLY") return "monthly" as const;
+    if (c === "QUARTERLY") return "quarterly" as const;
+    if (c === "YEARLY") return "annual" as const;
+    return null;
+  })();
+  if (!interval) return null;
 
-  if (c === "MONTHLY") return "monthly";
-  if (c === "QUARTERLY") return "quarterly";
-  if (c === "YEARLY") return "annual";
+  // Prefer safe tier detection based on exact known prices.
+  if (Number.isFinite(v)) {
+    // Basic
+    if (interval === "monthly" && approx(v, 79.9)) return "basic_monthly";
+    if (interval === "quarterly" && approx(v, 219.9)) return "basic_quarterly";
+    if (interval === "annual" && approx(v, 719.0)) return "basic_annual";
 
+    // Pro
+    if (interval === "monthly" && approx(v, 119.9)) return "pro_monthly";
+    if (interval === "quarterly" && approx(v, 329.9)) return "pro_quarterly";
+    if (interval === "annual" && approx(v, 1079.0)) return "pro_annual";
+
+    // Premium
+    if (interval === "monthly" && approx(v, 169.9)) return "premium_monthly";
+    if (interval === "quarterly" && approx(v, 469.9)) return "premium_quarterly";
+    if (interval === "annual" && approx(v, 1499.0)) return "premium_annual";
+  }
+
+  // If we can't safely determine tier, do not map the plan.
+  // The caller should avoid overwriting the stored plan in this case.
   return null;
 }
 

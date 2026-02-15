@@ -5,63 +5,109 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
 import { CreditCard, Check, Sparkles, Crown, Loader2, Calendar, RefreshCw, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
 
-const plans = [
-  {
-    key: "monthly" as const,
-    name: "Mensal",
-    price: "79,90",
-    period: "/mês",
-    description: "Flexibilidade total",
-    features: [
-      "Agendamentos ilimitados",
-      "Gestão de clientes",
-      "Controle financeiro",
-      "Gestão de equipe",
-      "Suporte por email",
-    ],
-  },
-  {
-    key: "annual" as const,
-    name: "Anual",
-    price: "49,90",
-    period: "/mês",
-    description: "Mais popular",
-    savings: "Economize R$360",
-    recommended: true,
-    features: [
-      "Tudo do trimestral",
-      "Treinamento exclusivo",
-      "Consultoria mensal",
-      "Acesso antecipado",
-    ],
-  },
-  {
-    key: "quarterly" as const,
-    name: "Trimestral",
-    price: "69,90",
-    period: "/mês",
-    description: "Melhor custo-benefício",
-    savings: "Economize R$30",
-    features: [
-      "Tudo do mensal",
-      "Relatórios avançados",
-      "Suporte prioritário",
-      "Backup diário",
-    ],
-  },
-];
+type TierKey = "basic" | "pro" | "premium";
+type IntervalKey = "monthly" | "quarterly" | "annual";
 
-const planNames: Record<string, string> = {
+const intervalNames: Record<IntervalKey, string> = {
   monthly: "Mensal",
   quarterly: "Trimestral",
   annual: "Anual",
 };
+
+const tierNames: Record<TierKey, string> = {
+  basic: "Básico",
+  pro: "Pro",
+  premium: "Premium",
+};
+
+const PRICING: Record<TierKey, Record<IntervalKey, { label: string; amountCents: number; savings?: string }>> = {
+  basic: {
+    monthly: { label: "R$79,90", amountCents: 7990 },
+    quarterly: { label: "R$219,90", amountCents: 21990, savings: "Economize ~8%" },
+    annual: { label: "R$719,00", amountCents: 71900, savings: "Economize ~25%" },
+  },
+  pro: {
+    monthly: { label: "R$119,90", amountCents: 11990 },
+    quarterly: { label: "R$329,90", amountCents: 32990, savings: "Economize ~8%" },
+    annual: { label: "R$1.079,00", amountCents: 107900, savings: "Economize ~25%" },
+  },
+  premium: {
+    monthly: { label: "R$169,90", amountCents: 16990 },
+    quarterly: { label: "R$469,90", amountCents: 46990, savings: "Economize ~8%" },
+    annual: { label: "R$1.499,00", amountCents: 149900, savings: "Economize ~25%" },
+  },
+};
+
+const tiers: Array<{
+  key: TierKey;
+  description: string;
+  recommended?: boolean;
+  features: string[];
+}> = [
+  {
+    key: "basic",
+    description: "Essencial para começar",
+    features: [
+      "Equipe: 2 usuários (inclui 1 admin)",
+      "Clientes: até 300",
+      "Histórico: 6 meses",
+      "Controle financeiro",
+      "Suporte por email",
+    ],
+  },
+  {
+    key: "pro",
+    description: "Para crescer com controle",
+    recommended: true,
+    features: [
+      "Equipe: 5 usuários (inclui 1 admin)",
+      "Clientes: até 2.000",
+      "Histórico: 24 meses",
+      "Relatórios avançados",
+      "Exportação",
+      "Suporte prioritário",
+    ],
+  },
+  {
+    key: "premium",
+    description: "Tudo liberado",
+    features: [
+      "Equipe ilimitada (inclui 1 admin)",
+      "Clientes ilimitados",
+      "Histórico ilimitado",
+      "Relatórios e exportação completos",
+      "PDFs e automações avançadas",
+    ],
+  },
+];
+
+function parseStoredPlan(plan: string | null): { tier: TierKey; interval: IntervalKey } | null {
+  if (!plan) return null;
+  const s = plan.trim();
+  if (!s) return null;
+
+  // Legacy format: "monthly" | "quarterly" | "annual"
+  if (s === "monthly" || s === "quarterly" || s === "annual") {
+    return { tier: "basic", interval: s };
+  }
+
+  const [tierRaw, intervalRaw] = s.split("_");
+  if (
+    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
+    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
+  ) {
+    return { tier: tierRaw, interval: intervalRaw };
+  }
+
+  return null;
+}
 
 export default function Assinatura() {
   const navigate = useNavigate();
@@ -80,10 +126,18 @@ export default function Assinatura() {
   
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleSubscribe = async (planKey: "monthly" | "quarterly" | "annual") => {
+  const [selectedInterval, setSelectedInterval] = useState<Record<TierKey, IntervalKey>>({
+    basic: "monthly",
+    pro: "annual",
+    premium: "annual",
+  });
+
+  const handleSubscribe = async (tier: TierKey) => {
     try {
+      const interval = selectedInterval[tier];
+      const planKey = `${tier}_${interval}`;
       setLoadingPlan(planKey);
-      await createCheckout(planKey);
+      await createCheckout({ tier, interval });
       toast.success("Redirecionando para o checkout...");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao iniciar checkout.";
@@ -139,7 +193,17 @@ export default function Assinatura() {
                   </div>
                 ) : subscribed ? (
                   <>
-                    <p className="font-semibold">Plano {planNames[plan || ""] || plan}</p>
+                    {(() => {
+                      const parsed = parseStoredPlan(plan);
+                      if (!parsed) {
+                        return <p className="font-semibold">Plano {plan}</p>;
+                      }
+                      return (
+                        <p className="font-semibold">
+                          Plano {tierNames[parsed.tier]} ({intervalNames[parsed.interval]})
+                        </p>
+                      );
+                    })()}
                     {subscription_end && (
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -185,15 +249,19 @@ export default function Assinatura() {
 
       {/* Plans */}
       <div className="grid gap-6 md:grid-cols-3">
-        {plans.map((planItem) => {
-          const isCurrentPlan = subscribed && plan === planItem.key;
+        {tiers.map((tier) => {
+          const stored = parseStoredPlan(plan);
+          const isCurrentPlan = subscribed && stored?.tier === tier.key;
+          const interval = selectedInterval[tier.key];
+          const currentPrice = PRICING[tier.key][interval];
+          const loadingKey = `${tier.key}_${interval}`;
           
           return (
             <Card
-              key={planItem.key}
-              className={`relative ${planItem.recommended ? "border-2 border-violet-500 shadow-lg shadow-violet-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
+              key={tier.key}
+              className={`relative ${tier.recommended ? "border-2 border-violet-500 shadow-lg shadow-violet-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
             >
-              {planItem.recommended && (
+              {tier.recommended && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white border-0">
                     <Sparkles className="mr-1 h-3 w-3" />
@@ -210,21 +278,41 @@ export default function Assinatura() {
                 </div>
               )}
               <CardHeader className="pt-8">
-                <CardTitle>{planItem.name}</CardTitle>
-                <CardDescription>{planItem.description}</CardDescription>
+                <CardTitle>{tierNames[tier.key]}</CardTitle>
+                <CardDescription>{tier.description}</CardDescription>
+
                 <div className="pt-4">
-                  <span className="text-4xl font-bold">R${planItem.price}</span>
-                  <span className="text-muted-foreground">{planItem.period}</span>
+                  <ToggleGroup
+                    type="single"
+                    value={interval}
+                    onValueChange={(v) => {
+                      if (!v) return;
+                      if (v !== "monthly" && v !== "quarterly" && v !== "annual") return;
+                      setSelectedInterval((prev) => ({ ...prev, [tier.key]: v }));
+                    }}
+                    className="justify-start"
+                  >
+                    <ToggleGroupItem value="monthly">Mensal</ToggleGroupItem>
+                    <ToggleGroupItem value="quarterly">Trimestral</ToggleGroupItem>
+                    <ToggleGroupItem value="annual">Anual</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
-                {planItem.savings && (
+
+                <div className="pt-4">
+                  <span className="text-4xl font-bold">{currentPrice.label}</span>
+                  <span className="text-muted-foreground">
+                    {interval === "monthly" ? "/mês" : interval === "quarterly" ? "/trimestre" : "/ano"}
+                  </span>
+                </div>
+                {currentPrice.savings && (
                   <Badge variant="secondary" className="mt-2 w-fit bg-green-100 text-green-700">
-                    {planItem.savings}
+                    {currentPrice.savings}
                   </Badge>
                 )}
               </CardHeader>
               <CardContent>
                 <ul className="mb-6 space-y-3">
-                  {planItem.features.map((feature) => (
+                  {tier.features.map((feature) => (
                     <li key={feature} className="flex items-center gap-2">
                       <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/20 text-green-600">
                         <Check className="h-3 w-3" />
@@ -240,15 +328,15 @@ export default function Assinatura() {
                 ) : (
                   <Button
                     className={
-                      planItem.recommended
+                      tier.recommended
                         ? "w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:opacity-90"
                         : "w-full"
                     }
-                    variant={planItem.recommended ? "default" : "outline"}
-                    onClick={() => handleSubscribe(planItem.key)}
+                    variant={tier.recommended ? "default" : "outline"}
+                    onClick={() => handleSubscribe(tier.key)}
                     disabled={loadingPlan !== null}
                   >
-                    {loadingPlan === planItem.key ? (
+                    {loadingPlan === loadingKey ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Processando...

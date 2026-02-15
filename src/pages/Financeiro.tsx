@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSalaryPayments, getProfessionalsWithSalary, paySalary } from "@/lib/supabase-typed-rpc";
 import { financialTransactionFormSchema, paySalaryDaysWorkedSchema } from "@/lib/validation";
@@ -78,6 +79,7 @@ const categories = {
 
 export default function Financeiro() {
   const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
@@ -194,9 +196,20 @@ export default function Financeiro() {
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
       logger.error("Error generating PDF:", error);
-      toast.error("Erro ao gerar o PDF");
+      const msg = error instanceof Error ? error.message : "Erro ao gerar o PDF";
+      const isBlocked = typeof msg === "string" && msg.toLowerCase().includes("exportação em pdf disponível apenas");
+      if (isBlocked) {
+        toast.error(msg, {
+          action: {
+            label: "Ver planos",
+            onClick: () => navigate("/assinatura"),
+          },
+        });
+        return;
+      }
+      toast.error(msg || "Erro ao gerar o PDF");
     }
-  }, [profile?.tenant_id, profile?.full_name]);
+  }, [navigate]);
 
   const fetchTransactions = useCallback(async () => {
     if (!profile?.tenant_id) return;
