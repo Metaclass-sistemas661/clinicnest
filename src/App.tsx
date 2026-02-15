@@ -10,10 +10,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -53,6 +55,12 @@ const queryClient = new QueryClient({
   },
 });
 
+function GlobalAdminProfitListener() {
+  const auth = useAuth();
+  if (!auth?.user || !auth?.isAdmin) return null;
+  return <AdminProfitRealtimeListener />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -64,6 +72,7 @@ const App = () => (
           <AuthProvider>
             <GoalMotivationProvider>
             <InternalDarkMode />
+            <GlobalAdminProfitListener />
             <ErrorBoundary>
               <Suspense fallback={<RouteFallback />}>
               <Routes>

@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { SubscriptionGuard } from "@/components/subscription/SubscriptionGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissionReminderDialog";
-import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
 import { ProfessionalGoalMotivationDialog } from "@/components/admin/ProfessionalGoalMotivationDialog";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -27,7 +26,6 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
       {isAdmin && (
         <>
           <AdminCommissionReminderDialog />
-          <AdminProfitRealtimeListener />
         </>
       )}
       {!isAdmin && <ProfessionalGoalMotivationDialog />}
