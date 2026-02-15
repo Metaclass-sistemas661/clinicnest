@@ -173,18 +173,8 @@ serve(async (req) => {
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
     logStep("Asaas request prepared", { apiBase });
 
-    // Important: if we send customerData with partial/incorrect address/phone fields,
-    // Asaas may reject the request with 400 requiring addressNumber/postalCode/province/etc.
-    // The hosted checkout can collect these fields, so we only prefill safe minimal data.
-    const phoneNumber = sanitizePhoneNumber(tenantData?.phone ?? "");
-    const minimalCustomerData: Record<string, unknown> = {
-      name: tenantData?.name || "Cliente",
-      email: tenantData?.email || user.email,
-      cpfCnpj,
-    };
-    if (phoneNumber.length >= 10) {
-      minimalCustomerData.phoneNumber = phoneNumber;
-    }
+    // Important: Asaas may enforce strict validation when customerData is provided.
+    // To rely on the hosted checkout to collect payer data, do not send customerData.
 
     const checkoutRequest = {
       // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
@@ -205,7 +195,6 @@ serve(async (req) => {
           value: Number((plan.amount / 100).toFixed(2)),
         },
       ],
-      customerData: minimalCustomerData,
       subscription: {
         cycle: plan.cycle,
         nextDueDate: toDueDate(0),
