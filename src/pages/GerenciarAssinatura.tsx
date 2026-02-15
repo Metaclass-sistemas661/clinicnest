@@ -114,7 +114,10 @@ export default function GerenciarAssinatura() {
 
       const { data, error } = await supabase.functions.invoke("cancel-subscription", {
         body: {},
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
       });
 
       if (error) throw error;
