@@ -40,7 +40,7 @@ const planNames: Record<string, string> = {
 
 export default function GerenciarAssinatura() {
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, session } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -108,8 +108,13 @@ export default function GerenciarAssinatura() {
 
     setIsCancelling(true);
     try {
+      if (!session?.access_token) {
+        throw new Error("Not authenticated");
+      }
+
       const { data, error } = await supabase.functions.invoke("cancel-subscription", {
         body: {},
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error) throw error;
