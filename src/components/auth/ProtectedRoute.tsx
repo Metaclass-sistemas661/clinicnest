@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 
@@ -13,6 +13,8 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const user = auth?.user;
   const isLoading = auth?.isLoading;
   const isAdmin = auth?.isAdmin ?? false;
+  const tenant = auth?.tenant;
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -28,6 +30,17 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
 
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  const billingCpfCnpj = String(tenant?.billing_cpf_cnpj ?? "").trim();
+  if (isAdmin && !billingCpfCnpj && location.pathname !== "/configuracoes") {
+    return (
+      <Navigate
+        to="/configuracoes"
+        replace
+        state={{ reason: "missing_billing_cpf_cnpj", from: location.pathname }}
+      />
+    );
   }
 
   return <div className="min-h-screen">{children}</div>;

@@ -9,6 +9,8 @@ import { TrendingUp, Package, DollarSign, User } from "lucide-react";
 import { formatCurrency } from "@/lib/formatCurrency";
 
 export interface AdminProfitData {
+  summaryId?: string;
+  appointmentId?: string;
   professionalName: string;
   serviceName: string;
   serviceProfit: number;

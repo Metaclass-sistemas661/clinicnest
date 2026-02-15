@@ -12,8 +12,57 @@ export function AdminProfitRealtimeListener() {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pendingSummariesRef = useRef<AdminProfitData[]>([]);
   const hasCheckedPendingRef = useRef(false);
+  const openRef = useRef(false);
+  const shownSummaryKeysRef = useRef<Set<string>>(new Set());
+
+  const getStorageKey = () => {
+    const tenantId = profile?.tenant_id ?? "";
+    return `admin_profit_shown:${tenantId}`;
+  };
+
+  const buildSummaryKey = (summaryData: AdminProfitData) => {
+    if (summaryData.summaryId) return `s:${summaryData.summaryId}`;
+    if (summaryData.appointmentId) return `a:${summaryData.appointmentId}`;
+    return null;
+  };
+
+  const loadShownFromStorage = () => {
+    try {
+      const raw = sessionStorage.getItem(getStorageKey());
+      if (!raw) return;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return;
+      shownSummaryKeysRef.current = new Set(arr.filter((x) => typeof x === "string"));
+    } catch {
+      // ignore
+    }
+  };
+
+  const persistShownToStorage = () => {
+    try {
+      const arr = Array.from(shownSummaryKeysRef.current).slice(-80);
+      sessionStorage.setItem(getStorageKey(), JSON.stringify(arr));
+    } catch {
+      // ignore
+    }
+  };
+
+  const markShown = (summaryData: AdminProfitData) => {
+    const key = buildSummaryKey(summaryData);
+    if (!key) return;
+    shownSummaryKeysRef.current.add(key);
+    persistShownToStorage();
+  };
+
+  const wasShown = (summaryData: AdminProfitData) => {
+    const key = buildSummaryKey(summaryData);
+    if (!key) return false;
+    return shownSummaryKeysRef.current.has(key);
+  };
 
   const showSummary = (summaryData: AdminProfitData) => {
+    if (wasShown(summaryData)) return;
+    markShown(summaryData);
     setData(summaryData);
     setOpen(true);
   };
@@ -32,9 +81,16 @@ export function AdminProfitRealtimeListener() {
     if (!isAdmin || !profile?.tenant_id) {
       hasCheckedPendingRef.current = false;
       pendingSummariesRef.current = [];
+      shownSummaryKeysRef.current = new Set();
       return;
     }
+
+    loadShownFromStorage();
   }, [isAdmin, profile?.tenant_id]);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   // Buscar summaries pendentes quando admin entra na tela
   useEffect(() => {
@@ -69,6 +125,8 @@ export function AdminProfitRealtimeListener() {
                 }))
               : [];
             return {
+              summaryId: String(s.id ?? ""),
+              appointmentId: s.appointment_id ? String(s.appointment_id) : undefined,
               professionalName: String(s.professional_name ?? ""),
               serviceName: String(s.service_name ?? "Serviço"),
               serviceProfit: Number(s.service_profit ?? 0),
@@ -78,12 +136,14 @@ export function AdminProfitRealtimeListener() {
             };
           });
 
+          const filtered = summariesData.filter((s) => !wasShown(s));
+
           // Adicionar à fila de pendentes
-          pendingSummariesRef.current = summariesData;
+          pendingSummariesRef.current = filtered;
           // Mostrar o primeiro
-          if (summariesData.length > 0) {
-            showSummary(summariesData[0]);
-            pendingSummariesRef.current = summariesData.slice(1);
+          if (filtered.length > 0) {
+            showSummary(filtered[0]);
+            pendingSummariesRef.current = filtered.slice(1);
           }
         }
 
@@ -122,6 +182,8 @@ export function AdminProfitRealtimeListener() {
         },
         (payload) => {
           const row = payload.new as {
+            id?: string;
+            appointment_id?: string | null;
             professional_name?: string;
             service_name?: string;
             service_profit?: number;
@@ -137,6 +199,8 @@ export function AdminProfitRealtimeListener() {
               }))
             : [];
           const summaryData: AdminProfitData = {
+            summaryId: row.id ? String(row.id) : undefined,
+            appointmentId: row.appointment_id ? String(row.appointment_id) : undefined,
             professionalName: String(row.professional_name ?? ""),
             serviceName: String(row.service_name ?? "Serviço"),
             serviceProfit: Number(row.service_profit ?? 0),
@@ -145,8 +209,10 @@ export function AdminProfitRealtimeListener() {
             totalProfit: Number(row.total_profit ?? 0),
           };
 
+          if (wasShown(summaryData)) return;
+
           // Se já há um dialog aberto, adicionar à fila
-          if (open) {
+          if (openRef.current) {
             pendingSummariesRef.current.push(summaryData);
           } else {
             showSummary(summaryData);
@@ -161,7 +227,7 @@ export function AdminProfitRealtimeListener() {
       channelRef.current?.unsubscribe();
       channelRef.current = null;
     };
-  }, [isAdmin, profile?.tenant_id, open]);
+  }, [isAdmin, profile?.tenant_id]);
 
   return (
     <AdminProfitCongratulationsDialog

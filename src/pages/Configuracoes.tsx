@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import {
   Settings,
   Loader2,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useLocation } from "react-router-dom";
 
 type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
 type LgpdRequestType =
@@ -107,6 +109,7 @@ const auditEntityLabel: Record<string, string> = {
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
+  const location = useLocation();
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingRetention, setIsSavingRetention] = useState(false);
   const [isUpdatingRequests, setIsUpdatingRequests] = useState(false);
@@ -154,6 +157,13 @@ export default function Configuracoes() {
       });
     }
   }, [tenant]);
+
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.reason === "missing_billing_cpf_cnpj") {
+      toast.error("Para continuar, informe o CPF/CNPJ em Configurações.");
+    }
+  }, [location.state]);
 
   const getStatusBadgeVariant = (status: LgpdRequestStatus): "secondary" | "default" | "destructive" => {
     if (status === "completed") return "default";
@@ -318,7 +328,7 @@ export default function Configuracoes() {
       p_action: action,
       p_entity_type: entityType,
       p_entity_id: entityId ?? null,
-      p_metadata: metadata ?? {},
+      p_metadata: (metadata ?? {}) as unknown as Json,
     });
     if (error) {
       logger.warn("Falha ao gravar trilha de auditoria", { action, entityType, error });
@@ -590,7 +600,7 @@ export default function Configuracoes() {
 
       setAnonymizationPreviewByRequestId((prev) => ({
         ...prev,
-        [request.id]: data as LgpdAnonymizationPreview,
+        [request.id]: data as unknown as LgpdAnonymizationPreview,
       }));
       setAnonymizationConfirmationByRequestId((prev) => ({
         ...prev,
@@ -678,6 +688,16 @@ export default function Configuracoes() {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label>CPF/CNPJ (faturamento)</Label>
+                <Input
+                  value={formData.billingCpfCnpj}
+                  onChange={(e) => setFormData({ ...formData, billingCpfCnpj: e.target.value })}
+                  placeholder="Somente números"
+                  inputMode="numeric"
+                  required
+                />
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Telefone</Label>
@@ -703,15 +723,6 @@ export default function Configuracoes() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Rua, número, bairro, cidade"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CPF/CNPJ (faturamento)</Label>
-                <Input
-                  value={formData.billingCpfCnpj}
-                  onChange={(e) => setFormData({ ...formData, billingCpfCnpj: e.target.value })}
-                  placeholder="Somente números"
-                  inputMode="numeric"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
