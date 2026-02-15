@@ -49,6 +49,35 @@ function createTimeoutSignal(ms: number): { signal: AbortSignal; cancel: () => v
   };
 }
 
+async function asaasFetch(params: {
+  url: string;
+  method: "GET" | "POST";
+  apiKey: string;
+  body?: unknown;
+  timeoutMs?: number;
+}): Promise<{ status: number; text: string }> {
+  const startedAt = Date.now();
+  const timeout = createTimeoutSignal(params.timeoutMs ?? 15000);
+  try {
+    const resp = await fetch(params.url, {
+      method: params.method,
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "salon-flow",
+        access_token: params.apiKey,
+      },
+      body: params.body ? JSON.stringify(params.body) : undefined,
+      signal: timeout.signal,
+    });
+    const text = await resp.text();
+    return { status: resp.status, text };
+  } finally {
+    timeout.cancel();
+    // keep for potential future metrics
+    void startedAt;
+  }
+}
+
 serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
@@ -188,6 +217,43 @@ serve(async (req) => {
       : "https://www.asaas.com";
     logStep("Asaas request prepared", { apiBase: normalizedApiBase, checkoutBaseUrl });
 
+    // Create a Customer in Asaas with externalReference=tenantId.
+    // This guarantees we can map webhook payment.customer -> tenantId even if subscription.externalReference is empty.
+    const customerPayload = {
+      name: tenantData?.name || "Cliente",
+      cpfCnpj,
+      email: tenantData?.email || user.email,
+      externalReference: tenantId,
+    };
+
+    logStep("Creating Asaas customer");
+    const customerRes = await asaasFetch({
+      url: `${normalizedApiBase}/v3/customers`,
+      method: "POST",
+      apiKey: asaasApiKey,
+      body: customerPayload,
+    });
+
+    if (customerRes.status < 200 || customerRes.status >= 300) {
+      logStep("ERROR: Asaas customer create failed", { status: customerRes.status, body: customerRes.text.slice(0, 500) });
+      return new Response(
+        JSON.stringify({ error: `Erro ao criar cliente no Asaas (${customerRes.status})` }),
+        { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
+    const customerJson = JSON.parse(customerRes.text);
+    const asaasCustomerId = customerJson?.id;
+    if (!asaasCustomerId || typeof asaasCustomerId !== "string") {
+      logStep("ERROR: Asaas customer response missing id", { body: customerRes.text.slice(0, 500) });
+      return new Response(JSON.stringify({ error: "Resposta inesperada ao criar cliente no Asaas" }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
+    logStep("Asaas customer created", { asaasCustomerId });
+
     // Important: Asaas may enforce strict validation when customerData is provided.
     // To rely on the hosted checkout to collect payer data, do not send customerData.
 
@@ -210,6 +276,7 @@ serve(async (req) => {
           value: Number((plan.amount / 100).toFixed(2)),
         },
       ],
+      customer: asaasCustomerId,
       subscription: {
         cycle: plan.cycle,
         nextDueDate: toDueDate(0),
@@ -217,45 +284,17 @@ serve(async (req) => {
       },
     };
 
-    const startedAt = Date.now();
-    const timeout = createTimeoutSignal(15000);
-    let checkoutResp: Response;
-    try {
-      logStep("Calling Asaas /v3/checkouts");
-      checkoutResp = await fetch(`${normalizedApiBase}/v3/checkouts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "salon-flow",
-          access_token: asaasApiKey,
-        },
-        body: JSON.stringify(checkoutRequest),
-        signal: timeout.signal,
-      });
-      logStep("Asaas responded", { status: checkoutResp.status, ms: Date.now() - startedAt });
-    } catch (err) {
-      const ms = Date.now() - startedAt;
-      const msg = err instanceof Error ? err.message : String(err);
-      logStep("ERROR: Asaas fetch failed", { ms, message: msg });
+    logStep("Calling Asaas /v3/checkouts");
+    const checkoutRes = await asaasFetch({
+      url: `${normalizedApiBase}/v3/checkouts`,
+      method: "POST",
+      apiKey: asaasApiKey,
+      body: checkoutRequest,
+    });
+    logStep("Asaas responded", { status: checkoutRes.status });
 
-      const isAbort = err instanceof DOMException && err.name === "AbortError";
-      return new Response(
-        JSON.stringify({
-          error: isAbort
-            ? "Timeout ao conectar no Asaas. Tente novamente."
-            : "Falha ao conectar no Asaas. Tente novamente.",
-        }),
-        {
-          headers: { ...cors, "Content-Type": "application/json" },
-          status: isAbort ? 504 : 502,
-        }
-      );
-    } finally {
-      timeout.cancel();
-    }
-
-    const checkoutText = await checkoutResp.text();
-    if (!checkoutResp.ok) {
+    const checkoutText = checkoutRes.text;
+    if (checkoutRes.status < 200 || checkoutRes.status >= 300) {
       let detail = checkoutText;
       try {
         const parsed = JSON.parse(checkoutText);
@@ -265,9 +304,9 @@ serve(async (req) => {
       } catch {
         // keep raw text
       }
-      logStep("ERROR: Asaas checkout failed", { status: checkoutResp.status, body: checkoutText.slice(0, 500) });
+      logStep("ERROR: Asaas checkout failed", { status: checkoutRes.status, body: checkoutText.slice(0, 500) });
       return new Response(
-        JSON.stringify({ error: `Erro ao criar checkout Asaas (${checkoutResp.status}): ${detail}` }),
+        JSON.stringify({ error: `Erro ao criar checkout Asaas (${checkoutRes.status}): ${detail}` }),
         { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
       );
     }

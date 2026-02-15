@@ -126,6 +126,30 @@ async function fetchSubscriptionFromAsaas(params: {
   return JSON.parse(text);
 }
 
+async function fetchCustomerFromAsaas(params: {
+  customerId: string;
+  apiBase: string;
+  apiKey: string;
+}): Promise<any> {
+  const resp = await fetch(
+    `${params.apiBase.replace(/\/$/, "")}/v3/customers/${encodeURIComponent(params.customerId)}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "salon-flow",
+        access_token: params.apiKey,
+      },
+    }
+  );
+
+  const text = await resp.text();
+  if (!resp.ok) {
+    throw new Error(`Asaas customer fetch failed (${resp.status}): ${text.slice(0, 300)}`);
+  }
+  return JSON.parse(text);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
@@ -228,9 +252,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? await fetchSubscriptionFromAsaas({ subscriptionId: asaasSubscriptionId, apiBase: asaasApiBase, apiKey: asaasApiKey! })
           : subscriptionFromPayload;
 
-        const tenantId =
+        let tenantId =
           tenantIdFromPayload
           || (sub && isValidNonZeroUuid(sub.externalReference) ? sub.externalReference : null);
+
+        if (!tenantId && asaasApiKey) {
+          const asaasCustomerIdFromPayment =
+            paymentFromPayload && typeof paymentFromPayload.customer === "string" ? paymentFromPayload.customer : null;
+          const asaasCustomerIdFromSub = sub && typeof sub.customer === "string" ? sub.customer : null;
+          const asaasCustomerIdForLookup = asaasCustomerIdFromPayment || asaasCustomerIdFromSub;
+
+          if (asaasCustomerIdForLookup) {
+            const customer = await fetchCustomerFromAsaas({
+              customerId: asaasCustomerIdForLookup,
+              apiBase: asaasApiBase,
+              apiKey: asaasApiKey,
+            });
+            tenantId = isValidNonZeroUuid(customer?.externalReference) ? customer.externalReference : null;
+          }
+        }
 
         const asaasCustomerId = sub && typeof sub.customer === "string" ? sub.customer : null;
         const mappedStatus = mapAsaasStatusToApp(sub?.status);
