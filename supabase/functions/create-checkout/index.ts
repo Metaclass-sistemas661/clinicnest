@@ -92,7 +92,7 @@ serve(async (req) => {
     logStep("Function started");
 
     const body = await req.json();
-    const planKey = body?.planKey as keyof typeof PLANS | "test_once" | "test_sub";
+    const planKey = body?.planKey as keyof typeof PLANS;
 
     if (!planKey) {
       return new Response(JSON.stringify({ error: "Plano não informado" }), {
@@ -101,34 +101,12 @@ serve(async (req) => {
       });
     }
 
-    const isTestOnce = planKey === "test_once";
-    const isTestSub = planKey === "test_sub";
-    const plan = (isTestOnce || isTestSub) ? null : PLANS[planKey as keyof typeof PLANS];
-    if (!isTestOnce && !isTestSub && !plan) {
+    const plan = PLANS[planKey];
+    if (!plan) {
       return new Response(JSON.stringify({ error: "Plano inválido" }), {
         headers: { ...cors, "Content-Type": "application/json" },
         status: 400,
       });
-    }
-
-    if (isTestOnce) {
-      const allow = (Deno.env.get("ALLOW_TEST_CHECKOUT") || "").toLowerCase() === "true";
-      if (!allow) {
-        return new Response(JSON.stringify({ error: "Checkout de teste desativado" }), {
-          headers: { ...cors, "Content-Type": "application/json" },
-          status: 403,
-        });
-      }
-    }
-
-    if (isTestSub) {
-      const allow = (Deno.env.get("ALLOW_TEST_SUBSCRIPTION") || "").toLowerCase() === "true";
-      if (!allow) {
-        return new Response(JSON.stringify({ error: "Assinatura de teste desativada" }), {
-          headers: { ...cors, "Content-Type": "application/json" },
-          status: 403,
-        });
-      }
     }
     logStep("User authenticated", { userId: user.id, email: user.email });
 
@@ -168,7 +146,7 @@ serve(async (req) => {
     }
 
     const tenantId = profileData?.tenant_id ?? "";
-    logStep("Plan selected", { planKey, cycle: plan?.cycle });
+    logStep("Plan selected", { planKey, cycle: plan.cycle });
 
     if (!tenantId) {
       return new Response(JSON.stringify({ error: "Tenant não encontrado" }), {
@@ -243,74 +221,31 @@ serve(async (req) => {
     // For recurring checkouts, Asaas may require full address/phone if customer is provided.
     // We'll correlate payments to tenant using payment.checkoutSession + our own mapping table.
 
-    const checkoutRequest = isTestOnce
-      ? {
-        billingTypes: ["CREDIT_CARD"],
-        chargeTypes: ["DETACHED"],
-        minutesToExpire: 60,
-        callback: {
-          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
-          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
-          successUrl: `${baseUrl}/dashboard?subscription=success`,
+    const checkoutRequest = {
+      // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
+      // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      minutesToExpire: 60,
+      callback: {
+        cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
+        expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
+        successUrl: `${baseUrl}/dashboard?subscription=success`,
+      },
+      items: [
+        {
+          name: `Plano ${plan.name}`,
+          description: `Assinatura ${plan.name}`,
+          quantity: 1,
+          value: Number((plan.amount / 100).toFixed(2)),
         },
-        items: [
-          {
-            name: "Teste - Pagamento Único",
-            description: "Pagamento único de teste (R$ 5,00)",
-            quantity: 1,
-            value: 5.0,
-          },
-        ],
-      }
-      : isTestSub
-      ? {
-        billingTypes: ["CREDIT_CARD"],
-        chargeTypes: ["RECURRENT"],
-        minutesToExpire: 60,
-        callback: {
-          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
-          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
-          successUrl: `${baseUrl}/dashboard?subscription=success`,
-        },
-        items: [
-          {
-            name: "Teste - Assinatura",
-            description: "Assinatura de teste (R$ 5,00 / mês)",
-            quantity: 1,
-            value: 5.0,
-          },
-        ],
-        subscription: {
-          cycle: "MONTHLY",
-          nextDueDate: toDueDate(0),
-          externalReference: tenantId,
-        },
-      }
-      : {
-        // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
-        // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
-        billingTypes: ["CREDIT_CARD"],
-        chargeTypes: ["RECURRENT"],
-        minutesToExpire: 60,
-        callback: {
-          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
-          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
-          successUrl: `${baseUrl}/dashboard?subscription=success`,
-        },
-        items: [
-          {
-            name: `Plano ${plan!.name}`,
-            description: `Assinatura ${plan!.name}`,
-            quantity: 1,
-            value: Number(((plan!.amount) / 100).toFixed(2)),
-          },
-        ],
-        subscription: {
-          cycle: plan!.cycle,
-          nextDueDate: toDueDate(0),
-          externalReference: tenantId,
-        },
-      };
+      ],
+      subscription: {
+        cycle: plan.cycle,
+        nextDueDate: toDueDate(0),
+        externalReference: tenantId,
+      },
+    };
 
     logStep("Calling Asaas /v3/checkouts");
     const checkoutRes = await asaasFetch({
