@@ -76,6 +76,15 @@ function mapAsaasStatusToApp(status: unknown): string | null {
   return null;
 }
 
+function isValidNonZeroUuid(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  const s = v.trim();
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuid.test(s)) return false;
+  if (s === "00000000-0000-0000-0000-000000000000") return false;
+  return true;
+}
+
 function mapAsaasPlan(cycle: unknown, value: unknown): string | null {
   if (typeof cycle !== "string") return null;
   const c = cycle.toUpperCase();
@@ -201,7 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Determine tenant_id (preferred) from subscription.externalReference
       const tenantIdFromPayload: string | null =
-        subscriptionFromPayload && typeof subscriptionFromPayload.externalReference === "string"
+        subscriptionFromPayload && isValidNonZeroUuid(subscriptionFromPayload.externalReference)
           ? subscriptionFromPayload.externalReference
           : null;
 
@@ -221,7 +230,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const tenantId =
           tenantIdFromPayload
-          || (sub && typeof sub.externalReference === "string" ? sub.externalReference : null);
+          || (sub && isValidNonZeroUuid(sub.externalReference) ? sub.externalReference : null);
 
         const asaasCustomerId = sub && typeof sub.customer === "string" ? sub.customer : null;
         const mappedStatus = mapAsaasStatusToApp(sub?.status);
