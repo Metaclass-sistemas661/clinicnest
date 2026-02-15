@@ -136,8 +136,15 @@ serve(async (req) => {
       });
     }
 
+    logStep("Tenant billing loaded", {
+      hasTenant: Boolean(tenantData),
+      hasBillingCpfCnpj: Boolean(tenantData?.billing_cpf_cnpj),
+    });
+
     const cpfCnpj = sanitizeCpfCnpj(tenantData?.billing_cpf_cnpj ?? "");
+    logStep("CPF/CNPJ sanitized", { length: cpfCnpj.length });
     if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
+      logStep("ERROR: Missing/invalid CPF/CNPJ", { length: cpfCnpj.length });
       return new Response(
         JSON.stringify({
           error: "CPF/CNPJ obrigatório para assinatura. Preencha em Configurações > Dados do Salão.",
@@ -162,7 +169,9 @@ serve(async (req) => {
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
     logStep("Asaas request prepared", { apiBase });
     const checkoutRequest = {
-      billingTypes: ["CREDIT_CARD", "PIX", "BOLETO"],
+      // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
+      // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
+      billingTypes: ["CREDIT_CARD"],
       chargeTypes: ["RECURRENT"],
       minutesToExpire: 60,
       callback: {
@@ -231,9 +240,18 @@ serve(async (req) => {
 
     const checkoutText = await checkoutResp.text();
     if (!checkoutResp.ok) {
+      let detail = checkoutText;
+      try {
+        const parsed = JSON.parse(checkoutText);
+        if (Array.isArray(parsed?.errors) && parsed.errors.length > 0) {
+          detail = parsed.errors.map((e: any) => e?.description).filter(Boolean).join(" | ");
+        }
+      } catch {
+        // keep raw text
+      }
       logStep("ERROR: Asaas checkout failed", { status: checkoutResp.status, body: checkoutText.slice(0, 500) });
       return new Response(
-        JSON.stringify({ error: `Erro ao criar checkout Asaas (${checkoutResp.status})` }),
+        JSON.stringify({ error: `Erro ao criar checkout Asaas (${checkoutResp.status}): ${detail}` }),
         { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
       );
     }
