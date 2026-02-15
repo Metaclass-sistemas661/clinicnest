@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,7 @@ const planNames: Record<string, string> = {
 };
 
 export default function Assinatura() {
+  const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const { 
     subscribed, 
@@ -73,12 +75,10 @@ export default function Assinatura() {
     subscription_end,
     isLoading,
     createCheckout,
-    openCustomerPortal,
     checkSubscription,
   } = useSubscription();
   
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [loadingPortal, setLoadingPortal] = useState(false);
 
   const handleSubscribe = async (planKey: "monthly" | "quarterly" | "annual") => {
     try {
@@ -94,15 +94,7 @@ export default function Assinatura() {
   };
 
   const handleManageSubscription = async () => {
-    try {
-      setLoadingPortal(true);
-      await openCustomerPortal();
-      toast.success("Abrindo portal de gerenciamento...");
-    } catch {
-      toast.error("Erro ao abrir portal. Tente novamente.");
-    } finally {
-      setLoadingPortal(false);
-    }
+    navigate("/assinatura/gerenciar");
   };
 
   if (!isAdmin) {
@@ -176,8 +168,8 @@ export default function Assinatura() {
               {subscribed ? (
                 <>
                   <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Ativo</Badge>
-                  <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={loadingPortal}>
-                    {loadingPortal ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
+                  <Button variant="outline" size="sm" onClick={handleManageSubscription}>
+                    <Settings className="mr-2 h-4 w-4" />
                     Gerenciar
                   </Button>
                 </>
@@ -276,8 +268,6 @@ export default function Assinatura() {
 
       <div className="mt-8 text-center">
         <p className="text-sm text-muted-foreground">
-          Pagamentos processados com segurança via Stripe.
-          <br />
           Cancele a qualquer momento sem multas.
         </p>
       </div>

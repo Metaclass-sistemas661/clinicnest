@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getAuthenticatedUser } from "../_shared/auth.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -7,13 +6,6 @@ import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const logStep = createLogger("CHECK-SUBSCRIPTION");
-
-// VynloBella pricing plans mapping
-const PRODUCT_TO_PLAN: Record<string, string> = {
-  "prod_TuB7bc1lxNBAoz": "monthly",
-  "prod_TuB8arh8d4qyt2": "quarterly",
-  "prod_TuB88hjDHGS60T": "annual",
-};
 
 serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -27,9 +19,6 @@ serve(async (req) => {
 
   try {
     logStep("Function started");
-
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
@@ -86,63 +75,20 @@ serve(async (req) => {
     // Check trial status
     const now = new Date();
     const trialEnd = subscriptionData?.trial_end ? new Date(subscriptionData.trial_end) : null;
+    const periodEnd = subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end) : null;
     const isTrialing = subscriptionData?.status === 'trialing';
+    const isActive = subscriptionData?.status === 'active';
     const trialExpired = trialEnd ? now > trialEnd : false;
     const daysRemaining = trialEnd 
       ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
 
-    // Check Stripe for active subscription
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-
-    let hasActiveSubscription = false;
-    let planKey = null;
-    let subscriptionEnd = null;
-    let stripeCustomerId = null;
-    let stripeSubscriptionId = null;
-
-    if (customers.data.length > 0) {
-      const customerId = customers.data[0].id;
-      stripeCustomerId = customerId;
-      logStep("Found Stripe customer", { customerId });
-
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "active",
-        limit: 1,
-      });
-
-      if (subscriptions.data.length > 0) {
-        hasActiveSubscription = true;
-        const subscription = subscriptions.data[0];
-        stripeSubscriptionId = subscription.id;
-        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-        
-        const productId = subscription.items.data[0].price.product as string;
-        planKey = PRODUCT_TO_PLAN[productId] || null;
-        logStep("Active subscription found", { subscriptionId: subscription.id, productId, planKey });
-
-        // Update subscription in database
-        await supabaseAdmin
-          .from("subscriptions")
-          .update({
-            status: "active",
-            stripe_customer_id: stripeCustomerId,
-            stripe_subscription_id: stripeSubscriptionId,
-            plan: planKey,
-            current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-            current_period_end: subscriptionEnd,
-          })
-          .eq("tenant_id", profileData.tenant_id);
-      }
-    }
-
-    // Determine access
-    const hasAccess = hasActiveSubscription || (isTrialing && !trialExpired);
+    const periodNotExpired = periodEnd ? now <= periodEnd : false;
+    const subscribed = Boolean(isActive && periodNotExpired);
+    const hasAccess = subscribed || (isTrialing && !trialExpired);
 
     logStep("Access check complete", {
-      hasActiveSubscription,
+      subscribed,
       isTrialing,
       trialExpired,
       daysRemaining,
@@ -150,12 +96,12 @@ serve(async (req) => {
     });
 
     return new Response(JSON.stringify({
-      subscribed: hasActiveSubscription,
+      subscribed,
       trialing: isTrialing && !trialExpired,
       trial_expired: isTrialing && trialExpired,
       days_remaining: daysRemaining,
-      plan: planKey,
-      subscription_end: subscriptionEnd,
+      plan: subscriptionData?.plan ?? null,
+      subscription_end: periodEnd?.toISOString() ?? null,
       has_access: hasAccess,
     }), {
       headers: { ...cors, "Content-Type": "application/json" },

@@ -86,6 +86,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),
   "/notificacoes": () => void import("@/pages/Notificacoes"),
   "/assinatura": () => void import("@/pages/Assinatura"),
+  "/assinatura/gerenciar": () => void import("@/pages/GerenciarAssinatura"),
   "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
   "/meus-salarios": () => void import("@/pages/MeusSalarios"),
 };

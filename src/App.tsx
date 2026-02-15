@@ -36,6 +36,7 @@ const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
 const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
+const GerenciarAssinatura = lazyWithRetry(() => import("@/pages/GerenciarAssinatura"));
 const MinhasComissoes = lazyWithRetry(() => import("@/pages/MinhasComissoes"));
 const MeusSalarios = lazyWithRetry(() => import("@/pages/MeusSalarios"));
 const Metas = lazyWithRetry(() => import("@/pages/Metas"));
@@ -198,6 +199,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <Assinatura />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assinatura/gerenciar"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <GerenciarAssinatura />
                     </ProtectedRoute>
                   }
                 />

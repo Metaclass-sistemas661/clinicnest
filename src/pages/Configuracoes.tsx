@@ -117,6 +117,7 @@ export default function Configuracoes() {
     phone: "",
     email: "",
     address: "",
+    billingCpfCnpj: "",
   });
   const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
   const [requestDrafts, setRequestDrafts] = useState<
@@ -149,6 +150,7 @@ export default function Configuracoes() {
         phone: tenant.phone || "",
         email: tenant.email || "",
         address: tenant.address || "",
+        billingCpfCnpj: tenant.billing_cpf_cnpj || "",
       });
     }
   }, [tenant]);
@@ -420,6 +422,7 @@ export default function Configuracoes() {
           phone: formData.phone || null,
           email: formData.email || null,
           address: formData.address || null,
+          billing_cpf_cnpj: formData.billingCpfCnpj || null,
         })
         .eq("id", tenant.id);
 
@@ -429,6 +432,7 @@ export default function Configuracoes() {
         name: formData.name,
         email: formData.email || null,
         phone: formData.phone || null,
+        billing_cpf_cnpj: formData.billingCpfCnpj || null,
       });
 
       toast.success("Configurações salvas com sucesso!");
@@ -699,6 +703,15 @@ export default function Configuracoes() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Rua, número, bairro, cidade"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CPF/CNPJ (faturamento)</Label>
+                <Input
+                  value={formData.billingCpfCnpj}
+                  onChange={(e) => setFormData({ ...formData, billingCpfCnpj: e.target.value })}
+                  placeholder="Somente números"
+                  inputMode="numeric"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
