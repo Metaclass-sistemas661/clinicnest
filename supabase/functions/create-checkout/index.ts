@@ -30,6 +30,23 @@ function sanitizeCpfCnpj(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
 
+function safeJsonParse(input: string): unknown {
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+}
+
+function pickFirstCustomerId(payload: unknown): string | null {
+  const p = payload as any;
+  // Asaas list responses are usually { data: [...] }
+  const arr = Array.isArray(p?.data) ? p.data : Array.isArray(p) ? p : [];
+  const first = arr?.[0];
+  const id = first?.id;
+  return typeof id === "string" && id ? id : null;
+}
+
 function sanitizePhoneNumber(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
@@ -226,33 +243,47 @@ serve(async (req) => {
       externalReference: tenantId,
     };
 
-    logStep("Creating Asaas customer");
-    const customerRes = await asaasFetch({
-      url: `${normalizedApiBase}/v3/customers`,
-      method: "POST",
-      apiKey: asaasApiKey,
-      body: customerPayload,
-    });
+    let asaasCustomerId: string | null = null;
 
-    if (customerRes.status < 200 || customerRes.status >= 300) {
-      logStep("ERROR: Asaas customer create failed", { status: customerRes.status, body: customerRes.text.slice(0, 500) });
-      return new Response(
-        JSON.stringify({ error: `Erro ao criar cliente no Asaas (${customerRes.status})` }),
-        { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
-      );
+    // Try to reuse an existing customer for this tenant.
+    const listUrl = `${normalizedApiBase}/v3/customers?externalReference=${encodeURIComponent(tenantId)}&limit=1`;
+    logStep("Searching Asaas customer", { by: "externalReference" });
+    const listRes = await asaasFetch({ url: listUrl, method: "GET", apiKey: asaasApiKey });
+    if (listRes.status >= 200 && listRes.status < 300) {
+      asaasCustomerId = pickFirstCustomerId(safeJsonParse(listRes.text));
     }
 
-    const customerJson = JSON.parse(customerRes.text);
-    const asaasCustomerId = customerJson?.id;
-    if (!asaasCustomerId || typeof asaasCustomerId !== "string") {
-      logStep("ERROR: Asaas customer response missing id", { body: customerRes.text.slice(0, 500) });
-      return new Response(JSON.stringify({ error: "Resposta inesperada ao criar cliente no Asaas" }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-        status: 500,
+    if (asaasCustomerId) {
+      logStep("Asaas customer reused", { asaasCustomerId });
+    } else {
+      logStep("Creating Asaas customer");
+      const customerRes = await asaasFetch({
+        url: `${normalizedApiBase}/v3/customers`,
+        method: "POST",
+        apiKey: asaasApiKey,
+        body: customerPayload,
       });
-    }
 
-    logStep("Asaas customer created", { asaasCustomerId });
+      if (customerRes.status < 200 || customerRes.status >= 300) {
+        logStep("ERROR: Asaas customer create failed", { status: customerRes.status, body: customerRes.text.slice(0, 500) });
+        return new Response(
+          JSON.stringify({ error: `Erro ao criar cliente no Asaas (${customerRes.status})` }),
+          { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
+        );
+      }
+
+      const customerJson = safeJsonParse(customerRes.text) as any;
+      asaasCustomerId = typeof customerJson?.id === "string" ? customerJson.id : null;
+      if (!asaasCustomerId) {
+        logStep("ERROR: Asaas customer response missing id", { body: customerRes.text.slice(0, 500) });
+        return new Response(JSON.stringify({ error: "Resposta inesperada ao criar cliente no Asaas" }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+          status: 500,
+        });
+      }
+
+      logStep("Asaas customer created", { asaasCustomerId });
+    }
 
     // Important: Asaas may enforce strict validation when customerData is provided.
     // To rely on the hosted checkout to collect payer data, do not send customerData.
