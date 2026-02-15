@@ -94,6 +94,10 @@ export default function ResetPassword() {
         body: {
           password: password,
         },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
       });
 
       logger.debug("[ResetPassword] Resposta da Edge Function:", { data, error });

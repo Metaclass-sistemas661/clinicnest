@@ -122,7 +122,10 @@ export function useSubscription() {
 
     const { data, error } = await supabase.functions.invoke('create-checkout', {
       body: { planKey },
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
     });
 
     if (data?.url) {
@@ -149,6 +152,7 @@ export function useSubscription() {
     const { data, error } = await supabase.functions.invoke('customer-portal', {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
     });
 

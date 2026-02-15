@@ -61,7 +61,7 @@ interface CommissionFormData {
 }
 
 export default function Equipe() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, isAdmin, session } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightUserId = searchParams.get("highlight");
   const highlightedRowRef = useRef<HTMLTableRowElement | HTMLDivElement | null>(null);
@@ -197,6 +197,10 @@ export default function Equipe() {
     setIsSaving(true);
 
     try {
+      if (!session?.access_token) {
+        throw new Error("Not authenticated");
+      }
+
       logger.debug("[Equipe] Chamando invite-team-member com:", {
         email: formData.email.trim(),
         full_name: formData.full_name.trim(),
@@ -210,6 +214,10 @@ export default function Equipe() {
           full_name: formData.full_name.trim(),
           phone: formData.phone.trim() || undefined,
           role: formData.role,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
       });
 

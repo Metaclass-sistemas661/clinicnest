@@ -31,6 +31,27 @@ export async function getAuthenticatedUser(
     };
   }
 
+  const apiKeyHeader = req.headers.get("apikey");
+  if (!apiKeyHeader) {
+    return {
+      user: null,
+      error: new Response(
+        JSON.stringify({ error: "Não autorizado. apikey ausente.", code: "missing_apikey" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  if (apiKeyHeader !== SUPABASE_ANON_KEY) {
+    return {
+      user: null,
+      error: new Response(
+        JSON.stringify({ error: "Não autorizado. apikey inválida.", code: "invalid_apikey" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
   const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!authHeader) {
     return {
