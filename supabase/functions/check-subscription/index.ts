@@ -78,13 +78,14 @@ serve(async (req) => {
     const periodEnd = subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end) : null;
     const isTrialing = subscriptionData?.status === 'trialing';
     const isActive = subscriptionData?.status === 'active';
+    const isInactive = subscriptionData?.status === 'inactive';
     const trialExpired = trialEnd ? now > trialEnd : false;
     const daysRemaining = trialEnd 
       ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
 
     const periodNotExpired = periodEnd ? now <= periodEnd : false;
-    const subscribed = Boolean(isActive && periodNotExpired);
+    const subscribed = Boolean(periodNotExpired && (isActive || isInactive) && subscriptionData?.plan);
     const hasAccess = subscribed || (isTrialing && !trialExpired);
 
     logStep("Access check complete", {

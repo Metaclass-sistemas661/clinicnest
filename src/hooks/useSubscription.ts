@@ -86,10 +86,16 @@ export function useSubscription() {
       const daysRemaining = trialEnd
         ? Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
         : 0;
-      const hasAccess = isActive || (isTrialing && !trialExpired);
+
+      // Policy (2): if the user paid for a period, allow access until current_period_end,
+      // even if the subscription has been canceled/inactivated.
+      const periodNotExpired = periodEnd ? now <= periodEnd : false;
+      const isInactive = sub?.status === 'inactive';
+      const subscribed = Boolean(periodNotExpired && (isActive || isInactive) && sub?.plan);
+      const hasAccess = subscribed || (isTrialing && !trialExpired);
 
       applyResult({
-        subscribed: isActive,
+        subscribed,
         trialing: isTrialing && !trialExpired,
         trial_expired: isTrialing && trialExpired,
         days_remaining: daysRemaining,
