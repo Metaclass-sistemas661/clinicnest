@@ -182,7 +182,11 @@ serve(async (req) => {
     })();
 
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
-    logStep("Asaas request prepared", { apiBase });
+    const normalizedApiBase = apiBase.replace(/\/$/, "");
+    const checkoutBaseUrl = normalizedApiBase.includes("api-sandbox.asaas.com")
+      ? "https://sandbox.asaas.com"
+      : "https://www.asaas.com";
+    logStep("Asaas request prepared", { apiBase: normalizedApiBase, checkoutBaseUrl });
 
     // Important: Asaas may enforce strict validation when customerData is provided.
     // To rely on the hosted checkout to collect payer data, do not send customerData.
@@ -218,7 +222,7 @@ serve(async (req) => {
     let checkoutResp: Response;
     try {
       logStep("Calling Asaas /v3/checkouts");
-      checkoutResp = await fetch(`${apiBase}/v3/checkouts`, {
+      checkoutResp = await fetch(`${normalizedApiBase}/v3/checkouts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -278,7 +282,7 @@ serve(async (req) => {
       });
     }
 
-    const checkoutUrl = `https://asaas.com/checkoutSession/show?id=${encodeURIComponent(checkoutId)}`;
+    const checkoutUrl = `${checkoutBaseUrl}/checkoutSession/show?id=${encodeURIComponent(checkoutId)}`;
     logStep("Asaas checkout created", { checkoutId, checkoutUrl });
 
     return new Response(JSON.stringify({ url: checkoutUrl }), {
