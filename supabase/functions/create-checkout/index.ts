@@ -92,7 +92,7 @@ serve(async (req) => {
     logStep("Function started");
 
     const body = await req.json();
-    const planKey = body?.planKey as keyof typeof PLANS | "test_once";
+    const planKey = body?.planKey as keyof typeof PLANS | "test_once" | "test_sub";
 
     if (!planKey) {
       return new Response(JSON.stringify({ error: "Plano não informado" }), {
@@ -102,8 +102,9 @@ serve(async (req) => {
     }
 
     const isTestOnce = planKey === "test_once";
-    const plan = isTestOnce ? null : PLANS[planKey as keyof typeof PLANS];
-    if (!isTestOnce && !plan) {
+    const isTestSub = planKey === "test_sub";
+    const plan = (isTestOnce || isTestSub) ? null : PLANS[planKey as keyof typeof PLANS];
+    if (!isTestOnce && !isTestSub && !plan) {
       return new Response(JSON.stringify({ error: "Plano inválido" }), {
         headers: { ...cors, "Content-Type": "application/json" },
         status: 400,
@@ -114,6 +115,16 @@ serve(async (req) => {
       const allow = (Deno.env.get("ALLOW_TEST_CHECKOUT") || "").toLowerCase() === "true";
       if (!allow) {
         return new Response(JSON.stringify({ error: "Checkout de teste desativado" }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
+    }
+
+    if (isTestSub) {
+      const allow = (Deno.env.get("ALLOW_TEST_SUBSCRIPTION") || "").toLowerCase() === "true";
+      if (!allow) {
+        return new Response(JSON.stringify({ error: "Assinatura de teste desativada" }), {
           headers: { ...cors, "Content-Type": "application/json" },
           status: 403,
         });
@@ -157,7 +168,7 @@ serve(async (req) => {
     }
 
     const tenantId = profileData?.tenant_id ?? "";
-    logStep("Got tenant", { tenantId });
+    logStep("Plan selected", { planKey, cycle: plan?.cycle });
 
     if (!tenantId) {
       return new Response(JSON.stringify({ error: "Tenant não encontrado" }), {
@@ -250,6 +261,30 @@ serve(async (req) => {
             value: 5.0,
           },
         ],
+      }
+      : isTestSub
+      ? {
+        billingTypes: ["CREDIT_CARD"],
+        chargeTypes: ["RECURRENT"],
+        minutesToExpire: 60,
+        callback: {
+          cancelUrl: `${baseUrl}/assinatura?subscription=cancelled`,
+          expiredUrl: `${baseUrl}/assinatura?subscription=expired`,
+          successUrl: `${baseUrl}/dashboard?subscription=success`,
+        },
+        items: [
+          {
+            name: "Teste - Assinatura",
+            description: "Assinatura de teste (R$ 5,00 / mês)",
+            quantity: 1,
+            value: 5.0,
+          },
+        ],
+        subscription: {
+          cycle: "MONTHLY",
+          nextDueDate: toDueDate(0),
+          externalReference: tenantId,
+        },
       }
       : {
         // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
