@@ -30,6 +30,10 @@ function sanitizeCpfCnpj(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
 
+function sanitizePhoneNumber(input: string): string {
+  return String(input || "").replace(/\D/g, "");
+}
+
 function toDueDate(daysFromNow: number): string {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
@@ -168,6 +172,20 @@ serve(async (req) => {
 
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
     logStep("Asaas request prepared", { apiBase });
+
+    // Important: if we send customerData with partial/incorrect address/phone fields,
+    // Asaas may reject the request with 400 requiring addressNumber/postalCode/province/etc.
+    // The hosted checkout can collect these fields, so we only prefill safe minimal data.
+    const phoneNumber = sanitizePhoneNumber(tenantData?.phone ?? "");
+    const minimalCustomerData: Record<string, unknown> = {
+      name: tenantData?.name || "Cliente",
+      email: tenantData?.email || user.email,
+      cpfCnpj,
+    };
+    if (phoneNumber.length >= 10) {
+      minimalCustomerData.phoneNumber = phoneNumber;
+    }
+
     const checkoutRequest = {
       // Asaas limitation: for RECURRENT, only CREDIT_CARD is allowed.
       // PIX/BOLETO require DETACHED charges (not recurring subscription charges).
@@ -187,13 +205,7 @@ serve(async (req) => {
           value: Number((plan.amount / 100).toFixed(2)),
         },
       ],
-      customerData: {
-        name: tenantData?.name || "Cliente",
-        email: tenantData?.email || user.email,
-        phone: tenantData?.phone || undefined,
-        cpfCnpj,
-        address: tenantData?.address || undefined,
-      },
+      customerData: minimalCustomerData,
       subscription: {
         cycle: plan.cycle,
         nextDueDate: toDueDate(0),
