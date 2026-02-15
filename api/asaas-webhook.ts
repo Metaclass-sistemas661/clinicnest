@@ -39,8 +39,8 @@ function toIsoDateStart(date: Date): string {
   return d.toISOString();
 }
 
-function parseAsaasDate(input: unknown): Date | null {
-  if (typeof input !== "string") return null;
+function parseAsaasDate(input: any): Date | null {
+  if (!input || typeof input !== "string") return null;
   const s = input.trim();
 
   // Common Asaas formats:
@@ -64,6 +64,50 @@ function parseAsaasDate(input: unknown): Date | null {
 
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function maybeCleanupCheckoutSessions(params: {
+  supabaseAdmin: any;
+  ttlDays: number;
+  sampleRate: number;
+}): Promise<void> {
+  if (Math.random() >= params.sampleRate) return;
+  const cutoff = new Date(Date.now() - params.ttlDays * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const { error } = await params.supabaseAdmin
+      .from("asaas_checkout_sessions")
+      .delete()
+      .lt("created_at", cutoff);
+    if (error) console.error("[ASAAS-WEBHOOK] cleanup failed", error);
+  } catch (err) {
+    console.error("[ASAAS-WEBHOOK] cleanup exception", err);
+  }
+}
+
+async function createWebhookAlert(params: {
+  supabaseAdmin: any;
+  eventId: string | null;
+  eventType: string;
+  reason: string;
+  asaasSubscriptionId: string | null;
+  asaasPaymentId: string | null;
+  checkoutSessionId: string | null;
+  payload: any;
+}): Promise<void> {
+  try {
+    const { error } = await params.supabaseAdmin.from("asaas_webhook_alerts").insert({
+      event_id: params.eventId,
+      event_type: params.eventType,
+      reason: params.reason,
+      asaas_subscription_id: params.asaasSubscriptionId,
+      asaas_payment_id: params.asaasPaymentId,
+      checkout_session_id: params.checkoutSessionId,
+      payload: params.payload,
+    });
+    if (error) console.error("[ASAAS-WEBHOOK] failed to persist alert", error);
+  } catch (err) {
+    console.error("[ASAAS-WEBHOOK] alert exception", err);
+  }
 }
 
 function mapAsaasStatusToApp(status: unknown): string | null {
@@ -173,6 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const { eventKey, eventType } = getEventKey(payload);
+    const eventId: string | null = null;
 
     const supabaseUrl = getEnv("SUPABASE_URL");
     const serviceRole = getEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -243,6 +288,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? paymentFromPayload.checkoutSession
           : null;
 
+      // best-effort TTL cleanup to prevent unbounded growth
+      await maybeCleanupCheckoutSessions({ supabaseAdmin, ttlDays: 60, sampleRate: 0.02 });
+
       if (asaasSubscriptionId) {
         // Fetch latest subscription state from Asaas on important events
         const shouldFetch = Boolean(
@@ -286,6 +334,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (mappingError) throw mappingError;
           tenantId = mapping?.tenant_id ?? null;
+        }
+
+        if (!tenantId) {
+          console.error("[ASAAS-WEBHOOK] tenant_id resolution failed", {
+            eventType,
+            asaasSubscriptionId,
+            checkoutSessionIdFromPayment,
+          });
+          await createWebhookAlert({
+            supabaseAdmin,
+            eventId,
+            eventType,
+            reason: "tenant_id_not_resolved",
+            asaasSubscriptionId,
+            asaasPaymentId: paymentFromPayload && typeof paymentFromPayload.id === "string" ? paymentFromPayload.id : null,
+            checkoutSessionId: checkoutSessionIdFromPayment,
+            payload,
+          });
+          res.status(200).json({ ok: true, ignored: true });
+          return;
         }
 
         const asaasCustomerId = sub && typeof sub.customer === "string" ? sub.customer : null;
