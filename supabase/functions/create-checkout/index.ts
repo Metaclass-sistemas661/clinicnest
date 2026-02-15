@@ -36,6 +36,15 @@ function toDueDate(daysFromNow: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function createTimeoutSignal(ms: number): { signal: AbortSignal; cancel: () => void } {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    cancel: () => clearTimeout(t),
+  };
+}
+
 serve(async (req) => {
   const cors = getCorsHeaders(req);
   if (req.method === "OPTIONS") {
@@ -151,6 +160,7 @@ serve(async (req) => {
       || "https://vynlobella.com";
 
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";
+    logStep("Asaas request prepared", { apiBase });
     const checkoutRequest = {
       billingTypes: ["CREDIT_CARD", "PIX", "BOLETO"],
       chargeTypes: ["RECURRENT"],
@@ -182,15 +192,42 @@ serve(async (req) => {
       },
     };
 
-    const checkoutResp = await fetch(`${apiBase}/v3/checkouts`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "salon-flow",
-        access_token: asaasApiKey,
-      },
-      body: JSON.stringify(checkoutRequest),
-    });
+    const startedAt = Date.now();
+    const timeout = createTimeoutSignal(15000);
+    let checkoutResp: Response;
+    try {
+      logStep("Calling Asaas /v3/checkouts");
+      checkoutResp = await fetch(`${apiBase}/v3/checkouts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "salon-flow",
+          access_token: asaasApiKey,
+        },
+        body: JSON.stringify(checkoutRequest),
+        signal: timeout.signal,
+      });
+      logStep("Asaas responded", { status: checkoutResp.status, ms: Date.now() - startedAt });
+    } catch (err) {
+      const ms = Date.now() - startedAt;
+      const msg = err instanceof Error ? err.message : String(err);
+      logStep("ERROR: Asaas fetch failed", { ms, message: msg });
+
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
+      return new Response(
+        JSON.stringify({
+          error: isAbort
+            ? "Timeout ao conectar no Asaas. Tente novamente."
+            : "Falha ao conectar no Asaas. Tente novamente.",
+        }),
+        {
+          headers: { ...cors, "Content-Type": "application/json" },
+          status: isAbort ? 504 : 502,
+        }
+      );
+    } finally {
+      timeout.cancel();
+    }
 
     const checkoutText = await checkoutResp.text();
     if (!checkoutResp.ok) {
