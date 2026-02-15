@@ -31,12 +31,12 @@ export async function getAuthenticatedUser(
     };
   }
 
-  const authHeader = req.headers.get("Authorization");
+  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!authHeader) {
     return {
       user: null,
       error: new Response(
-        JSON.stringify({ error: "Não autorizado. Faça login." }),
+        JSON.stringify({ error: "Não autorizado. Faça login.", code: "missing_auth_header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       ),
     };
@@ -52,7 +52,11 @@ export async function getAuthenticatedUser(
     return {
       user: null,
       error: new Response(
-        JSON.stringify({ error: "Sessão inválida ou expirada" }),
+        JSON.stringify({
+          error: "Sessão inválida ou expirada",
+          code: "invalid_or_expired_session",
+          details: error?.message ?? null,
+        }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       ),
     };
