@@ -234,7 +234,7 @@ serve(async (req) => {
 
     const checkoutRequest = isTestOnce
       ? {
-        billingTypes: ["PIX", "CREDIT_CARD"],
+        billingTypes: ["CREDIT_CARD"],
         chargeTypes: ["DETACHED"],
         minutesToExpire: 60,
         callback: {
@@ -245,9 +245,9 @@ serve(async (req) => {
         items: [
           {
             name: "Teste - Pagamento Único",
-            description: "Pagamento único de teste (R$ 1,00)",
+            description: "Pagamento único de teste (R$ 5,00)",
             quantity: 1,
-            value: 1.0,
+            value: 5.0,
           },
         ],
       }
