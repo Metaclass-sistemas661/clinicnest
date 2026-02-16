@@ -53,7 +53,7 @@ export function ProductsTable({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Produtos Cadastrados</CardTitle>
+          <CardTitle>Produtos cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 p-4">
@@ -71,18 +71,24 @@ export function ProductsTable({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Produtos Cadastrados</CardTitle>
+          <CardTitle>Produtos cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
             icon={Package}
             title="Nenhum produto cadastrado"
-            description="Cadastre os produtos em estoque para controlar vendas e baixas."
+            description={
+              isAdmin
+                ? "Cadastre produtos para controlar estoque, vendas e baixas danificadas."
+                : "Nenhum produto disponível no momento. Peça ao administrador para cadastrar o estoque."
+            }
             action={
-              <Button variant="outline" onClick={onAddProduct} data-tour="products-add-empty">
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Produto
-              </Button>
+              isAdmin ? (
+                <Button className="gradient-primary text-primary-foreground" onClick={onAddProduct} data-tour="products-add-empty">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Cadastrar produto
+                </Button>
+              ) : null
             }
           />
         </CardContent>
@@ -93,7 +99,7 @@ export function ProductsTable({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Produtos Cadastrados</CardTitle>
+        <CardTitle>Produtos cadastrados</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="block md:hidden space-y-4">
@@ -105,6 +111,7 @@ export function ProductsTable({
               <div className="space-y-3">
                 {group.products.map((product) => {
                   const isLowStock = product.quantity <= product.min_quantity;
+                  const isOutOfStock = product.quantity <= 0;
                   const salePrice = product.sale_price ?? 0;
                   const cost = product.cost ?? 0;
                   const profit = salePrice - cost;
@@ -121,12 +128,14 @@ export function ProductsTable({
                         <Badge
                           variant="outline"
                           className={
-                            isLowStock
-                              ? "bg-warning/20 text-warning border-warning/30"
-                              : "bg-success/20 text-success border-success/30"
+                            isOutOfStock
+                              ? "bg-destructive/20 text-destructive border-destructive/30"
+                              : isLowStock
+                                ? "bg-warning/20 text-warning border-warning/30"
+                                : "bg-success/20 text-success border-success/30"
                           }
                         >
-                          {isLowStock ? "Baixo" : "Normal"}
+                          {isOutOfStock ? "Zerado" : isLowStock ? "Baixo" : "Normal"}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -137,7 +146,17 @@ export function ProductsTable({
                         <span className="text-muted-foreground">Margem:</span>
                         <span>{marginPercent.toFixed(1)}%</span>
                         <span className="text-muted-foreground">Estoque:</span>
-                        <span className={isLowStock ? "font-bold text-warning" : ""}>{product.quantity}</span>
+                        <span
+                          className={
+                            isOutOfStock
+                              ? "font-bold text-destructive"
+                              : isLowStock
+                                ? "font-bold text-warning"
+                                : ""
+                          }
+                        >
+                          {product.quantity}
+                        </span>
                       </div>
                       {isAdmin && (
                         <Button
@@ -193,6 +212,7 @@ export function ProductsTable({
                   ) : (
                     group.products.map((product) => {
                       const isLowStock = product.quantity <= product.min_quantity;
+                      const isOutOfStock = product.quantity <= 0;
                       const salePrice = product.sale_price ?? 0;
                       const cost = product.cost ?? 0;
                       const profit = salePrice - cost;
@@ -212,13 +232,26 @@ export function ProductsTable({
                           <TableCell className="text-center">{marginPercent.toFixed(1)}%</TableCell>
                           <TableCell>{formatCurrency(profit)}</TableCell>
                           <TableCell className="text-center">
-                            <span className={isLowStock ? "font-bold text-warning" : ""}>
+                            <span
+                              className={
+                                isOutOfStock
+                                  ? "font-bold text-destructive"
+                                  : isLowStock
+                                    ? "font-bold text-warning"
+                                    : ""
+                              }
+                            >
                               {product.quantity}
                             </span>
                           </TableCell>
                           <TableCell className="text-center">{product.min_quantity}</TableCell>
                           <TableCell>
-                            {isLowStock ? (
+                            {isOutOfStock ? (
+                              <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/30">
+                                <AlertTriangle className="mr-1 h-3 w-3" />
+                                Zerado
+                              </Badge>
+                            ) : isLowStock ? (
                               <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
                                 <AlertTriangle className="mr-1 h-3 w-3" />
                                 Baixo

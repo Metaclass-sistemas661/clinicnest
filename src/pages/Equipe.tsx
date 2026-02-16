@@ -487,6 +487,7 @@ export default function Equipe() {
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     placeholder="Nome do profissional"
                     required
+                    data-tour="team-invite-full-name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -497,6 +498,7 @@ export default function Equipe() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="email@exemplo.com"
                     required
+                    data-tour="team-invite-email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -511,6 +513,7 @@ export default function Equipe() {
                     placeholder="Mínimo 6 caracteres"
                     minLength={6}
                     required
+                    data-tour="team-invite-password"
                   />
                 </div>
                 <div className="space-y-2">
@@ -525,6 +528,7 @@ export default function Equipe() {
                     placeholder="Repita a senha"
                     minLength={6}
                     required
+                    data-tour="team-invite-confirm-password"
                   />
                   {passwordError && (
                     <p className="text-sm text-destructive">{passwordError}</p>
@@ -536,6 +540,7 @@ export default function Equipe() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="(11) 99999-9999"
+                    data-tour="team-invite-phone"
                   />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
@@ -544,7 +549,7 @@ export default function Equipe() {
                     value={formData.role}
                     onValueChange={(v) => setFormData({ ...formData, role: v as AppRole })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="team-invite-role">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -558,7 +563,7 @@ export default function Equipe() {
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} data-tour="team-invite-cancel">
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="team-invite-submit">
@@ -595,7 +600,7 @@ export default function Equipe() {
                   setCommissionData({ ...commissionData, payment_type: v as "commission" | "salary" })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger data-tour="team-compensation-payment-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -615,7 +620,7 @@ export default function Equipe() {
                       setCommissionData({ ...commissionData, type: v as "percentage" | "fixed" })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="team-compensation-commission-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -641,6 +646,7 @@ export default function Equipe() {
                       commissionData.type === "percentage" ? "Ex: 30" : "Ex: 50.00"
                     }
                     required
+                    data-tour="team-compensation-commission-value"
                   />
                   <p className="text-xs text-muted-foreground">
                     {commissionData.type === "percentage"
@@ -663,6 +669,7 @@ export default function Equipe() {
                     }
                     placeholder="Ex: 2000.00"
                     required
+                    data-tour="team-compensation-salary-amount"
                   />
                 </div>
                 <div className="space-y-2">
@@ -677,6 +684,7 @@ export default function Equipe() {
                     }
                     placeholder="Ex: 5 (dia 5 de cada mês)"
                     required
+                    data-tour="team-compensation-salary-payment-day"
                   />
                   <p className="text-xs text-muted-foreground">
                     Dia do mês em que o salário será pago (1 a 31)
@@ -690,7 +698,7 @@ export default function Equipe() {
                       setCommissionData({ ...commissionData, default_payment_method: v })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="team-compensation-default-payment-method">
                       <SelectValue placeholder="Selecione o método" />
                     </SelectTrigger>
                     <SelectContent>
@@ -709,6 +717,7 @@ export default function Equipe() {
               type="button"
               variant="outline"
               onClick={() => setIsCommissionDialogOpen(false)}
+              data-tour="team-compensation-cancel"
             >
               Cancelar
             </Button>
@@ -796,6 +805,7 @@ export default function Equipe() {
                             size="sm"
                             onClick={() => handleOpenCommissionDialog(member)}
                             className="gap-1"
+                            data-tour="team-item-compensation"
                           >
                             <DollarSign className="h-3 w-3" />
                             Comissão
@@ -804,7 +814,7 @@ export default function Equipe() {
                             value={currentRole}
                             onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
                           >
-                            <SelectTrigger className="w-36">
+                            <SelectTrigger className="w-36" data-tour="team-item-role">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -876,6 +886,7 @@ export default function Equipe() {
                                 size="sm"
                                 onClick={() => handleOpenCommissionDialog(member)}
                                 className="gap-1"
+                                data-tour="team-item-compensation"
                               >
                                 <DollarSign className="h-3 w-3" />
                                 Comissão
@@ -884,7 +895,7 @@ export default function Equipe() {
                                 value={currentRole}
                                 onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
                               >
-                                <SelectTrigger className="w-40">
+                                <SelectTrigger className="w-40" data-tour="team-item-role">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>

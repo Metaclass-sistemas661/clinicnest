@@ -150,7 +150,7 @@ export function BulkCreateGoalsDialog({
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Profissionais</Label>
-              <Button type="button" variant="ghost" size="sm" onClick={selectAll}>
+              <Button type="button" variant="ghost" size="sm" onClick={selectAll} data-tour="goals-bulk-select-all">
                 {selectedIds.size === professionals.length ? "Desmarcar todos" : "Marcar todos"}
               </Button>
             </div>
@@ -177,13 +177,14 @@ export function BulkCreateGoalsDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="goals-bulk-cancel">
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isSaving || selectedIds.size === 0 || !targetValue}
               className="gradient-primary text-primary-foreground"
+              data-tour="goals-bulk-submit"
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

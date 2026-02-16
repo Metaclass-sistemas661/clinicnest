@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTour } from "@/contexts/TourContext";
 import {
   BookOpen,
@@ -190,11 +191,18 @@ export default function Ajuda() {
       title="Ajuda & Documentação"
       subtitle="Guia oficial VynloBella — aprenda rápido e use com confiança"
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Tabs value="ajuda" onValueChange={(v) => v === "suporte" && navigate("/suporte")}>
+            <TabsList data-tour="help-support-tabs">
+              <TabsTrigger value="ajuda" data-tour="help-tab-ajuda">Ajuda</TabsTrigger>
+              <TabsTrigger value="suporte" data-tour="help-tab-suporte">Suporte</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <Button
             variant="outline"
             onClick={tour.start}
             className="hidden sm:inline-flex"
+            data-tour="help-start-tour"
           >
             Iniciar tutorial
           </Button>
@@ -263,6 +271,11 @@ export default function Ajuda() {
                         icon={Search}
                         title="Nada encontrado"
                         description="Tente buscar por um módulo (ex.: Agenda, Financeiro) ou por uma ação (ex.: gerar PDF)."
+                        action={
+                          query ? (
+                            <Button variant="outline" onClick={() => setQuery("")}>Limpar busca</Button>
+                          ) : undefined
+                        }
                       />
                     </div>
                   ) : (
@@ -305,7 +318,11 @@ export default function Ajuda() {
               </ScrollArea>
 
               <div className="rounded-xl border p-3 text-xs text-muted-foreground">
-                Dica: se estiver travado em algo, abra um ticket em <Link className="underline" to="/suporte">Suporte</Link>.
+                Dica: se estiver travado em algo, abra um ticket em{" "}
+                <Link className="underline" to="/suporte" data-tour="help-tip-open-support">
+                  Suporte
+                </Link>
+                .
               </div>
             </div>
 
@@ -347,8 +364,12 @@ export default function Ajuda() {
 
                         <div className="flex flex-wrap gap-2">
                           {s.actions.map((a) => (
-                            <Link key={a.href} to={a.href}>
-                              <Button variant="outline" data-tour="help-section-action">
+                            <Link
+                              key={a.href}
+                              to={a.href}
+                              data-tour={`help-section-action-${s.id}-${a.href.replace(/\//g, "").replace(/\W+/g, "-")}`}
+                            >
+                              <Button variant="outline">
                                 {a.label}
                                 <ArrowRight className="h-4 w-4 ml-2" />
                               </Button>

@@ -48,7 +48,7 @@ async function sendEmailViaResend(
   log("EMAIL: Tentando enviar email via Resend", { to, subject });
   
   try {
-    const emailFrom = "VynloBella <noreply@vynlobella.com>";
+    const emailFrom = Deno.env.get("EMAIL_FROM") || "BeautyGest <no-reply@metaclass.com.br>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {

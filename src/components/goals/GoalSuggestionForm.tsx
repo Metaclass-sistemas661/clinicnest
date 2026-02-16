@@ -84,13 +84,14 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1"
+            data-tour="my-goals-suggest-name"
           />
         </div>
 
         <div>
           <Label htmlFor="suggestion-type">Tipo de meta</Label>
           <Select value={goalType} onValueChange={(v) => setGoalType(v as GoalType)}>
-            <SelectTrigger id="suggestion-type" className="mt-1">
+            <SelectTrigger id="suggestion-type" className="mt-1" data-tour="my-goals-suggest-type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -106,7 +107,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
         <div>
           <Label htmlFor="suggestion-period">Período</Label>
           <Select value={period} onValueChange={(v) => setPeriod(v as GoalPeriod)}>
-            <SelectTrigger id="suggestion-period" className="mt-1">
+            <SelectTrigger id="suggestion-period" className="mt-1" data-tour="my-goals-suggest-period">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -133,6 +134,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
             onChange={(e) => setTargetValue(e.target.value)}
             required
             className="mt-1"
+            data-tour="my-goals-suggest-target-value"
           />
         </div>
       </div>
@@ -141,6 +143,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
         type="submit"
         disabled={isSubmitting || !targetValue}
         className="gradient-primary text-primary-foreground w-full sm:w-auto"
+        data-tour="my-goals-suggest-submit"
       >
         {isSubmitting ? (
           <Loader2 className="h-4 w-4 animate-spin mr-2" />

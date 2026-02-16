@@ -336,7 +336,7 @@ export function AppointmentsTable({
           Nenhum agendamento encontrado
         </p>
         <p className="text-sm text-muted-foreground">
-          Clique em 'Novo Agendamento' para começar
+          Clique em 'Novo agendamento' para começar
         </p>
       </div>
     );
@@ -557,11 +557,13 @@ export function AppointmentsTable({
                           {/* Quick actions */}
                           {appointment.status === "pending" && (
                             <Button
+                              type="button"
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 text-success hover:bg-success/10 hover:text-success"
                               onClick={() => handleStatusChange(appointment, "confirmed")}
                               title="Confirmar"
+                              aria-label="Confirmar agendamento"
                               data-tour="agenda-action-confirm"
                             >
                               <CheckCircle2 className="h-4 w-4" />
@@ -569,11 +571,13 @@ export function AppointmentsTable({
                           )}
                           {appointment.status === "confirmed" && (
                             <Button
+                              type="button"
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
                               onClick={() => handleStatusChange(appointment, "completed")}
                               title="Concluir"
+                              aria-label="Concluir agendamento"
                               data-tour="agenda-action-complete"
                             >
                               <CheckCircle2 className="h-4 w-4" />
@@ -583,7 +587,14 @@ export function AppointmentsTable({
                           {/* More options */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" data-tour="agenda-action-more">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                aria-label="Mais ações"
+                                data-tour="agenda-action-more"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

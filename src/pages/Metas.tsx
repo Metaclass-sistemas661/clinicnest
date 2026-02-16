@@ -24,7 +24,13 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
+import {
+  archiveGoalV2,
+  createGoalTemplateV2,
+  createGoalV2,
+  getGoalsWithProgress,
+  updateGoalV2,
+} from "@/lib/supabase-typed-rpc";
 import { useNavigate } from "react-router-dom";
 import {
   Target,
@@ -44,7 +50,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { toastRpcError } from "@/lib/rpc-error";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { useSimpleMode } from "@/lib/simple-mode";
 import {
   goalTypeLabels,
   periodLabels,
@@ -83,6 +91,7 @@ type SortOption = "progress_desc" | "progress_asc" | "name" | "days_remaining";
 export default function Metas() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -164,6 +173,13 @@ export default function Metas() {
     }
   }, [profile?.tenant_id, isAdmin, showArchived]);
 
+  useEffect(() => {
+    if (simpleModeEnabled) {
+      setCreateMode("quick");
+      setBulkCreateOpen(false);
+    }
+  }, [simpleModeEnabled]);
+
 
   const formatValue = (g: GoalWithProgress) => {
     if (g.goal_type === "revenue" || g.goal_type === "product_revenue" || g.goal_type === "ticket_medio")
@@ -183,18 +199,20 @@ export default function Metas() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("goals").insert({
-        tenant_id: profile.tenant_id,
-        name: formData.name.trim() || `Meta ${goalTypeLabels[formData.goal_type]}`,
-        goal_type: formData.goal_type,
-        target_value: target,
-        period: formData.period,
-        professional_id: formData.professional_id || null,
-        product_id: formData.product_id || null,
-        show_in_header: formData.show_in_header,
+      const { error } = await createGoalV2({
+        p_name: formData.name.trim() || `Meta ${goalTypeLabels[formData.goal_type]}`,
+        p_goal_type: formData.goal_type,
+        p_target_value: target,
+        p_period: formData.period,
+        p_professional_id: formData.professional_id || null,
+        p_product_id: formData.product_id || null,
+        p_show_in_header: formData.show_in_header,
       });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao criar meta");
+        return;
+      }
       toast.success("Meta criada!");
       setIsDialogOpen(false);
       setFormData({
@@ -208,7 +226,7 @@ export default function Metas() {
       });
       fetchData(showArchived);
     } catch (_e: unknown) {
-      toast.error((e as { message?: string })?.message || "Erro ao criar meta");
+      toast.error((_e as { message?: string })?.message || "Erro ao criar meta");
     } finally {
       setIsSaving(false);
     }
@@ -218,25 +236,26 @@ export default function Metas() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { error } = await supabase
-        .from("goals")
-        .update({
-          name: data.name,
-          target_value: data.target_value,
-          period: data.period,
-          professional_id: data.professional_id || null,
-          product_id: data.product_id || null,
-          show_in_header: data.show_in_header,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", goal.id);
+      const { error } = await updateGoalV2({
+        p_goal_id: goal.id,
+        p_name: data.name,
+        p_target_value: data.target_value,
+        p_period: data.period,
+        p_professional_id: data.professional_id || null,
+        p_product_id: data.product_id || null,
+        p_show_in_header: data.show_in_header,
+        p_header_priority: goal.header_priority ?? null,
+      });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao atualizar meta");
+        throw error;
+      }
       toast.success("Meta atualizada!");
       fetchData(showArchived);
     } catch (_e: unknown) {
-      toast.error((e as { message?: string })?.message || "Erro ao atualizar meta");
-      throw e;
+      toast.error((_e as { message?: string })?.message || "Erro ao atualizar meta");
+      throw _e;
     }
   };
 
@@ -244,12 +263,15 @@ export default function Metas() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { error } = await supabase
-        .from("goals")
-        .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq("id", goal.id);
+      const { error } = await archiveGoalV2({
+        p_goal_id: goal.id,
+        p_archived: true,
+      });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao arquivar meta");
+        return;
+      }
       toast.success("Meta arquivada");
       fetchData(showArchived);
     } catch (_e: unknown) {
@@ -261,18 +283,20 @@ export default function Metas() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { error } = await supabase.from("goals").insert({
-        tenant_id: profile.tenant_id,
-        name: `${goal.name} (cópia)`,
-        goal_type: goal.goal_type,
-        target_value: goal.target_value,
-        period: goal.period,
-        professional_id: goal.professional_id,
-        product_id: goal.product_id,
-        show_in_header: false,
+      const { error } = await createGoalV2({
+        p_name: `${goal.name} (cópia)`,
+        p_goal_type: String(goal.goal_type),
+        p_target_value: goal.target_value,
+        p_period: String(goal.period),
+        p_professional_id: goal.professional_id,
+        p_product_id: goal.product_id,
+        p_show_in_header: false,
       });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao duplicar meta");
+        return;
+      }
       toast.success("Meta duplicada!");
       fetchData(showArchived);
     } catch (_e: unknown) {
@@ -289,26 +313,27 @@ export default function Metas() {
     if (!profile?.tenant_id) return;
 
     try {
-      const inserts = params.professionalIds.map((profId) => {
+      for (const profId of params.professionalIds) {
         const prof = professionals.find((p) => p.id === profId);
-        return {
-          tenant_id: profile.tenant_id,
-          name: `Meta ${goalTypeLabels[params.goal_type]} - ${prof?.full_name || "Profissional"}`,
-          goal_type: params.goal_type,
-          target_value: params.target_value,
-          period: params.period,
-          professional_id: profId,
-          product_id: null,
-          show_in_header: false,
-        };
-      });
-      const { error } = await supabase.from("goals").insert(inserts);
-      if (error) throw error;
-      toast.success(`${inserts.length} meta(s) criada(s)!`);
+        const { error } = await createGoalV2({
+          p_name: `Meta ${goalTypeLabels[params.goal_type]} - ${prof?.full_name || "Profissional"}`,
+          p_goal_type: params.goal_type,
+          p_target_value: params.target_value,
+          p_period: params.period,
+          p_professional_id: profId,
+          p_product_id: null,
+          p_show_in_header: false,
+        });
+        if (error) {
+          toastRpcError(toast, error as any, "Erro ao criar metas");
+          throw error;
+        }
+      }
+      toast.success(`${params.professionalIds.length} meta(s) criada(s)!`);
       fetchData(showArchived);
     } catch (_e: unknown) {
-      toast.error((e as { message?: string })?.message || "Erro ao criar metas");
-      throw e;
+      toast.error((_e as { message?: string })?.message || "Erro ao criar metas");
+      throw _e;
     }
   };
 
@@ -355,14 +380,16 @@ export default function Metas() {
       return;
     }
     try {
-      const { error } = await supabase.from("goal_templates").insert({
-        tenant_id: profile.tenant_id,
-        name: formData.name.trim() || `Template ${goalTypeLabels[formData.goal_type]}`,
-        goal_type: formData.goal_type,
-        target_value: target,
-        period: formData.period,
+      const { error } = await createGoalTemplateV2({
+        p_name: formData.name.trim() || `Template ${goalTypeLabels[formData.goal_type]}`,
+        p_goal_type: formData.goal_type,
+        p_target_value: target,
+        p_period: formData.period,
       });
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao salvar template");
+        return;
+      }
       toast.success("Template salvo!");
       fetchData(showArchived);
     } catch (_e: unknown) {
@@ -391,16 +418,28 @@ export default function Metas() {
         const maxPriority = goals
           .filter((g) => g.show_in_header || (g.header_priority ?? 0) > 0)
           .reduce((max, g) => Math.max(max, g.header_priority ?? 0), 0);
-        const { error } = await supabase
-          .from("goals")
-          .update({ show_in_header: true, header_priority: maxPriority + 1 })
-          .eq("id", goal.id);
+        const { error } = await updateGoalV2({
+          p_goal_id: goal.id,
+          p_name: goal.name,
+          p_target_value: goal.target_value,
+          p_period: String(goal.period),
+          p_professional_id: goal.professional_id,
+          p_product_id: goal.product_id,
+          p_show_in_header: true,
+          p_header_priority: maxPriority + 1,
+        });
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("goals")
-          .update({ show_in_header: false, header_priority: 0 })
-          .eq("id", goal.id);
+        const { error } = await updateGoalV2({
+          p_goal_id: goal.id,
+          p_name: goal.name,
+          p_target_value: goal.target_value,
+          p_period: String(goal.period),
+          p_professional_id: goal.professional_id,
+          p_product_id: goal.product_id,
+          p_show_in_header: false,
+          p_header_priority: 0,
+        });
         if (error) throw error;
       }
       toast.success(newVal ? "Meta exibida no cabeçalho" : "Meta removida do cabeçalho");
@@ -520,10 +559,10 @@ export default function Metas() {
               {advancedBlockedMessage || "Faça upgrade em Assinatura para liberar relatórios avançados."}
             </p>
             <div className="mt-6 flex flex-wrap gap-2 justify-center">
-              <Button className="gradient-primary text-primary-foreground" onClick={() => navigate("/assinatura")}> 
+              <Button className="gradient-primary text-primary-foreground" onClick={() => navigate("/assinatura")} data-tour="goals-advanced-blocked-upgrade">
                 Ver planos
               </Button>
-              <Button variant="outline" onClick={() => fetchData(showArchived)}>
+              <Button variant="outline" onClick={() => fetchData(showArchived)} data-tour="goals-advanced-blocked-retry">
                 Tentar novamente
               </Button>
             </div>
@@ -539,20 +578,24 @@ export default function Metas() {
       subtitle="Defina metas, aprove sugestões dos profissionais e acompanhe o desempenho"
       actions={
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={isLoading || activeGoals.length === 0}
-            data-tour="goals-export-csv"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Exportar CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setBulkCreateOpen(true)} data-tour="goals-bulk-create">
-            <CopyPlus className="mr-2 h-4 w-4" />
-            Criar em lote
-          </Button>
+          {!simpleModeEnabled ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCsv}
+              disabled={isLoading || activeGoals.length === 0}
+              data-tour="goals-export-csv"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
+          ) : null}
+          {!simpleModeEnabled ? (
+            <Button variant="outline" size="sm" onClick={() => setBulkCreateOpen(true)} data-tour="goals-bulk-create">
+              <CopyPlus className="mr-2 h-4 w-4" />
+              Criar em lote
+            </Button>
+          ) : null}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground" data-tour="goals-new-goal">
@@ -572,20 +615,24 @@ export default function Metas() {
               onValueChange={(v) => setCreateMode(v as "quick" | "wizard")}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="quick">Rápido</TabsTrigger>
-                <TabsTrigger value="wizard">Assistente</TabsTrigger>
-              </TabsList>
-              <TabsContent value="wizard" className="mt-0">
-                <GoalCreateWizard
-                  professionals={professionals}
-                  products={products}
-                  formData={formData}
-                  onFormChange={(d) => setFormData((prev) => ({ ...prev, ...d }))}
-                  onSubmit={handleCreate}
-                  isSaving={isSaving}
-                />
-              </TabsContent>
+              {!simpleModeEnabled ? (
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="quick">Rápido</TabsTrigger>
+                  <TabsTrigger value="wizard">Assistente</TabsTrigger>
+                </TabsList>
+              ) : null}
+              {!simpleModeEnabled ? (
+                <TabsContent value="wizard" className="mt-0">
+                  <GoalCreateWizard
+                    professionals={professionals}
+                    products={products}
+                    formData={formData}
+                    onFormChange={(d) => setFormData((prev) => ({ ...prev, ...d }))}
+                    onSubmit={handleCreate}
+                    isSaving={isSaving}
+                  />
+                </TabsContent>
+              ) : null}
               <TabsContent value="quick" className="mt-0">
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
@@ -712,7 +759,7 @@ export default function Metas() {
                   Exibir barra de progresso no cabeçalho
                 </Label>
               </div>
-              {templates.length > 0 && (
+              {!simpleModeEnabled && templates.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">Carregar de template</Label>
                   <div className="flex flex-wrap gap-2">
@@ -724,6 +771,7 @@ export default function Metas() {
                         size="sm"
                         className="gap-1"
                         onClick={() => handleLoadTemplate(t)}
+                        data-tour="goals-load-template"
                       >
                         <FileText className="h-3 w-3" />
                         {t.name}
@@ -734,25 +782,34 @@ export default function Metas() {
               )}
               <DialogFooter className="flex-col sm:flex-row gap-2">
                 <div className="flex-1 flex justify-start">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSaveAsTemplate}
-                    disabled={isSaving || !formData.target_value}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Salvar como template
-                  </Button>
+                  {!simpleModeEnabled && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveAsTemplate}
+                      disabled={isSaving || !formData.target_value}
+                      data-tour="goals-save-as-template"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Salvar como template
+                    </Button>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    data-tour="goals-create-cancel"
+                  >
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSaving}
                     className="gradient-primary text-primary-foreground"
+                    data-tour="goals-create-submit"
                   >
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar meta"}
                   </Button>
@@ -810,7 +867,7 @@ export default function Metas() {
         </div>
       )}
 
-      {!isLoading && profile?.tenant_id && (
+      {!simpleModeEnabled && !isLoading && profile?.tenant_id && (
         <div className="mb-6">
           <GoalSuggestionsAdminSection
             tenantId={profile.tenant_id}
@@ -821,7 +878,7 @@ export default function Metas() {
         </div>
       )}
 
-      {!isLoading && kpiCompleted > 0 && (
+      {!simpleModeEnabled && !isLoading && kpiCompleted > 0 && (
         <div className="mb-6">
           <GoalAchievementsSection
             completedGoals={activeGoals.filter((g) => g.progress_pct >= 100)}
@@ -1009,12 +1066,16 @@ export default function Metas() {
         />
       )}
 
-      <BulkCreateGoalsDialog
-        open={bulkCreateOpen}
-        onOpenChange={setBulkCreateOpen}
-        professionals={professionals}
-        onConfirm={handleBulkCreate}
-      />
+      {!simpleModeEnabled ? (
+        <BulkCreateGoalsDialog
+          open={bulkCreateOpen}
+          onOpenChange={setBulkCreateOpen}
+          professionals={professionals}
+          products={products}
+          isSaving={isSaving}
+          onCreate={handleBulkCreate}
+        />
+      ) : null}
     </MainLayout>
   );
 }

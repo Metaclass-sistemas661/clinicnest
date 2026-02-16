@@ -1,8 +1,19 @@
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -28,6 +39,14 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
   onMarkAsPaid,
   formatCurrency,
 }: FinanceiroCommissionsTabProps) {
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const sortedCommissions = useMemo(() => {
+    const pending = commissions.filter((c) => c.status === "pending");
+    const paid = commissions.filter((c) => c.status !== "pending");
+    return [...pending, ...paid];
+  }, [commissions]);
+
   if (isLoading) {
     return (
       <Card>
@@ -53,10 +72,11 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
           <CardTitle>Gerenciar Comissões</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-12">
-            <Wallet className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="text-muted-foreground">Nenhuma comissão neste período</p>
-          </div>
+          <EmptyState
+            icon={Wallet}
+            title="Nenhuma comissão neste período"
+            description="As comissões aparecem quando atendimentos são concluídos (e geram comissão)."
+          />
         </CardContent>
       </Card>
     );
@@ -66,10 +86,33 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
     <Card>
       <CardHeader>
         <CardTitle>Gerenciar Comissões</CardTitle>
+        <p className="text-sm text-muted-foreground">Comissões geradas por atendimentos concluídos no período</p>
       </CardHeader>
       <CardContent>
+        <AlertDialog open={!!confirmId} onOpenChange={(open) => !open && setConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar pagamento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Confirme para marcar esta comissão como paga. Essa ação ajuda na auditoria e no controle.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmId(null)}>Voltar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmId) onMarkAsPaid(confirmId);
+                  setConfirmId(null);
+                }}
+              >
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <div className="block md:hidden space-y-3">
-          {commissions.map((commission) => (
+          {sortedCommissions.map((commission) => (
             <div key={commission.id} className="rounded-lg border p-4 space-y-2">
               <div className="flex justify-between items-start">
                 <p className="font-medium">{commission.professional?.full_name || "—"}</p>
@@ -98,7 +141,7 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => onMarkAsPaid(commission.id)}
+                  onClick={() => setConfirmId(commission.id)}
                   className="w-full gap-1"
                 >
                   <CheckCircle2 className="h-3 w-3" />
@@ -127,7 +170,7 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {commissions.map((commission) => (
+              {sortedCommissions.map((commission) => (
                 <TableRow key={commission.id}>
                   <TableCell>
                     {formatInAppTz(commission.created_at, "dd/MM/yyyy")}
@@ -161,7 +204,7 @@ export const FinanceiroCommissionsTab = memo(function FinanceiroCommissionsTab({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onMarkAsPaid(commission.id)}
+                        onClick={() => setConfirmId(commission.id)}
                         className="gap-1"
                       >
                         <CheckCircle2 className="h-3 w-3" />

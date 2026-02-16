@@ -29,7 +29,7 @@ export function DamagedMovementsCard({
 }: DamagedMovementsCardProps) {
   if (isLoading) {
     return (
-      <Card className="mt-6">
+      <Card className="mt-6" data-tour="products-damaged-history">
         <CardHeader>
           <CardTitle>Histórico de Baixas (danificados)</CardTitle>
         </CardHeader>
@@ -47,7 +47,7 @@ export function DamagedMovementsCard({
 
   if (movements.length === 0) {
     return (
-      <Card className="mt-6">
+      <Card className="mt-6" data-tour="products-damaged-history">
         <CardHeader>
           <CardTitle>Histórico de Baixas (danificados)</CardTitle>
         </CardHeader>
@@ -61,7 +61,7 @@ export function DamagedMovementsCard({
   }
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-6" data-tour="products-damaged-history">
       <CardHeader>
         <CardTitle>Histórico de Baixas (danificados)</CardTitle>
       </CardHeader>

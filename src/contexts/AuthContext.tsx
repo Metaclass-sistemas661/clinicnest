@@ -36,10 +36,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const siteOrigin = typeof window !== "undefined" ? window.location.origin : "";
+
   const isAdmin = userRole?.role === 'admin';
 
   const fetchUserData = async (userId: string): Promise<{ profile: Profile | null; userRole: UserRole | null; tenant: Tenant | null }> => {
     try {
+      // Prefer single-roundtrip context load via RPC (enterprise hardening)
+      try {
+        const { data: ctx, error: ctxError } = await supabase.rpc("get_my_context");
+        if (!ctxError && ctx) {
+          const ctxAny = ctx as any;
+          const profileData = (ctxAny.profile ?? null) as Profile | null;
+          const roleData = (ctxAny.role ?? null) as UserRole | null;
+          const tenantData = (ctxAny.tenant ?? null) as Tenant | null;
+
+          // Ensure returned context is for the same user
+          if (profileData?.user_id === userId) {
+            return { profile: profileData, userRole: roleData, tenant: tenantData };
+          }
+        }
+      } catch {
+        // Fallback to legacy multi-query path
+      }
+
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -153,8 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
       options: {
-        // Sempre usar vynlobella.com para evitar redirect para vercel.app no mobile
-        emailRedirectTo: "https://vynlobella.com/login",
+        emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
         data: {
           full_name: fullName,
           salon_name: salonName,
@@ -174,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
+    const redirectTo = siteOrigin ? `${siteOrigin}/reset-password` : undefined;
     try {
       // Chamar Edge Function para enviar email customizado
       // A Edge Function buscará o nome do usuário internamente
@@ -182,13 +202,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: {
           email,
           type: "password_reset",
+          redirectTo,
         },
       });
 
       if (error) {
         // Fallback para método padrão do Supabase se Edge Function falhar
         const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://vynlobella.com/reset-password",
+          redirectTo,
         });
         return { error: fallbackError || error };
       }
@@ -196,7 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data?.success) {
         // Fallback para método padrão
         const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://vynlobella.com/reset-password",
+          redirectTo,
         });
         return { error: fallbackError || new Error(data?.message || "Erro ao enviar email") };
       }
@@ -205,7 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       // Fallback para método padrão em caso de erro
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://vynlobella.com/reset-password",
+        redirectTo,
       });
       return { error: error || (err instanceof Error ? err : new Error("Erro ao solicitar recuperação de senha")) };
     }

@@ -19,14 +19,15 @@ import {
   Wallet,
   Target,
   Bell,
-  LifeBuoy,
   BookOpen,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useSimpleMode } from "@/lib/simple-mode";
 
 interface NavItem {
   title: string;
@@ -64,14 +65,15 @@ const navCategories: NavCategory[] = [
     label: "Administrativo",
     items: [
       { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
+      { title: "Auditoria", href: "/auditoria", icon: Shield, adminOnly: true },
+      { title: "Diagnóstico", href: "/diagnostico-seguranca", icon: Shield, adminOnly: true },
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
-      { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
-      { title: "Minhas Configurações", href: "/minhas-configuracoes", icon: Settings, staffOnly: true },
-      { title: "Notificações", href: "/notificacoes", icon: Bell, staffOnly: true },
+      { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Meu Perfil", href: "/minhas-configuracoes", icon: Settings },
+      { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
       { title: "Ajuda", href: "/ajuda", icon: BookOpen },
-      { title: "Suporte", href: "/suporte", icon: LifeBuoy },
     ],
   },
 ];
@@ -84,6 +86,8 @@ const prefetchByHref: Record<string, () => void> = {
   "/financeiro": () => void import("@/pages/Financeiro"),
   "/produtos": () => void import("@/pages/Produtos"),
   "/metas": () => void import("@/pages/Metas"),
+  "/auditoria": () => void import("@/pages/Auditoria"),
+  "/diagnostico-seguranca": () => void import("@/pages/DiagnosticoSeguranca"),
   "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
@@ -117,6 +121,7 @@ function SidebarContent({
   const auth = useAuth();
   const { profile, tenant, signOut } = auth;
   const isAdmin = auth?.isAdmin ?? false;
+  const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
 
   const handleSignOut = async () => {
     onNavigate?.();
@@ -154,6 +159,7 @@ function SidebarContent({
           const filteredItems = category.items.filter((item) => {
             if (item.adminOnly && !isAdmin) return false;
             if (item.staffOnly && isAdmin) return false;
+            if (simpleModeEnabled && item.href === "/auditoria") return false;
             return true;
           });
           if (filteredItems.length === 0) return null;
@@ -177,7 +183,6 @@ function SidebarContent({
                     item.href === "/minhas-comissoes" ? "sidebar-minhas-comissoes" :
                     item.href === "/meus-salarios" ? "sidebar-meus-salarios" :
                     item.href === "/ajuda" ? "sidebar-ajuda" :
-                    item.href === "/suporte" ? "sidebar-suporte" :
                     undefined;
                   return (
                     <Link
@@ -277,7 +282,13 @@ export function Sidebar() {
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9"
+                aria-label="Abrir menu"
+              >
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Abrir menu</span>
               </Button>
@@ -308,11 +319,13 @@ export function Sidebar() {
 
       {/* Collapse Toggle */}
       <Button
+        type="button"
         variant="ghost"
         size="icon"
         className={cn(
           "absolute -right-4 top-24 z-50 h-8 w-8 rounded-full border bg-card shadow-lg hover:bg-primary hover:text-primary-foreground transition-all",
         )}
+        aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
         {isCollapsed ? (

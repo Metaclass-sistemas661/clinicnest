@@ -353,7 +353,7 @@ async function sendEmailViaResend(
   log("EMAIL: Tentando enviar email via Resend", { to, subject });
   
   try {
-    const emailFrom = "VynloBella <noreply@vynlobella.com>";
+    const emailFrom = Deno.env.get("EMAIL_FROM") || "BeautyGest <no-reply@metaclass.com.br>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -399,6 +399,21 @@ interface EmailBody {
   email: string;
   type: "password_reset" | "confirmation" | "password_changed";
   name?: string;
+  redirectTo?: string;
+}
+
+function normalizeSiteUrl(raw: string | undefined | null): string {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s) return "https://beautygest.metaclass.com.br";
+  if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
+  return `https://${s}`.replace(/\/+$/, "");
+}
+
+function safeRedirectTo(raw: string | undefined | null, fallback: string): string {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s) return fallback;
+  if (s.startsWith("https://")) return s;
+  return fallback;
 }
 
 serve(async (req) => {
@@ -452,9 +467,12 @@ serve(async (req) => {
       );
     }
 
-    const { email, type, name } = body;
+    const { email, type, name, redirectTo } = body;
     const emailTrim = typeof email === "string" ? email.trim() : "";
     let nameTrim = typeof name === "string" ? name.trim() : "";
+    const siteUrl = normalizeSiteUrl(Deno.env.get("SITE_URL") || Deno.env.get("PUBLIC_SITE_URL"));
+    const loginUrl = `${siteUrl}/login`;
+    const resetPasswordRedirectTo = safeRedirectTo(redirectTo, `${siteUrl}/reset-password`);
     const requesterIp =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("cf-connecting-ip") ||
@@ -520,7 +538,6 @@ serve(async (req) => {
 
     if (type === "password_changed") {
       // Para password_changed, não precisa gerar link, apenas usar login URL
-      const loginUrl = "https://vynlobella.com/login";
       subject = "Senha alterada com sucesso - VynloBella";
       emailHtml = getPasswordChangedEmailHtml(nameTrim, loginUrl);
       emailText = getPasswordChangedEmailText(nameTrim, loginUrl);
@@ -532,7 +549,7 @@ serve(async (req) => {
           type: "recovery",
           email: emailTrim,
           options: {
-            redirectTo: "https://vynlobella.com/reset-password",
+            redirectTo: resetPasswordRedirectTo,
           },
         });
       } else {
@@ -540,7 +557,7 @@ serve(async (req) => {
           type: "signup",
           email: emailTrim,
           options: {
-            redirectTo: "https://vynlobella.com/login",
+            redirectTo: loginUrl,
           },
         });
       }

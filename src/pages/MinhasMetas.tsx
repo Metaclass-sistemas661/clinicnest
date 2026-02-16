@@ -13,6 +13,7 @@ import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
+import { useSimpleMode } from "@/lib/simple-mode";
 import {
   goalTypeLabels,
   periodLabels,
@@ -42,6 +43,7 @@ interface GoalSuggestion {
 
 export default function MinhasMetas() {
   const { profile, isAdmin, refreshProfile } = useAuth();
+  const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -226,7 +228,7 @@ export default function MinhasMetas() {
           />
         </div>
 
-        {suggestions.length > 0 && (
+        {!simpleModeEnabled && suggestions.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Minhas sugestões</CardTitle>
@@ -283,12 +285,14 @@ export default function MinhasMetas() {
           </Card>
         )}
 
-        <GoalAchievementsSection
-          completedGoals={goals.filter((g) => g.progress_pct >= 100)}
-          professionals={[]}
-          tenantId={profile!.tenant_id!}
-          professionalId={profile!.id}
-        />
+        {!simpleModeEnabled ? (
+          <GoalAchievementsSection
+            completedGoals={goals.filter((g) => g.progress_pct >= 100)}
+            professionals={[]}
+            tenantId={profile!.tenant_id!}
+            professionalId={profile!.id}
+          />
+        ) : null}
 
         <div className="space-y-4">
         {goals.length === 0 ? (
@@ -336,17 +340,19 @@ export default function MinhasMetas() {
                     </Badge>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-2 gap-2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setDetailGoal(goal)}
-                  data-tour="my-goals-open-details"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Ver evolução e comparativo
-                  <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
-                </Button>
+                {!simpleModeEnabled ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-2 gap-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setDetailGoal(goal)}
+                    data-tour="my-goals-open-details"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Ver evolução e comparativo
+                    <ChevronDown className="h-4 w-4 rotate-[-90deg]" />
+                  </Button>
+                ) : null}
               </CardContent>
             </Card>
           );
@@ -354,7 +360,7 @@ export default function MinhasMetas() {
         </div>
       </div>
 
-      {detailGoal && (
+      {!simpleModeEnabled && detailGoal && (
         <GoalDetailDialog
           goal={detailGoal}
           tenantId={profile!.tenant_id!}

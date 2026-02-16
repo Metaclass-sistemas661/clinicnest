@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Dialog,
   DialogContent,
@@ -24,14 +25,15 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
-import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
-import { Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
+import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX } from "lucide-react";
 import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
+import { toastRpcError } from "@/lib/rpc-error";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
@@ -51,6 +53,9 @@ export default function Agenda() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [pendingCancelAppointmentId, setPendingCancelAppointmentId] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
@@ -215,22 +220,26 @@ export default function Agenda() {
       }
 
       const professionalId = !isAdmin ? (profile?.id ?? null) : (formData.professional_id || null);
-      const { error } = await supabase.from("appointments").insert({
-        tenant_id: profile.tenant_id,
-        client_id: formData.client_id || null,
-        service_id: formData.service_id || null,
-        professional_id: professionalId,
-        scheduled_at: scheduledAt.toISOString(),
-        duration_minutes: durationMinutes,
-        price: selectedService?.price || 0,
-        status: formData.status,
-        notes: formData.notes || null,
+      const { data: rpcData, error } = await createAppointmentV2({
+        p_client_id: formData.client_id || null,
+        p_service_id: formData.service_id || null,
+        p_professional_profile_id: professionalId,
+        p_scheduled_at: scheduledAt.toISOString(),
+        p_duration_minutes: durationMinutes,
+        p_price: selectedService?.price || 0,
+        p_status: formData.status,
+        p_notes: formData.notes || null,
       });
+      if (error) {
+        toastRpcError(toast, error, "Erro ao criar agendamento");
+        return;
+      }
 
-      if (error) throw error;
+      const createdId = String((rpcData as any)?.appointment_id ?? "");
+      const createdProfessionalId = professionalId;
 
       // Notificar profissional: quando admin cria para ele OU quando cria o próprio
-      if (professionalId && profile?.user_id) {
+      if (createdProfessionalId && profile?.user_id) {
         const prof = professionals.find((p) => p.id === professionalId);
         const client = clients.find((c) => c.id === formData.client_id);
         const service = selectedService;
@@ -272,33 +281,26 @@ export default function Agenda() {
 
   const updateAppointmentStatus = async (id: string, status: AppointmentStatus) => {
     try {
+      if (status === "cancelled") {
+        setPendingCancelAppointmentId(id);
+        setCancelReason("");
+        setIsCancelDialogOpen(true);
+        return;
+      }
+
       const apt = appointments.find((a) => a.id === id);
-      const { error } = await supabase
-        .from("appointments")
-        .update({ status })
-        .eq("id", id)
-        .select();
+      const { error } = await (async () => {
+        const { error } = await setAppointmentStatusV2({
+          p_appointment_id: id,
+          p_status: status,
+        });
+        return { error };
+      })();
 
       if (error) {
         logger.error("Error updating appointment status:", error);
         toast.error(`Erro ao atualizar status: ${error.message}`);
         return;
-      }
-
-      // Notificar profissional quando agendamento é cancelado
-      if (status === "cancelled" && apt?.professional_id && profile?.tenant_id) {
-        const prof = professionals.find((p) => p.id === apt.professional_id);
-        const client = apt.client as { name?: string } | undefined;
-        if (prof?.user_id) {
-          notifyUser(
-            profile.tenant_id,
-            prof.user_id,
-            "appointment_cancelled",
-            "Agendamento cancelado",
-            `O agendamento com ${client?.name || "cliente"} foi cancelado.`,
-            {}
-          ).catch(() => {});
-        }
       }
 
       const statusMessages = {
@@ -316,24 +318,69 @@ export default function Agenda() {
     }
   };
 
+  const confirmCancelAppointment = async () => {
+    if (!pendingCancelAppointmentId) return;
+
+    const id = pendingCancelAppointmentId;
+    const apt = appointments.find((a) => a.id === id);
+
+    try {
+      const { error } = await supabase.rpc("cancel_appointment", {
+        p_appointment_id: id,
+        p_reason: cancelReason || null,
+      });
+
+      if (error) {
+        logger.error("Error cancelling appointment:", error);
+        toast.error(error.message || "Erro ao cancelar agendamento");
+        return;
+      }
+
+      // Notificar profissional quando agendamento é cancelado
+      if (apt?.professional_id && profile?.tenant_id) {
+        const prof = professionals.find((p) => p.id === apt.professional_id);
+        const client = apt.client as { name?: string } | undefined;
+        if (prof?.user_id) {
+          notifyUser(
+            profile.tenant_id,
+            prof.user_id,
+            "appointment_cancelled",
+            "Agendamento cancelado",
+            `O agendamento com ${client?.name || "cliente"} foi cancelado.`,
+            {}
+          ).catch(() => {});
+        }
+      }
+
+      toast.success("Agendamento cancelado");
+      setIsCancelDialogOpen(false);
+      setPendingCancelAppointmentId(null);
+      setCancelReason("");
+      fetchData();
+    } catch (error: any) {
+      logger.error("Exception cancelling appointment:", error);
+      toast.error(error?.message || "Erro ao cancelar agendamento");
+    }
+  };
+
   const editAppointment = async (id: string, data: EditAppointmentData) => {
     try {
       const selectedService = services.find((s) => s.id === data.service_id);
-      
-      const { error } = await supabase
-        .from("appointments")
-        .update({
-          client_id: data.client_id,
-          service_id: data.service_id,
-          professional_id: data.professional_id,
-          scheduled_at: data.scheduled_at,
-          notes: data.notes,
-          price: selectedService?.price || 0,
-          duration_minutes: selectedService?.duration_minutes || 45,
-        })
-        .eq("id", id);
 
-      if (error) throw error;
+      const { error } = await updateAppointmentV2({
+        p_appointment_id: id,
+        p_client_id: data.client_id,
+        p_service_id: data.service_id,
+        p_professional_profile_id: data.professional_id,
+        p_scheduled_at: data.scheduled_at,
+        p_duration_minutes: selectedService?.duration_minutes || 45,
+        p_price: selectedService?.price || 0,
+        p_notes: data.notes,
+      });
+      if (error) {
+        toastRpcError(toast, error, "Erro ao atualizar agendamento");
+        return;
+      }
 
       toast.success("Agendamento atualizado com sucesso!");
       fetchData();
@@ -345,12 +392,14 @@ export default function Agenda() {
 
   const deleteAppointment = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("appointments")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      const { error } = await deleteAppointmentV2({
+        p_appointment_id: id,
+        p_reason: null,
+      });
+      if (error) {
+        toastRpcError(toast, error, "Erro ao excluir agendamento");
+        return;
+      }
 
       toast.success("Agendamento excluído com sucesso!");
       fetchData();
@@ -460,9 +509,7 @@ export default function Agenda() {
     } catch (error: any) {
       const errMsg = error?.message ?? (typeof error === "string" ? error : "Erro desconhecido");
       logger.error("Error completing appointment:", errMsg, error);
-      if (!errMsg?.includes("Estoque insuficiente") && !errMsg?.includes("Produto não encontrado")) {
-        toast.error("Erro ao concluir agendamento.");
-      }
+      toastRpcError(toast, error, "Erro ao concluir agendamento");
       throw error;
     }
   };
@@ -476,6 +523,12 @@ export default function Agenda() {
       return matchesStatus && matchesProfessional;
     });
   }, [appointments, statusFilter, professionalFilter]);
+
+  const hasActiveFilters = useMemo(() => {
+    if (statusFilter !== "all") return true;
+    if (isAdmin && professionalFilter !== "all") return true;
+    return false;
+  }, [statusFilter, professionalFilter, isAdmin]);
 
   // Appointment counts for filter badges
   const appointmentCounts = useMemo(() => {
@@ -533,13 +586,13 @@ export default function Agenda() {
             <DialogTrigger asChild>
               <Button className="gradient-primary text-primary-foreground text-sm" data-tour="agenda-new-appointment">
                 <Plus className="mr-1 md:mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Novo Agendamento</span>
+                <span className="hidden sm:inline">Novo agendamento</span>
                 <span className="sm:hidden">Novo</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Novo Agendamento</DialogTitle>
+                <DialogTitle>Novo agendamento</DialogTitle>
                 <DialogDescription>
                   Preencha os dados do agendamento
                 </DialogDescription>
@@ -677,10 +730,54 @@ export default function Agenda() {
         </div>
       }
     >
+      <Dialog
+        open={isCancelDialogOpen}
+        onOpenChange={(open) => {
+          setIsCancelDialogOpen(open);
+          if (!open) {
+            setPendingCancelAppointmentId(null);
+            setCancelReason("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cancelar agendamento</DialogTitle>
+            <DialogDescription>
+              Se quiser, informe um motivo. Isso ajuda no controle e na auditoria.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Motivo (opcional)</Label>
+            <Input
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ex.: cliente pediu para remarcar"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+              Voltar
+            </Button>
+            <Button type="button" className="gradient-primary text-primary-foreground" onClick={confirmCancelAppointment}>
+              Confirmar cancelamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Navigation */}
       <div className="mb-4 md:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
         <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))} data-tour="agenda-prev-period">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 md:h-10 md:w-10"
+            onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}
+            aria-label={viewMode === "day" ? "Dia anterior" : "Semana anterior"}
+            data-tour="agenda-prev-period"
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-sm md:text-lg font-semibold text-center min-w-0 text-foreground">
@@ -688,7 +785,15 @@ export default function Agenda() {
               ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
               : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
           </h2>
-          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))} data-tour="agenda-next-period">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 md:h-10 md:w-10"
+            onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}
+            aria-label={viewMode === "day" ? "Próximo dia" : "Próxima semana"}
+            data-tour="agenda-next-period"
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -760,21 +865,60 @@ export default function Agenda() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <AppointmentsTable
-            appointments={filteredAppointments}
-            clients={clients}
-            services={services}
-            professionals={professionals}
-            allAppointments={allAppointments}
-            onStatusChange={updateAppointmentStatus}
-            currentProfileId={profile?.id}
-            onComplete={handleCompleteAppointment}
-            onEdit={editAppointment}
-            onDelete={deleteAppointment}
-            isLoading={isLoading}
-            isAdmin={isAdmin}
-            products={products}
-          />
+          {!isLoading && filteredAppointments.length === 0 ? (
+            <div className="p-4">
+              <EmptyState
+                icon={CalendarDays}
+                title="Nenhum agendamento encontrado"
+                description={
+                  hasActiveFilters
+                    ? "Ajuste os filtros ou crie um novo agendamento."
+                    : "Crie seu primeiro agendamento para começar a organizar sua rotina."
+                }
+                action={
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      className="gradient-primary text-primary-foreground"
+                      onClick={() => setIsDialogOpen(true)}
+                      data-tour="agenda-empty-new-appointment"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Novo agendamento
+                    </Button>
+                    {hasActiveFilters ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setStatusFilter("all");
+                          if (isAdmin) setProfessionalFilter("all");
+                        }}
+                        data-tour="agenda-empty-clear-filters"
+                      >
+                        <FilterX className="mr-2 h-4 w-4" />
+                        Limpar filtros
+                      </Button>
+                    ) : null}
+                  </div>
+                }
+              />
+            </div>
+          ) : (
+            <AppointmentsTable
+              appointments={filteredAppointments}
+              clients={clients}
+              services={services}
+              professionals={professionals}
+              allAppointments={allAppointments}
+              onStatusChange={updateAppointmentStatus}
+              currentProfileId={profile?.id}
+              onComplete={handleCompleteAppointment}
+              onEdit={editAppointment}
+              onDelete={deleteAppointment}
+              isLoading={isLoading}
+              isAdmin={isAdmin}
+              products={products}
+            />
+          )}
         </CardContent>
       </Card>
     </MainLayout>

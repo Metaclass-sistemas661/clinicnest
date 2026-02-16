@@ -8,7 +8,8 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import { Plus, AlertTriangle, ArrowUp, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { formatInAppTz } from "@/lib/date";
+import { toastRpcError } from "@/lib/rpc-error";
+import { adjustStock, createProductCategoryV2, createProductV2, updateProductPricesV2 } from "@/lib/supabase-typed-rpc";
 import type { Product, ProductCategory, StockMovement, StockOutReasonType } from "@/types/database";
 import {
   ProductCategoryDialog,
@@ -69,6 +70,16 @@ export default function Produtos() {
     category_id: NO_CATEGORY_VALUE,
   });
 
+  const openMovement = (movementType: "in" | "out", outReasonType: "" | "sale" | "damaged") => {
+    setMovementForm((prev) => ({
+      ...prev,
+      movement_type: movementType,
+      out_reason_type: movementType === "out" ? outReasonType : "",
+      purchased_with_company_cash: movementType === "out" ? "no" : prev.purchased_with_company_cash,
+    }));
+    setIsMovementDialogOpen(true);
+  };
+
   useEffect(() => {
     if (profile?.tenant_id) {
       fetchCategories();
@@ -101,12 +112,12 @@ export default function Produtos() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*, category:product_categories(id, name)")
+        .select("*, category:product_categories(*)")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
       if (error) throw error;
-      setProducts((data as ProductWithCategory[]) || []);
+      setProducts((data as unknown as ProductWithCategory[]) || []);
     } catch (error) {
       logger.error("Error fetching products:", error);
       toast.error("Erro ao carregar produtos. Tente novamente.");
@@ -151,30 +162,28 @@ export default function Produtos() {
     setIsSavingCategory(true);
 
     try {
-      const { data, error } = await supabase
-        .from("product_categories")
-        .insert({
-          tenant_id: profile.tenant_id,
-          name,
-        })
-        .select("*")
-        .single();
+      const { data, error } = await createProductCategoryV2({
+        p_name: name,
+      });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao criar categoria");
+        return;
+      }
 
       toast.success("Categoria criada com sucesso!");
       setCategoryForm({ name: "" });
       setIsCategoryDialogOpen(false);
       await fetchCategories();
 
-      if (data?.id) {
+      if (data?.category_id) {
         setProductForm((current) => ({
           ...current,
-          category_id: current.category_id === NO_CATEGORY_VALUE ? data.id : current.category_id,
+          category_id: current.category_id === NO_CATEGORY_VALUE ? data.category_id : current.category_id,
         }));
         setEditPriceForm((current) => ({
           ...current,
-          category_id: current.category_id === NO_CATEGORY_VALUE ? data.id : current.category_id,
+          category_id: current.category_id === NO_CATEGORY_VALUE ? data.category_id : current.category_id,
         }));
       }
     } catch (error) {
@@ -196,39 +205,21 @@ export default function Produtos() {
       const salePrice = parseFloat(productForm.sale_price) || 0;
       const quantity = parseInt(productForm.quantity) || 0;
 
-      const { data: newProduct, error } = await supabase
-        .from("products")
-        .insert({
-          tenant_id: profile.tenant_id,
-          name: productForm.name,
-          description: productForm.description || null,
-          cost,
-          sale_price: salePrice,
-          quantity,
-          min_quantity: parseInt(productForm.min_quantity) || 5,
-          category_id: productForm.category_id === NO_CATEGORY_VALUE ? null : productForm.category_id,
-        })
-        .select("id")
-        .single();
+      const purchasedWithCompanyCash = productForm.purchased_with_company_cash === "yes";
+      const { error } = await createProductV2({
+        p_name: productForm.name,
+        p_description: productForm.description || null,
+        p_cost: cost,
+        p_sale_price: salePrice,
+        p_quantity: quantity,
+        p_min_quantity: parseInt(productForm.min_quantity) || 5,
+        p_category_id: productForm.category_id === NO_CATEGORY_VALUE ? null : productForm.category_id,
+        p_purchased_with_company_cash: purchasedWithCompanyCash,
+      });
 
-      if (error) throw error;
-      if (!newProduct?.id) throw new Error("Produto não retornado");
-
-      if (productForm.purchased_with_company_cash === "yes" && quantity > 0 && cost > 0) {
-        const expenseAmount = cost * quantity;
-        const { error: txError } = await supabase.from("financial_transactions").insert({
-          tenant_id: profile.tenant_id,
-          type: "expense",
-          category: "Compra de Produto",
-          amount: expenseAmount,
-          description: `Compra de estoque: ${productForm.name} (${quantity} un.)`,
-          transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
-          product_id: newProduct.id,
-        });
-        if (txError) {
-          logger.error("Erro ao registrar despesa da compra:", txError);
-          toast.error("Produto salvo, mas a despesa não foi registrada.");
-        }
+      if (error) {
+        toastRpcError(toast, error, "Erro ao cadastrar produto");
+        return;
       }
 
       toast.success("Produto cadastrado com sucesso!");
@@ -269,75 +260,23 @@ export default function Produtos() {
 
       if (!product) throw new Error("Produto não encontrado");
 
-      const newQuantity =
-        movementForm.movement_type === "in"
-          ? product.quantity + quantity
-          : product.quantity - quantity;
-
-      if (newQuantity < 0) {
-        toast.error("Quantidade insuficiente em estoque");
-        setIsSaving(false);
-        return;
-      }
-
       const outReasonType: StockOutReasonType | null =
         movementForm.movement_type === "out" ? (movementForm.out_reason_type as StockOutReasonType) : null;
 
-      // Create stock movement record
-      await supabase.from("stock_movements").insert({
-        tenant_id: profile.tenant_id,
-        product_id: movementForm.product_id,
-        quantity: movementForm.movement_type === "out" ? -quantity : quantity,
-        movement_type: movementForm.movement_type,
-        reason: movementForm.reason || null,
-        out_reason_type: outReasonType,
-        created_by: profile.id,
+      const purchasedWithCompanyCash = movementForm.purchased_with_company_cash === "yes";
+
+      const { error } = await adjustStock({
+        p_product_id: movementForm.product_id,
+        p_movement_type: movementForm.movement_type,
+        p_quantity: quantity,
+        p_out_reason_type: outReasonType,
+        p_reason: movementForm.reason || null,
+        p_purchased_with_company_cash: purchasedWithCompanyCash,
       });
 
-      // Update product quantity
-      const { error } = await supabase
-        .from("products")
-        .update({ quantity: newQuantity })
-        .eq("id", movementForm.product_id);
-
-      if (error) throw error;
-
-      if (movementForm.movement_type === "out" && movementForm.out_reason_type === "sale") {
-        const saleAmount = (product.sale_price || 0) * quantity;
-        if (saleAmount > 0) {
-          const { error: txError } = await supabase.from("financial_transactions").insert({
-            tenant_id: profile.tenant_id,
-            type: "income",
-            category: "Venda de Produto",
-            amount: saleAmount,
-            description: `Venda: ${product.name} (${quantity} un.)`,
-            transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
-            product_id: product.id,
-          });
-          if (txError) {
-            logger.error("Erro ao registrar receita da venda:", txError);
-            toast.error("Saída registrada, mas a receita não foi lançada.");
-          }
-        }
-      }
-
-      if (movementForm.movement_type === "in" && movementForm.purchased_with_company_cash === "yes") {
-        const expenseAmount = (product.cost || 0) * quantity;
-        if (expenseAmount > 0) {
-          const { error: txError } = await supabase.from("financial_transactions").insert({
-            tenant_id: profile.tenant_id,
-            type: "expense",
-            category: "Compra de Produto",
-            amount: expenseAmount,
-            description: `Compra de estoque: ${product.name} (${quantity} un.)`,
-            transaction_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
-            product_id: product.id,
-          });
-          if (txError) {
-            logger.error("Erro ao registrar despesa da compra:", txError);
-            toast.error("Entrada registrada, mas a despesa não foi lançada.");
-          }
-        }
+      if (error) {
+        toastRpcError(toast, error, "Erro ao registrar movimentação");
+        return;
       }
 
       toast.success(
@@ -350,12 +289,13 @@ export default function Produtos() {
       setIsMovementDialogOpen(false);
       setMovementForm({
         product_id: "",
-        quantity: "",
+        quantity: "1",
         movement_type: "in",
         out_reason_type: "",
         purchased_with_company_cash: "no",
         reason: "",
       });
+
       fetchProducts();
       fetchDamagedMovements();
     } catch (error) {
@@ -422,12 +362,17 @@ export default function Produtos() {
       const salePrice = parseFloat(editPriceForm.sale_price) || 0;
       const categoryId = editPriceForm.category_id === NO_CATEGORY_VALUE ? null : editPriceForm.category_id;
 
-      const { error } = await supabase
-        .from("products")
-        .update({ cost, sale_price: salePrice, category_id: categoryId })
-        .eq("id", selectedProduct.id);
+      const { error } = await updateProductPricesV2({
+        p_product_id: selectedProduct.id,
+        p_cost: cost,
+        p_sale_price: salePrice,
+        p_category_id: categoryId,
+      });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao atualizar preços");
+        return;
+      }
 
       toast.success("Preços atualizados com sucesso!");
       setIsEditPriceDialogOpen(false);
@@ -467,9 +412,31 @@ export default function Produtos() {
             Nova Categoria
           </Button>
 
-          <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)} data-tour="products-stock-movement">
+          <Button
+            variant="outline"
+            onClick={() => openMovement("in", "")}
+            data-tour="products-stock-movement-in"
+          >
             <ArrowUp className="mr-2 h-4 w-4" />
-            Entrada/Saída
+            Comprar (entrada)
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => openMovement("out", "sale")}
+            data-tour="products-stock-movement-sale"
+          >
+            <ArrowUp className="mr-2 h-4 w-4" />
+            Venda (saída)
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => openMovement("out", "damaged")}
+            data-tour="products-stock-movement-damaged"
+          >
+            <ArrowUp className="mr-2 h-4 w-4" />
+            Baixa danificado
           </Button>
           <StockMovementDialog
             open={isMovementDialogOpen}
@@ -523,15 +490,25 @@ export default function Produtos() {
       {/* Low Stock Alert - Admin only */}
       {isAdmin && lowStockCount > 0 && (
         <Card className="mb-6 border-warning/30 bg-warning/5">
-          <CardContent className="flex items-center gap-4 p-4">
+          <CardContent className="flex flex-col sm:flex-row sm:items-center gap-4 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20 text-warning">
               <AlertTriangle className="h-5 w-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-medium text-warning">Atenção ao estoque</p>
               <p className="text-sm text-muted-foreground">
                 {lowStockCount} produto{lowStockCount > 1 ? "s" : ""} com estoque baixo ou zerado
               </p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => openMovement("in", "")}
+                data-tour="products-low-stock-movement"
+              >
+                <ArrowUp className="mr-2 h-4 w-4" />
+                Comprar
+              </Button>
             </div>
           </CardContent>
         </Card>

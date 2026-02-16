@@ -292,9 +292,9 @@ export default function Assinatura() {
                     }}
                     className="justify-start"
                   >
-                    <ToggleGroupItem value="monthly">Mensal</ToggleGroupItem>
-                    <ToggleGroupItem value="quarterly">Trimestral</ToggleGroupItem>
-                    <ToggleGroupItem value="annual">Anual</ToggleGroupItem>
+                    <ToggleGroupItem value="monthly" data-tour={`subscription-interval-${tier.key}-monthly`}>Mensal</ToggleGroupItem>
+                    <ToggleGroupItem value="quarterly" data-tour={`subscription-interval-${tier.key}-quarterly`}>Trimestral</ToggleGroupItem>
+                    <ToggleGroupItem value="annual" data-tour={`subscription-interval-${tier.key}-annual`}>Anual</ToggleGroupItem>
                   </ToggleGroup>
                 </div>
 

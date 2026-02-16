@@ -2,6 +2,8 @@ import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DollarSign, Link as LinkIcon } from "lucide-react";
+import { DollarSign, Link as LinkIcon, Plus } from "lucide-react";
 import { formatInAppTz } from "@/lib/date";
 import type { FinancialTransaction } from "@/types/database";
 
@@ -18,12 +20,14 @@ interface FinanceiroTransactionsTabProps {
   isLoading: boolean;
   transactions: FinancialTransaction[];
   formatCurrency: (value: number) => string;
+  onNewTransaction?: () => void;
 }
 
 export const FinanceiroTransactionsTab = memo(function FinanceiroTransactionsTab({
   isLoading,
   transactions,
   formatCurrency,
+  onNewTransaction,
 }: FinanceiroTransactionsTabProps) {
   if (isLoading) {
     return (
@@ -50,10 +54,19 @@ export const FinanceiroTransactionsTab = memo(function FinanceiroTransactionsTab
           <CardTitle>Todas as Transações</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-12">
-            <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="text-muted-foreground">Nenhuma transação neste período</p>
-          </div>
+          <EmptyState
+            icon={DollarSign}
+            title="Nenhuma transação neste período"
+            description="Registre uma entrada ou saída para acompanhar o saldo e o fluxo de caixa."
+            action={
+              onNewTransaction ? (
+                <Button className="gradient-primary text-primary-foreground" onClick={onNewTransaction}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova transação
+                </Button>
+              ) : undefined
+            }
+          />
         </CardContent>
       </Card>
     );

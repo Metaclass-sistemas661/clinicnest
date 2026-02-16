@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -89,10 +90,11 @@ export const FinanceiroSalariesTab = memo(function FinanceiroSalariesTab({
           <p className="text-sm text-muted-foreground">Pagar salários fixos dos profissionais</p>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-12">
-            <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="text-muted-foreground">Nenhum salário registrado neste período</p>
-          </div>
+          <EmptyState
+            icon={DollarSign}
+            title="Nenhum salário registrado neste período"
+            description="Quando salários fixos estiverem configurados, eles aparecerão aqui para pagamento e controle."
+          />
         </CardContent>
       </Card>
     );

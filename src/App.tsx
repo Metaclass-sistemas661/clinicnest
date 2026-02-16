@@ -17,6 +17,7 @@ import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useAuth } from "@/contexts/AuthContext";
 import { TourProvider } from "@/contexts/TourContext";
+import { AppStatusProvider } from "@/contexts/AppStatusContext";
 
 // Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -48,6 +49,8 @@ const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
 const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfiguracoes"));
 const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
 const Ajuda = lazyWithRetry(() => import("@/pages/Ajuda"));
+const Auditoria = lazyWithRetry(() => import("@/pages/Auditoria"));
+const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSeguranca"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,13 +76,14 @@ const App = () => (
           <GoogleAnalytics />
           <CookieConsentBanner />
           <AuthProvider>
-            <GoalMotivationProvider>
-            <TourProvider>
-              <InternalDarkMode />
-              <GlobalAdminProfitListener />
-              <ErrorBoundary>
-                <Suspense fallback={<RouteFallback />}>
-                <Routes>
+            <AppStatusProvider>
+              <GoalMotivationProvider>
+              <TourProvider>
+                <InternalDarkMode />
+                <GlobalAdminProfitListener />
+                <ErrorBoundary>
+                  <Suspense fallback={<RouteFallback />}>
+                  <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
@@ -168,6 +172,22 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/auditoria"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Auditoria />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/diagnostico-seguranca"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <DiagnosticoSeguranca />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/minhas-metas"
                   element={
                     <ProtectedRoute>
@@ -244,11 +264,12 @@ const App = () => (
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-                </Suspense>
-              </ErrorBoundary>
-            </TourProvider>
-            </GoalMotivationProvider>
+                  </Routes>
+                  </Suspense>
+                </ErrorBoundary>
+              </TourProvider>
+              </GoalMotivationProvider>
+            </AppStatusProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

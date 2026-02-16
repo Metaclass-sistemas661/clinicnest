@@ -29,9 +29,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { upsertClientV2 } from "@/lib/supabase-typed-rpc";
 import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { toastRpcError } from "@/lib/rpc-error";
 import { z } from "zod";
 import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
@@ -188,28 +190,20 @@ export default function Clientes() {
     setIsSaving(true);
 
     try {
-      const clientData = {
-        tenant_id: profile.tenant_id,
-        name: parsed.data.name,
-        phone: parsed.data.phone || null,
-        email: parsed.data.email || null,
-        notes: parsed.data.notes || null,
-      };
+      const { error } = await upsertClientV2({
+        p_client_id: editingClient?.id ?? null,
+        p_name: parsed.data.name,
+        p_phone: parsed.data.phone || null,
+        p_email: parsed.data.email || null,
+        p_notes: parsed.data.notes || null,
+      });
 
-      if (editingClient) {
-        const { error } = await supabase
-          .from("clients")
-          .update(clientData)
-          .eq("id", editingClient.id);
-
-        if (error) throw error;
-        toast.success("Cliente atualizado com sucesso!");
-      } else {
-        const { error } = await supabase.from("clients").insert(clientData);
-
-        if (error) throw error;
-        toast.success("Cliente cadastrado com sucesso!");
+      if (error) {
+        toastRpcError(toast, error as any, editingClient ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
+        return;
       }
+
+      toast.success(editingClient ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!");
 
       setIsDialogOpen(false);
       setFormData({

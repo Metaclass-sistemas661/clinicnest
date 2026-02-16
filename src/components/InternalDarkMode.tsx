@@ -10,6 +10,8 @@ const PROTECTED_PATHS = [
   "/meus-salarios",
   "/minhas-metas",
   "/notificacoes",
+  "/suporte",
+  "/ajuda",
   "/minhas-configuracoes",
   "/produtos",
   "/servicos",

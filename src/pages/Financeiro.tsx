@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { notifyUser } from "@/lib/notifications";
+import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import { ExportPdfDialog } from "@/components/financeiro/ExportPdfDialog";
 import {
@@ -71,6 +73,7 @@ import {
 } from "@/components/financeiro/tabs";
 import { DamagedProductLoss, type CommissionPayment } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
+import { useSimpleMode } from "@/lib/simple-mode";
 
 const categories = {
   income: ["Serviço", "Venda de Produto", "Outros"],
@@ -82,13 +85,16 @@ export default function Financeiro() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab");
+  const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [filterMonth, setFilterMonth] = useState(formatInAppTz(new Date(), "yyyy-MM"));
   const [activeTabState, setActiveTabState] = useState("overview");
-  const validTabs = ["overview", "cashflow", "transactions", "commissions", "salaries"];
+  const validTabs = simpleModeEnabled
+    ? ["overview", "transactions"]
+    : ["overview", "cashflow", "transactions", "commissions", "salaries"];
   const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : activeTabState;
   const setActiveTab = (v: string) => {
     setActiveTabState(v);
@@ -116,6 +122,12 @@ export default function Financeiro() {
   const [daysWorked, setDaysWorked] = useState<string>("");
   const [productLosses, setProductLosses] = useState<DamagedProductLoss[]>([]);
   const [isLoadingProductLosses, setIsLoadingProductLosses] = useState(true);
+
+  useEffect(() => {
+    if (!validTabs.includes(activeTab)) {
+      setActiveTab("overview");
+    }
+  }, [activeTab, validTabs]);
 
   const [formData, setFormData] = useState({
     type: "income" as TransactionType,
@@ -254,13 +266,12 @@ export default function Financeiro() {
     setIsSaving(true);
 
     try {
-      const { error } = await supabase.from("financial_transactions").insert({
-        tenant_id: profile.tenant_id,
-        type: parsed.data.type,
-        category: parsed.data.category,
-        amount,
-        description: parsed.data.description || null,
-        transaction_date: parsed.data.transaction_date,
+      const { error } = await supabase.rpc("create_financial_transaction_v2", {
+        p_type: parsed.data.type,
+        p_category: parsed.data.category,
+        p_amount: amount,
+        p_description: parsed.data.description || null,
+        p_transaction_date: parsed.data.transaction_date,
       });
 
       if (error) throw error;
@@ -580,13 +591,10 @@ export default function Financeiro() {
     const commission = commissions.find((c) => c.id === commissionId);
 
     try {
-      const { error } = await supabase
-        .from("commission_payments")
-        .update({
-          status: "paid",
-          payment_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
-        })
-        .eq("id", commissionId);
+      const { error } = await supabase.rpc("mark_commission_paid", {
+        p_commission_payment_id: commissionId,
+        p_payment_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
+      });
 
       if (error) throw error;
 
@@ -604,15 +612,12 @@ export default function Financeiro() {
       }
 
       toast.success("Comissão marcada como paga! Despesa registrada automaticamente.");
-      
-      // Aguardar um pouco para o trigger criar a transação financeira
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       fetchCommissions();
       fetchTransactions(); // Refresh to update totals (inclui a nova despesa)
     } catch (error) {
       logger.error("Error marking commission as paid:", error);
-      toast.error("Erro ao marcar comissão como paga");
+      toastRpcError(toast, error as any, "Erro ao marcar comissão como paga");
     }
   }, [profile?.tenant_id, commissions, fetchCommissions, fetchTransactions]);
 
@@ -739,7 +744,7 @@ export default function Financeiro() {
                       setFormData({ ...formData, type: v as TransactionType, category: "" })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="finance-transaction-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -754,7 +759,7 @@ export default function Financeiro() {
                     value={formData.category}
                     onValueChange={(v) => setFormData({ ...formData, category: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-tour="finance-transaction-category">
                       <SelectValue placeholder="Selecione a categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -776,6 +781,7 @@ export default function Financeiro() {
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                     required
+                    data-tour="finance-transaction-amount"
                   />
                 </div>
                 <div className="space-y-2">
@@ -787,6 +793,7 @@ export default function Financeiro() {
                       setFormData({ ...formData, transaction_date: e.target.value })
                     }
                     required
+                    data-tour="finance-transaction-date"
                   />
                 </div>
                 <div className="space-y-2">
@@ -795,11 +802,17 @@ export default function Financeiro() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Descrição opcional..."
+                    data-tour="finance-transaction-description"
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  data-tour="finance-cancel-transaction"
+                >
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="finance-save-transaction">
@@ -821,7 +834,8 @@ export default function Financeiro() {
     >
       <div className="space-y-6">
         {/* Stats - skeleton enquanto carrega */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+        <TooltipProvider>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-6 flex items-start justify-between gap-3">
@@ -834,40 +848,80 @@ export default function Financeiro() {
             ))
           ) : (
             <>
-              <StatCard
-                title="Saldo do Período"
-                value={formatCurrency(balance)}
-                icon={DollarSign}
-                variant={balance >= 0 ? "success" : "danger"}
-              />
-              <StatCard
-                title="Receitas"
-                value={formatCurrency(totalIncome)}
-                icon={TrendingUp}
-                variant="success"
-              />
-              <StatCard
-                title="Despesas"
-                value={formatCurrency(totalExpense)}
-                icon={TrendingDown}
-                variant="danger"
-              />
-              <StatCard
-                title="Perdas de Produtos"
-                value={formatCurrency(totalProductLoss)}
-                icon={AlertTriangle}
-                variant="danger"
-                description="Baixas registradas como danificadas"
-              />
-              <StatCard
-                title="Vinculados a Agenda"
-                value={linkedTransactions}
-                icon={LinkIcon}
-                description="Transações automáticas de agendamentos concluídos"
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="finance-stat-balance">
+                    <StatCard
+                      title="Saldo do período"
+                      value={formatCurrency(balance)}
+                      icon={DollarSign}
+                      variant={balance >= 0 ? "success" : "danger"}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Saldo = receitas - despesas no período filtrado.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="finance-stat-income">
+                    <StatCard
+                      title="Receitas"
+                      value={formatCurrency(totalIncome)}
+                      icon={TrendingUp}
+                      variant="success"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Soma das entradas (receitas) no período.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="finance-stat-expense">
+                    <StatCard
+                      title="Despesas"
+                      value={formatCurrency(totalExpense)}
+                      icon={TrendingDown}
+                      variant="danger"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Soma das saídas (despesas) no período.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="finance-stat-product-loss">
+                    <StatCard
+                      title="Perdas de produtos"
+                      value={formatCurrency(totalProductLoss)}
+                      icon={AlertTriangle}
+                      variant="danger"
+                      description="Baixas registradas como danificadas"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Total de baixas de estoque marcadas como danificadas no período.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="finance-stat-linked-transactions">
+                    <StatCard
+                      title="Geradas pela agenda"
+                      value={linkedTransactions}
+                      icon={LinkIcon}
+                      description="Criadas automaticamente ao concluir atendimentos"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Transações criadas automaticamente ao finalizar agendamentos.</TooltipContent>
+              </Tooltip>
             </>
           )}
-        </div>
+          </div>
+        </TooltipProvider>
 
         {/* Filter */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
@@ -880,10 +934,11 @@ export default function Financeiro() {
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
             className="w-full sm:w-48"
+            data-tour="finance-filter-month"
           />
         </div>
 
-        <Card>
+        <Card data-tour="finance-product-losses-card">
           <CardHeader>
             <CardTitle>Perdas de Produtos (danificados)</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -899,17 +954,14 @@ export default function Financeiro() {
                 ))}
               </div>
             ) : productLosses.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma perda registrada neste período.
-              </p>
+              <p className="text-sm text-muted-foreground">Nenhuma perda registrada neste período.</p>
             ) : (
               <>
                 <div className="flex items-center justify-between text-sm text-muted-foreground pb-3">
                   <span>Perda total</span>
-                  <span className="font-semibold text-destructive">
-                    {formatCurrency(totalProductLoss)}
-                  </span>
+                  <span className="font-semibold text-destructive">{formatCurrency(totalProductLoss)}</span>
                 </div>
+
                 <div className="block md:hidden space-y-3">
                   {productLosses.map((loss) => (
                     <div key={loss.id} className="rounded-lg border p-4 space-y-1">
@@ -922,6 +974,7 @@ export default function Financeiro() {
                     </div>
                   ))}
                 </div>
+
                 <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -941,9 +994,7 @@ export default function Financeiro() {
                           <TableCell>{loss.productName}</TableCell>
                           <TableCell className="text-center">{loss.quantity}</TableCell>
                           <TableCell>{formatCurrency(loss.unitCost)}</TableCell>
-                          <TableCell className="font-semibold text-destructive">
-                            {formatCurrency(loss.totalLoss)}
-                          </TableCell>
+                          <TableCell className="font-semibold text-destructive">{formatCurrency(loss.totalLoss)}</TableCell>
                           <TableCell>{loss.reason || "—"}</TableCell>
                         </TableRow>
                       ))}
@@ -957,76 +1008,111 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1">
+          <TabsList
+            className={
+              simpleModeEnabled
+                ? "grid w-full grid-cols-2 h-auto gap-1 p-1"
+                : "grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1"
+            }
+          >
             <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-overview">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
               <span className="sm:hidden">Gráf.</span>
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-cashflow">
-              <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Fluxo de Caixa</span>
-              <span className="sm:hidden">Fluxo</span>
-            </TabsTrigger>
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-cashflow">
+                <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Fluxo de Caixa</span>
+                <span className="sm:hidden">Fluxo</span>
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-transactions">
               <List className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Transações</span>
               <span className="sm:hidden">Trans.</span>
             </TabsTrigger>
-            <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-commissions">
-              <Wallet className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Comissões</span>
-              <span className="sm:hidden">Com.</span>
-            </TabsTrigger>
-            <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-salaries">
-              <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Salários</span>
-              <span className="sm:hidden">Sal.</span>
-            </TabsTrigger>
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-commissions">
+                <Wallet className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Comissões</span>
+                <span className="sm:hidden">Com.</span>
+              </TabsTrigger>
+            ) : null}
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-salaries">
+                <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Salários</span>
+                <span className="sm:hidden">Sal.</span>
+              </TabsTrigger>
+            ) : null}
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
-            <FinanceiroOverviewTab
-              isLoading={isLoading}
-              transactions={transactions}
-              filterMonth={filterMonth}
-            />
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Visão geral do caixa e tendências do período selecionado.</p>
+              <FinanceiroOverviewTab
+                isLoading={isLoading}
+                transactions={transactions}
+                filterMonth={filterMonth}
+              />
+            </div>
           </TabsContent>
 
-          <TabsContent value="cashflow" className="mt-6">
-            <FinanceiroCashFlowTab
-              isLoading={isLoading}
-              transactions={transactions}
-              filterMonth={filterMonth}
-            />
+          {!simpleModeEnabled ? (
+            <TabsContent value="cashflow" className="mt-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Entradas e saídas detalhadas, organizadas por categoria.</p>
+              <FinanceiroCashFlowTab
+                isLoading={isLoading}
+                transactions={transactions}
+                formatCurrency={formatCurrency}
+                filterMonth={filterMonth}
+              />
+            </div>
           </TabsContent>
+          ) : null}
 
-          <TabsContent value="commissions" className="mt-6">
-            <FinanceiroCommissionsTab
-              isLoading={isLoadingCommissions}
-              commissions={commissions}
-              onMarkAsPaid={handleMarkAsPaid}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
+          {!simpleModeEnabled ? (
+            <TabsContent value="commissions" className="mt-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Comissões geradas por atendimentos concluídos. Pendentes aparecem primeiro.</p>
+                <FinanceiroCommissionsTab
+                  isLoading={isLoadingCommissions}
+                  commissions={commissions}
+                  onMarkAsPaid={handleMarkAsPaid}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+            </TabsContent>
+          ) : null}
 
           <TabsContent value="transactions" className="mt-6">
-            <FinanceiroTransactionsTab
-              isLoading={isLoading}
-              transactions={transactions}
-              formatCurrency={formatCurrency}
-            />
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Registros manuais e automáticos do financeiro no período.</p>
+              <FinanceiroTransactionsTab
+                isLoading={isLoading}
+                transactions={transactions}
+                formatCurrency={formatCurrency}
+                onNewTransaction={() => setIsDialogOpen(true)}
+              />
+            </div>
           </TabsContent>
 
-          <TabsContent value="salaries" className="mt-6">
-            <FinanceiroSalariesTab
-              isLoading={isLoadingSalaries}
-              salaries={salaries}
-              professionals={professionals}
-              onOpenPaySalary={handleOpenPaySalaryDialog}
-              formatCurrency={formatCurrency}
-            />
-          </TabsContent>
+          {!simpleModeEnabled ? (
+            <TabsContent value="salaries" className="mt-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Pagamentos de salários fixos dos profissionais no período.</p>
+                <FinanceiroSalariesTab
+                  isLoading={isLoadingSalaries}
+                  salaries={salaries}
+                  professionals={professionals}
+                  onOpenPaySalary={handleOpenPaySalaryDialog}
+                  formatCurrency={formatCurrency}
+                />
+              </div>
+            </TabsContent>
+          ) : null}
         </Tabs>
 
         {/* Info about automatic transactions */}
@@ -1075,6 +1161,7 @@ export default function Financeiro() {
                 value={daysWorked}
                 onChange={(e) => setDaysWorked(e.target.value)}
                 placeholder="Deixe em branco para pagar o mês completo"
+                data-tour="finance-salary-days-worked"
               />
               <p className="text-xs text-muted-foreground">
                 {selectedSalaryPayment && (
@@ -1099,6 +1186,7 @@ export default function Financeiro() {
                 setSelectedSalaryPayment(null);
                 setDaysWorked("");
               }}
+              data-tour="finance-cancel-salary-payment"
             >
               Cancelar
             </Button>

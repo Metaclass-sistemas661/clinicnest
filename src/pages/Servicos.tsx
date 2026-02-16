@@ -27,9 +27,11 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { setServiceActiveV2, upsertServiceV2 } from "@/lib/supabase-typed-rpc";
 import { Scissors, Plus, Loader2, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { toastRpcError } from "@/lib/rpc-error";
 import { z } from "zod";
 import type { Service } from "@/types/database";
 
@@ -129,29 +131,22 @@ export default function Servicos() {
     setIsSaving(true);
 
     try {
-      const serviceData = {
-        tenant_id: profile.tenant_id,
-        name: parsed.data.name,
-        description: parsed.data.description || null,
-        duration_minutes: parsed.data.duration_minutes,
-        price: parseFloat(parsed.data.price as string) || 0,
-        is_active: parsed.data.is_active,
-      };
+      const price = parseFloat(parsed.data.price as string) || 0;
+      const { error } = await upsertServiceV2({
+        p_service_id: editingService?.id ?? null,
+        p_name: parsed.data.name,
+        p_description: parsed.data.description || null,
+        p_duration_minutes: parsed.data.duration_minutes,
+        p_price: price,
+        p_is_active: parsed.data.is_active,
+      });
 
-      if (editingService) {
-        const { error } = await supabase
-          .from("services")
-          .update(serviceData)
-          .eq("id", editingService.id);
-
-        if (error) throw error;
-        toast.success("Serviço atualizado com sucesso!");
-      } else {
-        const { error } = await supabase.from("services").insert(serviceData);
-
-        if (error) throw error;
-        toast.success("Serviço cadastrado com sucesso!");
+      if (error) {
+        toastRpcError(toast, error as any, editingService ? "Erro ao atualizar serviço" : "Erro ao cadastrar serviço");
+        return;
       }
+
+      toast.success(editingService ? "Serviço atualizado com sucesso!" : "Serviço cadastrado com sucesso!");
 
       setIsDialogOpen(false);
       setFormData({
@@ -173,12 +168,15 @@ export default function Servicos() {
 
   const toggleActive = async (service: Service) => {
     try {
-      const { error } = await supabase
-        .from("services")
-        .update({ is_active: !service.is_active })
-        .eq("id", service.id);
+      const { error } = await setServiceActiveV2({
+        p_service_id: service.id,
+        p_is_active: !service.is_active,
+      });
 
-      if (error) throw error;
+      if (error) {
+        toastRpcError(toast, error as any, "Erro ao alterar status do serviço");
+        return;
+      }
 
       toast.success(service.is_active ? "Serviço desativado" : "Serviço ativado");
       fetchServices();

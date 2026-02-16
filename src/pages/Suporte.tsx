@@ -29,6 +29,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { parsePlanKey, useSubscription } from "@/hooks/useSubscription";
 import { LifeBuoy, Plus, Loader2, Mail, MessageCircle, Send } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "react-router-dom";
 
 type Ticket = {
   id: string;
@@ -82,6 +84,7 @@ function buildWhatsAppUrl(phoneE164Digits: string, message: string) {
 export default function Suporte() {
   const { profile, tenant } = useAuth();
   const { plan } = useSubscription();
+  const navigate = useNavigate();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -365,92 +368,107 @@ export default function Suporte() {
       title="Suporte"
       subtitle="Fale com a equipe e acompanhe seus chamados"
       actions={
-        <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground" data-tour="support-new-ticket">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo ticket
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Novo ticket</DialogTitle>
-              <DialogDescription>
-                Descreva o problema com o máximo de detalhes possível.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label>Assunto</Label>
-                <Input
-                  value={newTicket.subject}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, subject: e.target.value }))}
-                  placeholder="Ex.: Não consigo gerar relatório"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label>Categoria</Label>
-                  <Select value={newTicket.category} onValueChange={(v) => setNewTicket((p) => ({ ...p, category: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(categoryLabel).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {categoryLabel[k]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Prioridade</Label>
-                  <Select value={newTicket.priority} onValueChange={(v) => setNewTicket((p) => ({ ...p, priority: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(priorityLabel).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {priorityLabel[k]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label>Mensagem</Label>
-                <Textarea
-                  value={newTicket.message}
-                  onChange={(e) => setNewTicket((p) => ({ ...p, message: e.target.value }))}
-                  placeholder="Explique o que você tentou fazer e qual foi o erro..."
-                  rows={6}
-                />
-              </div>
-              <div className="rounded-xl border p-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <LifeBuoy className="h-4 w-4" />
-                  {allowWhatsapp ? (
-                    <span>Seu plano permite suporte por WhatsApp.</span>
-                  ) : (
-                    <span>Seu plano utiliza suporte por e-mail.</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewTicketOpen(false)} disabled={isSubmittingTicket}>
-                Cancelar
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Tabs value="suporte" onValueChange={(v) => v === "ajuda" && navigate("/ajuda")}>
+            <TabsList data-tour="help-support-tabs">
+              <TabsTrigger value="ajuda" data-tour="help-tab-ajuda">Ajuda</TabsTrigger>
+              <TabsTrigger value="suporte" data-tour="help-tab-suporte">Suporte</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
+            <DialogTrigger asChild>
+              <Button className="gradient-primary text-primary-foreground" data-tour="support-new-ticket">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo ticket
               </Button>
-              <Button onClick={handleCreateTicket} disabled={isSubmittingTicket} className="gradient-primary text-primary-foreground" data-tour="support-create-ticket">
-                {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                <span className="ml-2">Criar</span>
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Novo ticket</DialogTitle>
+                <DialogDescription>
+                  Descreva o problema com o máximo de detalhes possível.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label>Assunto</Label>
+                  <Input
+                    value={newTicket.subject}
+                    onChange={(e) => setNewTicket((p) => ({ ...p, subject: e.target.value }))}
+                    placeholder="Ex.: Não consigo gerar relatório"
+                    data-tour="support-ticket-subject"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label>Categoria</Label>
+                    <Select value={newTicket.category} onValueChange={(v) => setNewTicket((p) => ({ ...p, category: v }))}>
+                      <SelectTrigger data-tour="support-ticket-category">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(categoryLabel).map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {categoryLabel[k]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Prioridade</Label>
+                    <Select value={newTicket.priority} onValueChange={(v) => setNewTicket((p) => ({ ...p, priority: v }))}>
+                      <SelectTrigger data-tour="support-ticket-priority">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(priorityLabel).map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {priorityLabel[k]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={newTicket.message}
+                    onChange={(e) => setNewTicket((p) => ({ ...p, message: e.target.value }))}
+                    placeholder="Explique o que você tentou fazer e qual foi o erro..."
+                    rows={6}
+                    data-tour="support-ticket-message"
+                  />
+                </div>
+                <div className="rounded-xl border p-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <LifeBuoy className="h-4 w-4" />
+                    {allowWhatsapp ? (
+                      <span>Seu plano permite suporte por WhatsApp.</span>
+                    ) : (
+                      <span>Seu plano utiliza suporte por e-mail.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsNewTicketOpen(false)}
+                  disabled={isSubmittingTicket}
+                  data-tour="support-cancel-new-ticket"
+                >
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateTicket} disabled={isSubmittingTicket} className="gradient-primary text-primary-foreground" data-tour="support-create-ticket">
+                  {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  <span className="ml-2">Criar</span>
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       }
     >
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
@@ -458,7 +476,7 @@ export default function Suporte() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Tickets</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2" data-tour="support-tickets-list">
             {isLoadingTickets ? (
               <div className="space-y-2">
                 <Skeleton className="h-14 w-full" />
@@ -523,7 +541,7 @@ export default function Suporte() {
                 </Button>
               )}
               {selectedTicket && !allowWhatsapp && (
-                <Button variant="outline" disabled>
+                <Button variant="outline" disabled data-tour="support-email-only">
                   <Mail className="h-4 w-4 mr-2" />
                   E-mail
                 </Button>

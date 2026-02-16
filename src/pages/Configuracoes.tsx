@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useLocation } from "react-router-dom";
+import { useSimpleMode } from "@/lib/simple-mode";
 
 type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
 type LgpdRequestType =
@@ -110,6 +111,7 @@ const auditEntityLabel: Record<string, string> = {
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
   const location = useLocation();
+  const { enabled: simpleModeEnabled, set: setSimpleModeEnabled } = useSimpleMode(tenant?.id);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingRetention, setIsSavingRetention] = useState(false);
   const [isUpdatingRequests, setIsUpdatingRequests] = useState(false);
@@ -686,6 +688,7 @@ export default function Configuracoes() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Nome do seu salão"
                   required
+                  data-tour="settings-salon-name"
                 />
               </div>
               <div className="space-y-2">
@@ -696,6 +699,7 @@ export default function Configuracoes() {
                   placeholder="Somente números"
                   inputMode="numeric"
                   required
+                  data-tour="settings-billing-cpf-cnpj"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -705,6 +709,7 @@ export default function Configuracoes() {
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="(11) 99999-9999"
+                    data-tour="settings-salon-phone"
                   />
                 </div>
                 <div className="space-y-2">
@@ -714,6 +719,7 @@ export default function Configuracoes() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="contato@salao.com"
+                    data-tour="settings-salon-email"
                   />
                 </div>
               </div>
@@ -723,6 +729,7 @@ export default function Configuracoes() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Rua, número, bairro, cidade"
+                  data-tour="settings-salon-address"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -753,6 +760,35 @@ export default function Configuracoes() {
         <Card className="xl:col-span-1">
           <CardHeader>
             <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Interface</CardTitle>
+            </div>
+            <CardDescription>
+              Ajuste a experiência para um modo mais simples e direto.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2">
+              <div>
+                <Label htmlFor="simple-mode" className="cursor-pointer">
+                  Interface simplificada
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Oculta seções avançadas e reduz opções para uso mais rápido.
+                </p>
+              </div>
+              <Switch
+                id="simple-mode"
+                checked={simpleModeEnabled}
+                onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-1">
+          <CardHeader>
+            <div className="flex items-center gap-2">
               <Archive className="h-4 w-4 text-primary" />
               <CardTitle className="text-base">Retenção operacional (LGPD)</CardTitle>
             </div>
@@ -775,6 +811,7 @@ export default function Configuracoes() {
                       client_data_retention_days: Number(e.target.value || 0),
                     }))
                   }
+                  data-tour="settings-lgpd-retention-client-days"
                 />
               </div>
               <div className="space-y-2">
@@ -790,6 +827,7 @@ export default function Configuracoes() {
                       financial_data_retention_days: Number(e.target.value || 0),
                     }))
                   }
+                  data-tour="settings-lgpd-retention-financial-days"
                 />
               </div>
               <div className="space-y-2">
@@ -805,6 +843,7 @@ export default function Configuracoes() {
                       audit_log_retention_days: Number(e.target.value || 0),
                     }))
                   }
+                  data-tour="settings-lgpd-retention-audit-days"
                 />
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2">
@@ -969,12 +1008,14 @@ export default function Configuracoes() {
                             }))
                           }
                           placeholder="Digite o token de confirmação"
+                          data-tour="settings-lgpd-confirm-token"
                         />
                         <Button
                           size="sm"
                           variant="destructive"
                           disabled={executingAnonymizationRequestId === request.id}
                           onClick={() => handleExecuteAnonymization(request)}
+                          data-tour="settings-lgpd-execute-anonymization"
                         >
                           {executingAnonymizationRequestId === request.id ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1000,6 +1041,7 @@ export default function Configuracoes() {
                           }))
                         }
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        data-tour="settings-lgpd-request-status"
                       >
                         <option value="pending">Pendente</option>
                         <option value="in_progress">Em andamento</option>
@@ -1022,6 +1064,7 @@ export default function Configuracoes() {
                         }
                         rows={3}
                         placeholder="Descreva a resposta da solicitação para o titular."
+                        data-tour="settings-lgpd-request-resolution-notes"
                       />
                     </div>
                   </div>

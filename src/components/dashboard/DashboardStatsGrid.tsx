@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DollarSign,
   TrendingUp,
@@ -90,150 +91,286 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
   }
 
   return (
-    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+    <TooltipProvider>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
       {isAdmin && (
         <>
-          <StatCard
-            title="Saldo do Dia"
-            value={formatCurrency(dailyBalance)}
-            icon={DollarSign}
-            variant={dailyBalance >= 0 ? "success" : "danger"}
-            description="Só transações de hoje (zera à meia-noite)"
-          />
-          <StatCard
-            title="Saldo do Mês"
-            value={formatCurrency(monthlyBalance)}
-            icon={DollarSign}
-            variant={monthlyBalance >= 0 ? "success" : "danger"}
-          />
-          <StatCard
-            title="Receitas"
-            value={formatCurrency(monthlyIncome)}
-            icon={TrendingUp}
-            variant="success"
-          />
-          <StatCard
-            title="Despesas"
-            value={formatCurrency(monthlyExpenses)}
-            icon={TrendingDown}
-            variant="danger"
-          />
-          <StatCard
-            title="Perdas de Produtos"
-            value={formatCurrency(productLossTotal)}
-            icon={AlertTriangle}
-            variant="danger"
-            description="Baixas danificadas no mês"
-          />
-          <StatCard
-            title="Total de Clientes"
-            value={clientsCount}
-            icon={Users}
-            description="Clientes cadastrados"
-          />
-          <StatCard
-            title="Comissões a Pagar"
-            value={formatCurrency(commissionsPending)}
-            icon={CreditCard}
-            variant="warning"
-            description="Comissões pendentes do mês"
-          />
-          <Link to="/financeiro?tab=commissions" data-tour="dashboard-stat-commissions-paid" className="block [&:hover]:no-underline">
-            <StatCard
-              title="Comissões Pagas"
-              value={formatCurrency(commissionsPaid)}
-              icon={Wallet}
-              variant="success"
-              description="Comissões pagas no mês"
-            />
-          </Link>
-          <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-to-pay" className="block [&:hover]:no-underline">
-            <StatCard
-              title="Salários a Pagar"
-              value={formatCurrency(salariesToPay)}
-              icon={CreditCard}
-              variant="warning"
-              description="Total de salários fixos configurados"
-            />
-          </Link>
-          <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-paid" className="block [&:hover]:no-underline">
-            <StatCard
-              title="Salários Pagos"
-              value={formatCurrency(salariesPaid)}
-              icon={DollarSign}
-              variant="success"
-              description="Salários pagos no mês"
-            />
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-daily-balance">
+                <StatCard
+                  title="Saldo do Dia"
+                  value={formatCurrency(dailyBalance)}
+                  icon={DollarSign}
+                  variant={dailyBalance >= 0 ? "success" : "danger"}
+                  description="Só transações de hoje (zera à meia-noite)"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Saldo do dia = receitas - despesas registradas hoje.
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-monthly-balance">
+                <StatCard
+                  title="Saldo do Mês"
+                  value={formatCurrency(monthlyBalance)}
+                  icon={DollarSign}
+                  variant={monthlyBalance >= 0 ? "success" : "danger"}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Saldo do mês = receitas - despesas do período atual.
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-monthly-income">
+                <StatCard
+                  title="Receitas"
+                  value={formatCurrency(monthlyIncome)}
+                  icon={TrendingUp}
+                  variant="success"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Soma das entradas (receitas) registradas no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-monthly-expenses">
+                <StatCard
+                  title="Despesas"
+                  value={formatCurrency(monthlyExpenses)}
+                  icon={TrendingDown}
+                  variant="danger"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Soma das saídas (despesas) registradas no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-product-losses">
+                <StatCard
+                  title="Perdas de Produtos"
+                  value={formatCurrency(productLossTotal)}
+                  icon={AlertTriangle}
+                  variant="danger"
+                  description="Baixas danificadas no mês"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Total de baixas marcadas como danificadas no período.
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-clients-count">
+                <StatCard
+                  title="Total de Clientes"
+                  value={clientsCount}
+                  icon={Users}
+                  description="Clientes cadastrados"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Quantidade total de clientes cadastrados no salão.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-commissions-to-pay">
+                <StatCard
+                  title="Comissões a Pagar"
+                  value={formatCurrency(commissionsPending)}
+                  icon={CreditCard}
+                  variant="warning"
+                  description="Comissões pendentes do mês"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Total de comissões pendentes de pagamento no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/financeiro?tab=commissions" data-tour="dashboard-stat-commissions-paid" className="block [&:hover]:no-underline">
+                <StatCard
+                  title="Comissões Pagas"
+                  value={formatCurrency(commissionsPaid)}
+                  icon={Wallet}
+                  variant="success"
+                  description="Comissões pagas no mês"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Total de comissões já pagas no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-to-pay" className="block [&:hover]:no-underline">
+                <StatCard
+                  title="Salários a Pagar"
+                  value={formatCurrency(salariesToPay)}
+                  icon={CreditCard}
+                  variant="warning"
+                  description="Total de salários fixos configurados"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Total configurado de salários ainda não pagos no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-paid" className="block [&:hover]:no-underline">
+                <StatCard
+                  title="Salários Pagos"
+                  value={formatCurrency(salariesPaid)}
+                  icon={DollarSign}
+                  variant="success"
+                  description="Salários pagos no mês"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Total de salários pagos no período atual.</TooltipContent>
+          </Tooltip>
         </>
       )}
       {!isAdmin && (
         <>
-          <StatCard
-            title="Comissões a Receber"
-            value={formatCurrency(professionalCommissionsToReceive)}
-            icon={CreditCard}
-            variant="warning"
-            description="Comissões pendentes (aguardando pagamento do admin)"
-          />
-          <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-commissions">
-            <StatCard
-              title="Comissões Recebidas"
-              value={formatCurrency(professionalCommissionsReceived)}
-              icon={Wallet}
-              variant="success"
-              description="Comissões já pagas neste mês"
-            />
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-commissions-to-receive">
+                <StatCard
+                  title="Comissões a Receber"
+                  value={formatCurrency(professionalCommissionsToReceive)}
+                  icon={CreditCard}
+                  variant="warning"
+                  description="Comissões pendentes (aguardando pagamento do admin)"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Comissões geradas e ainda não pagas para você.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-commissions">
+                <StatCard
+                  title="Comissões Recebidas"
+                  value={formatCurrency(professionalCommissionsReceived)}
+                  icon={Wallet}
+                  variant="success"
+                  description="Comissões já pagas neste mês"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Total de comissões já pagas no mês.</TooltipContent>
+          </Tooltip>
           {mySalaryAmount !== null && (
-            <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-salary">
-              <StatCard
-                title="Meu Salário"
-                value={formatCurrency(mySalaryAmount)}
-                icon={DollarSign}
-                variant="info"
-                description={
-                  lastSalaryPayment
-                    ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
-                    : "Salário fixo configurado"
-                }
-              />
-            </Link>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-salary">
+                  <StatCard
+                    title="Meu Salário"
+                    value={formatCurrency(mySalaryAmount)}
+                    icon={DollarSign}
+                    variant="info"
+                    description={
+                      lastSalaryPayment
+                        ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
+                        : "Salário fixo configurado"
+                    }
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
+            </Tooltip>
           )}
-          <StatCard
-            title="Meu desempenho"
-            value={staffCompletedThisMonth}
-            icon={TrendingUp}
-            description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados este mês`}
-          />
-          <StatCard
-            title="Clientes que atendi"
-            value={staffMyClientsCount ?? 0}
-            icon={Users}
-            description="Clientes únicos nos seus atendimentos"
-          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-my-performance">
+                <StatCard
+                  title="Meu desempenho"
+                  value={staffCompletedThisMonth}
+                  icon={TrendingUp}
+                  description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados este mês`}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Quantidade de atendimentos e valor gerado no mês.</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div data-tour="dashboard-stat-my-clients-served">
+                <StatCard
+                  title="Clientes que atendi"
+                  value={staffMyClientsCount ?? 0}
+                  icon={Users}
+                  description="Clientes únicos nos seus atendimentos"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Clientes únicos atendidos por você no mês.</TooltipContent>
+          </Tooltip>
         </>
       )}
-      <StatCard
-        title="Agendamentos Hoje"
-        value={todayAppointments}
-        icon={Calendar}
-      />
-      <StatCard
-        title={isAdmin ? "Pendentes" : "Meus pendentes"}
-        value={pendingAppointments}
-        icon={Clock}
-        variant={pendingAppointments > 0 ? "warning" : "default"}
-        description={!isAdmin ? "Agendamentos pendentes de confirmação" : undefined}
-      />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div data-tour="dashboard-stat-today-appointments">
+            <StatCard
+              title="Agendamentos Hoje"
+              value={todayAppointments}
+              icon={Calendar}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Total de agendamentos marcados para hoje.</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div data-tour="dashboard-stat-pending-appointments">
+            <StatCard
+              title={isAdmin ? "Pendentes" : "Meus pendentes"}
+              value={pendingAppointments}
+              icon={Clock}
+              variant={pendingAppointments > 0 ? "warning" : "default"}
+              description={!isAdmin ? "Agendamentos pendentes de confirmação" : undefined}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Agendamentos que ainda não foram confirmados.</TooltipContent>
+      </Tooltip>
       {isAdmin && (
-        <StatCard
-          title="Estoque Baixo"
-          value={lowStockProducts}
-          icon={Package}
-          variant={lowStockProducts > 0 ? "warning" : "default"}
-        />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div data-tour="dashboard-stat-low-stock">
+              <StatCard
+                title="Estoque Baixo"
+                value={lowStockProducts}
+                icon={Package}
+                variant={lowStockProducts > 0 ? "warning" : "default"}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Produtos abaixo do estoque mínimo configurado.</TooltipContent>
+        </Tooltip>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 });

@@ -2,9 +2,14 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
@@ -17,6 +22,17 @@ import type { SalaryPaymentRow } from "@/types/supabase-extensions";
 import { getDashboardSalaryTotals, getDashboardCommissionTotals, getDashboardProductLossTotal, getDashboardClientsCount, getProfessionalsWithSalary, getSalaryPayments } from "@/lib/supabase-typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { processNumericRpc } from "@/lib/rpc-fallback";
+import { useSimpleMode } from "@/lib/simple-mode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  defaultDashboardPreferences,
+  getDashboardPreferences,
+  normalizeDashboardPreferences,
+  setDashboardPreferences,
+  type DashboardPreferences,
+  type DashboardSectionKey,
+} from "@/lib/dashboard-preferences";
 import {
   DashboardStatsGrid,
   DashboardClientRanking,
@@ -28,6 +44,26 @@ import {
 
 export default function Dashboard() {
   const { user, profile, tenant, isAdmin } = useAuth();
+  const { enabled: simpleModeEnabled } = useSimpleMode(tenant?.id);
+  const { markRefreshed } = useAppStatus();
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [activityRows, setActivityRows] = useState<
+    Array<{
+      id: string;
+      action: string;
+      entity_type: string | null;
+      entity_id: string | null;
+      actor_user_id: string | null;
+      created_at: string;
+    }>
+  >([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [dashboardPrefs, setDashboardPrefsState] = useState<DashboardPreferences>(() =>
+    defaultDashboardPreferences(Boolean(isAdmin))
+  );
   const [stats, setStats] = useState<DashboardStats>({
     monthlyBalance: 0,
     monthlyIncome: 0,
@@ -95,12 +131,89 @@ export default function Dashboard() {
     return () => window.clearTimeout(t);
   }, [profile?.tenant_id, isAdmin]);
 
+  const fetchActivityFeed = useCallback(async () => {
+    if (!isAdmin || simpleModeEnabled || !profile?.tenant_id) return;
+    setActivityLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id,action,entity_type,entity_id,actor_user_id,created_at")
+        .eq("tenant_id", profile.tenant_id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      setActivityRows((Array.isArray(data) ? (data as any[]) : []) as any);
+    } catch (e) {
+      logger.error("Error fetching activity feed:", e);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [isAdmin, simpleModeEnabled, profile?.tenant_id]);
+
+  useEffect(() => {
+    if (!isAdmin || simpleModeEnabled) return;
+    fetchActivityFeed();
+  }, [isAdmin, simpleModeEnabled, fetchActivityFeed]);
+
+  const persistPrefs = useCallback(
+    (next: DashboardPreferences) => {
+      const tenantId = tenant?.id ?? profile?.tenant_id ?? null;
+      const userId = user?.id ?? null;
+      setDashboardPreferences(tenantId, userId, next);
+      setDashboardPrefsState(next);
+    },
+    [tenant?.id, profile?.tenant_id, user?.id]
+  );
+
+  const moveSection = useCallback(
+    (key: DashboardSectionKey, dir: "up" | "down") => {
+      const idx = dashboardPrefs.order.indexOf(key);
+      if (idx < 0) return;
+      const next = [...dashboardPrefs.order];
+      const swapWith = dir === "up" ? idx - 1 : idx + 1;
+      if (swapWith < 0 || swapWith >= next.length) return;
+      const tmp = next[idx];
+      next[idx] = next[swapWith];
+      next[swapWith] = tmp;
+      persistPrefs({ ...dashboardPrefs, order: next });
+    },
+    [dashboardPrefs, persistPrefs]
+  );
+
+  const toggleSection = useCallback(
+    (key: DashboardSectionKey, hidden: boolean) => {
+      persistPrefs({
+        ...dashboardPrefs,
+        hidden: {
+          ...dashboardPrefs.hidden,
+          [key]: hidden,
+        },
+      });
+    },
+    [dashboardPrefs, persistPrefs]
+  );
+
   useEffect(() => {
     const hasStaffId = profile?.user_id ?? user?.id;
     if (profile?.tenant_id && (isAdmin || (hasStaffId && profile?.id))) {
       fetchDashboardData();
     }
   }, [profile?.tenant_id, profile?.user_id, profile?.id, user?.id, isAdmin]);
+
+  const availableSections = useMemo(() => {
+    const keys: DashboardSectionKey[] = ["quick_actions", "today", "month"];
+    if (isAdmin && !simpleModeEnabled) keys.push("activity_feed");
+    if (!simpleModeEnabled) keys.push("insights");
+    return keys;
+  }, [isAdmin, simpleModeEnabled]);
+
+  useEffect(() => {
+    const tenantId = tenant?.id ?? profile?.tenant_id ?? null;
+    const userId = user?.id ?? null;
+    const base = getDashboardPreferences(tenantId, userId) ?? defaultDashboardPreferences(Boolean(isAdmin));
+    const normalized = normalizeDashboardPreferences(base, availableSections);
+    setDashboardPrefsState(normalized);
+  }, [tenant?.id, profile?.tenant_id, user?.id, isAdmin, availableSections]);
 
   // Refetch quando o usuário volta para a página (ex.: após marcar comissão como paga no Financeiro)
   useEffect(() => {
@@ -110,6 +223,10 @@ export default function Dashboard() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [profile?.tenant_id]);
+
+  useEffect(() => {
+    if (simpleModeEnabled) setInsightsOpen(false);
+  }, [simpleModeEnabled]);
 
   // Garantir que o "Saldo do Dia" zere à meia-noite, mesmo com a página aberta.
   // Sem isso, o card pode ficar mostrando o dia anterior até o usuário dar refresh ou mudar de página.
@@ -277,6 +394,7 @@ export default function Dashboard() {
     const monthEndDate = monthEnd.split("T")[0];
     const todayDateStr = formatInAppTz(today, "yyyy-MM-dd");
 
+    let didSucceed = false;
     try {
       // Disparar todas as buscas em paralelo (em vez de uma após a outra)
       const [
@@ -624,11 +742,14 @@ export default function Dashboard() {
           logger.error("Error fetching ranking:", err);
         }
       }
+
+      didSucceed = true;
     } catch (error) {
       logger.error("Error fetching dashboard data:", error);
       toast.error("Erro ao carregar painel. Tente novamente.");
     } finally {
       setIsLoading(false);
+      if (didSucceed) markRefreshed("dashboard");
     }
   };
 
@@ -672,68 +793,551 @@ export default function Dashboard() {
       title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
       subtitle={`Bem-vindo ao ${tenant?.name || "seu salão"}`}
       actions={
-        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base" data-tour="dashboard-new-appointment">
-          <Link to="/agenda">
+        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base">
+          <Link to="/agenda" data-tour="dashboard-new-appointment">
             <Plus className="mr-1 md:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Novo Agendamento</span>
+            <span className="hidden sm:inline">Novo agendamento</span>
             <span className="sm:hidden">Agendar</span>
           </Link>
         </Button>
       }
     >
-      <div className="space-y-8">
-        <DashboardStatsGrid
-          isLoading={isLoading}
-          isAdmin={isAdmin}
-          dailyBalance={dailyBalance}
-          monthlyBalance={stats.monthlyBalance}
-          monthlyIncome={stats.monthlyIncome}
-          monthlyExpenses={stats.monthlyExpenses}
-          productLossTotal={productLossTotal}
-          clientsCount={clientsCount}
-          commissionsPending={commissionsPending}
-          commissionsPaid={commissionsPaid}
-          salariesToPay={salariesToPay}
-          salariesPaid={salariesPaid}
-          professionalCommissionsToReceive={professionalCommissionsToReceive}
-          professionalCommissionsReceived={professionalCommissionsReceived}
-          mySalaryAmount={mySalaryAmount}
-          lastSalaryPayment={lastSalaryPayment}
-          staffCompletedThisMonth={staffCompletedThisMonth}
-          staffValueGeneratedThisMonth={staffValueGeneratedThisMonth}
-          staffMyClientsCount={staffMyClientsCount}
-          todayAppointments={stats.todayAppointments}
-          pendingAppointments={stats.pendingAppointments}
-          lowStockProducts={stats.lowStockProducts}
-          formatCurrency={formatCurrency}
-        />
+      <TooltipProvider>
+        <div className="space-y-8">
+          {dashboardPrefs.order.map((sectionKey) => {
+            if (!availableSections.includes(sectionKey)) return null;
+            if (dashboardPrefs.hidden?.[sectionKey]) return null;
 
-        {isAdmin && (
-          <DashboardClientRanking clientRanking={clientRanking} formatCurrency={formatCurrency} />
-        )}
+            if (sectionKey === "quick_actions") {
+              return (
+                <Card key={sectionKey}>
+                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-lg">Ações rápidas</CardTitle>
+                      <CardDescription>Atalhos para o que você mais faz no dia a dia</CardDescription>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setPrefsOpen(true)}
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Personalizar
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+                      <Button asChild variant="outline" className="justify-start">
+                        <Link to="/agenda" data-tour="dashboard-quick-new-appointment">
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Novo agendamento
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" className="justify-start">
+                        <Link to="/clientes" data-tour="dashboard-quick-new-client">
+                          <Users className="mr-2 h-4 w-4" />
+                          Novo cliente
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" className="justify-start">
+                        <Link to="/produtos" data-tour="dashboard-quick-stock">
+                          <Package className="mr-2 h-4 w-4" />
+                          Movimentar estoque
+                        </Link>
+                      </Button>
+                      {isAdmin && !simpleModeEnabled && (
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/financeiro?tab=transactions" data-tour="dashboard-quick-new-transaction">
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Nova transação
+                          </Link>
+                        </Button>
+                      )}
+                      {isAdmin && !simpleModeEnabled && (
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/financeiro?tab=commissions" data-tour="dashboard-quick-pay-commissions">
+                            <Wallet className="mr-2 h-4 w-4" />
+                            Comissões
+                            {commissionsPending > 0 ? (
+                              <span className="ml-2 inline-flex items-center rounded-md bg-warning/20 px-2 py-0.5 text-xs text-warning">
+                                {Math.round(commissionsPending)}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </Button>
+                      )}
+                      {isAdmin && !simpleModeEnabled && (
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/financeiro?tab=salaries" data-tour="dashboard-quick-pay-salaries">
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Salários
+                            {salariesToPay > 0 ? (
+                              <span className="ml-2 inline-flex items-center rounded-md bg-warning/20 px-2 py-0.5 text-xs text-warning">
+                                {Math.round(salariesToPay)}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </Button>
+                      )}
+                      {!isAdmin && (
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/minhas-comissoes" data-tour="dashboard-quick-my-commissions">
+                            <Wallet className="mr-2 h-4 w-4" />
+                            Minhas comissões
+                          </Link>
+                        </Button>
+                      )}
+                      {!isAdmin && (
+                        <Button asChild variant="outline" className="justify-start">
+                          <Link to="/meus-salarios" data-tour="dashboard-quick-my-salary">
+                            <DollarSign className="mr-2 h-4 w-4" />
+                            Meu salário
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
 
-        {isAdmin && professionalGoalsRanking.length > 0 && (
-          <DashboardGoalsCard
-            professionalGoalsRanking={professionalGoalsRanking}
-            formatCurrency={formatCurrency}
-          />
-        )}
+            if (sectionKey === "activity_feed") {
+              return (
+                <Collapsible
+                  key={sectionKey}
+                  open={activityOpen}
+                  onOpenChange={(o) => {
+                    setActivityOpen(o);
+                    if (o) fetchActivityFeed();
+                  }}
+                >
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Atividade</CardTitle>
+                        <CardDescription>Últimas ações registradas</CardDescription>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          {activityOpen ? (
+                            <>
+                              Ocultar <ChevronUp className="ml-2 h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              Ver <ChevronDown className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </CardHeader>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-2">
+                        {activityLoading ? (
+                          <div className="text-sm text-muted-foreground">Carregando...</div>
+                        ) : activityRows.length === 0 ? (
+                          <div className="text-sm text-muted-foreground">Sem atividades recentes.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {activityRows.map((r) => (
+                              <div key={r.id} className="rounded-lg border border-border/70 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium">{r.action}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {(r.entity_type ?? "").toString()}
+                                      {r.entity_id ? ` (${String(r.entity_id).slice(0, 8)}...)` : ""}
+                                    </p>
+                                  </div>
+                                  <p className="whitespace-nowrap text-xs text-muted-foreground">
+                                    {formatInAppTz(new Date(r.created_at), "dd/MM HH:mm")}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex justify-end">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to="/auditoria">Ver auditoria</Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              );
+            }
 
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          <DashboardTodayAppointments
-            appointments={myTodayAppointments}
-            isAdmin={isAdmin}
-            getStatusBadge={getStatusBadge}
-          />
-          {!isAdmin && nextAppointment && (
-            <DashboardNextAppointmentCard
-              nextAppointment={nextAppointment}
-              getStatusBadge={getStatusBadge}
-            />
-          )}
-          {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+            if (sectionKey === "today") {
+              return (
+                <Card key={sectionKey}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Hoje</CardTitle>
+                    <CardDescription>{formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="dashboard-today-stat-appointments">
+                    <StatCard title="Agendamentos" value={stats.todayAppointments} icon={Calendar} />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Total de agendamentos marcados para hoje.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div data-tour="dashboard-today-stat-pending">
+                    <StatCard
+                      title={isAdmin ? "Pendentes" : "Meus pendentes"}
+                      value={stats.pendingAppointments}
+                      icon={Wallet}
+                      variant={stats.pendingAppointments > 0 ? "warning" : "default"}
+                      description={isAdmin ? "Aguardando confirmação" : "Aguardando confirmação do admin"}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Agendamentos que ainda não foram confirmados.</TooltipContent>
+              </Tooltip>
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div data-tour="dashboard-today-stat-low-stock">
+                      <StatCard
+                        title="Estoque baixo"
+                        value={stats.lowStockProducts}
+                        icon={Package}
+                        variant={stats.lowStockProducts > 0 ? "warning" : "default"}
+                        description="Produtos abaixo do mínimo"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Produtos abaixo do estoque mínimo configurado.</TooltipContent>
+                </Tooltip>
+              )}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div data-tour="dashboard-today-stat-daily-balance">
+                      <StatCard
+                        title="Saldo do dia"
+                        value={formatCurrency(dailyBalance)}
+                        icon={DollarSign}
+                        variant={dailyBalance >= 0 ? "success" : "danger"}
+                        description="Zera à meia-noite"
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Saldo do dia = receitas - despesas registradas hoje.</TooltipContent>
+                </Tooltip>
+              )}
+                    </div>
+
+                    <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+              <DashboardTodayAppointments
+                appointments={myTodayAppointments}
+                isAdmin={isAdmin}
+                getStatusBadge={getStatusBadge}
+              />
+              {!isAdmin && nextAppointment && (
+                <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
+              )}
+              {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            if (sectionKey === "month") {
+              return (
+                <Card key={sectionKey}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Mês atual</CardTitle>
+                    <CardDescription>{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
+                    <StatCard
+                      title="Saldo do mês"
+                      value={formatCurrency(stats.monthlyBalance)}
+                      icon={DollarSign}
+                      variant={stats.monthlyBalance >= 0 ? "success" : "danger"}
+                      description="Receitas - despesas"
+                    />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Saldo do mês = receitas - despesas do mês atual.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
+                    <StatCard title="Receitas" value={formatCurrency(stats.monthlyIncome)} icon={DollarSign} variant="success" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Soma das entradas (receitas) no mês atual.</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
+                    <StatCard title="Despesas" value={formatCurrency(stats.monthlyExpenses)} icon={DollarSign} variant="danger" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Soma das saídas (despesas) no mês atual.</TooltipContent>
+              </Tooltip>
+              {isAdmin && !simpleModeEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro?tab=commissions" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-commissions-pending">
+                      <StatCard
+                        title="Comissões pendentes"
+                        value={formatCurrency(commissionsPending)}
+                        icon={Wallet}
+                        variant={commissionsPending > 0 ? "warning" : "default"}
+                        description="Clique para gerenciar"
+                      />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Comissões geradas no mês e ainda não pagas.</TooltipContent>
+                </Tooltip>
+              )}
+              {isAdmin && !simpleModeEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro?tab=salaries" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-salaries-pending">
+                      <StatCard
+                        title="Salários a pagar"
+                        value={formatCurrency(salariesToPay)}
+                        icon={CreditCard}
+                        variant={salariesToPay > 0 ? "warning" : "default"}
+                        description="Clique para gerenciar"
+                      />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Salários configurados que ainda não foram pagos no mês.</TooltipContent>
+                </Tooltip>
+              )}
+              {!isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
+                      <StatCard
+                        title="Minhas comissões (pendentes)"
+                        value={formatCurrency(professionalCommissionsToReceive)}
+                        icon={Wallet}
+                        variant={professionalCommissionsToReceive > 0 ? "warning" : "default"}
+                        description="Clique para ver detalhes"
+                      />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Comissões do mês que ainda não foram pagas para você.</TooltipContent>
+                </Tooltip>
+              )}
+              {!isAdmin && mySalaryAmount !== null && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-salary">
+                      <StatCard
+                        title="Meu salário"
+                        value={formatCurrency(mySalaryAmount)}
+                        icon={DollarSign}
+                        variant="info"
+                        description={
+                          lastSalaryPayment
+                            ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
+                            : "Salário fixo configurado"
+                        }
+                      />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
+                </Tooltip>
+              )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            if (sectionKey === "insights") {
+              if (simpleModeEnabled) return null;
+              return (
+                <Collapsible key={sectionKey} open={insightsOpen} onOpenChange={setInsightsOpen}>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Insights</CardTitle>
+                        <CardDescription>Otimizações, rankings e indicadores detalhados</CardDescription>
+                      </div>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" size="sm" data-tour="dashboard-insights-toggle">
+                          {insightsOpen ? (
+                            <>
+                              Ocultar <ChevronUp className="ml-2 h-4 w-4" />
+                            </>
+                          ) : (
+                            <>
+                              Ver insights <ChevronDown className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </CardHeader>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-6">
+                        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                    {isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to="/produtos" className="block [&:hover]:no-underline" data-tour="dashboard-insights-product-loss">
+                            <StatCard
+                              title="Perdas (danificados)"
+                              value={formatCurrency(productLossTotal)}
+                              icon={Package}
+                              variant={productLossTotal > 0 ? "warning" : "default"}
+                              description="Total no mês"
+                            />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Total de baixas danificadas registradas no mês.</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to="/clientes" className="block [&:hover]:no-underline" data-tour="dashboard-insights-clients">
+                            <StatCard
+                              title="Clientes cadastrados"
+                              value={clientsCount}
+                              icon={Users}
+                              description="Total do salão"
+                            />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Quantidade total de clientes cadastrados.</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {!isAdmin && (
+                      <div data-tour="dashboard-insights-my-performance">
+                        <StatCard
+                          title="Meu desempenho"
+                          value={staffCompletedThisMonth}
+                          icon={Calendar}
+                          description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados no mês`}
+                        />
+                      </div>
+                    )}
+                    {!isAdmin && (
+                      <div data-tour="dashboard-insights-my-clients">
+                        <StatCard
+                          title="Clientes que atendi"
+                          value={staffMyClientsCount ?? 0}
+                          icon={Users}
+                          description="Clientes únicos no mês"
+                        />
+                      </div>
+                    )}
+                        </div>
+
+                        {isAdmin && (
+                          <DashboardClientRanking clientRanking={clientRanking} formatCurrency={formatCurrency} />
+                        )}
+
+                        {isAdmin && professionalGoalsRanking.length > 0 && (
+                          <DashboardGoalsCard professionalGoalsRanking={professionalGoalsRanking} formatCurrency={formatCurrency} />
+                        )}
+
+                        <div data-tour="dashboard-insights-all-kpis">
+                          <DashboardStatsGrid
+                            isLoading={isLoading}
+                            isAdmin={isAdmin}
+                            dailyBalance={dailyBalance}
+                            monthlyBalance={stats.monthlyBalance}
+                            monthlyIncome={stats.monthlyIncome}
+                            monthlyExpenses={stats.monthlyExpenses}
+                            productLossTotal={productLossTotal}
+                            clientsCount={clientsCount}
+                            commissionsPending={commissionsPending}
+                            commissionsPaid={commissionsPaid}
+                            salariesToPay={salariesToPay}
+                            salariesPaid={salariesPaid}
+                            professionalCommissionsToReceive={professionalCommissionsToReceive}
+                            professionalCommissionsReceived={professionalCommissionsReceived}
+                            mySalaryAmount={mySalaryAmount}
+                            lastSalaryPayment={lastSalaryPayment}
+                            staffCompletedThisMonth={staffCompletedThisMonth}
+                            staffValueGeneratedThisMonth={staffValueGeneratedThisMonth}
+                            staffMyClientsCount={staffMyClientsCount}
+                            todayAppointments={stats.todayAppointments}
+                            pendingAppointments={stats.pendingAppointments}
+                            lowStockProducts={stats.lowStockProducts}
+                            formatCurrency={formatCurrency}
+                          />
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
+              );
+            }
+
+            return null;
+          })}
         </div>
-      </div>
+
+        <Dialog open={prefsOpen} onOpenChange={setPrefsOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Personalizar Dashboard</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {dashboardPrefs.order
+                .filter((k) => availableSections.includes(k))
+                .map((key) => {
+                  const isHidden = Boolean(dashboardPrefs.hidden?.[key]);
+                  const idx = dashboardPrefs.order.indexOf(key);
+                  const canUp = idx > 0;
+                  const canDown = idx >= 0 && idx < dashboardPrefs.order.length - 1;
+
+                  const labelByKey: Record<DashboardSectionKey, string> = {
+                    quick_actions: "Ações rápidas",
+                    today: "Hoje",
+                    month: "Mês atual",
+                    activity_feed: "Atividade",
+                    insights: "Insights",
+                  };
+
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{labelByKey[key] ?? key}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch checked={!isHidden} onCheckedChange={(checked) => toggleSection(key, !checked)} />
+                        </div>
+                        <Button variant="outline" size="icon" disabled={!canUp} onClick={() => moveSection(key, "up")}>
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={!canDown} onClick={() => moveSection(key, "down")}>
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </TooltipProvider>
     </MainLayout>
   );
 }
