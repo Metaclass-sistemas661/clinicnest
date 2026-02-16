@@ -11,14 +11,17 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-violet-950 via-fuchsia-900 to-violet-950 backdrop-blur-xl border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 sm:h-24 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+        <div className="flex h-[72px] sm:h-[88px] items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
             <img
-              src="/beauty.logo.png"
+              src="/beautyg.logo.png"
               alt="BeautyGest"
-              className="h-16 w-64 sm:h-20 sm:w-80 object-contain"
+              className="h-14 w-14 sm:h-16 sm:w-16 object-contain"
               loading="eager"
             />
+            <span className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              BeautyGest
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -238,7 +241,7 @@ export function LandingLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <Navbar />
       <PromoBanner />
-      <div className="pt-32 sm:pt-36">
+      <div className="pt-[124px] sm:pt-[140px]">
         {children}
       </div>
       <Footer />
