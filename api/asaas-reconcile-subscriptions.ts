@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/node";
-import { isCronAuthorized } from "./_shared/cronAuth";
-import { applySubscriptionUpdate, fetchSubscriptionFromAsaas, mapSubscriptionFromAsaas } from "./_shared/asaasBilling";
+import { isCronAuthorized } from "./_shared/cronAuth.js";
+import { applySubscriptionUpdate, fetchSubscriptionFromAsaas, mapSubscriptionFromAsaas } from "./_shared/asaasBilling.js";
 
 function getEnv(name: string): string {
   const v = process.env[name];

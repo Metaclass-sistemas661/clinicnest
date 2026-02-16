@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import * as Sentry from "@sentry/node";
-import { isCronAuthorized } from "./_shared/cronAuth";
-import { processAsaasWebhookPayload } from "./_shared/asaasWebhookProcessor";
+import { isCronAuthorized } from "./_shared/cronAuth.js";
+import { processAsaasWebhookPayload } from "./_shared/asaasWebhookProcessor.js";
 
 function getEnv(name: string): string {
   const v = process.env[name];

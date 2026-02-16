@@ -1,5 +1,5 @@
  
-import { applySubscriptionUpdate, fetchSubscriptionFromAsaas, getAsaasEventAt, mapSubscriptionFromAsaas } from "./asaasBilling";
+import { applySubscriptionUpdate, fetchSubscriptionFromAsaas, getAsaasEventAt, mapSubscriptionFromAsaas } from "./asaasBilling.js";
 
 function isValidNonZeroUuid(v: unknown): v is string {
   if (typeof v !== "string") return false;
