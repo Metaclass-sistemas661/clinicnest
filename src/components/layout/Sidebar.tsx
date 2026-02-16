@@ -9,6 +9,7 @@ import {
   Scissors,
   Users,
   UserCog,
+  User,
   Settings,
   LogOut,
   CreditCard,
@@ -65,12 +66,11 @@ const navCategories: NavCategory[] = [
     label: "Administrativo",
     items: [
       { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
-      { title: "Auditoria", href: "/auditoria", icon: Shield, adminOnly: true },
-      { title: "Diagnóstico", href: "/diagnostico-seguranca", icon: Shield, adminOnly: true },
+      { title: "Auditoria & Diagnóstico", href: "/auditoria", icon: Shield, adminOnly: true },
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
-      { title: "Meu Perfil", href: "/minhas-configuracoes", icon: Settings },
+      { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
       { title: "Ajuda", href: "/ajuda", icon: BookOpen },
@@ -87,7 +87,6 @@ const prefetchByHref: Record<string, () => void> = {
   "/produtos": () => void import("@/pages/Produtos"),
   "/metas": () => void import("@/pages/Metas"),
   "/auditoria": () => void import("@/pages/Auditoria"),
-  "/diagnostico-seguranca": () => void import("@/pages/DiagnosticoSeguranca"),
   "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
@@ -140,7 +139,7 @@ function SidebarContent({
             </div>
             <div>
               <span className="font-display text-base md:text-lg font-bold text-foreground">
-                {tenant?.name || "VynloBella"}
+                {tenant?.name || "BeautyGest"}
               </span>
               <p className="text-xs text-muted-foreground">Gestão Profissional</p>
             </div>
@@ -278,7 +277,7 @@ export function Sidebar() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-vibrant shadow-glow">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-foreground">VynloBella</span>
+            <span className="font-display text-lg font-bold text-foreground">BeautyGest</span>
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>

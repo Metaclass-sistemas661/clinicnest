@@ -103,7 +103,7 @@ export default function Contato() {
       }
     } catch (err) {
       logger.error("Erro ao enviar contato:", err);
-      toast.error("Erro ao enviar mensagem. Tente novamente ou envie para contato@vynlobella.com");
+      toast.error("Erro ao enviar mensagem. Tente novamente ou envie para contato@metaclass.com.br");
     } finally {
       setLoading(false);
     }
@@ -148,10 +148,10 @@ export default function Contato() {
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-1">E-mail</h3>
                   <a
-                    href="mailto:contato@vynlobella.com"
+                    href="mailto:contato@metaclass.com.br"
                     className="text-violet-600 hover:text-fuchsia-600 font-medium"
                   >
-                    contato@vynlobella.com
+                    contato@metaclass.com.br
                   </a>
                 </div>
                 <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">

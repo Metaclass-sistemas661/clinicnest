@@ -40,7 +40,7 @@ type DocSection = {
 const SECTIONS: DocSection[] = [
   {
     id: "comecando",
-    title: "Começando no VynloBella",
+    title: "Começando no BeautyGest",
     icon: Sparkles,
     tags: ["primeiro acesso", "configuração", "setup"],
     summary: "Configure o salão, cadastre serviços e comece a usar a agenda em poucos minutos.",
@@ -189,9 +189,9 @@ export default function Ajuda() {
   return (
     <MainLayout
       title="Ajuda & Documentação"
-      subtitle="Guia oficial VynloBella — aprenda rápido e use com confiança"
+      subtitle="Guia oficial BeautyGest — aprenda rápido e use com confiança"
       actions={
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap justify-end py-1">
           <Tabs value="ajuda" onValueChange={(v) => v === "suporte" && navigate("/suporte")}>
             <TabsList data-tour="help-support-tabs">
               <TabsTrigger value="ajuda" data-tour="help-tab-ajuda">Ajuda</TabsTrigger>
@@ -245,13 +245,13 @@ export default function Ajuda() {
             </div>
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase tracking-wider">VynloBella</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">BeautyGest</span>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-            <div className="space-y-4">
+        <CardContent className="p-4 sm:p-6 min-h-[calc(100vh-260px)]">
+          <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-stretch min-h-0">
+            <div className="flex flex-col gap-4 min-h-0 h-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -263,7 +263,7 @@ export default function Ajuda() {
                 />
               </div>
 
-              <ScrollArea className="h-[520px] rounded-xl border" data-tour="help-sections">
+              <ScrollArea className="flex-1 min-h-0 rounded-xl border" data-tour="help-sections">
                 <div className="p-2 space-y-1">
                   {filtered.length === 0 ? (
                     <div className="p-2">
@@ -326,7 +326,7 @@ export default function Ajuda() {
               </div>
             </div>
 
-            <div className="space-y-6" data-tour="help-content">
+            <div className="space-y-6 min-h-0" data-tour="help-content">
               {filtered.length === 0 ? null : (
                 filtered.map((s, idx) => {
                   const Icon = s.icon;
@@ -362,7 +362,7 @@ export default function Ajuda() {
                           </CardContent>
                         </Card>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 pt-1">
                           {s.actions.map((a) => (
                             <Link
                               key={a.href}

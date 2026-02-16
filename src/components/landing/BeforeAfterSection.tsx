@@ -40,7 +40,7 @@ export function BeforeAfterSection() {
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             A diferença de usar{" "}
             <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-              VynloBella
+              BeautyGest
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
@@ -54,7 +54,7 @@ export function BeforeAfterSection() {
           <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-red-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
               <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 font-semibold text-sm border border-red-200">
-                ❌ Sem VynloBella
+                ❌ Sem BeautyGest
               </span>
             </div>
             
@@ -83,7 +83,7 @@ export function BeforeAfterSection() {
           <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-green-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
               <span className="px-4 py-2 rounded-full bg-green-100 text-green-600 font-semibold text-sm border border-green-200">
-                ✅ Com VynloBella
+                ✅ Com BeautyGest
               </span>
             </div>
             

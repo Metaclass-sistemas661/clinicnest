@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function storageKey(tenantId: string) {
-  return `vynlobella:simple_mode:${tenantId}`;
+  return `beautygest:simple_mode:${tenantId}`;
 }
 
 export function getSimpleMode(tenantId: string | null | undefined): boolean {
@@ -17,7 +17,7 @@ export function setSimpleMode(tenantId: string | null | undefined, enabled: bool
   if (!tenantId) return;
   try {
     localStorage.setItem(storageKey(tenantId), enabled ? "1" : "0");
-    window.dispatchEvent(new Event("vynlobella:simple_mode_changed"));
+    window.dispatchEvent(new Event("beautygest:simple_mode_changed"));
   } catch {
     // ignore
   }
@@ -43,10 +43,10 @@ export function useSimpleMode(tenantId: string | null | undefined) {
     };
 
     window.addEventListener("storage", onStorage);
-    window.addEventListener("vynlobella:simple_mode_changed", onCustom);
+    window.addEventListener("beautygest:simple_mode_changed", onCustom);
     return () => {
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("vynlobella:simple_mode_changed", onCustom);
+      window.removeEventListener("beautygest:simple_mode_changed", onCustom);
     };
   }, [tenantId]);
 

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { PromoBanner } from "./PromoBanner";
 import { openCookieConsentPreferences } from "@/lib/cookieConsent";
@@ -9,36 +9,41 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 sm:h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-              VynloBella
+            <img
+              src="/beautygest-logo.png"
+              alt="BeautyGest"
+              className="h-10 w-10 rounded-lg bg-white/5 p-1"
+              loading="eager"
+            />
+            <span className="font-display text-xl sm:text-2xl font-bold text-white">
+              BeautyGest
             </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="/#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <a href="/#features" className="text-white/80 hover:text-white transition-colors">
               Recursos
             </a>
-            <a href="/#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <a href="/#testimonials" className="text-white/80 hover:text-white transition-colors">
               Depoimentos
             </a>
-            <a href="/#faq" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <a href="/#faq" className="text-white/80 hover:text-white transition-colors">
               FAQ
             </a>
-            <a href="/#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <a href="/#pricing" className="text-white/80 hover:text-white transition-colors">
               Preços
             </a>
           </div>
 
           <div className="hidden md:flex items-center gap-4">
             <Link to="/login">
-              <Button variant="ghost">Entrar</Button>
+              <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">
+                Entrar
+              </Button>
             </Link>
             <Link to="/cadastro">
               <Button className="bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30">
@@ -58,30 +63,30 @@ export function Navbar() {
         </div>
 
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200" role="menu">
+          <div className="md:hidden py-4 border-t border-white/10" role="menu">
             <div className="flex flex-col gap-4">
-              <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+              <a href="#features" className="text-white/80 hover:text-white transition-colors py-2" onClick={(e) => {
                 e.preventDefault();
                 setIsOpen(false);
                 document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
               }}>
                 Recursos
               </a>
-              <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+              <a href="#testimonials" className="text-white/80 hover:text-white transition-colors py-2" onClick={(e) => {
                 e.preventDefault();
                 setIsOpen(false);
                 document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' });
               }}>
                 Depoimentos
               </a>
-              <a href="#faq" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+              <a href="#faq" className="text-white/80 hover:text-white transition-colors py-2" onClick={(e) => {
                 e.preventDefault();
                 setIsOpen(false);
                 document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' });
               }}>
                 FAQ
               </a>
-              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors py-2" onClick={(e) => {
+              <a href="#pricing" className="text-white/80 hover:text-white transition-colors py-2" onClick={(e) => {
                 e.preventDefault();
                 setIsOpen(false);
                 document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
@@ -90,7 +95,7 @@ export function Navbar() {
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
                 <Link to="/login">
-                  <Button variant="ghost" className="w-full">Entrar</Button>
+                  <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10">Entrar</Button>
                 </Link>
                 <Link to="/cadastro">
                   <Button className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-500">Começar Grátis</Button>
@@ -113,10 +118,13 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="space-y-4 lg:col-span-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-display text-xl font-bold">VynloBella</span>
+              <img
+                src="/beautygest-logo.png"
+                alt="BeautyGest"
+                className="h-10 w-10 rounded-lg bg-white/80 p-1"
+                loading="lazy"
+              />
+              <span className="font-display text-xl font-bold">BeautyGest</span>
             </Link>
 
             <p className="max-w-sm text-sm text-muted-foreground">
@@ -173,10 +181,10 @@ export function Footer() {
                 </li>
                 <li>
                   <a
-                    href="mailto:contato@vynlobella.com"
+                    href="mailto:contato@metaclass.com.br"
                     className="transition-colors hover:text-foreground"
                   >
-                    contato@vynlobella.com
+                    contato@metaclass.com.br
                   </a>
                 </li>
                 <li className="text-muted-foreground/90">Atendimento Seg-Sáb</li>
@@ -220,7 +228,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-border/70 pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {currentYear} VynloBella. Todos os direitos reservados.</p>
+          <p>© {currentYear} BeautyGest. Todos os direitos reservados.</p>
           <p>Feito para salões e profissionais da beleza no Brasil.</p>
         </div>
       </div>

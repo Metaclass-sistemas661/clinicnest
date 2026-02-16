@@ -16,7 +16,7 @@ function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Redefinir Senha - VynloBella</title>
+  <title>Redefinir Senha - BeautyGest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -27,7 +27,7 @@ function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">VynloBella</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
               <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
             </td>
           </tr>
@@ -42,7 +42,7 @@ function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
               </p>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Recebemos uma solicitação para redefinir a senha da sua conta no VynloBella.
+                Recebemos uma solicitação para redefinir a senha da sua conta no BeautyGest.
               </p>
 
               <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
@@ -77,7 +77,7 @@ function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
                 Precisa de ajuda? Entre em contato com o administrador do sistema.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -96,11 +96,11 @@ function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
  */
 function getPasswordResetEmailText(name: string, resetUrl: string): string {
   return `
-Redefinir sua senha - VynloBella
+Redefinir sua senha - BeautyGest
 
 Olá${name ? `, ${name}` : ""}!
 
-Recebemos uma solicitação para redefinir a senha da sua conta no VynloBella.
+Recebemos uma solicitação para redefinir a senha da sua conta no BeautyGest.
 
 Clique no link abaixo para criar uma nova senha:
 ${resetUrl}
@@ -111,7 +111,7 @@ Importante: Este link expira em 1 hora por motivos de segurança.
 
 Precisa de ajuda? Entre em contato com o administrador do sistema.
 
-© ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
   `.trim();
 }
 
@@ -125,7 +125,7 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirme sua conta - VynloBella</title>
+  <title>Confirme sua conta - BeautyGest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -136,7 +136,7 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">VynloBella</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
               <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
             </td>
           </tr>
@@ -144,14 +144,14 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
           <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
-              <h2 style="margin: 0 0 20px; color: #1f2937; font-size: 24px;">Bem-vindo ao VynloBella! 🎉</h2>
+              <h2 style="margin: 0 0 20px; color: #1f2937; font-size: 24px;">Bem-vindo ao BeautyGest! 🎉</h2>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
                 Olá${name ? `, ${name}` : ""}!
               </p>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Obrigado por se cadastrar no VynloBella! Estamos muito felizes em tê-lo conosco.
+                Obrigado por se cadastrar no BeautyGest! Estamos muito felizes em tê-lo conosco.
               </p>
 
               <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
@@ -170,7 +170,7 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
               </table>
 
               <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                Se você não criou uma conta no VynloBella, pode ignorar este email.
+                Se você não criou uma conta no BeautyGest, pode ignorar este email.
               </p>
 
               <p style="margin: 16px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6;">
@@ -186,7 +186,7 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
                 Precisa de ajuda? Entre em contato conosco.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+                &copy; ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -205,22 +205,22 @@ function getConfirmationEmailHtml(name: string, confirmationUrl: string): string
  */
 function getConfirmationEmailText(name: string, confirmationUrl: string): string {
   return `
-Bem-vindo ao VynloBella!
+Bem-vindo ao BeautyGest!
 
 Olá${name ? `, ${name}` : ""}!
 
-Obrigado por se cadastrar no VynloBella! Estamos muito felizes em tê-lo conosco.
+Obrigado por se cadastrar no BeautyGest! Estamos muito felizes em tê-lo conosco.
 
 Para ativar sua conta, clique no link abaixo para confirmar seu email:
 ${confirmationUrl}
 
-Se você não criou uma conta no VynloBella, pode ignorar este email.
+Se você não criou uma conta no BeautyGest, pode ignorar este email.
 
 Importante: Este link expira em 24 horas por motivos de segurança.
 
 Precisa de ajuda? Entre em contato conosco.
 
-© ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
   `.trim();
 }
 
@@ -234,7 +234,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senha Alterada - VynloBella</title>
+  <title>Senha Alterada - BeautyGest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -245,7 +245,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">VynloBella</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
               <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
             </td>
           </tr>
@@ -297,7 +297,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
                 Precisa de ajuda? Entre em contato com o administrador do sistema.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -316,7 +316,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
  */
 function getPasswordChangedEmailText(name: string, loginUrl: string): string {
   return `
-Senha alterada com sucesso - VynloBella
+Senha alterada com sucesso - BeautyGest
 
 Olá${name ? `, ${name}` : ""}!
 
@@ -331,7 +331,7 @@ Dica de segurança: Se você não realizou esta alteração, entre em contato co
 
 Precisa de ajuda? Entre em contato com o administrador do sistema.
 
-© ${new Date().getFullYear()} VynloBella. Todos os direitos reservados.
+© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
   `.trim();
 }
 
@@ -538,7 +538,7 @@ serve(async (req) => {
 
     if (type === "password_changed") {
       // Para password_changed, não precisa gerar link, apenas usar login URL
-      subject = "Senha alterada com sucesso - VynloBella";
+      subject = "Senha alterada com sucesso - BeautyGest";
       emailHtml = getPasswordChangedEmailHtml(nameTrim, loginUrl);
       emailText = getPasswordChangedEmailText(nameTrim, loginUrl);
     } else {
@@ -584,11 +584,11 @@ serve(async (req) => {
       log("Link gerado", { link: actionLink.substring(0, 50) + "..." });
 
       if (type === "password_reset") {
-        subject = "Redefinir sua senha - VynloBella";
+        subject = "Redefinir sua senha - BeautyGest";
         emailHtml = getPasswordResetEmailHtml(nameTrim, actionLink);
         emailText = getPasswordResetEmailText(nameTrim, actionLink);
       } else {
-        subject = "Confirme sua conta - VynloBella";
+        subject = "Confirme sua conta - BeautyGest";
         emailHtml = getConfirmationEmailHtml(nameTrim, actionLink);
         emailText = getConfirmationEmailText(nameTrim, actionLink);
       }

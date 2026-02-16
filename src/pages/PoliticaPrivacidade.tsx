@@ -33,7 +33,7 @@ export default function PoliticaPrivacidade() {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-3xl">
           <div className="max-w-none space-y-8 text-muted-foreground">
             <p className="text-base leading-relaxed">
-              O VynloBella está comprometido com a proteção da sua privacidade. Esta Política
+              O BeautyGest está comprometido com a proteção da sua privacidade. Esta Política
               descreve como coletamos, usamos, armazenamos e protegemos suas informações quando
               você utiliza nossa plataforma.
             </p>
@@ -56,7 +56,7 @@ export default function PoliticaPrivacidade() {
                 2. Finalidade do tratamento
               </h2>
               <p className="text-base leading-relaxed">
-                Utilizamos os dados para: prestar e melhorar o serviço VynloBella, processar
+                Utilizamos os dados para: prestar e melhorar o serviço BeautyGest, processar
                 pagamentos, enviar comunicações relevantes (incluindo suporte), garantir
                 segurança e cumprimento de obrigações legais, e realizar análises agregadas e
                 anônimas para melhorar nossa oferta.
@@ -69,7 +69,7 @@ export default function PoliticaPrivacidade() {
               </h2>
               <p className="text-base leading-relaxed">
                 O tratamento é realizado com base na execução do contrato, no seu consentimento
-                quando aplicável, no legítimo interesse do VynloBella e no cumprimento de
+                quando aplicável, no legítimo interesse do BeautyGest e no cumprimento de
                 obrigações legais, em conformidade com a Lei Geral de Proteção de Dados (LGPD).
               </p>
             </div>

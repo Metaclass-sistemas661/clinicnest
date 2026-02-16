@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://vynlobella.com/sitemap.xml
+Sitemap: https://beautygest.metaclass.com.br/sitemap.xml

@@ -1,7 +1,7 @@
 /**
  * CORS headers compartilhados para todas as Edge Functions.
  * Em produção: defina CORS_ALLOWED_ORIGINS (vírgula separada) para restringir origens.
- * Ex.: CORS_ALLOWED_ORIGINS=https://vynlobella.com,https://www.vynlobella.com
+ * Ex.: CORS_ALLOWED_ORIGINS=https://beautygest.metaclass.com.br
  * Se não definido, usa "*" (desenvolvimento).
  */
 const allowedOriginsEnv = Deno.env.get("CORS_ALLOWED_ORIGINS");

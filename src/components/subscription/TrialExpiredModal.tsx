@@ -117,7 +117,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
                 Seu período de teste expirou
               </DialogTitle>
               <DialogDescription className="text-base">
-                Entre em contato com o administrador do salão para continuar usando o VynloBella.
+                Entre em contato com o administrador do salão para continuar usando o BeautyGest.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-center mt-6">
@@ -139,7 +139,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
             Seu período de teste expirou
           </DialogTitle>
           <DialogDescription className="text-base">
-            Para continuar usando o VynloBella, escolha um plano e desbloqueie todas as funcionalidades.
+            Para continuar usando o BeautyGest, escolha um plano e desbloqueie todas as funcionalidades.
           </DialogDescription>
         </DialogHeader>
 

@@ -32,7 +32,7 @@ export default function TermosDeUso() {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-3xl">
           <div className="max-w-none space-y-8 text-muted-foreground">
             <p className="text-base leading-relaxed">
-              Bem-vindo ao VynloBella. Ao acessar ou utilizar nossa plataforma, você concorda com os
+              Bem-vindo ao BeautyGest. Ao acessar ou utilizar nossa plataforma, você concorda com os
               presentes Termos de Uso. Recomendamos a leitura atenta antes de utilizar nossos
               serviços.
             </p>
@@ -42,7 +42,7 @@ export default function TermosDeUso() {
                 1. Aceitação dos termos
               </h2>
               <p className="text-base leading-relaxed">
-                O uso do sistema VynloBella (“Plataforma”) implica a aceitação integral destes
+                O uso do sistema BeautyGest (“Plataforma”) implica a aceitação integral destes
                 Termos. Caso não concorde com qualquer disposição, solicitamos que não utilize a
                 Plataforma. A continuação do uso após alterações constitui aceitação das novas
                 condições.
@@ -54,7 +54,7 @@ export default function TermosDeUso() {
                 2. Descrição do serviço
               </h2>
               <p className="text-base leading-relaxed">
-                O VynloBella é uma solução de gestão para salões de beleza e profissionais da área,
+                O BeautyGest é uma solução de gestão para salões de beleza e profissionais da área,
                 oferecendo recursos como agenda, cadastro de clientes, controle financeiro,
                 serviços, produtos e relatórios. O escopo exato do serviço depende do plano
                 contratado.
@@ -68,7 +68,7 @@ export default function TermosDeUso() {
               <p className="text-base leading-relaxed">
                 O usuário é responsável pela veracidade dos dados informados no cadastro e por
                 manter a confidencialidade de sua senha. O uso da conta é de sua exclusiva
-                responsabilidade. O VynloBella não se responsabiliza por uso indevido em caso de
+                responsabilidade. O BeautyGest não se responsabiliza por uso indevido em caso de
                 negligência do usuário.
               </p>
             </div>
@@ -81,7 +81,7 @@ export default function TermosDeUso() {
                 É vedado utilizar a Plataforma para fins ilícitos, ofensivos ou que prejudiquem
                 terceiros. O usuário compromete-se a não violar leis aplicáveis, não difundir
                 malware, não tentar acessar áreas restritas do sistema sem autorização e a respeitar
-                a propriedade intelectual do VynloBella e de terceiros.
+                a propriedade intelectual do BeautyGest e de terceiros.
               </p>
             </div>
 
@@ -91,7 +91,7 @@ export default function TermosDeUso() {
               </h2>
               <p className="text-base leading-relaxed">
                 Todo o conteúdo da Plataforma (interface, textos, marcas, lógica de negócio e
-                demais elementos) é de propriedade do VynloBella ou de seus licenciadores. Nenhuma
+                demais elementos) é de propriedade do BeautyGest ou de seus licenciadores. Nenhuma
                 licença ou direito de uso é concedido além do acesso à Plataforma nos termos
                 contratados.
               </p>
@@ -114,7 +114,7 @@ export default function TermosDeUso() {
                 7. Limitação de responsabilidade
               </h2>
               <p className="text-base leading-relaxed">
-                O VynloBella se empenha em manter a Plataforma estável e segura, porém não se
+                O BeautyGest se empenha em manter a Plataforma estável e segura, porém não se
                 responsabiliza por danos indiretos, lucros cessantes ou perda de dados decorrentes
                 do uso ou da impossibilidade de uso do serviço, dentro dos limites permitidos pela
                 lei.

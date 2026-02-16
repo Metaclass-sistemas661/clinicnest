@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, Scissors, Package, DollarSign, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const STORAGE_KEY = "vynlobella_onboarding_seen";
+const STORAGE_KEY = "beautygest_onboarding_seen";
 
 export function WelcomeModal() {
   const [open, setOpen] = useState(false);
@@ -51,7 +51,7 @@ export function WelcomeModal() {
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl">Bem-vindo ao VynloBella!</DialogTitle>
+              <DialogTitle className="text-xl">Bem-vindo ao BeautyGest!</DialogTitle>
               <DialogDescription>
                 Seu painel de gestão para salões de beleza
               </DialogDescription>

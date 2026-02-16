@@ -16,9 +16,9 @@ type TourStep = {
   staffOnly?: boolean;
 };
 
-type TourKey = "vynlobella_core";
+type TourKey = "beautygest_core";
 
-const TOUR_KEY: TourKey = "vynlobella_core";
+const TOUR_KEY: TourKey = "beautygest_core";
 
 const STEPS: TourStep[] = [
   {
@@ -92,7 +92,7 @@ const STEPS: TourStep[] = [
     route: "/agenda",
     target: "sidebar-ajuda",
     title: "Ajuda & documentação",
-    description: "Guia oficial do VynloBella com busca e atalhos. Você pode reiniciar o tutorial por lá.",
+    description: "Guia oficial do BeautyGest com busca e atalhos. Você pode reiniciar o tutorial por lá.",
     placement: "right",
   },
   {

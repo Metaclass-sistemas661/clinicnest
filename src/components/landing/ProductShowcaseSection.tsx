@@ -107,13 +107,13 @@ export function ProductShowcaseSection() {
   // Mapeamento de IDs para URLs
   const getFeatureUrl = (featureId: string) => {
     const urlMap: Record<string, string> = {
-      dashboard: "app.vynlobella.com/dashboard",
-      agenda: "app.vynlobella.com/agenda",
-      clientes: "app.vynlobella.com/clientes",
-      financeiro: "app.vynlobella.com/financeiro",
-      estoque: "app.vynlobella.com/estoque",
+      dashboard: "beautygest.metaclass.com.br/dashboard",
+      agenda: "beautygest.metaclass.com.br/agenda",
+      clientes: "beautygest.metaclass.com.br/clientes",
+      financeiro: "beautygest.metaclass.com.br/financeiro",
+      estoque: "beautygest.metaclass.com.br/estoque",
     };
-    return urlMap[featureId] || "app.vynlobella.com";
+    return urlMap[featureId] || "beautygest.metaclass.com.br";
   };
 
   // Função para detectar se está no mobile
@@ -149,7 +149,7 @@ export function ProductShowcaseSection() {
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Conheça o{" "}
             <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-              VynloBella
+              BeautyGest
             </span>{" "}
             por dentro
           </h2>

@@ -57,7 +57,7 @@ export function ROICalculatorSection() {
               </span>
             </h2>
             <p className="text-lg text-muted-foreground">
-              Calcule o retorno sobre investimento do VynloBella para o seu salão.
+              Calcule o retorno sobre investimento do BeautyGest para o seu salão.
             </p>
           </div>
 
@@ -115,7 +115,7 @@ export function ROICalculatorSection() {
                 </CardTitle>
                 <CardDescription>
                   {results
-                    ? "Veja quanto o VynloBella pode economizar para você"
+                    ? "Veja quanto o BeautyGest pode economizar para você"
                     : "Preencha os campos ao lado para ver os resultados"}
                 </CardDescription>
               </CardHeader>

@@ -295,7 +295,7 @@ serve(async (req) => {
         }
       }
 
-      return Deno.env.get("SITE_URL") || "https://vynlobella.com";
+      return Deno.env.get("SITE_URL") || "https://beautygest.metaclass.com.br";
     })();
 
     const apiBase = Deno.env.get("ASAAS_API_BASE_URL") || "https://api-sandbox.asaas.com";

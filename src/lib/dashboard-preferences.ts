@@ -12,7 +12,7 @@ export type DashboardPreferences = {
 };
 
 function storageKey(tenantId: string, userId: string) {
-  return `vynlobella:dashboard_prefs:v1:${tenantId}:${userId}`;
+  return `beautygest:dashboard_prefs:v1:${tenantId}:${userId}`;
 }
 
 export function getDashboardPreferences(tenantId: string | null | undefined, userId: string | null | undefined): DashboardPreferences | null {

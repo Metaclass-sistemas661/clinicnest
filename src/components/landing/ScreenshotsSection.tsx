@@ -96,7 +96,7 @@ export function ScreenshotsSection() {
               </div>
               <div className="flex-1 flex justify-center">
                 <div className="px-4 py-1 rounded-md bg-slate-700/50 text-slate-400 text-xs sm:text-sm">
-                  app.vynlobella.com/{activeTab}
+                  beautygest.metaclass.com.br/{activeTab}
                 </div>
               </div>
               <div className="w-16" />
@@ -107,7 +107,7 @@ export function ScreenshotsSection() {
               {activeScreenshot && (
                 <img
                   src={activeScreenshot.image}
-                  alt={`Tela de ${activeScreenshot.name} do VynloBella`}
+                  alt={`Tela de ${activeScreenshot.name} do BeautyGest`}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />

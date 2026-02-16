@@ -9,11 +9,11 @@ import {
 const faqs = [
   {
     question: "Preciso de conhecimento técnico para usar?",
-    answer: "Absolutamente não! O VynloBella foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos fluxos guiados no sistema e suporte humanizado para tirar dúvidas."
+    answer: "Absolutamente não! O BeautyGest foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos fluxos guiados no sistema e suporte humanizado para tirar dúvidas."
   },
   {
     question: "Posso usar no celular?",
-    answer: "Sim! O VynloBella funciona perfeitamente em qualquer dispositivo: computador, tablet ou celular. Você pode gerenciar seu salão de qualquer lugar, a qualquer hora."
+    answer: "Sim! O BeautyGest funciona perfeitamente em qualquer dispositivo: computador, tablet ou celular. Você pode gerenciar seu salão de qualquer lugar, a qualquer hora."
   },
   {
     question: "Como funciona o período de teste?",
@@ -50,7 +50,7 @@ export function FAQSection() {
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Respostas para as perguntas mais comuns sobre o VynloBella.
+            Respostas para as perguntas mais comuns sobre o BeautyGest.
           </p>
         </div>
 
