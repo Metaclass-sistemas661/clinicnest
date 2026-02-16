@@ -14,9 +14,9 @@ export function Navbar() {
         <div className="flex h-16 sm:h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="/beautygest-logo.png"
+              src="/beautygest.logo.png"
               alt="BeautyGest"
-              className="h-12 w-12 sm:h-14 sm:w-14"
+              className="h-14 w-14 sm:h-16 sm:w-16"
               loading="eager"
             />
           </Link>
