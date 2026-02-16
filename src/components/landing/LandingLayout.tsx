@@ -11,12 +11,12 @@ export function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-violet-950 via-fuchsia-900 to-violet-950 backdrop-blur-xl border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 sm:h-20 items-center justify-between">
+        <div className="flex h-20 sm:h-24 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="/beauty-logo.png"
+              src="/beauty.logo.png"
               alt="BeautyGest"
-              className="h-16 w-44 sm:h-20 sm:w-56 object-contain"
+              className="h-16 w-64 sm:h-20 sm:w-80 object-contain"
               loading="eager"
             />
           </Link>
@@ -238,7 +238,7 @@ export function LandingLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <Navbar />
       <PromoBanner />
-      <div className="pt-28 sm:pt-32">
+      <div className="pt-32 sm:pt-36">
         {children}
       </div>
       <Footer />

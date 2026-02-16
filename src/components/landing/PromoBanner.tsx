@@ -34,7 +34,7 @@ export function PromoBanner() {
 
   return (
     <div 
-      className="fixed top-16 sm:top-20 left-0 right-0 z-40 bg-yellow-400 text-black border-b-2 border-yellow-500 shadow-lg overflow-hidden"
+      className="fixed top-20 sm:top-24 left-0 right-0 z-40 bg-yellow-400 text-black border-b-2 border-yellow-500 shadow-lg overflow-hidden"
       style={{ backgroundColor: "#FFEB3B" }}
     >
       <div className="flex items-center py-2 sm:py-3 overflow-hidden">
