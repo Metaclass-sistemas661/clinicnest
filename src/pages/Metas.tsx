@@ -544,17 +544,18 @@ export default function Metas() {
             size="sm"
             onClick={handleExportCsv}
             disabled={isLoading || activeGoals.length === 0}
+            data-tour="goals-export-csv"
           >
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setBulkCreateOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setBulkCreateOpen(true)} data-tour="goals-bulk-create">
             <CopyPlus className="mr-2 h-4 w-4" />
             Criar em lote
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground">
+            <Button className="gradient-primary text-primary-foreground" data-tour="goals-new-goal">
               <Plus className="mr-2 h-4 w-4" />
               Nova Meta
             </Button>

@@ -16,6 +16,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useAuth } from "@/contexts/AuthContext";
+import { TourProvider } from "@/contexts/TourContext";
 
 // Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -45,6 +46,8 @@ const Metas = lazyWithRetry(() => import("@/pages/Metas"));
 const MinhasMetas = lazyWithRetry(() => import("@/pages/MinhasMetas"));
 const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
 const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfiguracoes"));
+const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
+const Ajuda = lazyWithRetry(() => import("@/pages/Ajuda"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,11 +74,12 @@ const App = () => (
           <CookieConsentBanner />
           <AuthProvider>
             <GoalMotivationProvider>
-            <InternalDarkMode />
-            <GlobalAdminProfitListener />
-            <ErrorBoundary>
-              <Suspense fallback={<RouteFallback />}>
-              <Routes>
+            <TourProvider>
+              <InternalDarkMode />
+              <GlobalAdminProfitListener />
+              <ErrorBoundary>
+                <Suspense fallback={<RouteFallback />}>
+                <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
@@ -220,11 +224,30 @@ const App = () => (
                   }
                 />
 
+                <Route
+                  path="/suporte"
+                  element={
+                    <ProtectedRoute>
+                      <Suporte />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/ajuda"
+                  element={
+                    <ProtectedRoute>
+                      <Ajuda />
+                    </ProtectedRoute>
+                  }
+                />
+
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </Suspense>
-            </ErrorBoundary>
+                </Suspense>
+              </ErrorBoundary>
+            </TourProvider>
             </GoalMotivationProvider>
           </AuthProvider>
         </BrowserRouter>

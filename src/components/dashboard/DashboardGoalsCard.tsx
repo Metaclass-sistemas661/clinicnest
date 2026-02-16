@@ -41,7 +41,7 @@ export const DashboardGoalsCard = memo(function DashboardGoalsCard({ professiona
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/metas">Ver metas</Link>
+          <Link to="/metas" data-tour="dashboard-goals-view-all">Ver metas</Link>
         </Button>
       </CardHeader>
       <CardContent>

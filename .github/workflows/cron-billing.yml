@@ -1,0 +1,55 @@
+name: Billing Cron Jobs
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: billing-cron
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Run scheduled billing jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Call billing cron endpoints
+        env:
+          BASE_URL: ${{ secrets.PROD_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "Missing PROD_BASE_URL secret" && exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET secret" && exit 1
+          fi
+
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Now: $(date -u)"
+
+          # Decide which endpoints to call based on schedule frequency.
+          # - */5: retry
+          # - */30: retry + monitor
+          # - 0 3: retry + monitor + reconcile
+
+          # Always run retry
+          curl -fsS -X POST "$BASE_URL/api/asaas-webhook-retry" -H "Authorization: Bearer $CRON_SECRET" || true
+
+          MINUTE=$(date -u +%M)
+          HOUR=$(date -u +%H)
+
+          # Every 30 minutes
+          if [ $((10#$MINUTE % 30)) -eq 0 ]; then
+            curl -fsS -X POST "$BASE_URL/api/monitor-asaas-webhook-failures" -H "Authorization: Bearer $CRON_SECRET" || true
+          fi
+
+          # Daily at 03:00 UTC
+          if [ "$HOUR" = "03" ] && [ "$MINUTE" = "00" ]; then
+            curl -fsS -X POST "$BASE_URL/api/asaas-reconcile-subscriptions" -H "Authorization: Bearer $CRON_SECRET" || true
+          fi

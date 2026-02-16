@@ -515,6 +515,7 @@ export default function Agenda() {
               size="sm"
               onClick={() => setViewMode("day")}
               className={viewMode === "day" ? "gradient-primary text-primary-foreground" : ""}
+              data-tour="agenda-view-day"
             >
               Dia
             </Button>
@@ -523,13 +524,14 @@ export default function Agenda() {
               size="sm"
               onClick={() => setViewMode("week")}
               className={viewMode === "week" ? "gradient-primary text-primary-foreground" : ""}
+              data-tour="agenda-view-week"
             >
               Semana
             </Button>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground text-sm">
+              <Button className="gradient-primary text-primary-foreground text-sm" data-tour="agenda-new-appointment">
                 <Plus className="mr-1 md:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo Agendamento</span>
                 <span className="sm:hidden">Novo</span>
@@ -658,7 +660,7 @@ export default function Agenda() {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="agenda-create-appointment">
                     {isSaving ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -678,7 +680,7 @@ export default function Agenda() {
       {/* Navigation */}
       <div className="mb-4 md:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
         <div className="flex items-center gap-2 md:gap-4">
-          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}>
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))} data-tour="agenda-prev-period">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-sm md:text-lg font-semibold text-center min-w-0 text-foreground">
@@ -686,11 +688,11 @@ export default function Agenda() {
               ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
               : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
           </h2>
-          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}>
+          <Button variant="outline" size="icon" className="h-8 w-8 md:h-10 md:w-10" onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))} data-tour="agenda-next-period">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())}>
+        <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} data-tour="agenda-today">
           Hoje
         </Button>
       </div>

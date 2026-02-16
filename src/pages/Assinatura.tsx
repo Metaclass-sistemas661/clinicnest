@@ -171,7 +171,7 @@ export default function Assinatura() {
       title="Assinatura"
       subtitle="Gerencie seu plano"
       actions={
-        <Button variant="outline" size="sm" onClick={() => checkSubscription()}>
+        <Button variant="outline" size="sm" onClick={() => checkSubscription()} data-tour="subscription-refresh">
           <RefreshCw className="mr-2 h-4 w-4" />
           Atualizar Status
         </Button>
@@ -232,7 +232,7 @@ export default function Assinatura() {
               {subscribed ? (
                 <>
                   <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Ativo</Badge>
-                  <Button variant="outline" size="sm" onClick={handleManageSubscription}>
+                  <Button variant="outline" size="sm" onClick={handleManageSubscription} data-tour="subscription-manage">
                     <Settings className="mr-2 h-4 w-4" />
                     Gerenciar
                   </Button>
@@ -335,6 +335,7 @@ export default function Assinatura() {
                     variant={tier.recommended ? "default" : "outline"}
                     onClick={() => handleSubscribe(tier.key)}
                     disabled={loadingPlan !== null}
+                    data-tour={tier.key === "pro" ? "subscription-choose-pro" : tier.key === "premium" ? "subscription-choose-premium" : "subscription-choose-basic"}
                   >
                     {loadingPlan === loadingKey ? (
                       <>

@@ -173,10 +173,10 @@ export function StockMovementDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="products-movement-cancel">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="products-movement-submit">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

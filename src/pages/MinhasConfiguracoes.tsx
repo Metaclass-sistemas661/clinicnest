@@ -298,7 +298,7 @@ export default function MinhasConfiguracoes() {
                 </div>
               </div>
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} disabled={isSavingProfile} size="sm">
+                <Button onClick={handleSaveProfile} disabled={isSavingProfile} size="sm" data-tour="my-settings-save-phone">
                   {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Salvar telefone
                 </Button>
@@ -334,7 +334,7 @@ export default function MinhasConfiguracoes() {
                   />
                 </div>
                 <div className="lg:col-span-2 flex justify-end">
-                  <Button type="submit" disabled={isSavingPassword} size="sm">
+                  <Button type="submit" disabled={isSavingPassword} size="sm" data-tour="my-settings-change-password">
                     {isSavingPassword ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Alterar senha
                   </Button>
@@ -383,7 +383,7 @@ export default function MinhasConfiguracoes() {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" size="sm" disabled={isSubmittingLgpdRequest}>
+                  <Button type="submit" size="sm" disabled={isSubmittingLgpdRequest} data-tour="my-settings-lgpd-submit">
                     {isSubmittingLgpdRequest ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Enviar solicitação
                   </Button>
@@ -451,7 +451,7 @@ export default function MinhasConfiguracoes() {
                 <CardTitle className="text-base">Notificações</CardTitle>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link to="/notificacoes">Ver notificações</Link>
+                <Link to="/notificacoes" data-tour="my-settings-view-notifications">Ver notificações</Link>
               </Button>
             </div>
             <CardDescription>
@@ -483,7 +483,7 @@ export default function MinhasConfiguracoes() {
               </div>
             ))}
             <div className="flex justify-end pt-1">
-              <Button onClick={handleSavePrefs} disabled={isSavingPrefs} size="sm">
+              <Button onClick={handleSavePrefs} disabled={isSavingPrefs} size="sm" data-tour="my-settings-save-notification-prefs">
                 {isSavingPrefs ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Salvar preferências
               </Button>

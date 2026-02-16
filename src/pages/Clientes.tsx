@@ -235,7 +235,7 @@ export default function Clientes() {
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new">
               <Plus className="mr-2 h-4 w-4" />
               Novo Cliente
             </Button>
@@ -289,7 +289,7 @@ export default function Clientes() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="clients-save">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -326,6 +326,7 @@ export default function Clientes() {
               size="sm"
               className={clientFilter === "all" ? "gradient-primary text-primary-foreground" : ""}
               onClick={() => setClientFilter("all")}
+              data-tour="clients-filter-all"
             >
               Todos
             </Button>
@@ -334,6 +335,7 @@ export default function Clientes() {
               size="sm"
               className={clientFilter === "mine" ? "gradient-primary text-primary-foreground" : ""}
               onClick={() => setClientFilter("mine")}
+              data-tour="clients-filter-mine"
             >
               Meus clientes ({myClientIds.size})
             </Button>
@@ -371,7 +373,7 @@ export default function Clientes() {
               }
               action={
                 !searchQuery && (
-                  <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+                  <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new-empty">
                     <Plus className="mr-2 h-4 w-4" />
                     Novo Cliente
                   </Button>
@@ -403,6 +405,7 @@ export default function Clientes() {
                           size="icon"
                           onClick={() => handleOpenDialog(client)}
                           aria-label={`Editar cliente ${client.name}`}
+                          data-tour="clients-item-edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -448,6 +451,7 @@ export default function Clientes() {
                               setDetailClient(client);
                               setIsDetailOpen(true);
                             }}
+                            data-tour="clients-item-details"
                           >
                             <Info className="h-3 w-3 mr-1" />
                             Detalhes
@@ -544,6 +548,7 @@ export default function Clientes() {
                                       setIsDetailOpen(true);
                                     }}
                                     aria-label={`Ver detalhes e consumo de ${client.name}`}
+                                    data-tour="clients-item-details"
                                   >
                                     <Info className="h-3 w-3" />
                                   </Button>
@@ -562,6 +567,7 @@ export default function Clientes() {
                               size="icon"
                               onClick={() => handleOpenDialog(client)}
                               aria-label={`Editar cliente ${client.name}`}
+                              data-tour="clients-item-edit"
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>

@@ -138,7 +138,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
             variant="warning"
             description="Comissões pendentes do mês"
           />
-          <Link to="/financeiro?tab=commissions">
+          <Link to="/financeiro?tab=commissions" data-tour="dashboard-stat-commissions-paid" className="block [&:hover]:no-underline">
             <StatCard
               title="Comissões Pagas"
               value={formatCurrency(commissionsPaid)}
@@ -147,7 +147,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
               description="Comissões pagas no mês"
             />
           </Link>
-          <Link to="/financeiro?tab=salaries">
+          <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-to-pay" className="block [&:hover]:no-underline">
             <StatCard
               title="Salários a Pagar"
               value={formatCurrency(salariesToPay)}
@@ -156,7 +156,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
               description="Total de salários fixos configurados"
             />
           </Link>
-          <Link to="/financeiro?tab=salaries">
+          <Link to="/financeiro?tab=salaries" data-tour="dashboard-stat-salaries-paid" className="block [&:hover]:no-underline">
             <StatCard
               title="Salários Pagos"
               value={formatCurrency(salariesPaid)}
@@ -176,7 +176,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
             variant="warning"
             description="Comissões pendentes (aguardando pagamento do admin)"
           />
-          <Link to="/minhas-comissoes" className="block [&:hover]:no-underline">
+          <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-commissions">
             <StatCard
               title="Comissões Recebidas"
               value={formatCurrency(professionalCommissionsReceived)}
@@ -186,7 +186,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
             />
           </Link>
           {mySalaryAmount !== null && (
-            <Link to="/meus-salarios" className="block [&:hover]:no-underline">
+            <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-salary">
               <StatCard
                 title="Meu Salário"
                 value={formatCurrency(mySalaryAmount)}

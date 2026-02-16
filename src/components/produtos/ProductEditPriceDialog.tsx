@@ -126,10 +126,10 @@ export function ProductEditPriceDialog({
             ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="products-edit-price-cancel">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="products-edit-price-submit">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

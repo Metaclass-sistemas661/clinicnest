@@ -10,7 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 .env
-.env.local
+.env.*
+!.env.example
+vite.config.ts.timestamp-*.mjs
 .env.*.local
 dist-ssr
 *.local

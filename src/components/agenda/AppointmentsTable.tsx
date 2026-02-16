@@ -399,6 +399,7 @@ export function AppointmentsTable({
                         variant="outline"
                         className="flex-1 text-success border-success/30 hover:bg-success/10"
                         onClick={() => handleStatusChange(appointment, "confirmed")}
+                        data-tour="agenda-action-confirm"
                       >
                         <CheckCircle2 className="mr-1 h-4 w-4" />
                         Confirmar
@@ -410,6 +411,7 @@ export function AppointmentsTable({
                         variant="outline"
                         className="flex-1 text-primary border-primary/30 hover:bg-primary/10"
                         onClick={() => handleStatusChange(appointment, "completed")}
+                        data-tour="agenda-action-complete"
                       >
                         <CheckCircle2 className="mr-1 h-4 w-4" />
                         Concluir
@@ -419,12 +421,13 @@ export function AppointmentsTable({
                       size="sm"
                       variant="outline"
                       onClick={() => openEditDialog(appointment)}
+                      data-tour="agenda-action-edit"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" data-tour="agenda-action-more">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -432,6 +435,7 @@ export function AppointmentsTable({
                         <DropdownMenuItem
                           onClick={() => handleStatusChange(appointment, "pending")}
                           disabled={appointment.status === "pending"}
+                          data-tour="agenda-action-mark-pending"
                         >
                           <Clock className="mr-2 h-4 w-4 text-warning" />
                           Pendente
@@ -439,6 +443,7 @@ export function AppointmentsTable({
                         <DropdownMenuItem
                           onClick={() => handleStatusChange(appointment, "cancelled")}
                           disabled={appointment.status === "cancelled"}
+                          data-tour="agenda-action-cancel"
                         >
                           <XCircle className="mr-2 h-4 w-4 text-destructive" />
                           Cancelar
@@ -449,6 +454,7 @@ export function AppointmentsTable({
                             <DropdownMenuItem
                               onClick={() => openDeleteDialog(appointment)}
                               className="text-destructive focus:text-destructive"
+                              data-tour="agenda-action-delete"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
@@ -556,6 +562,7 @@ export function AppointmentsTable({
                               className="h-8 w-8 text-success hover:bg-success/10 hover:text-success"
                               onClick={() => handleStatusChange(appointment, "confirmed")}
                               title="Confirmar"
+                              data-tour="agenda-action-confirm"
                             >
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
@@ -567,6 +574,7 @@ export function AppointmentsTable({
                               className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
                               onClick={() => handleStatusChange(appointment, "completed")}
                               title="Concluir"
+                              data-tour="agenda-action-complete"
                             >
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
@@ -575,13 +583,13 @@ export function AppointmentsTable({
                           {/* More options */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Button size="icon" variant="ghost" className="h-8 w-8" data-tour="agenda-action-more">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {canEdit && (
-                                <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
+                                <DropdownMenuItem onClick={() => openEditDialog(appointment)} data-tour="agenda-action-edit">
                                   <Pencil className="mr-2 h-4 w-4" />
                                   Editar
                                 </DropdownMenuItem>
@@ -590,6 +598,7 @@ export function AppointmentsTable({
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "pending")}
                                 disabled={appointment.status === "pending"}
+                                data-tour="agenda-action-mark-pending"
                               >
                                 <Clock className="mr-2 h-4 w-4 text-warning" />
                                 Marcar Pendente
@@ -597,6 +606,7 @@ export function AppointmentsTable({
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "confirmed")}
                                 disabled={appointment.status === "confirmed"}
+                                data-tour="agenda-action-confirm"
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-info" />
                                 Confirmar
@@ -604,6 +614,7 @@ export function AppointmentsTable({
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "completed")}
                                 disabled={appointment.status !== "confirmed"}
+                                data-tour="agenda-action-complete"
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
                                 Concluir
@@ -611,6 +622,7 @@ export function AppointmentsTable({
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "cancelled")}
                                 disabled={appointment.status === "cancelled"}
+                                data-tour="agenda-action-cancel"
                               >
                                 <XCircle className="mr-2 h-4 w-4 text-destructive" />
                                 Cancelar
@@ -621,6 +633,7 @@ export function AppointmentsTable({
                                   <DropdownMenuItem
                                     onClick={() => openDeleteDialog(appointment)}
                                     className="text-destructive focus:text-destructive"
+                                    data-tour="agenda-action-delete"
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Excluir
@@ -755,6 +768,7 @@ export function AppointmentsTable({
                 type="submit"
                 className="gradient-primary text-primary-foreground"
                 disabled={isCompleting}
+                data-tour="agenda-complete-confirm"
               >
                 {isCompleting ? (
                   <>
@@ -790,6 +804,7 @@ export function AppointmentsTable({
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-tour="agenda-delete-confirm"
             >
               {updatingId ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
             </AlertDialogAction>
@@ -916,7 +931,7 @@ export function AppointmentsTable({
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="agenda-edit-save">
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

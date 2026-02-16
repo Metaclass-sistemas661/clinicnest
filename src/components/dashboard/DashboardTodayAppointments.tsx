@@ -29,7 +29,7 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/agenda">Ver tudo</Link>
+          <Link to="/agenda" data-tour="dashboard-today-appointments-view-all">Ver tudo</Link>
         </Button>
       </CardHeader>
       <CardContent>
@@ -40,7 +40,7 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
               {isAdmin ? "Nenhum agendamento para hoje" : "Nenhum agendamento seu para hoje"}
             </p>
             <Button variant="link" asChild className="mt-2">
-              <Link to="/agenda">Criar agendamento</Link>
+              <Link to="/agenda" data-tour="dashboard-today-appointments-create">Criar agendamento</Link>
             </Button>
           </div>
         ) : (

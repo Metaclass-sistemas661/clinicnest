@@ -7,6 +7,29 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const logStep = createLogger("CREATE-CHECKOUT");
 
+async function auditLog(params: {
+  supabaseAdmin: ReturnType<typeof createClient>;
+  tenantId: string;
+  actorUserId: string;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await params.supabaseAdmin.rpc("log_tenant_action", {
+      p_tenant_id: params.tenantId,
+      p_actor_user_id: params.actorUserId,
+      p_action: params.action,
+      p_entity_type: params.entityType,
+      p_entity_id: params.entityId ?? null,
+      p_metadata: params.metadata ?? {},
+    });
+  } catch (err) {
+    logStep("AUDIT: failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 type TierKey = "basic" | "pro" | "premium";
 type IntervalKey = "monthly" | "quarterly" | "annual";
 
@@ -191,6 +214,21 @@ serve(async (req) => {
       });
     }
 
+    await auditLog({
+      supabaseAdmin,
+      tenantId,
+      actorUserId: user.id,
+      action: "checkout_attempt",
+      entityType: "subscription",
+      entityId: tenantId,
+      metadata: {
+        planKey: internalPlanKey,
+        tier,
+        interval,
+        cycle,
+      },
+    });
+
     const { data: tenantData, error: tenantError } = await supabaseAdmin
       .from("tenants")
       .select("name,email,phone,address,billing_cpf_cnpj")
@@ -214,6 +252,20 @@ serve(async (req) => {
     logStep("CPF/CNPJ sanitized", { length: cpfCnpj.length });
     if (!cpfCnpj || (cpfCnpj.length !== 11 && cpfCnpj.length !== 14)) {
       logStep("ERROR: Missing/invalid CPF/CNPJ", { length: cpfCnpj.length });
+
+      await auditLog({
+        supabaseAdmin,
+        tenantId,
+        actorUserId: user.id,
+        action: "checkout_blocked_missing_billing_cpf_cnpj",
+        entityType: "tenant",
+        entityId: tenantId,
+        metadata: {
+          planKey: internalPlanKey,
+          cpfCnpjLength: cpfCnpj.length,
+        },
+      });
+
       return new Response(
         JSON.stringify({
           error: "CPF/CNPJ obrigatório para assinatura. Preencha em Configurações > Dados do Salão.",
@@ -304,6 +356,21 @@ serve(async (req) => {
         // keep raw text
       }
       logStep("ERROR: Asaas checkout failed", { status: checkoutRes.status, body: checkoutText.slice(0, 500) });
+
+      await auditLog({
+        supabaseAdmin,
+        tenantId,
+        actorUserId: user.id,
+        action: "checkout_failed_asaas",
+        entityType: "subscription",
+        entityId: tenantId,
+        metadata: {
+          planKey: internalPlanKey,
+          status: checkoutRes.status,
+          detail,
+        },
+      });
+
       return new Response(
         JSON.stringify({ error: `Erro ao criar checkout Asaas (${checkoutRes.status}): ${detail}` }),
         { headers: { ...cors, "Content-Type": "application/json" }, status: 500 }
@@ -334,6 +401,18 @@ serve(async (req) => {
 
     const checkoutUrl = `${checkoutBaseUrl}/checkoutSession/show?id=${encodeURIComponent(checkoutId)}`;
     logStep("Asaas checkout created", { checkoutId, checkoutUrl });
+
+    await auditLog({
+      supabaseAdmin,
+      tenantId,
+      actorUserId: user.id,
+      action: "checkout_created",
+      entityType: "asaas_checkout",
+      entityId: checkoutId,
+      metadata: {
+        planKey: internalPlanKey,
+      },
+    });
 
     return new Response(JSON.stringify({ url: checkoutUrl }), {
       headers: { ...cors, "Content-Type": "application/json" },

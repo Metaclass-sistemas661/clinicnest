@@ -44,7 +44,7 @@ export const DashboardNextAppointmentCard = memo(function DashboardNextAppointme
           </div>
         </div>
         <Button variant="outline" size="sm" asChild className="mt-4">
-          <Link to="/agenda">Ver agenda</Link>
+          <Link to="/agenda" data-tour="dashboard-next-appointment-view-agenda">Ver agenda</Link>
         </Button>
       </CardContent>
     </Card>

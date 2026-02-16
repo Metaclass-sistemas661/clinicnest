@@ -49,7 +49,7 @@ export const DashboardClientRanking = memo(function DashboardClientRanking({ cli
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/clientes">Ver todos</Link>
+          <Link to="/clientes" data-tour="dashboard-client-ranking-view-all">Ver todos</Link>
         </Button>
       </CardHeader>
       <CardContent>

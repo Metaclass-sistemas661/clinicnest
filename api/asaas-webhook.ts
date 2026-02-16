@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "node:crypto";
+import * as Sentry from "@sentry/node";
 
 function getEnv(name: string): string {
   const v = process.env[name];
@@ -64,6 +65,12 @@ function parseAsaasDate(input: any): Date | null {
 
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function computeNextRetryAt(attempts: number): string {
+  const a = Math.max(1, Number(attempts || 1));
+  const minutes = a <= 1 ? 1 : a === 2 ? 5 : a === 3 ? 30 : a === 4 ? 120 : 360;
+  return new Date(Date.now() + minutes * 60_000).toISOString();
 }
 
 async function maybeCleanupCheckoutSessions(params: {
@@ -220,6 +227,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  const sentryDsn = process.env.SENTRY_DSN;
+  if (sentryDsn) {
+    Sentry.init({ dsn: sentryDsn, environment: process.env.VERCEL_ENV, release: process.env.VERCEL_GIT_COMMIT_SHA });
+  }
+
   const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
   if (expectedToken) {
     const received = getHeader(req, "asaas-access-token");
@@ -249,44 +261,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const asaasApiKey = process.env.ASAAS_API_KEY;
     const asaasApiBase = process.env.ASAAS_API_BASE_URL || "https://api-sandbox.asaas.com";
 
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from("asaas_webhook_events")
-      .select("status, attempts")
-      .eq("event_key", eventKey)
-      .maybeSingle();
+    const { data: claimRows, error: claimError } = await supabaseAdmin.rpc(
+      "claim_asaas_webhook_event",
+      {
+        p_event_key: eventKey,
+        p_event_type: eventType,
+        p_payload: payload,
+      }
+    );
 
-    if (existingError) throw existingError;
+    if (claimError) throw claimError;
 
-    if (existing?.status === "processed") {
+    const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+    if (claim?.already_processed) {
       res.status(200).json({ received: true, duplicate: true });
       return;
     }
 
-    if (!existing) {
-      const { error: insertError } = await supabaseAdmin.from("asaas_webhook_events").insert({
-        event_key: eventKey,
-        event_type: eventType,
-        received_at: new Date().toISOString(),
-        status: "processing",
-        attempts: 1,
-        payload,
-      });
-
-      if (insertError) {
-        const msg = insertError.message ?? String(insertError);
-        if (!msg.toLowerCase().includes("duplicate") && !msg.toLowerCase().includes("unique")) {
-          throw insertError;
-        }
-      }
-    } else {
-      const nextAttempts = Number(existing.attempts ?? 0) + 1;
-      const { error: updateAttemptsError } = await supabaseAdmin
-        .from("asaas_webhook_events")
-        .update({ status: "processing", attempts: nextAttempts })
-        .eq("event_key", eventKey);
-
-      if (updateAttemptsError) throw updateAttemptsError;
+    if (claim && claim.claimed === false) {
+      res.status(200).json({ received: true, duplicate: true });
+      return;
     }
+
+    const attemptsFromClaim = Number((claim as any)?.attempts ?? 1);
 
     try {
       const subscriptionFromPayload = (payload as any)?.subscription;
@@ -381,6 +378,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const mappedPlan = mapAsaasPlan(sub?.cycle, sub?.value);
         const nextDue = parseAsaasDate(sub?.nextDueDate);
 
+        const eventAt = (() => {
+          const candidates = [
+            (payload as any)?.dateCreated,
+            (payload as any)?.payment?.dateCreated,
+            (payload as any)?.subscription?.dateCreated,
+            (payload as any)?.payment?.confirmedDate,
+            (payload as any)?.payment?.creditDate,
+            (payload as any)?.subscription?.updatedAt,
+            (payload as any)?.payment?.updatedAt,
+          ].filter(Boolean);
+          for (const c of candidates) {
+            const d = typeof c === "string" ? new Date(c) : null;
+            if (d && !Number.isNaN(d.getTime())) return d;
+          }
+          return new Date();
+        })();
+
         const update: Record<string, unknown> = {
           billing_provider: "asaas",
           asaas_subscription_id: asaasSubscriptionId,
@@ -392,13 +406,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (nextDue) update.current_period_end = toIsoDateStart(nextDue);
 
         if (tenantId) {
-          await supabaseAdmin.from("subscriptions").update(update).eq("tenant_id", tenantId);
-        } else {
-          // Fallback if externalReference is missing
-          await supabaseAdmin
-            .from("subscriptions")
-            .update(update)
-            .eq("asaas_subscription_id", asaasSubscriptionId);
+          const { data: applyRows, error: applyError } = await supabaseAdmin.rpc("apply_subscription_update", {
+            p_tenant_id: tenantId,
+            p_billing_provider: "asaas",
+            p_event_key: eventKey,
+            p_event_at: eventAt.toISOString(),
+            p_status: mappedStatus,
+            p_plan: mappedPlan,
+            p_current_period_end: nextDue ? toIsoDateStart(nextDue) : null,
+            p_customer_id: asaasCustomerId,
+            p_provider_subscription_id: asaasSubscriptionId,
+          });
+          if (applyError) throw applyError;
+          void applyRows;
+
+          try {
+            await supabaseAdmin.rpc("log_tenant_action", {
+              p_tenant_id: tenantId,
+              p_actor_user_id: null,
+              p_action: "billing_webhook_applied",
+              p_entity_type: "asaas_webhook",
+              p_entity_id: eventKey,
+              p_metadata: {
+                provider: "asaas",
+                event_type: eventType,
+                asaas_subscription_id: asaasSubscriptionId,
+                status: mappedStatus,
+                plan: mappedPlan,
+              },
+            });
+          } catch {
+            // ignore
+          }
+
+          void update;
         }
       }
 
@@ -415,12 +456,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await supabaseAdmin
         .from("asaas_webhook_events")
-        .update({ status: "failed", last_error: msg })
+        .update({
+          status: "failed",
+          last_error: msg,
+          last_attempt_at: new Date().toISOString(),
+          next_retry_at: computeNextRetryAt(attemptsFromClaim + 1),
+        })
         .eq("event_key", eventKey);
+
+      if (sentryDsn) {
+        Sentry.captureException(handlerError, { extra: { event_key: eventKey, event_type: eventType } });
+        await Sentry.flush(2000);
+      }
 
       throw handlerError;
     }
   } catch (err) {
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(err);
+      await Sentry.flush(2000);
+    }
     const message = err instanceof Error ? err.message : String(err);
     res.status(500).json({ ok: false, error: message });
   }

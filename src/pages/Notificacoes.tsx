@@ -79,7 +79,7 @@ export default function Notificacoes() {
                 </div>
               </div>
               {unreadCount > 0 && (
-                <Button variant="outline" size="sm" onClick={markAllRead}>
+                <Button variant="outline" size="sm" onClick={markAllRead} data-tour="notifications-mark-all-read">
                   <CheckCheck className="h-4 w-4 mr-2" />
                   Marcar todas como lidas
                 </Button>
@@ -128,6 +128,7 @@ export default function Notificacoes() {
                         className="shrink-0"
                         onClick={() => markAsRead(n.id)}
                         title="Marcar como lida"
+                        data-tour="notifications-mark-read"
                       >
                         <Check className="h-4 w-4" />
                       </Button>

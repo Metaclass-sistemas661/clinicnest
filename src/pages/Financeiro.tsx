@@ -714,10 +714,12 @@ export default function Financeiro() {
       subtitle="Controle completo de receitas e despesas"
       actions={
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
-          <ExportPdfDialog onExport={handleExportPdf} isLoading={isLoading} />
+          <div data-tour="finance-export-pdf">
+            <ExportPdfDialog onExport={handleExportPdf} isLoading={isLoading} />
+          </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground">
+              <Button className="gradient-primary text-primary-foreground" data-tour="finance-new-transaction">
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Transação
               </Button>
@@ -800,7 +802,7 @@ export default function Financeiro() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="finance-save-transaction">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -956,27 +958,27 @@ export default function Financeiro() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1">
-            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-overview">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
               <span className="sm:hidden">Gráf.</span>
             </TabsTrigger>
-            <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+            <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-cashflow">
               <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Fluxo de Caixa</span>
               <span className="sm:hidden">Fluxo</span>
             </TabsTrigger>
-            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-transactions">
               <List className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Transações</span>
               <span className="sm:hidden">Trans.</span>
             </TabsTrigger>
-            <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+            <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-commissions">
               <Wallet className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Comissões</span>
               <span className="sm:hidden">Com.</span>
             </TabsTrigger>
-            <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2">
+            <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-salaries">
               <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Salários</span>
               <span className="sm:hidden">Sal.</span>
@@ -1104,6 +1106,7 @@ export default function Financeiro() {
               type="button"
               onClick={handlePaySalary}
               className="gradient-primary text-primary-foreground"
+              data-tour="finance-confirm-salary-payment"
             >
               Confirmar Pagamento
             </Button>
@@ -1112,4 +1115,5 @@ export default function Financeiro() {
       </Dialog>
     </MainLayout>
   );
+
 }

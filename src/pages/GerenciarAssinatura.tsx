@@ -182,7 +182,7 @@ export default function GerenciarAssinatura() {
       title="Gerenciar assinatura"
       subtitle="Cancelar e acompanhar status"
       actions={
-        <Button variant="outline" size="sm" onClick={() => navigate("/assinatura")}
+        <Button variant="outline" size="sm" onClick={() => navigate("/assinatura")} data-tour="subscription-manage-back"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
@@ -239,11 +239,12 @@ export default function GerenciarAssinatura() {
                     variant="destructive"
                     onClick={() => setShowCancelDialog(true)}
                     disabled={subscription.status !== "active" && subscription.status !== "trialing"}
+                    data-tour="subscription-cancel-open"
                   >
                     Cancelar assinatura
                   </Button>
 
-                  <Button variant="outline" onClick={() => fetchSubscription()} disabled={isLoading || isCancelling}>
+                  <Button variant="outline" onClick={() => fetchSubscription()} disabled={isLoading || isCancelling} data-tour="subscription-manage-refresh">
                     Atualizar
                   </Button>
                 </div>
@@ -283,6 +284,7 @@ export default function GerenciarAssinatura() {
               onClick={handleCancel}
               disabled={isCancelling}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-tour="subscription-cancel-confirm"
             >
               {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar cancelamento"}
             </AlertDialogAction>

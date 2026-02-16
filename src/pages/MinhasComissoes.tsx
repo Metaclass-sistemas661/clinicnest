@@ -164,6 +164,7 @@ export default function MinhasComissoes() {
               id="show-all"
               checked={showAllPeriods}
               onCheckedChange={setShowAllPeriods}
+              data-tour="commissions-show-all-periods"
             />
             <Label htmlFor="show-all" className="text-sm cursor-pointer">Todos os períodos</Label>
           </div>
@@ -172,13 +173,14 @@ export default function MinhasComissoes() {
             size="sm"
             onClick={exportCsv}
             disabled={isLoading || commissions.length === 0}
+            data-tour="commissions-export-csv"
           >
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
           </Button>
           {!showAllPeriods && (
           <Select value={filterMonth} onValueChange={setFilterMonth}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" data-tour="commissions-filter-month">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

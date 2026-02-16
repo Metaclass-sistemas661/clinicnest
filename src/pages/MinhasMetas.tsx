@@ -222,6 +222,7 @@ export default function MinhasMetas() {
             checked={showBarInHeader}
             onCheckedChange={handleToggleBarInHeader}
             disabled={savingBarPref}
+            data-tour="my-goals-toggle-header-bar"
           />
         </div>
 
@@ -340,6 +341,7 @@ export default function MinhasMetas() {
                   size="sm"
                   className="w-full mt-2 gap-2 text-muted-foreground hover:text-foreground"
                   onClick={() => setDetailGoal(goal)}
+                  data-tour="my-goals-open-details"
                 >
                   <TrendingUp className="h-4 w-4" />
                   Ver evolução e comparativo

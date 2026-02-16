@@ -462,12 +462,12 @@ export default function Produtos() {
             onSubmit={handleCreateCategory}
             isSaving={isSavingCategory}
           />
-          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)}>
+          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)} data-tour="products-new-category">
             <Tag className="mr-2 h-4 w-4" />
             Nova Categoria
           </Button>
 
-          <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)}>
+          <Button variant="outline" onClick={() => setIsMovementDialogOpen(true)} data-tour="products-stock-movement">
             <ArrowUp className="mr-2 h-4 w-4" />
             Entrada/Saída
           </Button>
@@ -481,7 +481,7 @@ export default function Produtos() {
             isSaving={isSaving}
           />
 
-          <Button className="gradient-primary text-primary-foreground" onClick={() => setIsProductDialogOpen(true)}>
+          <Button className="gradient-primary text-primary-foreground" onClick={() => setIsProductDialogOpen(true)} data-tour="products-new">
             <Plus className="mr-2 h-4 w-4" />
             Novo Produto
           </Button>

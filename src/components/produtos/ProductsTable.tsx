@@ -79,7 +79,7 @@ export function ProductsTable({
             title="Nenhum produto cadastrado"
             description="Cadastre os produtos em estoque para controlar vendas e baixas."
             action={
-              <Button variant="outline" onClick={onAddProduct}>
+              <Button variant="outline" onClick={onAddProduct} data-tour="products-add-empty">
                 <Plus className="mr-2 h-4 w-4" />
                 Adicionar Produto
               </Button>
@@ -140,7 +140,13 @@ export function ProductsTable({
                         <span className={isLowStock ? "font-bold text-warning" : ""}>{product.quantity}</span>
                       </div>
                       {isAdmin && (
-                        <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => onEditPrice(product)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => onEditPrice(product)}
+                          data-tour="products-item-edit"
+                        >
                           Editar detalhes
                         </Button>
                       )}
@@ -225,7 +231,7 @@ export function ProductsTable({
                           </TableCell>
                           <TableCell>
                             {isAdmin && (
-                              <Button variant="outline" size="sm" onClick={() => onEditPrice(product)}>
+                              <Button variant="outline" size="sm" onClick={() => onEditPrice(product)} data-tour="products-item-edit">
                                 Editar detalhes
                               </Button>
                             )}

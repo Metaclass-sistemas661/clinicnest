@@ -732,6 +732,7 @@ export default function Configuracoes() {
                 type="submit"
                 disabled={isSaving}
                 className="gradient-primary text-primary-foreground"
+                data-tour="settings-save"
               >
                 {isSaving ? (
                   <>
@@ -816,6 +817,7 @@ export default function Configuracoes() {
                   onCheckedChange={(checked) =>
                     setRetentionPolicy((prev) => ({ ...prev, auto_cleanup_enabled: checked }))
                   }
+                  data-tour="settings-lgpd-auto-cleanup"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -824,7 +826,7 @@ export default function Configuracoes() {
                   ? new Date(retentionPolicy.last_reviewed_at).toLocaleString("pt-BR")
                   : "não registrada"}
               </p>
-              <Button type="submit" disabled={isSavingRetention} className="w-full" variant="outline">
+              <Button type="submit" disabled={isSavingRetention} className="w-full" variant="outline" data-tour="settings-lgpd-save-policy">
                 {isSavingRetention ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Salvar política
               </Button>
@@ -888,6 +890,7 @@ export default function Configuracoes() {
                       variant="outline"
                       disabled={exportingRequestKey === `${request.id}:json`}
                       onClick={() => handleExportSubjectData(request, "json")}
+                      data-tour="settings-lgpd-export-json"
                     >
                       {exportingRequestKey === `${request.id}:json` ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -901,6 +904,7 @@ export default function Configuracoes() {
                       variant="outline"
                       disabled={exportingRequestKey === `${request.id}:csv`}
                       onClick={() => handleExportSubjectData(request, "csv")}
+                      data-tour="settings-lgpd-export-csv"
                     >
                       {exportingRequestKey === `${request.id}:csv` ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -914,6 +918,7 @@ export default function Configuracoes() {
                       variant="outline"
                       disabled={previewingRequestId === request.id}
                       onClick={() => handlePreviewAnonymization(request)}
+                      data-tour="settings-lgpd-preview-anonymization"
                     >
                       {previewingRequestId === request.id ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1027,6 +1032,7 @@ export default function Configuracoes() {
                       variant="outline"
                       disabled={isUpdatingRequests}
                       onClick={() => handleUpdateRequest(request.id)}
+                      data-tour="settings-lgpd-save-request-status"
                     >
                       {isUpdatingRequests ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       Salvar status

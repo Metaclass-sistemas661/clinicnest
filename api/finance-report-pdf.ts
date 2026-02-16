@@ -201,7 +201,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!hasPdf) {
         res.status(403).json({
-          error: "Exportação em PDF disponível apenas nos planos Pro e Premium. Faça upgrade em Assinatura para liberar.",
+          error: "Exportação em PDF disponível apenas nos planos Pro e Premium.",
+          code: "premium_required",
+          cta: {
+            label: "Fazer upgrade",
+            href: "/assinatura",
+          },
+          details: {
+            feature: "pdf_export",
+            required_tier: "pro",
+          },
         });
         return;
       }

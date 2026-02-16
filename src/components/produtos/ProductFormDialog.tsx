@@ -111,6 +111,7 @@ export function ProductFormDialog({
                 variant="link"
                 className="px-0 text-sm"
                 onClick={onOpenCategoryDialog}
+                data-tour="products-create-category-link"
               >
                 Criar nova categoria
               </Button>
@@ -198,10 +199,10 @@ export function ProductFormDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="products-form-cancel">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="products-form-submit">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

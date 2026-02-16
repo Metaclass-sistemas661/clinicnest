@@ -672,7 +672,7 @@ export default function Dashboard() {
       title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
       subtitle={`Bem-vindo ao ${tenant?.name || "seu salão"}`}
       actions={
-        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base">
+        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base" data-tour="dashboard-new-appointment">
           <Link to="/agenda">
             <Plus className="mr-1 md:mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Novo Agendamento</span>

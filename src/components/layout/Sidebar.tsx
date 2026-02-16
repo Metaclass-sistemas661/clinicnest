@@ -19,6 +19,8 @@ import {
   Wallet,
   Target,
   Bell,
+  LifeBuoy,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -68,6 +70,8 @@ const navCategories: NavCategory[] = [
       { title: "Minhas Configurações", href: "/minhas-configuracoes", icon: Settings, staffOnly: true },
       { title: "Notificações", href: "/notificacoes", icon: Bell, staffOnly: true },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
+      { title: "Ajuda", href: "/ajuda", icon: BookOpen },
+      { title: "Suporte", href: "/suporte", icon: LifeBuoy },
     ],
   },
 ];
@@ -89,6 +93,8 @@ const prefetchByHref: Record<string, () => void> = {
   "/assinatura/gerenciar": () => void import("@/pages/GerenciarAssinatura"),
   "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
   "/meus-salarios": () => void import("@/pages/MeusSalarios"),
+  "/ajuda": () => void import("@/pages/Ajuda"),
+  "/suporte": () => void import("@/pages/Suporte"),
 };
 
 function prefetchRoute(href: string) {
@@ -161,12 +167,25 @@ function SidebarContent({
               <div className="space-y-1">
                 {filteredItems.map((item) => {
                   const isActive = location.pathname === item.href;
+                  const tourKey =
+                    item.href === "/dashboard" ? "sidebar-dashboard" :
+                    item.href === "/agenda" ? "sidebar-agenda" :
+                    item.href === "/clientes" ? "sidebar-clientes" :
+                    item.href === "/servicos" ? "sidebar-servicos" :
+                    item.href === "/produtos" ? "sidebar-produtos" :
+                    item.href === "/financeiro" ? "sidebar-financeiro" :
+                    item.href === "/minhas-comissoes" ? "sidebar-minhas-comissoes" :
+                    item.href === "/meus-salarios" ? "sidebar-meus-salarios" :
+                    item.href === "/ajuda" ? "sidebar-ajuda" :
+                    item.href === "/suporte" ? "sidebar-suporte" :
+                    undefined;
                   return (
                     <Link
                       key={item.href}
                       to={item.href}
                       onClick={onNavigate}
                       onMouseEnter={() => prefetchRoute(item.href)}
+                      data-tour={tourKey}
                       className={cn(
                         "group flex items-center gap-3 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium transition-all duration-200",
                         isActive

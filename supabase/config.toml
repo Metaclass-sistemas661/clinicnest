@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.invite-team-member]
 verify_jwt = false
 
+[functions.send-support-ticket-email]
+verify_jwt = false
+
 [functions.update-password]
 verify_jwt = false
 

@@ -466,7 +466,7 @@ export default function Equipe() {
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground">
+            <Button className="gradient-primary text-primary-foreground" data-tour="team-invite-open">
               <Plus className="mr-2 h-4 w-4" />
               Cadastrar profissional
             </Button>
@@ -561,7 +561,7 @@ export default function Equipe() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="team-invite-submit">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -717,6 +717,7 @@ export default function Equipe() {
               onClick={handleSaveCommission}
               disabled={isSavingCommission}
               className="gradient-primary text-primary-foreground"
+              data-tour="team-save-compensation"
             >
               {isSavingCommission ? (
                 <>

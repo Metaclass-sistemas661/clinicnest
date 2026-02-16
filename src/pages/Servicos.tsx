@@ -202,7 +202,7 @@ export default function Servicos() {
         isAdmin ? (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="services-new">
               <Plus className="mr-2 h-4 w-4" />
               Novo Serviço
             </Button>
@@ -279,7 +279,7 @@ export default function Servicos() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="services-save">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -316,7 +316,7 @@ export default function Servicos() {
               title="Nenhum serviço cadastrado"
               description={isAdmin ? "Cadastre os serviços oferecidos pelo salão para usar na agenda." : "Ainda não há serviços cadastrados."}
               action={isAdmin ? (
-                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="services-new-empty">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Serviço
                 </Button>
@@ -358,12 +358,13 @@ export default function Servicos() {
                     </div>
                     {isAdmin && (
                     <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)} aria-label={`Editar serviço ${service.name}`}>
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(service)} aria-label={`Editar serviço ${service.name}`} data-tour="services-item-edit">
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Switch
                         checked={service.is_active}
                         onCheckedChange={() => toggleActive(service)}
+                        data-tour="services-item-toggle-active"
                       />
                       <span className="text-xs text-muted-foreground">
                         {service.is_active ? "Ativo" : "Inativo"}
@@ -426,12 +427,14 @@ export default function Servicos() {
                           size="icon"
                           onClick={() => handleOpenDialog(service)}
                           aria-label={`Editar serviço ${service.name}`}
+                          data-tour="services-item-edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Switch
                           checked={service.is_active}
                           onCheckedChange={() => toggleActive(service)}
+                          data-tour="services-item-toggle-active"
                         />
                       </div>
                       )}

@@ -7,6 +7,29 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const log = createLogger("INVITE-TEAM-MEMBER");
 
+async function auditLog(params: {
+  supabaseAdmin: ReturnType<typeof createClient>;
+  tenantId: string;
+  actorUserId: string;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    await params.supabaseAdmin.rpc("log_tenant_action", {
+      p_tenant_id: params.tenantId,
+      p_actor_user_id: params.actorUserId,
+      p_action: params.action,
+      p_entity_type: params.entityType,
+      p_entity_id: params.entityId ?? null,
+      p_metadata: params.metadata ?? {},
+    });
+  } catch (err) {
+    log("AUDIT: failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 /**
  * Envia e-mail via Resend
  */
@@ -346,10 +369,31 @@ serve(async (req) => {
       const effectiveUsers = Math.max(0, totalUsers - 1);
 
       if (effectiveUsers >= additionalLimit) {
+        await auditLog({
+          supabaseAdmin,
+          tenantId,
+          actorUserId: user.id,
+          action: "team_invite_blocked_limit",
+          entityType: "team",
+          entityId: null,
+          metadata: {
+            tier,
+            additionalLimit,
+            effectiveUsers,
+          },
+        });
         return new Response(
           JSON.stringify({
-            error:
-              "Você atingiu o limite de usuários do seu plano. Faça upgrade em Assinatura para adicionar mais membros.",
+            error: "Você atingiu o limite de usuários do seu plano.",
+            code: "plan_limit_reached",
+            cta: {
+              label: "Fazer upgrade",
+              href: "/assinatura",
+            },
+            details: {
+              feature: "team_members",
+              required_tier: tier === "basic" ? "pro" : "premium",
+            },
           }),
           { status: 403, headers: { ...cors, "Content-Type": "application/json" } }
         );
@@ -383,6 +427,19 @@ serve(async (req) => {
           ? "Já existe uma conta com este e-mail"
           : createError.message || "Erro ao criar usuário";
       log("ERROR: Erro ao criar usuário", { error: createError.message, code: createError.status });
+
+      await auditLog({
+        supabaseAdmin,
+        tenantId,
+        actorUserId: user.id,
+        action: "team_invite_failed",
+        entityType: "user",
+        entityId: null,
+        metadata: {
+          reason: msg,
+        },
+      });
+
       return new Response(
         JSON.stringify({ error: msg }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
@@ -393,6 +450,7 @@ serve(async (req) => {
 
     // Enviar email de boas-vindas ao profissional (não bloqueia se falhar)
     log("Iniciando processo de envio de email", { email: emailTrim });
+    let emailSent = false;
     try {
       // URL fixa de produção: o link no email deve sempre apontar para vynlobella.com
       // (não usar SITE_URL aqui para evitar redirecionamento para vercel.app)
@@ -403,7 +461,7 @@ serve(async (req) => {
       const emailText = getTeamMemberWelcomeEmailText(fullNameTrim, emailTrim, loginUrl, role);
       log("Templates de email gerados", { htmlLength: emailHtml.length, textLength: emailText.length });
       
-      const emailSent = await sendEmailViaResend(
+      emailSent = await sendEmailViaResend(
         emailTrim,
         "Bem-vindo à equipe do VynloBella! 🎉",
         emailHtml,
@@ -425,6 +483,19 @@ serve(async (req) => {
       });
       // Não falha o cadastro se o email não for enviado
     }
+
+    await auditLog({
+      supabaseAdmin,
+      tenantId,
+      actorUserId: user.id,
+      action: "team_member_invited",
+      entityType: "user",
+      entityId: newUser.user?.id ?? null,
+      metadata: {
+        invitedRole: role,
+        emailSent,
+      },
+    });
 
     return new Response(
       JSON.stringify({

@@ -87,6 +87,7 @@ export function AgendaFilters({
               size="sm"
               className={`gap-2 ${isActive ? "gradient-primary text-primary-foreground" : ""}`}
               onClick={() => onStatusFilterChange(option.value)}
+              data-tour={`agenda-filter-status-${option.value}`}
             >
               <Icon className="h-3.5 w-3.5" />
               {option.label}
@@ -105,7 +106,7 @@ export function AgendaFilters({
       {isAdmin && (
       <div className="w-full sm:w-auto sm:ml-auto">
         <Select value={professionalFilter} onValueChange={onProfessionalFilterChange}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" data-tour="agenda-filter-professional">
             <SelectValue placeholder="Todos os profissionais" />
           </SelectTrigger>
           <SelectContent>

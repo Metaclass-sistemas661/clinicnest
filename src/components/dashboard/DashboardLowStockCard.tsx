@@ -20,7 +20,7 @@ export const DashboardLowStockCard = memo(function DashboardLowStockCard({ lowSt
           </CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/produtos">Ver todos</Link>
+          <Link to="/produtos" data-tour="dashboard-low-stock-view-all">Ver todos</Link>
         </Button>
       </CardHeader>
       <CardContent>
