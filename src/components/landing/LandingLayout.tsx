@@ -16,12 +16,9 @@ export function Navbar() {
             <img
               src="/beautyg.logo.png"
               alt="BeautyGest"
-              className="h-14 w-14 sm:h-16 sm:w-16 object-contain"
+              className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
               loading="eager"
             />
-            <span className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              BeautyGest
-            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">

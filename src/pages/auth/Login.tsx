@@ -87,74 +87,67 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-6xl animate-slide-up">
         <div className="grid items-center gap-10 lg:grid-cols-2">
-          <div className="hidden lg:flex flex-col">
+          <div className="hidden lg:flex flex-col rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-10">
             <div className="mb-10">
               <div className="mb-6 relative inline-block">
-                <div className="flex h-28 w-28 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
-                  <img
-                    src="/beautygest.logo.png"
-                    alt="BeautyGest"
-                    className="h-20 w-20"
-                    loading="eager"
-                  />
-                </div>
-                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
+                <img
+                  src="/beautyg.logo.png"
+                  alt="BeautyGest"
+                  className="h-24 w-24 object-contain"
+                  loading="eager"
+                />
+                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-white/10 to-white/0 blur-2xl -z-10" />
               </div>
-              <p className="mt-3 text-muted-foreground max-w-md">
+              <p className="mt-3 text-white/80 max-w-md">
                 Gestão profissional para salões, com foco em agilidade e organização.
               </p>
             </div>
 
             <div className="space-y-4 max-w-md">
-              <div className="flex gap-3 rounded-2xl border border-violet-100 bg-white/60 p-4 backdrop-blur">
-                <CalendarDays className="h-5 w-5 text-violet-600 mt-0.5" />
+              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <CalendarDays className="h-5 w-5 text-white mt-0.5" />
                 <div>
-                  <div className="font-medium text-foreground">Agenda e atendimento</div>
-                  <div className="text-sm text-muted-foreground">Organize horários, serviços e profissionais.</div>
+                  <div className="font-medium text-white">Agenda e atendimento</div>
+                  <div className="text-sm text-white/75">Organize horários, serviços e profissionais.</div>
                 </div>
               </div>
-              <div className="flex gap-3 rounded-2xl border border-violet-100 bg-white/60 p-4 backdrop-blur">
-                <Users className="h-5 w-5 text-violet-600 mt-0.5" />
+              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <Users className="h-5 w-5 text-white mt-0.5" />
                 <div>
-                  <div className="font-medium text-foreground">Clientes e recorrência</div>
-                  <div className="text-sm text-muted-foreground">Histórico e relacionamento em um só lugar.</div>
+                  <div className="font-medium text-white">Clientes e recorrência</div>
+                  <div className="text-sm text-white/75">Histórico e relacionamento em um só lugar.</div>
                 </div>
               </div>
-              <div className="flex gap-3 rounded-2xl border border-violet-100 bg-white/60 p-4 backdrop-blur">
-                <Wallet className="h-5 w-5 text-violet-600 mt-0.5" />
+              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
+                <Wallet className="h-5 w-5 text-white mt-0.5" />
                 <div>
-                  <div className="font-medium text-foreground">Financeiro e comissões</div>
-                  <div className="text-sm text-muted-foreground">Controle entradas, saídas e repasses.</div>
+                  <div className="font-medium text-white">Financeiro e comissões</div>
+                  <div className="text-sm text-white/75">Controle entradas, saídas e repasses.</div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-white/80">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-violet-600" />
+                <ShieldCheck className="h-4 w-4 text-white" />
                 <span>Conexão segura</span>
               </div>
               <div className="flex items-center gap-2">
-                <Headset className="h-4 w-4 text-violet-600" />
+                <Headset className="h-4 w-4 text-white" />
                 <span>Suporte por e-mail</span>
               </div>
             </div>
           </div>
 
           <div className="w-full max-w-md justify-self-center">
-            <div className="mb-10 flex flex-col items-center lg:hidden">
-              <div className="mb-6 relative">
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
-                  <img
-                    src="/beautygest.logo.png"
-                    alt="BeautyGest"
-                    className="h-16 w-16"
-                    loading="eager"
-                  />
-                </div>
-                <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
-              </div>
-              <p className="mt-2 text-muted-foreground">Gestão profissional para seu salão</p>
+            <div className="mb-10 flex flex-col items-center lg:hidden rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-6 text-center">
+              <img
+                src="/beautyg.logo.png"
+                alt="BeautyGest"
+                className="h-24 w-24 object-contain"
+                loading="eager"
+              />
+              <p className="mt-3 text-white/80">Gestão profissional para seu salão</p>
             </div>
 
             <Card className="border-violet-100/60 bg-white/80 shadow-2xl backdrop-blur-md">
