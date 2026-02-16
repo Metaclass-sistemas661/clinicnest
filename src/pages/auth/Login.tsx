@@ -91,9 +91,9 @@ export default function Login() {
             <div className="mb-10">
               <div className="mb-6 relative inline-block">
                 <img
-                  src="/beautyg.logo.png"
+                  src="/beautyg-horizontal.svg"
                   alt="BeautyGest"
-                  className="h-24 w-24 object-contain"
+                  className="h-20 w-auto max-w-[360px] object-contain"
                   loading="eager"
                 />
                 <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-white/10 to-white/0 blur-2xl -z-10" />
@@ -142,9 +142,9 @@ export default function Login() {
           <div className="w-full max-w-md justify-self-center">
             <div className="mb-10 flex flex-col items-center lg:hidden rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-6 text-center">
               <img
-                src="/beautyg.logo.png"
+                src="/beautyg-horizontal.svg"
                 alt="BeautyGest"
-                className="h-24 w-24 object-contain"
+                className="h-16 w-auto max-w-[280px] object-contain"
                 loading="eager"
               />
               <p className="mt-3 text-white/80">Gestão profissional para seu salão</p>
