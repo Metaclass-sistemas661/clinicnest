@@ -30,6 +30,25 @@ jobs:
             echo "Missing CRON_SECRET secret" && exit 1
           fi
 
+          call_api () {
+            local path="$1"
+            echo ""
+            echo "=== POST $BASE_URL$path ==="
+            # -L follows redirects (common with http->https or domain canonicalization)
+            # -sS silent except errors
+            # -D - prints headers
+            # -o prints body
+            curl -L -sS -D - \
+              -X POST "$BASE_URL$path" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              -H "Content-Type: application/json" \
+              -o /tmp/resp.json \
+              -w "\nHTTP_STATUS=%{http_code}\n" || true
+            echo "--- body ---"
+            cat /tmp/resp.json || true
+            echo "------------"
+          }
+
           echo "Event: $GITHUB_EVENT_NAME"
           echo "Now: $(date -u)"
 
@@ -39,17 +58,17 @@ jobs:
           # - 0 3: retry + monitor + reconcile
 
           # Always run retry
-          curl -fsS -X POST "$BASE_URL/api/asaas-webhook-retry" -H "Authorization: Bearer $CRON_SECRET" || true
+          call_api "/api/asaas-webhook-retry"
 
           MINUTE=$(date -u +%M)
           HOUR=$(date -u +%H)
 
           # Every 30 minutes
           if [ $((10#$MINUTE % 30)) -eq 0 ]; then
-            curl -fsS -X POST "$BASE_URL/api/monitor-asaas-webhook-failures" -H "Authorization: Bearer $CRON_SECRET" || true
+            call_api "/api/monitor-asaas-webhook-failures"
           fi
 
           # Daily at 03:00 UTC
           if [ "$HOUR" = "03" ] && [ "$MINUTE" = "00" ]; then
-            curl -fsS -X POST "$BASE_URL/api/asaas-reconcile-subscriptions" -H "Authorization: Bearer $CRON_SECRET" || true
+            call_api "/api/asaas-reconcile-subscriptions"
           fi
