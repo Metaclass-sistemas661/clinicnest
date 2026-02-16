@@ -79,9 +79,12 @@ function parseLegacyPlanKey(planKey: unknown): { tier: TierKey; interval: Interv
   return null;
 }
 
-function parseTierInterval(body: any): { tier: TierKey; interval: IntervalKey } | null {
-  const tier = body?.tier;
-  const interval = body?.interval;
+function parseTierInterval(body: unknown): { tier: TierKey; interval: IntervalKey } | null {
+  const b = (body && typeof body === "object" ? (body as Record<string, unknown>) : null) as
+    | Record<string, unknown>
+    | null;
+  const tier = b?.tier;
+  const interval = b?.interval;
   if ((tier === "basic" || tier === "pro" || tier === "premium") && (interval === "monthly" || interval === "quarterly" || interval === "annual")) {
     return { tier, interval };
   }
@@ -92,7 +95,7 @@ function sanitizeCpfCnpj(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
 
-function sanitizePhoneNumber(input: string): string {
+function _sanitizePhoneNumber(input: string): string {
   return String(input || "").replace(/\D/g, "");
 }
 
@@ -350,7 +353,14 @@ serve(async (req) => {
       try {
         const parsed = JSON.parse(checkoutText);
         if (Array.isArray(parsed?.errors) && parsed.errors.length > 0) {
-          detail = parsed.errors.map((e: any) => e?.description).filter(Boolean).join(" | ");
+          detail = (parsed.errors as unknown[])
+            .map((e) => {
+              if (!e || typeof e !== "object") return null;
+              const d = (e as Record<string, unknown>).description;
+              return typeof d === "string" ? d : null;
+            })
+            .filter((v): v is string => Boolean(v))
+            .join(" | ");
         }
       } catch {
         // keep raw text

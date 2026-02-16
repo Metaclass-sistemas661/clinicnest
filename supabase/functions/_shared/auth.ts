@@ -22,7 +22,7 @@ function getProjectRefFromUrl(url: string): string | null {
   }
 }
 
-function decodeJwtPayload(token: string): any | null {
+function decodeJwtPayload(token: string): unknown | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
@@ -40,15 +40,17 @@ function isLikelyValidProjectApiKey(apiKeyJwt: string): boolean {
   const payload = decodeJwtPayload(apiKeyJwt);
   if (!payload || typeof payload !== "object") return false;
 
-  if (payload.iss !== "supabase") return false;
-  const expectedRef = getProjectRefFromUrl(SUPABASE_URL);
-  if (!expectedRef || payload.ref !== expectedRef) return false;
+  const p = payload as Record<string, unknown>;
 
-  const exp = typeof payload.exp === "number" ? payload.exp : null;
+  if (p.iss !== "supabase") return false;
+  const expectedRef = getProjectRefFromUrl(SUPABASE_URL);
+  if (!expectedRef || p.ref !== expectedRef) return false;
+
+  const exp = typeof p.exp === "number" ? p.exp : null;
   if (exp && exp < Math.floor(Date.now() / 1000)) return false;
 
   // apikey used by clients typically has anon role
-  if (payload.role && payload.role !== "anon") return false;
+  if (p.role && p.role !== "anon") return false;
 
   return true;
 }

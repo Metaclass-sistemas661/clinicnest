@@ -13,6 +13,7 @@ import {
   Headset,
   Loader2,
   Mail,
+  Sparkles,
   ShieldCheck,
   Users,
   Wallet,
