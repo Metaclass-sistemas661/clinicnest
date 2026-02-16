@@ -9,14 +9,14 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-violet-950 via-fuchsia-900 to-violet-950 backdrop-blur-xl border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 sm:h-20 items-center justify-between">
+        <div className="flex h-20 sm:h-24 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <img
               src="/beautygest.logo.png"
               alt="BeautyGest"
-              className="h-14 w-14 sm:h-16 sm:w-16"
+              className="h-16 w-16 sm:h-20 sm:w-20"
               loading="eager"
             />
           </Link>

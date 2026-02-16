@@ -90,15 +90,16 @@ export default function Login() {
           <div className="hidden lg:flex flex-col">
             <div className="mb-10">
               <div className="mb-6 relative inline-block">
-                <img
-                  src="/beautygest-logo.png"
-                  alt="BeautyGest"
-                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
-                  loading="eager"
-                />
+                <div className="flex h-28 w-28 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
+                  <img
+                    src="/beautygest.logo.png"
+                    alt="BeautyGest"
+                    className="h-20 w-20"
+                    loading="eager"
+                  />
+                </div>
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
-              <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>
               <p className="mt-3 text-muted-foreground max-w-md">
                 Gestão profissional para salões, com foco em agilidade e organização.
               </p>
@@ -143,15 +144,16 @@ export default function Login() {
           <div className="w-full max-w-md justify-self-center">
             <div className="mb-10 flex flex-col items-center lg:hidden">
               <div className="mb-6 relative">
-                <img
-                  src="/beautygest-logo.png"
-                  alt="BeautyGest"
-                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
-                  loading="eager"
-                />
+                <div className="flex h-24 w-24 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
+                  <img
+                    src="/beautygest.logo.png"
+                    alt="BeautyGest"
+                    className="h-16 w-16"
+                    loading="eager"
+                  />
+                </div>
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
-              <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>
               <p className="mt-2 text-muted-foreground">Gestão profissional para seu salão</p>
             </div>
 
