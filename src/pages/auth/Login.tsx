@@ -90,9 +90,12 @@ export default function Login() {
           <div className="hidden lg:flex flex-col">
             <div className="mb-10">
               <div className="mb-6 relative inline-block">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
-                  <span className="font-display text-3xl font-extrabold tracking-tight text-white">BG</span>
-                </div>
+                <img
+                  src="/beautygest-logo.png"
+                  alt="BeautyGest"
+                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
+                  loading="eager"
+                />
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
               <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>
@@ -140,9 +143,12 @@ export default function Login() {
           <div className="w-full max-w-md justify-self-center">
             <div className="mb-10 flex flex-col items-center lg:hidden">
               <div className="mb-6 relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl gradient-vibrant shadow-glow">
-                  <span className="font-display text-3xl font-extrabold tracking-tight text-white">BG</span>
-                </div>
+                <img
+                  src="/beautygest-logo.png"
+                  alt="BeautyGest"
+                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
+                  loading="eager"
+                />
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
               <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>

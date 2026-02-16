@@ -16,12 +16,9 @@ export function Navbar() {
             <img
               src="/beautygest-logo.png"
               alt="BeautyGest"
-              className="h-10 w-10 rounded-lg bg-white/5 p-1"
+              className="h-12 w-12 sm:h-14 sm:w-14"
               loading="eager"
             />
-            <span className="font-display text-xl sm:text-2xl font-bold text-white">
-              BeautyGest
-            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -93,7 +90,7 @@ export function Navbar() {
               }}>
                 Preços
               </a>
-              <div className="flex flex-col gap-2 pt-4 border-t border-gray-200">
+              <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
                 <Link to="/login">
                   <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10">Entrar</Button>
                 </Link>

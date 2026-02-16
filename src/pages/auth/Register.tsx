@@ -13,7 +13,6 @@ import {
   Headset,
   Loader2,
   Mail,
-  Sparkles,
   ShieldCheck,
   Users,
   Wallet,
@@ -144,9 +143,12 @@ export default function Register() {
           <div className="hidden lg:flex flex-col">
             <div className="mb-10">
               <div className="mb-6 relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl gradient-vibrant shadow-glow animate-glow">
-                  <Sparkles className="h-10 w-10 text-white" />
-                </div>
+                <img
+                  src="/beautygest-logo.png"
+                  alt="BeautyGest"
+                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
+                  loading="eager"
+                />
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
               <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>
@@ -194,9 +196,12 @@ export default function Register() {
           <div className="w-full max-w-md justify-self-center">
             <div className="mb-10 flex flex-col items-center lg:hidden">
               <div className="mb-6 relative">
-                <div className="flex h-20 w-20 items-center justify-center rounded-3xl gradient-vibrant shadow-glow animate-glow">
-                  <Sparkles className="h-10 w-10 text-white" />
-                </div>
+                <img
+                  src="/beautygest-logo.png"
+                  alt="BeautyGest"
+                  className="h-20 w-20 rounded-3xl bg-white/80 p-2 shadow-glow"
+                  loading="eager"
+                />
                 <div className="absolute -inset-2 rounded-3xl bg-gradient-to-r from-primary/20 to-accent/20 blur-xl -z-10" />
               </div>
               <h1 className="font-display text-4xl font-bold text-gradient">BeautyGest</h1>
