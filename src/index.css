@@ -170,6 +170,19 @@
   }
 }
 
+@layer base {
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.1);
+    opacity: 0.85;
+  }
+
+  .dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   .gradient-primary {
     background: var(--gradient-primary);

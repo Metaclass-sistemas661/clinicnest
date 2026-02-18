@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
@@ -17,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
 import { createScheduleBlockV1, deleteScheduleBlockV1, upsertProfessionalWorkingHoursV1 } from "@/lib/supabase-typed-rpc";
-import { CalendarX } from "lucide-react";
+import { CalendarX, Clock } from "lucide-react";
 import type { Profile } from "@/types/database";
 
 type WorkingHoursRow = {
@@ -59,6 +61,20 @@ function toLocalInputValue(iso: string) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+function generateTimeOptions(stepMinutes: number) {
+  const slots: string[] = [];
+  for (let hour = 0; hour <= 23; hour++) {
+    for (let minute = 0; minute < 60; minute += stepMinutes) {
+      const h = String(hour).padStart(2, "0");
+      const m = String(minute).padStart(2, "0");
+      slots.push(`${h}:${m}`);
+    }
+  }
+  return slots;
+}
+
+const WORKING_HOURS_OPTIONS = generateTimeOptions(15);
 
 export default function Disponibilidade() {
   const { profile, isAdmin } = useAuth();
@@ -270,6 +286,58 @@ export default function Disponibilidade() {
     return blocks;
   }, [blocks, isAdmin, profile?.id]);
 
+  const TimeSelect = ({
+    value,
+    onChange,
+    disabled,
+  }: {
+    value: string;
+    onChange: (next: string) => void;
+    disabled?: boolean;
+  }) => {
+    const valueHHMM = value.slice(0, 5);
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled}
+            className="w-full justify-between font-mono"
+          >
+            <span>{valueHHMM}</span>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="start">
+          <div className="border-b px-3 py-2">
+            <div className="text-sm font-medium text-foreground">Selecione um horário</div>
+            <div className="text-xs text-muted-foreground">Passos de 15 minutos</div>
+          </div>
+          <ScrollArea className="h-56">
+            <div className="grid grid-cols-4 gap-1 p-2">
+              {WORKING_HOURS_OPTIONS.map((t) => {
+                const isSelected = t === valueHHMM;
+                return (
+                  <Button
+                    key={t}
+                    type="button"
+                    size="sm"
+                    variant={isSelected ? "default" : "ghost"}
+                    className={isSelected ? "gradient-primary text-primary-foreground" : "font-mono"}
+                    onClick={() => onChange(`${t}:00`)}
+                  >
+                    {t}
+                  </Button>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   return (
     <MainLayout title="Disponibilidade" subtitle="Jornada e bloqueios de agenda">
       {isLoading ? (
@@ -320,26 +388,24 @@ export default function Disponibilidade() {
                       <div className="grid grid-cols-3 gap-2 items-end">
                         <div className="space-y-1">
                           <Label className="text-xs">Início</Label>
-                          <Input
-                            type="time"
-                            value={draft.start.slice(0, 5)}
-                            onChange={(e) =>
+                          <TimeSelect
+                            value={draft.start}
+                            onChange={(next) =>
                               setHoursDraftByDow((prev) => ({
                                 ...prev,
-                                [dow]: { ...prev[dow], start: `${e.target.value}:00` },
+                                [dow]: { ...prev[dow], start: next },
                               }))
                             }
                           />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Fim</Label>
-                          <Input
-                            type="time"
-                            value={draft.end.slice(0, 5)}
-                            onChange={(e) =>
+                          <TimeSelect
+                            value={draft.end}
+                            onChange={(next) =>
                               setHoursDraftByDow((prev) => ({
                                 ...prev,
-                                [dow]: { ...prev[dow], end: `${e.target.value}:00` },
+                                [dow]: { ...prev[dow], end: next },
                               }))
                             }
                           />
