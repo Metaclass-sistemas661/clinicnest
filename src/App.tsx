@@ -31,12 +31,19 @@ const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacid
 const Contato = lazyWithRetry(() => import("@/pages/Contato"));
 const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 
+const AgendarOnline = lazyWithRetry(() => import("@/pages/AgendarOnline"));
+
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
 const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
 const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
+const Compras = lazyWithRetry(() => import("@/pages/Compras"));
+const Fornecedores = lazyWithRetry(() => import("@/pages/Fornecedores"));
 const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
 const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
+const Comandas = lazyWithRetry(() => import("@/pages/Comandas"));
+const Caixa = lazyWithRetry(() => import("@/pages/Caixa"));
+const Disponibilidade = lazyWithRetry(() => import("@/pages/Disponibilidade"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
 const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
@@ -51,6 +58,8 @@ const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
 const Ajuda = lazyWithRetry(() => import("@/pages/Ajuda"));
 const Auditoria = lazyWithRetry(() => import("@/pages/Auditoria"));
 const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSeguranca"));
+const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
+const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +103,7 @@ const App = () => (
                 <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
                 <Route path="/contato" element={<Contato />} />
                 <Route path="/canal-lgpd" element={<CanalLgpd />} />
+                <Route path="/agendar/:slug" element={<AgendarOnline />} />
 
                 {/* Protected routes */}
                 <Route
@@ -148,6 +158,22 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/compras"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Compras />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fornecedores"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Fornecedores />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/servicos"
                   element={
                     <ProtectedRoute>
@@ -160,6 +186,30 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Clientes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/comandas"
+                  element={
+                    <ProtectedRoute>
+                      <Comandas />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/caixa"
+                  element={
+                    <ProtectedRoute>
+                      <Caixa />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/disponibilidade"
+                  element={
+                    <ProtectedRoute>
+                      <Disponibilidade />
                     </ProtectedRoute>
                   }
                 />
@@ -258,6 +308,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Ajuda />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/campanhas"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Campanhas />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/relatorio-financeiro"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <RelatorioFinanceiro />
                     </ProtectedRoute>
                   }
                 />

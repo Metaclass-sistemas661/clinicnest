@@ -10,6 +10,25 @@ import type {
   ProfessionalWithSalaryRow,
   PaySalaryResult,
   GoalWithProgressRow,
+  CreateWalkinOrderResult,
+  CreateOrderForAppointmentResult,
+  AddOrderItemResult,
+  RemoveOrderItemResult,
+  SetOrderDiscountResult,
+  FinalizeOrderResult,
+  OpenCashSessionResult,
+  AddCashMovementResult,
+  CashSessionSummaryResult,
+  CloseCashSessionResult,
+  UpsertProfessionalWorkingHoursResult,
+  CreateScheduleBlockResult,
+  DeleteScheduleBlockResult,
+  CreateClientPackageResult,
+  ClientTimelineEventRow,
+  RevertPackageConsumptionResult,
+  CreatePurchaseResult,
+  CancelPurchaseResult,
+  DreSimpleResult,
 } from "@/types/supabase-extensions";
 import type { AppointmentStatus, TransactionType, StockOutReasonType } from "@/types/database";
 
@@ -219,6 +238,54 @@ export async function upsertClientV2(params: {
   return rpc<UpsertClientV2Result>("upsert_client_v2", params as Record<string, unknown>);
 }
 
+export async function createClientPackageV1(params: {
+  p_client_id: string;
+  p_service_id: string;
+  p_total_sessions: number;
+  p_expires_at?: string | null;
+  p_notes?: string | null;
+}): Promise<{ data: CreateClientPackageResult | null; error: unknown }> {
+  return rpc<CreateClientPackageResult>("create_client_package_v1", params as Record<string, unknown>);
+}
+
+export async function getClientTimelineV1(params: {
+  p_client_id: string;
+  p_limit?: number;
+}): Promise<{ data: ClientTimelineEventRow[] | null; error: unknown }> {
+  return rpc<ClientTimelineEventRow[]>("get_client_timeline_v1", params as Record<string, unknown>);
+}
+
+export async function revertPackageConsumptionForAppointmentV1(params: {
+  p_appointment_id: string;
+  p_reason?: string | null;
+}): Promise<{ data: RevertPackageConsumptionResult | null; error: unknown }> {
+  return rpc<RevertPackageConsumptionResult>(
+    "revert_package_consumption_for_appointment_v1",
+    params as Record<string, unknown>
+  );
+}
+
+export async function createPurchaseV1(params: {
+  p_supplier_id?: string | null;
+  p_purchased_at?: string | null;
+  p_invoice_number?: string | null;
+  p_notes?: string | null;
+  p_purchased_with_company_cash?: boolean;
+  p_items: Array<{ product_id: string; quantity: number; unit_cost: number }>;
+}): Promise<{ data: CreatePurchaseResult | null; error: unknown }> {
+  return rpc<CreatePurchaseResult>("create_purchase_v1", {
+    ...params,
+    p_items: params.p_items as unknown,
+  } as Record<string, unknown>);
+}
+
+export async function cancelPurchaseV1(params: {
+  p_purchase_id: string;
+  p_reason?: string | null;
+}): Promise<{ data: CancelPurchaseResult | null; error: unknown }> {
+  return rpc<CancelPurchaseResult>("cancel_purchase_v1", params as Record<string, unknown>);
+}
+
 export type CreateProductCategoryV2Result = { success: boolean; category_id: string };
 export async function createProductCategoryV2(params: {
   p_name: string;
@@ -292,4 +359,124 @@ export type SecurityDiagnosticsV1 = {
 
 export async function getSecurityDiagnosticsV1(): Promise<{ data: SecurityDiagnosticsV1 | null; error: unknown }> {
   return rpc<SecurityDiagnosticsV1>("get_security_diagnostics_v1");
+}
+
+// ─── Orders / Checkout RPCs ──────────────────────────────────
+
+export async function createWalkinOrderV1(params: {
+  p_client_id?: string | null;
+  p_professional_id?: string | null;
+  p_notes?: string | null;
+}): Promise<{ data: CreateWalkinOrderResult | null; error: unknown }> {
+  return rpc<CreateWalkinOrderResult>("create_walkin_order_v1", params as Record<string, unknown>);
+}
+
+export async function createOrderForAppointmentV1(params: {
+  p_appointment_id: string;
+}): Promise<{ data: CreateOrderForAppointmentResult | null; error: unknown }> {
+  return rpc<CreateOrderForAppointmentResult>("create_order_for_appointment_v1", params as Record<string, unknown>);
+}
+
+export async function addOrderItemV1(params: {
+  p_order_id: string;
+  p_kind: "service" | "product";
+  p_service_id?: string | null;
+  p_product_id?: string | null;
+  p_quantity?: number;
+  p_unit_price: number;
+  p_professional_id?: string | null;
+}): Promise<{ data: AddOrderItemResult | null; error: unknown }> {
+  return rpc<AddOrderItemResult>("add_order_item_v1", params as Record<string, unknown>);
+}
+
+export async function removeOrderItemV1(params: {
+  p_order_item_id: string;
+}): Promise<{ data: RemoveOrderItemResult | null; error: unknown }> {
+  return rpc<RemoveOrderItemResult>("remove_order_item_v1", params as Record<string, unknown>);
+}
+
+export async function setOrderDiscountV1(params: {
+  p_order_id: string;
+  p_discount_amount: number;
+}): Promise<{ data: SetOrderDiscountResult | null; error: unknown }> {
+  return rpc<SetOrderDiscountResult>("set_order_discount_v1", params as Record<string, unknown>);
+}
+
+export type FinalizePaymentInput = {
+  payment_method_id: string;
+  amount: number;
+};
+
+export async function finalizeOrderV1(params: {
+  p_order_id: string;
+  p_payments: FinalizePaymentInput[];
+}): Promise<{ data: FinalizeOrderResult | null; error: unknown }> {
+  return rpc<FinalizeOrderResult>("finalize_order_v1", params as Record<string, unknown>);
+}
+
+// ─── Cash Register / Caixa RPCs ─────────────────────────────
+
+export async function openCashSessionV1(params: {
+  p_opening_balance?: number;
+  p_notes?: string | null;
+}): Promise<{ data: OpenCashSessionResult | null; error: unknown }> {
+  return rpc<OpenCashSessionResult>("open_cash_session_v1", params as Record<string, unknown>);
+}
+
+export async function addCashMovementV1(params: {
+  p_type: "reinforcement" | "withdrawal";
+  p_amount: number;
+  p_reason?: string | null;
+}): Promise<{ data: AddCashMovementResult | null; error: unknown }> {
+  return rpc<AddCashMovementResult>("add_cash_movement_v1", params as Record<string, unknown>);
+}
+
+export async function getCashSessionSummaryV1(params: {
+  p_session_id: string;
+}): Promise<{ data: CashSessionSummaryResult | null; error: unknown }> {
+  return rpc<CashSessionSummaryResult>("get_cash_session_summary_v1", params as Record<string, unknown>);
+}
+
+export async function closeCashSessionV1(params: {
+  p_session_id: string;
+  p_reported_balance: number;
+  p_notes?: string | null;
+}): Promise<{ data: CloseCashSessionResult | null; error: unknown }> {
+  return rpc<CloseCashSessionResult>("close_cash_session_v1", params as Record<string, unknown>);
+}
+
+// ─── Agenda Availability / Blocks RPCs ──────────────────────
+
+export async function upsertProfessionalWorkingHoursV1(params: {
+  p_professional_id: string;
+  p_day_of_week: number;
+  p_start_time: string;
+  p_end_time: string;
+  p_is_active?: boolean;
+}): Promise<{ data: UpsertProfessionalWorkingHoursResult | null; error: unknown }> {
+  return rpc<UpsertProfessionalWorkingHoursResult>("upsert_professional_working_hours_v1", params as Record<string, unknown>);
+}
+
+export async function createScheduleBlockV1(params: {
+  p_professional_id?: string | null;
+  p_start_at: string;
+  p_end_at: string;
+  p_reason?: string | null;
+}): Promise<{ data: CreateScheduleBlockResult | null; error: unknown }> {
+  return rpc<CreateScheduleBlockResult>("create_schedule_block_v1", params as Record<string, unknown>);
+}
+
+export async function deleteScheduleBlockV1(params: {
+  p_block_id: string;
+}): Promise<{ data: DeleteScheduleBlockResult | null; error: unknown }> {
+  return rpc<DeleteScheduleBlockResult>("delete_schedule_block_v1", params as Record<string, unknown>);
+}
+
+// ─── BI / DRE RPCs ──────────────────────────────────
+
+export async function getDreSimpleV1(params: {
+  p_start_date: string;
+  p_end_date: string;
+}): Promise<{ data: DreSimpleResult | null; error: unknown }> {
+  return rpc<DreSimpleResult>("get_dre_simple_v1", params as Record<string, unknown>);
 }

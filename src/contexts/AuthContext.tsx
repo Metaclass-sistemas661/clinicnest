@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Prefer single-roundtrip context load via RPC (enterprise hardening)
       try {
-        const { data: ctx, error: ctxError } = await supabase.rpc("get_my_context");
+        const { data: ctx, error: ctxError } = await (supabase as any).rpc("get_my_context");
         if (!ctxError && ctx) {
           const ctxAny = ctx as any;
           const profileData = (ctxAny.profile ?? null) as Profile | null;

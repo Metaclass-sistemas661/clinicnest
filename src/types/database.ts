@@ -11,7 +11,13 @@ export interface Tenant {
   email: string | null;
   address: string | null;
   billing_cpf_cnpj?: string | null;
+  online_booking_enabled?: boolean;
+  online_booking_slug?: string | null;
+  online_booking_min_lead_minutes?: number;
+  online_booking_cancel_min_lead_minutes?: number;
   default_commission_percent?: number | null;
+  cashback_enabled?: boolean;
+  cashback_percent?: number;
   created_at: string;
   updated_at: string;
 }
@@ -124,6 +130,75 @@ export interface StockMovement {
   reason: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+// ─── Orders / Checkout ──────────────────────────────────────
+
+export type OrderStatus = 'draft' | 'open' | 'paid' | 'cancelled' | 'refunded';
+export type OrderItemKind = 'service' | 'product';
+export type PaymentStatusType = 'pending' | 'paid' | 'void';
+
+export interface Order {
+  id: string;
+  tenant_id: string;
+  appointment_id: string;
+  client_id: string | null;
+  professional_id: string | null;
+  status: OrderStatus;
+  subtotal_amount: number;
+  discount_amount: number;
+  total_amount: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  items?: OrderItem[];
+  payments?: Payment[];
+  client?: Client;
+  professional?: Profile;
+  appointment?: Appointment;
+}
+
+export interface OrderItem {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  kind: OrderItemKind;
+  service_id: string | null;
+  product_id: string | null;
+  professional_id: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
+  // Joined
+  service?: Service;
+  product?: Product;
+}
+
+export interface PaymentMethod {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Payment {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  payment_method_id: string;
+  amount: number;
+  status: PaymentStatusType;
+  paid_at: string | null;
+  reference: string | null;
+  created_at: string;
+  // Joined
+  payment_method?: PaymentMethod;
 }
 
 // Dashboard stats

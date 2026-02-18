@@ -76,6 +76,205 @@ export interface DashboardCommissionTotals {
   paid?: number;
 }
 
+// ─── Orders / Checkout RPC results ──────────────────────────
+
+export interface CreateWalkinOrderResult {
+  success: boolean;
+  order_id: string;
+  appointment_id: string;
+}
+
+export interface CreateOrderForAppointmentResult {
+  success: boolean;
+  order_id: string;
+}
+
+export interface AddOrderItemResult {
+  success: boolean;
+  item_id: string;
+  subtotal: number;
+}
+
+export interface RemoveOrderItemResult {
+  success: boolean;
+  subtotal: number;
+}
+
+export interface SetOrderDiscountResult {
+  success: boolean;
+  total_amount: number;
+}
+
+export interface FinalizeOrderResult {
+  success: boolean;
+  order_id: string;
+  status: string;
+}
+
+// ─── Cash Register / Caixa RPC results ──────────────────────
+
+export interface OpenCashSessionResult {
+  success: boolean;
+  session_id: string;
+}
+
+export interface AddCashMovementResult {
+  success: boolean;
+  movement_id: string;
+  session_id: string;
+}
+
+export interface CashSessionSummaryResult {
+  success: boolean;
+  session_id: string;
+  status: string;
+  opened_at: string;
+  closed_at: string | null;
+  opening_balance: number;
+  reinforcements: number;
+  withdrawals: number;
+  payments: Array<{
+    payment_method_id: string;
+    code: string;
+    name: string;
+    amount: number;
+  }>;
+  expected_closing_balance: number;
+}
+
+export interface CloseCashSessionResult {
+  success: boolean;
+  session_id: string;
+  status: string;
+  expected: number;
+  reported: number;
+  difference: number;
+}
+
+// ─── Agenda Availability / Blocks RPC results ───────────────
+
+export interface UpsertProfessionalWorkingHoursResult {
+  success: boolean;
+  id: string;
+}
+
+export interface CreateScheduleBlockResult {
+  success: boolean;
+  block_id: string;
+}
+
+export interface DeleteScheduleBlockResult {
+  success: boolean;
+}
+
+// ─── CRM / Timeline / Pacotes (Milestone 5) ────────────────
+
+export interface CreateClientPackageResult {
+  success: boolean;
+  package_id: string;
+}
+
+export interface ClientTimelineEventRow {
+  event_at: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  meta: Record<string, unknown>;
+}
+
+export interface RevertPackageConsumptionResult {
+  success: boolean;
+  reverted: boolean;
+  reason?: string;
+  package_id?: string;
+  appointment_id?: string;
+}
+
+// ─── Cashback / Fidelidade (Milestone 6) ───────────────────
+
+export interface CashbackWalletRow {
+  tenant_id: string;
+  client_id: string;
+  balance: number;
+  updated_at: string;
+}
+
+export interface CashbackLedgerRow {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  appointment_id: string | null;
+  order_id: string | null;
+  delta_amount: number;
+  reason: "earn" | "redeem" | "adjust" | "revert";
+  notes: string | null;
+  actor_user_id: string | null;
+  created_at: string;
+}
+
+// ─── Campanhas (Milestone 6) ──────────────────────────────
+
+export type CampaignStatus = "draft" | "sent" | "cancelled";
+
+export interface CampaignRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  subject: string;
+  html: string;
+  status: CampaignStatus;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+  updated_at: string;
+}
+
+export interface CampaignDeliveryRow {
+  id: string;
+  tenant_id: string;
+  campaign_id: string;
+  client_id: string;
+  to_email: string;
+  status: string;
+  provider_message_id: string | null;
+  error: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+// ─── Compras / Inventário (Milestone 7) ────────────────────
+
+export interface CreatePurchaseResult {
+  success: boolean;
+  purchase_id: string;
+  total_amount: number;
+  financial_transaction_id: string | null;
+}
+
+export interface CancelPurchaseResult {
+  success: boolean;
+  already_cancelled?: boolean;
+  purchase_id: string;
+  reversal_financial_transaction_id?: string | null;
+}
+
+/** Resultado da RPC get_dre_simple_v1 */
+export interface DreSimpleResult {
+  success: boolean;
+  start_date: string;
+  end_date: string;
+  revenue: number;
+  cogs: number;
+  expenses: number;
+  gross_profit: number;
+  net_profit: number;
+  gross_margin_pct: number | null;
+  net_margin_pct: number | null;
+  income_by_category: Array<{ category: string; amount: number }>;
+  expense_by_category: Array<{ category: string; amount: number }>;
+  cogs_by_product: Array<{ product_id: string; product_name: string; amount: number }>;
+}
+
 /** Linha retornada por get_goals_with_progress */
 export interface GoalWithProgressRow {
   id: string;
