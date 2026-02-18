@@ -142,7 +142,7 @@ export default function Contato() {
             <div className="grid gap-10 lg:grid-cols-5">
               {/* Info cards */}
               <div className="lg:col-span-2 space-y-6">
-                <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
                     <Mail className="h-6 w-6" />
                   </div>
@@ -154,7 +154,7 @@ export default function Contato() {
                     contato@metaclass.com.br
                   </a>
                 </div>
-                <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
                     <MessageSquare className="h-6 w-6" />
                   </div>
@@ -163,7 +163,7 @@ export default function Contato() {
                     Resposta em até 24 horas úteis.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+                <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
                     <MapPin className="h-6 w-6" />
                   </div>
@@ -176,10 +176,10 @@ export default function Contato() {
 
               {/* Form */}
               <div className="lg:col-span-3">
-                <div className="rounded-2xl border border-violet-100 bg-white p-6 sm:p-8 shadow-sm">
+                <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
                   {submitted ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mb-4">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300 mb-4">
                         <CheckCircle className="h-8 w-8" />
                       </div>
                       <h3 className="font-display text-xl font-semibold text-foreground mb-2">
@@ -206,7 +206,7 @@ export default function Contato() {
                               name="name"
                               placeholder="Seu nome"
                               required
-                              className="border-violet-100 focus:ring-violet-500"
+                              className="focus:ring-violet-500"
                             />
                           </div>
                           <div className="space-y-2">
@@ -217,7 +217,7 @@ export default function Contato() {
                               type="email"
                               placeholder="seu@email.com"
                               required
-                              className="border-violet-100 focus:ring-violet-500"
+                              className="focus:ring-violet-500"
                             />
                           </div>
                         </div>

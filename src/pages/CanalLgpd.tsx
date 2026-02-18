@@ -141,7 +141,7 @@ export default function CanalLgpd() {
         <section className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-5">
             <div className="space-y-6 lg:col-span-2">
-              <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
                   <FileText className="h-6 w-6" />
                 </div>
@@ -155,7 +155,7 @@ export default function CanalLgpd() {
                 </ul>
               </div>
 
-              <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
                   <Clock3 className="h-6 w-6" />
                 </div>
@@ -166,7 +166,7 @@ export default function CanalLgpd() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
                 <p className="text-sm text-muted-foreground">
                   Se você já é cliente e está logado, também pode registrar e acompanhar suas
                   solicitações na área{" "}
@@ -182,10 +182,10 @@ export default function CanalLgpd() {
             </div>
 
             <div className="lg:col-span-3">
-              <div className="rounded-2xl border border-violet-100 bg-white p-6 shadow-sm sm:p-8">
+              <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
                 {submitted ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-300">
                       <CheckCircle className="h-8 w-8" />
                     </div>
                     <h3 className="font-display text-xl font-semibold text-foreground">
@@ -220,7 +220,7 @@ export default function CanalLgpd() {
                             name="name"
                             placeholder="Seu nome"
                             required
-                            className="border-violet-100 focus:ring-violet-500"
+                            className="focus:ring-violet-500"
                           />
                         </div>
                         <div className="space-y-2">
@@ -232,7 +232,7 @@ export default function CanalLgpd() {
                             inputMode="tel"
                             placeholder="(11) 99999-9999"
                             required
-                            className="border-violet-100 focus:ring-violet-500"
+                            className="focus:ring-violet-500"
                           />
                         </div>
                       </div>
