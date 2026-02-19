@@ -5,7 +5,7 @@ import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
@@ -65,9 +65,6 @@ const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinance
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
-const ContasPagar = lazyWithRetry(() => import("@/pages/ContasPagar"));
-const ContasReceber = lazyWithRetry(() => import("@/pages/ContasReceber"));
-const FluxoDeCaixa = lazyWithRetry(() => import("@/pages/FluxoDeCaixa"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -370,30 +367,9 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/contas-pagar"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <ContasPagar />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/contas-receber"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <ContasReceber />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/fluxo-de-caixa"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <FluxoDeCaixa />
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="/contas-pagar" element={<Navigate to="/financeiro?tab=bills_payable" replace />} />
+                <Route path="/contas-receber" element={<Navigate to="/financeiro?tab=bills_receivable" replace />} />
+                <Route path="/fluxo-de-caixa" element={<Navigate to="/financeiro?tab=projection" replace />} />
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />

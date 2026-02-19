@@ -31,9 +31,6 @@ import {
   Globe,
   Gift,
   Zap,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -73,9 +70,6 @@ const navCategories: NavCategory[] = [
     label: "Financeiro",
     items: [
       { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-      { title: "Contas a Pagar", href: "/contas-pagar", icon: ArrowDownCircle, adminOnly: true },
-      { title: "Contas a Receber", href: "/contas-receber", icon: ArrowUpCircle, adminOnly: true },
-      { title: "Fluxo de Caixa", href: "/fluxo-de-caixa", icon: TrendingUp, adminOnly: true },
       { title: "Minhas Comissões", href: "/minhas-comissoes", icon: Wallet, staffOnly: true },
       { title: "Meus Salários", href: "/meus-salarios", icon: DollarSign, staffOnly: true },
       { title: "Produtos", href: "/produtos", icon: Package },
@@ -112,9 +106,6 @@ const prefetchByHref: Record<string, () => void> = {
   "/servicos": () => void import("@/pages/Servicos"),
   "/clientes": () => void import("@/pages/Clientes"),
   "/financeiro": () => void import("@/pages/Financeiro"),
-  "/contas-pagar": () => void import("@/pages/ContasPagar"),
-  "/contas-receber": () => void import("@/pages/ContasReceber"),
-  "/fluxo-de-caixa": () => void import("@/pages/FluxoDeCaixa"),
   "/produtos": () => void import("@/pages/Produtos"),
   "/compras": () => void import("@/pages/Compras"),
   "/fornecedores": () => void import("@/pages/Fornecedores"),

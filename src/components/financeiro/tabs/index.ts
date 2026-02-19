@@ -7,3 +7,6 @@ export {
   type SalaryRow,
   type ProfessionalForSalary,
 } from "./FinanceiroSalariesTab";
+export { FinanceiroBillsPayableTab } from "./FinanceiroBillsPayableTab";
+export { FinanceiroBillsReceivableTab } from "./FinanceiroBillsReceivableTab";
+export { FinanceiroProjectionTab } from "./FinanceiroProjectionTab";

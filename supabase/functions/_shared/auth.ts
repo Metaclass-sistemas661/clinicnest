@@ -37,6 +37,11 @@ function decodeJwtPayload(token: string): unknown | null {
 }
 
 function isLikelyValidProjectApiKey(apiKeyJwt: string): boolean {
+  // Handle new Supabase publishable key format (sb_publishable_<data>) — not a JWT.
+  // Introduced in supabase-js v2.x (2024+). Real auth is validated downstream via getUser().
+  if (apiKeyJwt.startsWith("sb_publishable_")) return true;
+
+  // Legacy: validate as JWT (old HS256 anon key format)
   const payload = decodeJwtPayload(apiKeyJwt);
   if (!payload || typeof payload !== "object") return false;
 

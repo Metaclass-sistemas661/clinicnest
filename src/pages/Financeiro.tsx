@@ -40,16 +40,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { getSalaryPayments, getProfessionalsWithSalary, paySalary } from "@/lib/supabase-typed-rpc";
 import { financialTransactionFormSchema, paySalaryDaysWorkedSchema } from "@/lib/validation";
 import type { SalaryPaymentRow, ProfessionalWithSalaryRow, PaySalaryResult } from "@/types/supabase-extensions";
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
-  Plus, 
-  Loader2, 
-  Calendar, 
-  BarChart3, 
-  List, 
+import {
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Plus,
+  Loader2,
+  Calendar,
+  BarChart3,
+  List,
   ArrowRightLeft,
+  ArrowDownCircle,
+  ArrowUpCircle,
   Link as LinkIcon,
   Wallet,
   AlertTriangle
@@ -68,6 +70,9 @@ import {
   FinanceiroCommissionsTab,
   FinanceiroTransactionsTab,
   FinanceiroSalariesTab,
+  FinanceiroBillsPayableTab,
+  FinanceiroBillsReceivableTab,
+  FinanceiroProjectionTab,
   type SalaryRow,
   type ProfessionalForSalary,
 } from "@/components/financeiro/tabs";
@@ -94,7 +99,7 @@ export default function Financeiro() {
   const [activeTabState, setActiveTabState] = useState("overview");
   const validTabs = simpleModeEnabled
     ? ["overview", "transactions"]
-    : ["overview", "cashflow", "transactions", "commissions", "salaries"];
+    : ["overview", "cashflow", "transactions", "commissions", "salaries", "bills_payable", "bills_receivable", "projection"];
   const activeTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : activeTabState;
   const setActiveTab = (v: string) => {
     setActiveTabState(v);
@@ -1013,38 +1018,59 @@ export default function Financeiro() {
             className={
               simpleModeEnabled
                 ? "grid w-full grid-cols-2 h-auto gap-1 p-1"
-                : "grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1 p-1"
+                : "flex w-full overflow-x-auto h-auto gap-1 p-1 justify-start"
             }
           >
-            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-overview">
+            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0" data-tour="finance-tab-overview">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
               <span className="sm:hidden">Gráf.</span>
             </TabsTrigger>
             {!simpleModeEnabled ? (
-              <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-cashflow">
+              <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0" data-tour="finance-tab-cashflow">
                 <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
-                <span className="hidden sm:inline">Fluxo de Caixa</span>
-                <span className="sm:hidden">Fluxo</span>
+                <span className="hidden sm:inline">Entradas & Saídas</span>
+                <span className="sm:hidden">E&S</span>
               </TabsTrigger>
             ) : null}
-            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-transactions">
+            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0" data-tour="finance-tab-transactions">
               <List className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Transações</span>
               <span className="sm:hidden">Trans.</span>
             </TabsTrigger>
             {!simpleModeEnabled ? (
-              <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-commissions">
+              <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0" data-tour="finance-tab-commissions">
                 <Wallet className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Comissões</span>
                 <span className="sm:hidden">Com.</span>
               </TabsTrigger>
             ) : null}
             {!simpleModeEnabled ? (
-              <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2" data-tour="finance-tab-salaries">
+              <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0" data-tour="finance-tab-salaries">
                 <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Salários</span>
                 <span className="sm:hidden">Sal.</span>
+              </TabsTrigger>
+            ) : null}
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="bills_payable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0">
+                <ArrowDownCircle className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Contas a Pagar</span>
+                <span className="sm:hidden">C.Pagar</span>
+              </TabsTrigger>
+            ) : null}
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="bills_receivable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0">
+                <ArrowUpCircle className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Contas a Receber</span>
+                <span className="sm:hidden">C.Receber</span>
+              </TabsTrigger>
+            ) : null}
+            {!simpleModeEnabled ? (
+              <TabsTrigger value="projection" className="gap-1 md:gap-2 text-xs md:text-sm py-2 flex-shrink-0">
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Projeção</span>
+                <span className="sm:hidden">Proj.</span>
               </TabsTrigger>
             ) : null}
           </TabsList>
@@ -1112,6 +1138,24 @@ export default function Financeiro() {
                   formatCurrency={formatCurrency}
                 />
               </div>
+            </TabsContent>
+          ) : null}
+
+          {!simpleModeEnabled ? (
+            <TabsContent value="bills_payable" className="mt-6">
+              <FinanceiroBillsPayableTab />
+            </TabsContent>
+          ) : null}
+
+          {!simpleModeEnabled ? (
+            <TabsContent value="bills_receivable" className="mt-6">
+              <FinanceiroBillsReceivableTab />
+            </TabsContent>
+          ) : null}
+
+          {!simpleModeEnabled ? (
+            <TabsContent value="projection" className="mt-6">
+              <FinanceiroProjectionTab />
             </TabsContent>
           ) : null}
         </Tabs>
