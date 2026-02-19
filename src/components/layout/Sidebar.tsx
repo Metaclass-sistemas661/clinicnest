@@ -65,9 +65,6 @@ const navCategories: NavCategory[] = [
       { title: "Disponibilidade", href: "/disponibilidade", icon: Clock },
       { title: "Serviços", href: "/servicos", icon: Scissors },
       { title: "Clientes", href: "/clientes", icon: Users },
-      { title: "Campanhas", href: "/campanhas", icon: Send, adminOnly: true },
-      { title: "Vouchers", href: "/vouchers", icon: Gift, adminOnly: true },
-      { title: "Cupons", href: "/cupons", icon: Tag, adminOnly: true },
     ],
   },
   {
@@ -83,16 +80,24 @@ const navCategories: NavCategory[] = [
     ],
   },
   {
+    label: "Marketing & Fidelidade",
+    items: [
+      { title: "Campanhas", href: "/campanhas", icon: Send, adminOnly: true },
+      { title: "Automações", href: "/automacoes", icon: Zap, adminOnly: true },
+      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, adminOnly: true },
+      { title: "Vouchers", href: "/vouchers", icon: Ticket, adminOnly: true },
+      { title: "Cupons", href: "/cupons", icon: Tag, adminOnly: true },
+    ],
+  },
+  {
     label: "Administrativo",
     items: [
       { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
-      { title: "Auditoria & Diagnóstico", href: "/auditoria", icon: Shield, adminOnly: true },
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
-      { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
-      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, adminOnly: true },
-      { title: "Automações", href: "/automacoes", icon: Zap, adminOnly: true },
+      { title: "Auditoria & Diagnóstico", href: "/auditoria", icon: Shield, adminOnly: true },
+      { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
