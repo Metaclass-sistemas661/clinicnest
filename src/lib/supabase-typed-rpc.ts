@@ -30,6 +30,7 @@ import type {
   CreatePurchaseResult,
   CancelPurchaseResult,
   DreSimpleResult,
+  CashFlowProjectionResult,
 } from "@/types/supabase-extensions";
 import type { AppointmentStatus, TransactionType, StockOutReasonType } from "@/types/database";
 
@@ -487,4 +488,12 @@ export async function getDreSimpleV1(params: {
   p_end_date: string;
 }): Promise<{ data: DreSimpleResult | null; error: unknown }> {
   return rpc<DreSimpleResult>("get_dre_simple_v1", params as Record<string, unknown>);
+}
+
+// ─── Financeiro Avançado — Fase 2 ───────────────────────────
+
+export async function getCashFlowProjectionV1(params: {
+  p_days?: number;
+}): Promise<{ data: CashFlowProjectionResult | null; error: unknown }> {
+  return rpc<CashFlowProjectionResult>("get_cash_flow_projection_v1", params as Record<string, unknown>);
 }

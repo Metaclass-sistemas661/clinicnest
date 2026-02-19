@@ -65,6 +65,9 @@ const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinance
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
+const ContasPagar = lazyWithRetry(() => import("@/pages/ContasPagar"));
+const ContasReceber = lazyWithRetry(() => import("@/pages/ContasReceber"));
+const FluxoDeCaixa = lazyWithRetry(() => import("@/pages/FluxoDeCaixa"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -364,6 +367,30 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <RelatorioFinanceiro />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/contas-pagar"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <ContasPagar />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/contas-receber"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <ContasReceber />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fluxo-de-caixa"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <FluxoDeCaixa />
                     </ProtectedRoute>
                   }
                 />

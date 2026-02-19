@@ -285,6 +285,30 @@ export interface DreSimpleResult {
   cogs_by_product: Array<{ product_id: string; product_name: string; amount: number }>;
 }
 
+// ─── Financeiro Avançado — Fase 2 ───────────────────────────
+
+export interface CashFlowSeriesPoint {
+  date: string;
+  actual_income: number;
+  actual_expense: number;
+  projected_payable: number;
+  projected_receivable: number;
+  running_balance: number;
+  is_past: boolean;
+}
+
+export interface CashFlowProjectionResult {
+  success: boolean;
+  days: number;
+  today: string;
+  opening_balance: number;
+  projected_payable_window: number;
+  projected_receivable_window: number;
+  overdue_payable: number;
+  overdue_receivable: number;
+  series: CashFlowSeriesPoint[];
+}
+
 /** Linha retornada por get_goals_with_progress */
 export interface GoalWithProgressRow {
   id: string;

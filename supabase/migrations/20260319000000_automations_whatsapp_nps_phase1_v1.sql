@@ -280,6 +280,7 @@ grant execute on function public.submit_nps_public_v1(uuid, integer, text) to an
 grant execute on function public.submit_nps_public_v1(uuid, integer, text) to authenticated;
 
 -- 3.1) Create NPS record when an appointment is completed (idempotent)
+-- Uses WHERE NOT EXISTS instead of ON CONFLICT to avoid dependency on partial index
 create or replace function public.create_nps_response_for_completed_appointment_v1()
 returns trigger
 language plpgsql
@@ -289,8 +290,11 @@ as $$
 begin
   if new.status = 'completed' and (old.status is distinct from 'completed') then
     insert into public.nps_responses(tenant_id, appointment_id, client_id)
-    values (new.tenant_id, new.id, new.client_id)
-    on conflict (appointment_id) do nothing;
+    select new.tenant_id, new.id, new.client_id
+    where not exists (
+      select 1 from public.nps_responses r
+      where r.appointment_id = new.id
+    );
   end if;
   return new;
 end;

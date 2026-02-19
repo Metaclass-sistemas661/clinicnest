@@ -18,6 +18,8 @@ export interface Tenant {
   default_commission_percent?: number | null;
   cashback_enabled?: boolean;
   cashback_percent?: number;
+  asaas_api_key?: string | null;
+  asaas_environment?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -212,4 +214,62 @@ export interface DashboardStats {
   todayAppointments: number;
   lowStockProducts: number;
   pendingAppointments: number;
+}
+
+// ─── Financeiro Avançado — Fase 2 ───────────────────────────
+
+export type BillStatus = 'pending' | 'paid' | 'cancelled';
+export type BillReceivableStatus = 'pending' | 'received' | 'cancelled';
+export type RecurrenceType = 'weekly' | 'monthly' | 'yearly';
+
+export interface CostCenter {
+  id: string;
+  tenant_id: string;
+  name: string;
+  color: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BillPayable {
+  id: string;
+  tenant_id: string;
+  description: string;
+  amount: number;
+  due_date: string;
+  category: string;
+  cost_center_id: string | null;
+  status: BillStatus;
+  is_recurring: boolean;
+  recurrence_type: RecurrenceType | null;
+  notes: string | null;
+  paid_at: string | null;
+  paid_amount: number | null;
+  payment_method: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  cost_center?: CostCenter;
+}
+
+export interface BillReceivable {
+  id: string;
+  tenant_id: string;
+  client_id: string | null;
+  description: string;
+  amount: number;
+  due_date: string;
+  category: string;
+  status: BillReceivableStatus;
+  notes: string | null;
+  received_at: string | null;
+  received_amount: number | null;
+  payment_method: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  client?: { id: string; name: string };
 }
