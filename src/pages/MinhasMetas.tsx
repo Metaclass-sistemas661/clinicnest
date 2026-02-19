@@ -45,7 +45,7 @@ interface GoalSuggestion {
 export default function MinhasMetas() {
   const { profile, isAdmin, refreshProfile } = useAuth();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
-  const { status: subscription } = useSubscription();
+  const subscription = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);

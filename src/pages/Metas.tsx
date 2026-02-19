@@ -93,7 +93,7 @@ export default function Metas() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
-  const { status: subscription } = useSubscription();
+  const subscription = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);

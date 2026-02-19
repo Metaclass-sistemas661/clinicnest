@@ -7,10 +7,10 @@
 -- - deletes are allowed (admin always; staff only pending and own) with mandatory audit
 
 CREATE OR REPLACE FUNCTION public.create_appointment_v2(
+  p_scheduled_at timestamptz,
   p_client_id uuid DEFAULT NULL,
   p_service_id uuid DEFAULT NULL,
   p_professional_profile_id uuid DEFAULT NULL,
-  p_scheduled_at timestamptz,
   p_duration_minutes integer DEFAULT NULL,
   p_price numeric DEFAULT NULL,
   p_status public.appointment_status DEFAULT 'pending',
@@ -157,9 +157,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_appointment_v2(uuid, uuid, uuid, timestamptz, integer, numeric, public.appointment_status, text) FROM public;
-GRANT EXECUTE ON FUNCTION public.create_appointment_v2(uuid, uuid, uuid, timestamptz, integer, numeric, public.appointment_status, text) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_appointment_v2(uuid, uuid, uuid, timestamptz, integer, numeric, public.appointment_status, text) TO service_role;
+REVOKE ALL ON FUNCTION public.create_appointment_v2(timestamptz, uuid, uuid, uuid, integer, numeric, public.appointment_status, text) FROM public;
+GRANT EXECUTE ON FUNCTION public.create_appointment_v2(timestamptz, uuid, uuid, uuid, integer, numeric, public.appointment_status, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_appointment_v2(timestamptz, uuid, uuid, uuid, integer, numeric, public.appointment_status, text) TO service_role;
 
 
 CREATE OR REPLACE FUNCTION public.update_appointment_v2(

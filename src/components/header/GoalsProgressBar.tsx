@@ -20,7 +20,7 @@ function formatValue(g: GoalWithProgress): string {
 
 export function GoalsProgressBar() {
   const { profile, isAdmin } = useAuth();
-  const { status: subscription } = useSubscription();
+  const subscription = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
 
   useEffect(() => {

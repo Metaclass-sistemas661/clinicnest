@@ -43,7 +43,7 @@ import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscripti
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
   const goalMotivation = useGoalMotivation();
-  const { status: subscription } = useSubscription();
+  const subscription = useSubscription();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
