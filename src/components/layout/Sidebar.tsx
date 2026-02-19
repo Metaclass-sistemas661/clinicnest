@@ -77,6 +77,7 @@ const navCategories: NavCategory[] = [
       { title: "Compras", href: "/compras", icon: ShoppingCart, adminOnly: true },
       { title: "Fornecedores", href: "/fornecedores", icon: Truck, adminOnly: true },
       { title: "Relatório DRE", href: "/relatorio-financeiro", icon: BarChart3, adminOnly: true },
+      { title: "Relatórios & BI", href: "/relatorios", icon: BarChart3, adminOnly: true },
     ],
   },
   {
@@ -134,6 +135,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/campanhas": () => void import("@/pages/Campanhas"),
   "/automacoes": () => void import("@/pages/Automacoes"),
   "/relatorio-financeiro": () => void import("@/pages/RelatorioFinanceiro"),
+  "/relatorios": () => void import("@/pages/Relatorios"),
   "/ajuda": () => void import("@/pages/Ajuda"),
   "/suporte": () => void import("@/pages/Suporte"),
   "/vouchers": () => void import("@/pages/Vouchers"),

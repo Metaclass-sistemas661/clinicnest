@@ -62,6 +62,7 @@ const Auditoria = lazyWithRetry(() => import("@/pages/Auditoria"));
 const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSeguranca"));
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
 const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
+const Relatorios = lazyWithRetry(() => import("@/pages/Relatorios"));
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
@@ -382,6 +383,14 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <RelatorioFinanceiro />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/relatorios"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Relatorios />
                     </ProtectedRoute>
                   }
                 />

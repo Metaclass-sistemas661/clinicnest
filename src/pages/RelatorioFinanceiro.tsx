@@ -34,9 +34,42 @@ import {
   Minus,
   FileText,
   ShoppingCart,
+  Download,
 } from "lucide-react";
 
 /* ── Helpers ───────────────────────────────────────── */
+
+function downloadDreCsv(dre: DreSimpleResult, label: string) {
+  const bom = "\uFEFF";
+  const rows: string[] = [
+    `"DRE — ${label}"`,
+    "",
+    '"Item";"Valor (R$)"',
+    `"Receita Bruta";"${dre.revenue.toFixed(2).replace(".", ",")}"`,
+    ...dre.income_by_category.map(
+      (c) => `"  ${c.category || "Outros"}";"${c.amount.toFixed(2).replace(".", ",")}"`
+    ),
+    `"(-) CMV";"${(-dre.cogs).toFixed(2).replace(".", ",")}"`,
+    ...dre.cogs_by_product.map(
+      (p) => `"  ${p.product_name}";"${(-p.amount).toFixed(2).replace(".", ",")}"`
+    ),
+    `"= Lucro Bruto";"${dre.gross_profit.toFixed(2).replace(".", ",")}"`,
+    `"(-) Despesas";"${(-dre.expenses).toFixed(2).replace(".", ",")}"`,
+    ...dre.expense_by_category.map(
+      (c) => `"  ${c.category || "Outros"}";"${(-c.amount).toFixed(2).replace(".", ",")}"`
+    ),
+    `"= Lucro Líquido";"${dre.net_profit.toFixed(2).replace(".", ",")}"`,
+    `"Margem Bruta";"${dre.gross_margin_pct?.toFixed(1) ?? "0"}%"`,
+    `"Margem Líquida";"${dre.net_margin_pct?.toFixed(1) ?? "0"}%"`,
+  ];
+  const blob = new Blob([bom + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dre-${label.toLowerCase().replace(/\s+/g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -235,6 +268,19 @@ export default function RelatorioFinanceiro() {
         {/* ── DRE Results ── */}
         {!isLoading && dre && (
           <>
+            {/* Export bar */}
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => downloadDreCsv(dre, activePeriod.label)}
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+            </div>
+
             {/* KPI Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
