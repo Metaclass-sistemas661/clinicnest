@@ -8,7 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   generateEmailHtml,
   makeDefaultState,
@@ -151,15 +154,90 @@ function ColorPresetRow({
 
 // ─── Banner URL input with thumbnail ─────────────────────────────────────────
 
-function BannerUrlInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function BannerUrlInput({
+  value,
+  onChange,
+  onUploadFile,
+  isUploading,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onUploadFile: (file: File) => Promise<void>;
+  isUploading: boolean;
+}) {
+  const [mode, setMode] = useState<"upload" | "url">("upload");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isValidUrl = value.trim().startsWith("http");
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await onUploadFile(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="space-y-2">
-      <Input
-        placeholder="https://exemplo.com/imagem-banner.jpg"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      {/* Mode toggle */}
+      <div className="flex rounded-md border border-border overflow-hidden text-xs">
+        <button
+          type="button"
+          onClick={() => setMode("upload")}
+          className={cn(
+            "flex-1 py-1.5 px-2 transition-colors",
+            mode === "upload"
+              ? "bg-primary text-primary-foreground font-medium"
+              : "bg-transparent text-muted-foreground hover:bg-muted"
+          )}
+        >
+          Do computador
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("url")}
+          className={cn(
+            "flex-1 py-1.5 px-2 transition-colors border-l border-border",
+            mode === "url"
+              ? "bg-primary text-primary-foreground font-medium"
+              : "bg-transparent text-muted-foreground hover:bg-muted"
+          )}
+        >
+          Colar URL
+        </button>
+      </div>
+
+      {mode === "upload" ? (
+        <div className="space-y-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" />Enviando...</>
+            ) : (
+              <><Upload className="h-4 w-4" />Importar imagem</>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground">JPG, PNG, GIF ou WebP — máx. 5 MB</p>
+        </div>
+      ) : (
+        <Input
+          placeholder="https://exemplo.com/imagem-banner.jpg"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+
       {isValidUrl && (
         <div className="rounded-md overflow-hidden border bg-muted/30">
           <img
@@ -220,8 +298,10 @@ const TEMPLATES: { id: TemplateId; label: string }[] = [
 
 export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSaving }: EmailBuilderProps) {
   const isMobile = useIsMobile();
+  const { tenant } = useAuth();
   const [previewMobile, setPreviewMobile] = useState(false);
   const [errors, setErrors] = useState<{ campaignName?: string; subject?: string }>({});
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const [state, setState] = useState<BuilderState>(() =>
     makeDefaultState("promocao", defaultSalonName || "Meu Salão")
@@ -252,6 +332,30 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       useGradient: preset.gradient,
       ctaColor: preset.primary,
     }));
+  };
+
+  const handleBannerUpload = async (file: File) => {
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error("Imagem muito grande. Máximo 5 MB.");
+      return;
+    }
+    setIsUploadingBanner(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const tenantId = tenant?.id ?? "shared";
+      const path = `${tenantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("campaign-banners")
+        .upload(path, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("campaign-banners").getPublicUrl(path);
+      set("bannerUrl", data.publicUrl);
+    } catch (err) {
+      toast.error("Erro ao enviar imagem. Tente novamente.");
+    } finally {
+      setIsUploadingBanner(false);
+    }
   };
 
   const handleSave = () => {
@@ -370,8 +474,12 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
           <SectionLabel icon={ImageIcon}>Imagem de Banner</SectionLabel>
           <div className="space-y-1.5">
             <Label className="text-sm">URL da Imagem <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-            <BannerUrlInput value={state.bannerUrl} onChange={(v) => set("bannerUrl", v)} />
-            <p className="text-xs text-muted-foreground">Cole o link de uma imagem (ex: do Google Drive, Unsplash, Canva, etc.)</p>
+            <BannerUrlInput
+              value={state.bannerUrl}
+              onChange={(v) => set("bannerUrl", v)}
+              onUploadFile={handleBannerUpload}
+              isUploading={isUploadingBanner}
+            />
           </div>
         </div>
 

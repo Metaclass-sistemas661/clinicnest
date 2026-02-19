@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,17 +27,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { z } from "zod";
 import { Send, Plus, Loader2, Eye, Mail } from "lucide-react";
 import type { CampaignRow, CampaignDeliveryRow, CampaignStatus } from "@/types/supabase-extensions";
-
-const campaignFormSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  subject: z.string().min(1, "Assunto é obrigatório"),
-  banner_url: z.string().trim().optional().nullable(),
-  preheader: z.string().trim().optional().nullable(),
-  html: z.string().min(1, "Conteúdo é obrigatório"),
-});
+import EmailBuilder from "@/components/campanhas/EmailBuilder";
 
 const statusConfig: Record<CampaignStatus, { label: string; variant: "default" | "secondary" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
@@ -48,12 +39,11 @@ const statusConfig: Record<CampaignStatus, { label: string; variant: "default" |
 };
 
 export default function Campanhas() {
-  const { profile, isAdmin } = useAuth();
+  const { profile, tenant, isAdmin } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewCampaign, setPreviewCampaign] = useState<CampaignRow | null>(null);
@@ -82,13 +72,14 @@ export default function Campanhas() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const db: any = supabase;
+      const { data, error } = await db
         .from("campaigns")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setCampaigns((data as unknown as CampaignRow[]) || []);
+      setCampaigns((data as CampaignRow[]) || []);
     } catch (err) {
       logger.error("[Campanhas] fetch error", err);
       toast.error("Erro ao carregar campanhas");
@@ -97,29 +88,30 @@ export default function Campanhas() {
     }
   };
 
-  const handleCreate = async () => {
-    const parsed = campaignFormSchema.safeParse(formData);
-    if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? "Verifique os dados");
-      return;
-    }
+  const handleCreateFromBuilder = async (payload: {
+    name: string;
+    subject: string;
+    html: string;
+    banner_url: string | null;
+    preheader: string | null;
+  }) => {
     if (!profile?.tenant_id) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("campaigns").insert({
+      const db: any = supabase;
+      const { error } = await db.from("campaigns").insert({
         tenant_id: profile.tenant_id,
-        name: parsed.data.name,
-        subject: parsed.data.subject,
-        banner_url: parsed.data.banner_url || null,
-        preheader: parsed.data.preheader || null,
-        html: parsed.data.html,
+        name: payload.name,
+        subject: payload.subject,
+        banner_url: payload.banner_url,
+        preheader: payload.preheader,
+        html: payload.html,
         status: "draft" as CampaignStatus,
         created_by: profile.user_id ?? null,
       } as any);
       if (error) throw error;
-      toast.success("Campanha criada!");
+      toast.success("Campanha criada com sucesso!");
       setIsDialogOpen(false);
-      setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
       await fetchCampaigns();
     } catch (err) {
       logger.error("[Campanhas] create error", err);
@@ -148,19 +140,13 @@ export default function Campanhas() {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     const token = data.session?.access_token;
-    if (!token) {
-      throw new Error("Sessão ausente. Faça login novamente.");
-    }
+    if (!token) throw new Error("Sessão ausente. Faça login novamente.");
     return { Authorization: `Bearer ${token}` };
   };
 
   const runTestSend = async () => {
     if (!sendCampaign) return;
-    if (!testEmail.trim()) {
-      toast.error("Informe um email para teste");
-      return;
-    }
-
+    if (!testEmail.trim()) { toast.error("Informe um email para teste"); return; }
     setIsSending(true);
     try {
       const headers = await getAuthHeaders();
@@ -168,15 +154,9 @@ export default function Campanhas() {
         headers,
         body: { campaignId: sendCampaign.id, testEmail: testEmail.trim() },
       });
-      if (error) {
-        toast.error(error.message || "Erro ao enviar teste");
-        return;
-      }
-      if (!data?.success) {
-        toast.error(data?.error || "Erro ao enviar teste");
-        return;
-      }
-      toast.success("Teste enviado!");
+      if (error) { toast.error(error.message || "Erro ao enviar teste"); return; }
+      if (!data?.success) { toast.error(data?.error || "Erro ao enviar teste"); return; }
+      toast.success("Email de teste enviado! Verifique sua caixa de entrada.");
     } catch (err) {
       logger.error("[Campanhas] test send error", err);
       toast.error("Erro ao enviar teste");
@@ -187,28 +167,15 @@ export default function Campanhas() {
 
   const runBatch = async () => {
     if (!sendCampaign) return;
-
     setIsSending(true);
     try {
       const headers = await getAuthHeaders();
       const { data, error } = await supabase.functions.invoke("run-campaign", {
         headers,
-        body: {
-          campaignId: sendCampaign.id,
-          limit: batchLimit,
-          afterClientId: afterClientId || undefined,
-        },
+        body: { campaignId: sendCampaign.id, limit: batchLimit, afterClientId: afterClientId || undefined },
       });
-
-      if (error) {
-        toast.error(error.message || "Erro ao enviar lote");
-        return;
-      }
-      if (!data?.success) {
-        toast.error(data?.error || "Erro ao enviar lote");
-        return;
-      }
-
+      if (error) { toast.error(error.message || "Erro ao enviar lote"); return; }
+      if (!data?.success) { toast.error(data?.error || "Erro ao enviar lote"); return; }
       setSendStats((prev) => ({
         sent: prev.sent + Number(data?.sent || 0),
         skipped: prev.skipped + Number(data?.skipped || 0),
@@ -218,9 +185,8 @@ export default function Campanhas() {
       }));
       setHasMore(Boolean(data?.has_more));
       setAfterClientId(typeof data?.next_after_client_id === "string" ? data.next_after_client_id : null);
-
       await fetchCampaigns();
-      toast.success(`Lote concluído: ${Number(data?.sent || 0)} enviados, ${Number(data?.failed || 0)} falharam`);
+      toast.success(`Lote concluído: ${Number(data?.sent || 0)} enviados`);
     } catch (err) {
       logger.error("[Campanhas] batch send error", err);
       toast.error("Erro ao enviar lote");
@@ -234,13 +200,14 @@ export default function Campanhas() {
     setIsDeliveriesOpen(true);
     setIsLoadingDeliveries(true);
     try {
-      const { data, error } = await supabase
+      const db: any = supabase;
+      const { data, error } = await db
         .from("campaign_deliveries")
         .select("*")
         .eq("campaign_id", campaign.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setDeliveries((data as unknown as CampaignDeliveryRow[]) || []);
+      setDeliveries((data as CampaignDeliveryRow[]) || []);
     } catch (err) {
       logger.error("[Campanhas] deliveries error", err);
       toast.error("Erro ao carregar entregas");
@@ -255,6 +222,8 @@ export default function Campanhas() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
+  const defaultSalonName = tenant?.name ?? profile?.full_name ?? "Meu Salão";
+
   return (
     <MainLayout
       title="Campanhas"
@@ -262,10 +231,7 @@ export default function Campanhas() {
       actions={
         <Button
           className="gradient-primary text-primary-foreground"
-          onClick={() => {
-            setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
-            setIsDialogOpen(true);
-          }}
+          onClick={() => setIsDialogOpen(true)}
           data-tour="campaigns-new"
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -287,7 +253,7 @@ export default function Campanhas() {
           action={
             <Button
               className="gradient-primary text-primary-foreground"
-              onClick={() => { setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" }); setIsDialogOpen(true); }}
+              onClick={() => setIsDialogOpen(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
               Nova Campanha
@@ -300,7 +266,7 @@ export default function Campanhas() {
             <CardTitle>Campanhas ({campaigns.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Mobile: Card Layout */}
+            {/* Mobile */}
             <div className="block md:hidden space-y-3">
               {campaigns.map((c) => {
                 const cfg = statusConfig[c.status] || statusConfig.draft;
@@ -311,29 +277,21 @@ export default function Campanhas() {
                       <Badge variant={cfg.variant}>{cfg.label}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">
-                      <Mail className="inline h-3 w-3 mr-1" />
-                      {c.subject}
+                      <Mail className="inline h-3 w-3 mr-1" />{c.subject}
                     </p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{new Date(c.created_at).toLocaleDateString("pt-BR")}</span>
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs"
-                          onClick={() => openPreview(c)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          Preview
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => openPreview(c)}>
+                          <Eye className="h-3 w-3 mr-1" />Preview
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs"
-                          onClick={() => loadDeliveries(c)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          Entregas
+                        {isAdmin && (c.status === "draft" || c.status === "sending") && (
+                          <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => openSend(c)}>
+                            <Send className="h-3 w-3 mr-1" />Enviar
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => loadDeliveries(c)}>
+                          <Eye className="h-3 w-3 mr-1" />Entregas
                         </Button>
                       </div>
                     </div>
@@ -342,7 +300,7 @@ export default function Campanhas() {
               })}
             </div>
 
-            {/* Desktop: Table Layout */}
+            {/* Desktop */}
             <div className="hidden md:block">
               <Table>
                 <TableHeader>
@@ -366,34 +324,16 @@ export default function Campanhas() {
                         <TableCell className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell className="text-muted-foreground">{c.sent_at ? new Date(c.sent_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openPreview(c)}
-                            aria-label={`Preview da campanha ${c.name}`}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Preview
+                          <Button variant="ghost" size="sm" onClick={() => openPreview(c)}>
+                            <Eye className="h-4 w-4 mr-1" />Preview
                           </Button>
-                          {isAdmin && (c.status === "draft" || c.status === "sending") ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openSend(c)}
-                              aria-label={`Enviar campanha ${c.name}`}
-                            >
-                              <Send className="h-4 w-4 mr-1" />
-                              Enviar
+                          {isAdmin && (c.status === "draft" || c.status === "sending") && (
+                            <Button variant="ghost" size="sm" onClick={() => openSend(c)}>
+                              <Send className="h-4 w-4 mr-1" />Enviar
                             </Button>
-                          ) : null}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => loadDeliveries(c)}
-                            aria-label={`Ver entregas da campanha ${c.name}`}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Entregas
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => loadDeliveries(c)}>
+                            <Eye className="h-4 w-4 mr-1" />Entregas
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -406,70 +346,19 @@ export default function Campanhas() {
         </Card>
       )}
 
-      {/* Dialog de criação */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Campanha</DialogTitle>
-            <DialogDescription>Crie um rascunho de campanha de email</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nome da campanha</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Promoção de Natal"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Assunto do email</Label>
-              <Input
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                placeholder="Ex: Aproveite 20% de desconto!"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Preheader (opcional)</Label>
-              <Input
-                value={formData.preheader}
-                onChange={(e) => setFormData({ ...formData, preheader: e.target.value })}
-                placeholder="Texto curto que aparece na prévia do email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Banner URL (opcional)</Label>
-              <Input
-                value={formData.banner_url}
-                onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Conteúdo (HTML)</Label>
-              <Textarea
-                value={formData.html}
-                onChange={(e) => setFormData({ ...formData, html: e.target.value })}
-                rows={8}
-                placeholder="Cole o HTML do email aqui..."
-                className="font-mono text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Cole o conteúdo HTML do email. Você poderá fazer preview e enviar por lotes.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-            <Button className="gradient-primary text-primary-foreground" onClick={handleCreate} disabled={isSaving}>
-              {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : "Criar Campanha"}
-            </Button>
-          </DialogFooter>
+      {/* ── Email Builder Dialog ─────────────────────────────────────────── */}
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSaving) setIsDialogOpen(open); }}>
+        <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+          <EmailBuilder
+            defaultSalonName={defaultSalonName}
+            onSave={handleCreateFromBuilder}
+            onCancel={() => setIsDialogOpen(false)}
+            isSaving={isSaving}
+          />
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de preview */}
+      {/* ── Preview Dialog ───────────────────────────────────────────────── */}
       {previewCampaign && (
         <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
           <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -477,66 +366,36 @@ export default function Campanhas() {
               <DialogTitle>Preview: {previewCampaign.name}</DialogTitle>
               <DialogDescription>{previewCampaign.subject}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              {previewCampaign.preheader ? (
-                <div className="rounded-lg border p-3 text-sm">
-                  <div className="text-xs text-muted-foreground">Preheader</div>
-                  <div className="mt-1">{previewCampaign.preheader}</div>
-                </div>
-              ) : null}
-              {previewCampaign.banner_url ? (
-                <div className="rounded-lg border p-3">
-                  <div className="text-xs text-muted-foreground">Banner</div>
-                  <img src={previewCampaign.banner_url} alt={previewCampaign.name} className="mt-2 w-full rounded-lg" />
-                </div>
-              ) : null}
-              <div className="rounded-lg border p-3">
-                <div className="text-xs text-muted-foreground">HTML</div>
-                <div className="mt-2 rounded-md border bg-background">
-                  <iframe
-                    title={`preview-${previewCampaign.id}`}
-                    className="w-full h-[520px] rounded-md"
-                    srcDoc={previewCampaign.html}
-                  />
-                </div>
-              </div>
+            <div className="rounded-md border bg-background">
+              <iframe
+                title={`preview-${previewCampaign.id}`}
+                className="w-full h-[540px] rounded-md"
+                srcDoc={previewCampaign.html}
+                sandbox="allow-same-origin"
+              />
             </div>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* Dialog de envio */}
+      {/* ── Send Dialog ──────────────────────────────────────────────────── */}
       {sendCampaign && (
         <Dialog open={isSendOpen} onOpenChange={setIsSendOpen}>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Enviar: {sendCampaign.name}</DialogTitle>
-              <DialogDescription>Envio por lotes idempotente. Você pode reexecutar sem reenviar para quem já foi enviado.</DialogDescription>
+              <DialogDescription>Envio por lotes idempotente. Você pode reexecutar sem reenviar para quem já recebeu.</DialogDescription>
             </DialogHeader>
-
             <div className="space-y-4 py-2">
               <div className="rounded-lg border p-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Enviados</div>
-                    <div className="font-semibold">{sendStats.sent}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Falhas</div>
-                    <div className="font-semibold">{sendStats.failed}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Opt-out</div>
-                    <div className="font-semibold">{sendStats.opted_out}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Já enviados</div>
-                    <div className="font-semibold">{sendStats.already_sent}</div>
-                  </div>
+                  <div><div className="text-xs text-muted-foreground">Enviados</div><div className="font-semibold">{sendStats.sent}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Falhas</div><div className="font-semibold">{sendStats.failed}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Opt-out</div><div className="font-semibold">{sendStats.opted_out}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Já enviados</div><div className="font-semibold">{sendStats.already_sent}</div></div>
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Próximo cursor: {afterClientId ? afterClientId : "—"}
-                  {hasMore === null ? "" : hasMore ? " (ainda há mais)" : " (finalizado)"}
+                  {hasMore === null ? "" : hasMore ? "Ainda há mais clientes para enviar." : "✓ Todos os clientes processados."}
                 </div>
               </div>
 
@@ -545,29 +404,23 @@ export default function Campanhas() {
                 <div className="flex gap-2">
                   <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="seuemail@dominio.com" />
                   <Button variant="outline" onClick={runTestSend} disabled={isSending}>
-                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar teste"}
+                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Testar"}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">Envie para seu email antes de disparar para toda a base.</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Tamanho do lote</Label>
                 <div className="flex gap-2">
-                  <Input
-                    value={String(batchLimit)}
-                    onChange={(e) => setBatchLimit(Number(e.target.value || 0))}
-                    inputMode="numeric"
-                  />
-                  <Button className="gradient-primary text-primary-foreground" onClick={runBatch} disabled={isSending}>
-                    {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : hasMore === false ? "Reenviar lote" : afterClientId ? "Continuar" : "Enviar lote"}
+                  <Input value={String(batchLimit)} onChange={(e) => setBatchLimit(Number(e.target.value || 0))} inputMode="numeric" className="w-24" />
+                  <Button className="flex-1 gradient-primary text-primary-foreground" onClick={runBatch} disabled={isSending}>
+                    {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : hasMore === false ? "Reenviar lote" : afterClientId ? "Continuar envio" : "Disparar campanha"}
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  A campanha só será marcada como enviada quando não houver mais clientes a processar.
-                </div>
+                <p className="text-xs text-muted-foreground">A campanha só é marcada como enviada quando todos forem processados.</p>
               </div>
             </div>
-
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsSendOpen(false)} disabled={isSending}>Fechar</Button>
             </DialogFooter>
@@ -575,7 +428,7 @@ export default function Campanhas() {
         </Dialog>
       )}
 
-      {/* Dialog de entregas */}
+      {/* ── Deliveries Dialog ────────────────────────────────────────────── */}
       {selectedCampaign && (
         <Dialog open={isDeliveriesOpen} onOpenChange={setIsDeliveriesOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -585,16 +438,10 @@ export default function Campanhas() {
             </DialogHeader>
             {isLoadingDeliveries ? (
               <div className="space-y-3 py-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
+                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
               </div>
             ) : deliveries.length === 0 ? (
-              <EmptyState
-                icon={Mail}
-                title="Nenhuma entrega"
-                description="Esta campanha ainda não possui envios registrados."
-              />
+              <EmptyState icon={Mail} title="Nenhuma entrega" description="Esta campanha ainda não possui envios registrados." />
             ) : (
               <div className="rounded-lg border divide-y text-sm">
                 {deliveries.map((d) => (
