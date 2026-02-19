@@ -680,7 +680,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-3 border-b bg-background flex-shrink-0">
         <div>
