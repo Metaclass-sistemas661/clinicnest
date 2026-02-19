@@ -63,6 +63,7 @@ const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSegu
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
 const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
 const Relatorios = lazyWithRetry(() => import("@/pages/Relatorios"));
+const Integracoes = lazyWithRetry(() => import("@/pages/Integracoes"));
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));

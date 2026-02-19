@@ -328,6 +328,13 @@ function hexToHsl(hex: string): string | null {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+// ── Widget config (from Supabase or localStorage) ─────────────────────────────
+interface WidgetConfig {
+  color?: string;
+  welcome?: string;
+  logo?: string;
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AgendarOnline() {
   const { slug } = useParams();
@@ -340,6 +347,8 @@ export default function AgendarOnline() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [ctx, setCtx] = useState<ContextResponse | null>(null);
+  // Widget config loaded from Supabase/localStorage (fallback when no URL params)
+  const [widgetCfg, setWidgetCfg] = useState<WidgetConfig | null>(null);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [serviceId, setServiceId] = useState("");
@@ -358,10 +367,16 @@ export default function AgendarOnline() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Inject custom primary color when widget is embedded with ?primary=HEX
+  // Effective values: URL params > Supabase widget_config > defaults
+  const effectivePrimary = primaryParam || widgetCfg?.color?.replace("#", "") || "";
+  const effectiveWelcome = welcomeParam || widgetCfg?.welcome || "";
+  const effectiveLogo    = logoParam    || widgetCfg?.logo    || "";
+
+  // Inject custom primary color (URL param OR widget_config)
   useEffect(() => {
-    if (!primaryParam) return;
-    const hsl = hexToHsl(primaryParam);
+    const colorHex = effectivePrimary;
+    if (!colorHex) return;
+    const hsl = hexToHsl(colorHex);
     if (!hsl) return;
     const id = "bg-embed-theme";
     let el = document.getElementById(id) as HTMLStyleElement | null;
@@ -372,7 +387,7 @@ export default function AgendarOnline() {
     }
     el.textContent = `:root { --primary: ${hsl}; --ring: ${hsl}; }`;
     return () => { document.getElementById(id)?.remove(); };
-  }, [primaryParam]);
+  }, [effectivePrimary]);
 
   const canLoadSlots = useMemo(
     () => Boolean(serviceId && professionalId && date),
@@ -427,7 +442,7 @@ export default function AgendarOnline() {
     }
   }, [slot]);
 
-  // Load context
+  // Load context + widget config
   useEffect(() => {
     const run = async () => {
       setIsLoading(true);
@@ -450,12 +465,31 @@ export default function AgendarOnline() {
           return;
         }
         setCtx(data as ContextResponse);
+
+        // Load widget_config from Supabase (so ALL visitors see the personalization)
+        // Only needed when no URL params are present (direct access, not embed)
+        if (!primaryParam && !welcomeParam && !logoParam && data?.tenant?.id) {
+          try {
+            const { data: tenantRow } = await (supabase as any)
+              .from("tenants")
+              .select("widget_config")
+              .eq("id", data.tenant.id)
+              .maybeSingle();
+            if (tenantRow?.widget_config) {
+              setWidgetCfg(tenantRow.widget_config as WidgetConfig);
+            } else {
+              // localStorage fallback (same browser as admin)
+              const saved = localStorage.getItem("bg-widget-config");
+              if (saved) setWidgetCfg(JSON.parse(saved) as WidgetConfig);
+            }
+          } catch { /* ignore */ }
+        }
       } finally {
         setIsLoading(false);
       }
     };
     run().catch(() => {});
-  }, [slug]);
+  }, [slug, primaryParam, welcomeParam, logoParam]);
 
   // Cancel flow
   useEffect(() => {
@@ -668,8 +702,8 @@ export default function AgendarOnline() {
         {/* Branding */}
         <div className="flex flex-col items-center gap-3 py-2 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10 overflow-hidden">
-            {logoParam ? (
-              <img src={logoParam} alt={ctx.tenant.name} className="h-full w-full object-contain p-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            {effectiveLogo ? (
+              <img src={effectiveLogo} alt={ctx.tenant.name} className="h-full w-full object-contain p-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
             ) : (
               <Scissors className="h-8 w-8" />
             )}
@@ -679,7 +713,7 @@ export default function AgendarOnline() {
               {ctx.tenant.name}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {welcomeParam || "Agende em segundos. Sem WhatsApp, sem espera."}
+              {effectiveWelcome || "Agende em segundos. Sem WhatsApp, sem espera."}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">

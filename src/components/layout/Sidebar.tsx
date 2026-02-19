@@ -33,6 +33,7 @@ import {
   Zap,
   Tag,
   Ticket,
+  Plug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -97,6 +98,7 @@ const navCategories: NavCategory[] = [
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
+      { title: "Integrações", href: "/integracoes", icon: Plug, adminOnly: true },
       { title: "Auditoria & Diagnóstico", href: "/auditoria", icon: Shield, adminOnly: true },
       { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
@@ -140,6 +142,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/suporte": () => void import("@/pages/Suporte"),
   "/vouchers": () => void import("@/pages/Vouchers"),
   "/cupons": () => void import("@/pages/Cupons"),
+  "/integracoes": () => void import("@/pages/Integracoes"),
 };
 
 function prefetchRoute(href: string) {
