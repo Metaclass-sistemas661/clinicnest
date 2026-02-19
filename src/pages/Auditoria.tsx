@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ export default function Auditoria() {
   const [rows, setRows] = useState<AuditLogRow[]>([]);
   const [pageSize] = useState(200);
   const [page, setPage] = useState(0);
+  const pageRef = useRef(0);
   const [hasMore, setHasMore] = useState(true);
 
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
@@ -80,7 +81,7 @@ export default function Auditoria() {
     if (showSpinner) setIsRefreshing(true);
 
     try {
-      const nextPage = reset ? 0 : page;
+      const nextPage = reset ? 0 : pageRef.current;
       let q = supabase
         .from("audit_logs")
         .select("id,tenant_id,actor_user_id,action,entity_type,entity_id,metadata,created_at")
@@ -106,7 +107,8 @@ export default function Auditoria() {
       const newRows = (data as AuditLogRow[]) || [];
       setRows((current) => (reset ? newRows : [...current, ...newRows]));
       setHasMore(newRows.length === pageSize);
-      setPage(nextPage + 1);
+      pageRef.current = nextPage + 1;
+      setPage(pageRef.current);
     } catch (e) {
       logger.error("Error fetching audit logs:", e);
       toast.error("Erro ao carregar auditoria");
@@ -114,10 +116,11 @@ export default function Auditoria() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [canUse, profile, queryRange.startIso, queryRange.endIso, actionFilter, entityTypeFilter, entityIdFilter, actorUserIdFilter, page, pageSize]);
+  }, [canUse, profile, queryRange.startIso, queryRange.endIso, actionFilter, entityTypeFilter, entityIdFilter, actorUserIdFilter, pageSize]);
 
   useEffect(() => {
     setRows([]);
+    pageRef.current = 0;
     setPage(0);
     setHasMore(true);
     fetchAuditLogs({ reset: true });

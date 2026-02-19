@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
 
 type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
@@ -124,10 +124,6 @@ export default function Configuracoes() {
     email: "",
     address: "",
     billingCpfCnpj: "",
-    onlineBookingEnabled: false,
-    onlineBookingSlug: "",
-    onlineBookingMinLeadMinutes: 60,
-    onlineBookingCancelMinLeadMinutes: 240,
   });
   const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
   const [requestDrafts, setRequestDrafts] = useState<
@@ -143,10 +139,6 @@ export default function Configuracoes() {
   });
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
   const [actorNameByUserId, setActorNameByUserId] = useState<Record<string, string>>({});
-  // Cashback config
-  const [cashbackEnabled, setCashbackEnabled] = useState(false);
-  const [cashbackPercent, setCashbackPercent] = useState("0");
-  const [isSavingCashback, setIsSavingCashback] = useState(false);
 
   const [exportingRequestKey, setExportingRequestKey] = useState<string | null>(null);
   const [previewingRequestId, setPreviewingRequestId] = useState<string | null>(null);
@@ -166,13 +158,7 @@ export default function Configuracoes() {
         email: tenant.email || "",
         address: tenant.address || "",
         billingCpfCnpj: tenant.billing_cpf_cnpj || "",
-        onlineBookingEnabled: tenant.online_booking_enabled === true,
-        onlineBookingSlug: tenant.online_booking_slug || "",
-        onlineBookingMinLeadMinutes: Number(tenant.online_booking_min_lead_minutes ?? 60),
-        onlineBookingCancelMinLeadMinutes: Number(tenant.online_booking_cancel_min_lead_minutes ?? 240),
       });
-      setCashbackEnabled((tenant as any).cashback_enabled === true);
-      setCashbackPercent(String((tenant as any).cashback_percent ?? 0));
     }
   }, [tenant]);
 
@@ -182,30 +168,6 @@ export default function Configuracoes() {
       toast.error("Para continuar, informe o CPF/CNPJ em Configurações.");
     }
   }, [location.state]);
-
-  const handleSaveCashback = async () => {
-    if (!tenant?.id) return;
-    const percent = Number(cashbackPercent);
-    if (isNaN(percent) || percent < 0 || percent > 100) {
-      toast.error("Percentual de cashback deve estar entre 0 e 100");
-      return;
-    }
-    setIsSavingCashback(true);
-    try {
-      const { error } = await supabase
-        .from("tenants")
-        .update({ cashback_enabled: cashbackEnabled, cashback_percent: percent } as any)
-        .eq("id", tenant.id);
-      if (error) throw error;
-      toast.success("Configuração de cashback salva!");
-      refreshProfile();
-    } catch (err) {
-      logger.error("[Configuracoes] cashback save error", err);
-      toast.error("Erro ao salvar cashback");
-    } finally {
-      setIsSavingCashback(false);
-    }
-  };
 
   const getStatusBadgeVariant = (status: LgpdRequestStatus): "secondary" | "default" | "destructive" => {
     if (status === "completed") return "default";
@@ -475,10 +437,6 @@ export default function Configuracoes() {
           email: formData.email || null,
           address: formData.address || null,
           billing_cpf_cnpj: formData.billingCpfCnpj || null,
-          online_booking_enabled: formData.onlineBookingEnabled,
-          online_booking_slug: formData.onlineBookingSlug ? formData.onlineBookingSlug.trim() : null,
-          online_booking_min_lead_minutes: Number(formData.onlineBookingMinLeadMinutes || 0) || 60,
-          online_booking_cancel_min_lead_minutes: Number(formData.onlineBookingCancelMinLeadMinutes || 0) || 240,
         })
         .eq("id", tenant.id);
 
@@ -489,10 +447,6 @@ export default function Configuracoes() {
         email: formData.email || null,
         phone: formData.phone || null,
         billing_cpf_cnpj: formData.billingCpfCnpj || null,
-        online_booking_enabled: formData.onlineBookingEnabled,
-        online_booking_slug: formData.onlineBookingSlug ? formData.onlineBookingSlug.trim() : null,
-        online_booking_min_lead_minutes: Number(formData.onlineBookingMinLeadMinutes || 0) || 60,
-        online_booking_cancel_min_lead_minutes: Number(formData.onlineBookingCancelMinLeadMinutes || 0) || 240,
       });
 
       toast.success("Configurações salvas com sucesso!");
@@ -715,7 +669,7 @@ export default function Configuracoes() {
       subtitle="Dados do salão e governança LGPD"
     >
       <div className="grid w-full gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+        <Card className="xl:col-span-3">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -772,73 +726,16 @@ export default function Configuracoes() {
               </div>
 
               <div className="rounded-lg border border-border/70 p-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <Label htmlFor="online-booking-enabled" className="cursor-pointer">
-                      Agendamento online
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Habilita um link público para clientes agendarem online.
+                    <p className="text-sm font-medium text-foreground">Agendamento Online</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure o link público e regras de antecedência em uma tela dedicada.
                     </p>
                   </div>
-                  <Switch
-                    id="online-booking-enabled"
-                    checked={formData.onlineBookingEnabled}
-                    onCheckedChange={(checked) => setFormData({ ...formData, onlineBookingEnabled: checked })}
-                  />
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Slug do link</Label>
-                    <Input
-                      value={formData.onlineBookingSlug}
-                      onChange={(e) => setFormData({ ...formData, onlineBookingSlug: e.target.value })}
-                      placeholder="meu-salao"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      O link ficará em /agendar/&lt;slug&gt;
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Antecedência mínima (minutos)</Label>
-                    <Input
-                      inputMode="numeric"
-                      value={String(formData.onlineBookingMinLeadMinutes)}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          onlineBookingMinLeadMinutes: Number(e.target.value || 0),
-                        })
-                      }
-                      placeholder="60"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Antecedência p/ cancelar (minutos)</Label>
-                    <Input
-                      inputMode="numeric"
-                      value={String(formData.onlineBookingCancelMinLeadMinutes)}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          onlineBookingCancelMinLeadMinutes: Number(e.target.value || 0),
-                        })
-                      }
-                      placeholder="240"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Link público</Label>
-                    <Input
-                      readOnly
-                      value={formData.onlineBookingSlug ? `${window.location.origin}/agendar/${formData.onlineBookingSlug}` : ""}
-                      placeholder="Defina o slug para ver o link"
-                    />
-                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/agendamento-online">Abrir</Link>
+                  </Button>
                 </div>
               </div>
               <div className="space-y-2">
@@ -882,49 +779,21 @@ export default function Configuracoes() {
                 <Gift className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Fidelidade - Cashback</CardTitle>
-                <CardDescription>Configure o programa de cashback para clientes</CardDescription>
+                <CardTitle>Fidelidade & Cashback</CardTitle>
+                <CardDescription>Programa de recompensas em uma tela dedicada</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-border/70 p-4">
+          <CardContent>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 p-4">
               <div>
-                <Label htmlFor="cashback-enabled" className="cursor-pointer">Cashback habilitado</Label>
-                <p className="text-xs text-muted-foreground">
-                  Crédita automaticamente um percentual ao cliente ao concluir um atendimento.
+                <p className="text-sm font-medium text-foreground">Configuração avançada</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajuste percentual, ativação e regras do cashback em uma aba exclusiva.
                 </p>
               </div>
-              <Switch id="cashback-enabled" checked={cashbackEnabled} onCheckedChange={setCashbackEnabled} />
-            </div>
-            {cashbackEnabled && (
-              <div className="space-y-2">
-                <Label>Percentual de cashback (%)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={cashbackPercent}
-                  onChange={(e) => setCashbackPercent(e.target.value)}
-                  placeholder="Ex: 5"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Exemplo: 5 significa 5% do valor do atendimento em crédito para o cliente.
-                </p>
-              </div>
-            )}
-            <div className="flex justify-end">
-              <Button
-                className="gradient-primary text-primary-foreground"
-                onClick={handleSaveCashback}
-                disabled={isSavingCashback}
-              >
-                {isSavingCashback ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</>
-                ) : (
-                  <><Save className="mr-2 h-4 w-4" />Salvar cashback</>
-                )}
+              <Button asChild variant="outline" size="sm">
+                <Link to="/fidelidade-cashback">Abrir</Link>
               </Button>
             </div>
           </CardContent>

@@ -61,6 +61,9 @@ const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSegu
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
 const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
 
+const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
+const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -234,6 +237,22 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <DiagnosticoSeguranca />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/agendamento-online"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <AgendamentoOnlineAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fidelidade-cashback"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <FidelidadeCashbackAdmin />
                     </ProtectedRoute>
                   }
                 />

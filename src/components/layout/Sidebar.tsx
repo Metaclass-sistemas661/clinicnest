@@ -28,6 +28,8 @@ import {
   Shield,
   Send,
   BarChart3,
+  Globe,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -83,6 +85,8 @@ const navCategories: NavCategory[] = [
       { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
       { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
       { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
+      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, adminOnly: true },
       { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
@@ -108,6 +112,8 @@ const prefetchByHref: Record<string, () => void> = {
   "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
+  "/agendamento-online": () => void import("@/pages/AgendamentoOnlineAdmin"),
+  "/fidelidade-cashback": () => void import("@/pages/FidelidadeCashbackAdmin"),
   "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),
   "/notificacoes": () => void import("@/pages/Notificacoes"),
   "/assinatura": () => void import("@/pages/Assinatura"),
