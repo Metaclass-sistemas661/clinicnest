@@ -12,6 +12,7 @@ type Body = {
   limit?: number;
   afterClientId?: string;
   testEmail?: string;
+  clientIds?: string[]; // optional: restrict to these client IDs
 };
 
 type CampaignRow = {
@@ -188,6 +189,11 @@ serve(async (req) => {
   const limit = clampInt(body?.limit, 1, 1000, 200);
   const afterClientId = typeof body?.afterClientId === "string" ? body.afterClientId.trim() : "";
   const testEmail = normalizeEmail(body?.testEmail);
+  // Optional: send only to specific client IDs (recipient selection feature)
+  const selectedClientIds: string[] | null =
+    Array.isArray(body?.clientIds) && (body.clientIds as unknown[]).length > 0
+      ? (body.clientIds as unknown[]).map((id) => String(id)).filter(Boolean)
+      : null;
   if (!campaignId) {
     return new Response(JSON.stringify({ error: "campaignId é obrigatório" }), {
       status: 400,
@@ -265,13 +271,19 @@ serve(async (req) => {
     .not("email", "is", null)
     .order("id", { ascending: true });
 
-  if (afterClientId) {
-    recipientsQuery = recipientsQuery.gt("id", afterClientId);
+  if (selectedClientIds) {
+    // Recipient-selection mode: ignore pagination, send only to chosen clients
+    recipientsQuery = recipientsQuery.in("id", selectedClientIds);
+  } else {
+    // Batch mode: support cursor-based pagination
+    if (afterClientId) {
+      recipientsQuery = recipientsQuery.gt("id", afterClientId);
+    }
   }
 
-  const { data: recipients, error: recipientsError } = (await recipientsQuery.limit(limit)) as unknown as SelectResult<
-    RecipientRow[] | null
-  >;
+  const { data: recipients, error: recipientsError } = (await (
+    selectedClientIds ? recipientsQuery : recipientsQuery.limit(limit)
+  )) as unknown as SelectResult<RecipientRow[] | null>;
 
   if (recipientsError) {
     return new Response(JSON.stringify({ error: "Erro ao listar destinatários" }), {
@@ -368,8 +380,9 @@ serve(async (req) => {
     }
   }
 
-  // Decide whether this batch likely finished the list.
-  const hasMore = (recipients || []).length === limit;
+  // In recipient-selection mode there is no pagination — always finished.
+  // In batch mode, hasMore is true when the returned count equals the limit.
+  const hasMore = selectedClientIds ? false : (recipients || []).length === limit;
   if (!hasMore) {
     await supabaseAdmin
       .from("campaigns")

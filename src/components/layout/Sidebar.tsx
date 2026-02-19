@@ -31,6 +31,8 @@ import {
   Globe,
   Gift,
   Zap,
+  Tag,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -64,6 +66,8 @@ const navCategories: NavCategory[] = [
       { title: "Serviços", href: "/servicos", icon: Scissors },
       { title: "Clientes", href: "/clientes", icon: Users },
       { title: "Campanhas", href: "/campanhas", icon: Send, adminOnly: true },
+      { title: "Vouchers", href: "/vouchers", icon: Gift, adminOnly: true },
+      { title: "Cupons", href: "/cupons", icon: Tag, adminOnly: true },
     ],
   },
   {
@@ -127,6 +131,8 @@ const prefetchByHref: Record<string, () => void> = {
   "/relatorio-financeiro": () => void import("@/pages/RelatorioFinanceiro"),
   "/ajuda": () => void import("@/pages/Ajuda"),
   "/suporte": () => void import("@/pages/Suporte"),
+  "/vouchers": () => void import("@/pages/Vouchers"),
+  "/cupons": () => void import("@/pages/Cupons"),
 };
 
 function prefetchRoute(href: string) {

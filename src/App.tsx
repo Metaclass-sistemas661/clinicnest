@@ -68,6 +68,8 @@ const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
+const Vouchers = lazyWithRetry(() => import("@/pages/Vouchers"));
+const Cupons = lazyWithRetry(() => import("@/pages/Cupons"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -265,6 +267,22 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <FidelidadeCashbackAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vouchers"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Vouchers />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cupons"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Cupons />
                     </ProtectedRoute>
                   }
                 />

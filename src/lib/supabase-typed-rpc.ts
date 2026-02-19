@@ -497,3 +497,64 @@ export async function getCashFlowProjectionV1(params: {
 }): Promise<{ data: CashFlowProjectionResult | null; error: unknown }> {
   return rpc<CashFlowProjectionResult>("get_cash_flow_projection_v1", params as Record<string, unknown>);
 }
+
+// ─── Fase 3 — Vendas & Fidelidade ───────────────────────────
+
+export type RedeemVoucherResult = {
+  success: boolean;
+  voucher_id?: string;
+  discount_applied?: number;
+  error?: string;
+};
+export async function redeemVoucherV1(params: {
+  p_code: string;
+  p_order_id: string;
+}): Promise<{ data: RedeemVoucherResult | null; error: unknown }> {
+  return rpc<RedeemVoucherResult>("redeem_voucher_v1", params as Record<string, unknown>);
+}
+
+export type ValidateCouponResult = {
+  valid: boolean;
+  coupon_id?: string;
+  type?: "percent" | "fixed";
+  value?: number;
+  service_id?: string | null;
+  error?: string;
+};
+export async function validateCouponV1(params: {
+  p_code: string;
+  p_tenant_id: string;
+}): Promise<{ data: ValidateCouponResult | null; error: unknown }> {
+  return rpc<ValidateCouponResult>("validate_coupon_v1", params as Record<string, unknown>);
+}
+
+export type ApplyCouponResult = {
+  success: boolean;
+  coupon_id?: string;
+  discount_applied?: number;
+  error?: string;
+};
+export async function applyCouponToOrderV1(params: {
+  p_code: string;
+  p_order_id: string;
+}): Promise<{ data: ApplyCouponResult | null; error: unknown }> {
+  return rpc<ApplyCouponResult>("apply_coupon_to_order_v1", params as Record<string, unknown>);
+}
+
+export type EarnPointsResult = {
+  success: boolean;
+  points_earned?: number;
+  skipped?: string;
+  error?: string;
+};
+export async function earnPointsForOrderV1(params: {
+  p_order_id: string;
+}): Promise<{ data: EarnPointsResult | null; error: unknown }> {
+  return rpc<EarnPointsResult>("earn_points_for_order_v1", params as Record<string, unknown>);
+}
+
+export async function seedDefaultLoyaltyTiersV1(params: {
+  p_tenant_id: string;
+}): Promise<{ data: null; error: unknown }> {
+  return rpc<null>("seed_default_loyalty_tiers_v1", params as Record<string, unknown>);
+}

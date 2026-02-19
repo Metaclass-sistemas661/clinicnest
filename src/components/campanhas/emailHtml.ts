@@ -28,6 +28,8 @@ export interface BuilderState {
   ctaUrl: string;
   ctaColor: string;
   footerText: string;
+  startDate: string; // "YYYY-MM-DD" or ""
+  endDate: string;   // "YYYY-MM-DD" or ""
 }
 
 export const COLOR_PRESETS: ColorPreset[] = [
@@ -59,6 +61,8 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
     ctaUrl: "",
     ctaColor: "#7c3aed",
     footerText: footer,
+    startDate: "",
+    endDate: "",
   };
 
   if (templateId === "promocao") {
@@ -186,6 +190,25 @@ function buildCtaRow(state: BuilderState): string {
           </tr>`;
 }
 
+function formatDateBR(iso: string): string {
+  try {
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  } catch { return iso; }
+}
+
+function buildDateBadge(state: BuilderState): string {
+  const { startDate, endDate } = state;
+  if (!startDate && !endDate) return "";
+  if (startDate && endDate) {
+    return `<p style="margin:0 0 16px 0;font-size:13px;color:#6b7280;text-align:center;">
+      📅 Válida de <strong>${formatDateBR(startDate)}</strong> até <strong>${formatDateBR(endDate)}</strong>
+    </p>`;
+  }
+  if (startDate) return `<p style="margin:0 0 16px 0;font-size:13px;color:#6b7280;text-align:center;">📅 A partir de <strong>${formatDateBR(startDate)}</strong></p>`;
+  return `<p style="margin:0 0 16px 0;font-size:13px;color:#6b7280;text-align:center;">📅 Válida até <strong>${formatDateBR(endDate)}</strong></p>`;
+}
+
 function buildFooterRow(state: BuilderState): string {
   return `
           <tr>
@@ -207,6 +230,7 @@ export function generateEmailHtml(state: BuilderState): string {
   const bodyParagraphs = buildBodyParagraphs(state.bodyText);
   const ctaRow = buildCtaRow(state);
   const footerRow = buildFooterRow(state);
+  const dateBadge = buildDateBadge(state);
 
   const subheadlineHtml = state.subheadline.trim()
     ? `<p style="margin:0 0 20px 0;font-size:16px;color:#6b7280;line-height:1.5;">${escHtml(state.subheadline)}</p>`
@@ -274,6 +298,7 @@ export function generateEmailHtml(state: BuilderState): string {
               </h1>
               ${subheadlineHtml}
               <div style="height:1px;background:${dividerColor};margin:0 0 20px 0;"></div>
+              ${dateBadge}
               ${bodyParagraphs}
             </td>
           </tr>

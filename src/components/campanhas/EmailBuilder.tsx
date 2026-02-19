@@ -4,11 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -19,6 +18,7 @@ import {
   type BuilderState,
   type TemplateId,
 } from "./emailHtml";
+import SocialCreativePanel from "./SocialCreativePanel";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,8 @@ export interface EmailBuilderProps {
     html: string;
     banner_url: string | null;
     preheader: string | null;
+    start_date: string | null;
+    end_date: string | null;
   }) => void;
   onCancel: () => void;
   isSaving?: boolean;
@@ -78,7 +80,6 @@ function TemplateThumbnail({ templateId }: { templateId: TemplateId }) {
       </div>
     );
   }
-  // novidade
   return (
     <div className="rounded overflow-hidden border border-border/50 w-full">
       <div className="h-7" style={{ background: "linear-gradient(135deg,#b45309,#d97706)" }} />
@@ -134,7 +135,6 @@ function ColorPresetRow({
           }}
         />
       ))}
-      {/* Custom color */}
       <label
         title="Cor personalizada"
         className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/50 cursor-pointer flex items-center justify-center hover:border-foreground transition-colors"
@@ -152,7 +152,7 @@ function ColorPresetRow({
   );
 }
 
-// ─── Banner URL input with thumbnail ─────────────────────────────────────────
+// ─── Banner input (upload + URL) ──────────────────────────────────────────────
 
 function BannerUrlInput({
   value,
@@ -178,7 +178,6 @@ function BannerUrlInput({
 
   return (
     <div className="space-y-2">
-      {/* Mode toggle */}
       <div className="flex rounded-md border border-border overflow-hidden text-xs">
         <button
           type="button"
@@ -267,20 +266,31 @@ function CtaColorPicker({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
+// ─── Right panel tabs ─────────────────────────────────────────────────────────
+
+type RightTab = "email" | "stories" | "feed" | "whatsapp";
+
+const RIGHT_TABS: { id: RightTab; label: string }[] = [
+  { id: "email",    label: "Email"    },
+  { id: "stories",  label: "Stories"  },
+  { id: "feed",     label: "Feed"     },
+  { id: "whatsapp", label: "WhatsApp" },
+];
+
 // ─── Email preview panel ──────────────────────────────────────────────────────
 
-function EmailPreviewPanel({ html, isMobile: previewMobile }: { html: string; isMobile: boolean }) {
+function EmailPreviewPanel({ html, isMobilePreview }: { html: string; isMobilePreview: boolean }) {
   return (
     <div className="h-full w-full bg-muted/30 overflow-auto">
       <div
         className="transition-all duration-300 mx-auto"
-        style={{ maxWidth: previewMobile ? "390px" : "100%" }}
+        style={{ maxWidth: isMobilePreview ? "390px" : "100%" }}
       >
         <iframe
           title="Email Preview"
           srcDoc={html}
           className="w-full border-0"
-          style={{ height: "calc(100vh - 60px)", minHeight: "600px" }}
+          style={{ height: "calc(100vh - 100px)", minHeight: "600px" }}
           sandbox="allow-same-origin"
         />
       </div>
@@ -288,7 +298,7 @@ function EmailPreviewPanel({ html, isMobile: previewMobile }: { html: string; is
   );
 }
 
-// ─── Main EmailBuilder ────────────────────────────────────────────────────────
+// ─── Main templates list ──────────────────────────────────────────────────────
 
 const TEMPLATES: { id: TemplateId; label: string }[] = [
   { id: "promocao",   label: "Promoção"   },
@@ -296,10 +306,13 @@ const TEMPLATES: { id: TemplateId; label: string }[] = [
   { id: "novidade",   label: "Novidade"   },
 ];
 
+// ─── Main EmailBuilder ────────────────────────────────────────────────────────
+
 export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSaving }: EmailBuilderProps) {
   const isMobile = useIsMobile();
   const { tenant } = useAuth();
   const [previewMobile, setPreviewMobile] = useState(false);
+  const [rightTab, setRightTab] = useState<RightTab>("email");
   const [errors, setErrors] = useState<{ campaignName?: string; subject?: string }>({});
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
@@ -321,6 +334,8 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       subject: state.subject,
       bannerUrl: state.bannerUrl,
       preheader: state.preheader,
+      startDate: state.startDate,
+      endDate: state.endDate,
     });
   };
 
@@ -351,7 +366,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       if (uploadError) throw uploadError;
       const { data } = supabase.storage.from("campaign-banners").getPublicUrl(path);
       set("bannerUrl", data.publicUrl);
-    } catch (err) {
+    } catch {
       toast.error("Erro ao enviar imagem. Tente novamente.");
     } finally {
       setIsUploadingBanner(false);
@@ -373,12 +388,14 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       html: generateEmailHtml(state),
       banner_url: state.bannerUrl.trim() || null,
       preheader: state.preheader.trim() || null,
+      start_date: state.startDate || null,
+      end_date: state.endDate || null,
     });
   };
 
-  // ── Left panel (all controls) ──────────────────────────────────────────────
+  // ── Left panel controls ────────────────────────────────────────────────────
   const LeftPanel = (
-    <ScrollArea className="h-full">
+    <div className="h-full overflow-y-auto">
       <div className="p-4 space-y-5 pb-8">
 
         {/* IDENTIFICAÇÃO */}
@@ -406,6 +423,34 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
               {errors.subject && <p className="text-xs text-destructive">{errors.subject}</p>}
             </div>
           </div>
+        </div>
+
+        <Separator />
+
+        {/* PERÍODO */}
+        <div>
+          <SectionLabel icon={Calendar}>Período da Campanha</SectionLabel>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Início</Label>
+              <Input
+                type="date"
+                value={state.startDate}
+                onChange={(e) => set("startDate", e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Término</Label>
+              <Input
+                type="date"
+                value={state.endDate}
+                onChange={(e) => set("endDate", e.target.value)}
+                className="text-sm"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5">Aparece no email como "Válida de DD/MM até DD/MM"</p>
         </div>
 
         <Separator />
@@ -472,15 +517,12 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
         {/* IMAGEM */}
         <div>
           <SectionLabel icon={ImageIcon}>Imagem de Banner</SectionLabel>
-          <div className="space-y-1.5">
-            <Label className="text-sm">URL da Imagem <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-            <BannerUrlInput
-              value={state.bannerUrl}
-              onChange={(v) => set("bannerUrl", v)}
-              onUploadFile={handleBannerUpload}
-              isUploading={isUploadingBanner}
-            />
-          </div>
+          <BannerUrlInput
+            value={state.bannerUrl}
+            onChange={(v) => set("bannerUrl", v)}
+            onUploadFile={handleBannerUpload}
+            isUploading={isUploadingBanner}
+          />
         </div>
 
         <Separator />
@@ -508,7 +550,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
             <div className="space-y-1.5">
               <Label className="text-sm">Texto do Email</Label>
               <Textarea
-                placeholder="Escreva o texto principal do email aqui...&#10;&#10;Use linha em branco para criar um novo parágrafo."
+                placeholder={"Escreva o texto principal do email aqui...\n\nUse linha em branco para criar um novo parágrafo."}
                 value={state.bodyText}
                 onChange={(e) => set("bodyText", e.target.value)}
                 rows={5}
@@ -562,7 +604,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
           />
         </div>
 
-        {/* SAVE BAR (mobile only — desktop has it in header) */}
+        {/* SAVE BAR (mobile only) */}
         {isMobile && (
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={onCancel} disabled={isSaving}>
@@ -574,42 +616,68 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
           </div>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 
-  // ── Right panel (preview) ──────────────────────────────────────────────────
+  // ── Right panel (preview + social) ────────────────────────────────────────
   const RightPanel = (
     <div className="flex flex-col h-full">
-      {/* Preview toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40 flex-shrink-0">
-        <p className="text-xs font-medium text-muted-foreground">Prévia do Email</p>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setPreviewMobile(false)}
-            className={cn(
-              "p-1.5 rounded transition-colors",
-              !previewMobile ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-            title="Desktop"
-          >
-            <Monitor className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreviewMobile(true)}
-            className={cn(
-              "p-1.5 rounded transition-colors",
-              previewMobile ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-            title="Mobile"
-          >
-            <Smartphone className="h-3.5 w-3.5" />
-          </button>
+      {/* Tab bar */}
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40 flex-shrink-0 gap-2">
+        <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
+          {RIGHT_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setRightTab(t.id)}
+              className={cn(
+                "px-2.5 py-1 text-xs rounded transition-all font-medium",
+                rightTab === t.id
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
+        {/* Desktop/mobile toggle – only for email tab */}
+        {rightTab === "email" && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPreviewMobile(false)}
+              className={cn(
+                "p-1.5 rounded transition-colors",
+                !previewMobile ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Desktop"
+            >
+              <Monitor className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewMobile(true)}
+              className={cn(
+                "p-1.5 rounded transition-colors",
+                previewMobile ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Mobile"
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Tab content */}
       <div className="flex-1 overflow-hidden">
-        <EmailPreviewPanel html={previewHtml} isMobile={previewMobile} />
+        {rightTab === "email" && (
+          <EmailPreviewPanel html={previewHtml} isMobilePreview={previewMobile} />
+        )}
+        {(rightTab === "stories" || rightTab === "feed" || rightTab === "whatsapp") && (
+          <SocialCreativePanel state={debouncedState} format={rightTab} />
+        )}
       </div>
     </div>
   );
@@ -656,11 +724,11 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Left controls */}
-          <div className="w-[380px] flex-shrink-0 border-r h-full overflow-hidden">
+          <div className="w-[380px] flex-shrink-0 border-r flex flex-col overflow-hidden">
             {LeftPanel}
           </div>
           {/* Right preview */}
-          <div className="flex-1 h-full overflow-hidden">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {RightPanel}
           </div>
         </div>
