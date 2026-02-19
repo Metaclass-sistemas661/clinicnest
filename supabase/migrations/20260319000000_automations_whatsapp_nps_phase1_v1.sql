@@ -62,12 +62,14 @@ create policy "Admins can manage automations in their tenant"
   );
 
 -- 2.2) Dispatch logs (idempotency for workers)
+-- dispatch_period: 'once' for appointment triggers, 'YYYY' for birthday, 'YYYY-MM' for inactive
 create table if not exists public.automation_dispatch_logs (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references public.tenants(id) on delete cascade,
   automation_id uuid not null references public.automations(id) on delete cascade,
   entity_type text not null,
   entity_id uuid not null,
+  dispatch_period text not null default 'once',
   channel text not null,
   status text not null default 'sent',
   details jsonb not null default '{}'::jsonb,
@@ -78,8 +80,9 @@ create table if not exists public.automation_dispatch_logs (
   constraint automation_dispatch_logs_status_check check (status in ('sent','skipped','failed'))
 );
 
-create unique index if not exists uq_automation_dispatch_once
-  on public.automation_dispatch_logs(automation_id, entity_type, entity_id);
+-- Includes dispatch_period so recurring automations (birthday/inactive) can repeat across periods
+create unique index if not exists uq_automation_dispatch_v2
+  on public.automation_dispatch_logs(automation_id, entity_type, entity_id, dispatch_period);
 
 create index if not exists idx_automation_dispatch_tenant_created
   on public.automation_dispatch_logs(tenant_id, created_at desc);
