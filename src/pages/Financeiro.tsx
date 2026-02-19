@@ -1018,56 +1018,56 @@ export default function Financeiro() {
             className={
               simpleModeEnabled
                 ? "grid w-full grid-cols-2 h-auto gap-1 p-1"
-                : "flex w-full overflow-x-auto h-auto gap-2 md:gap-3 p-2 justify-start"
+                : "flex w-full overflow-x-auto h-auto gap-2 p-2 justify-start md:grid md:overflow-visible md:grid-flow-col md:auto-cols-fr md:gap-3"
             }
           >
-            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0" data-tour="finance-tab-overview">
+            <TabsTrigger value="overview" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center" data-tour="finance-tab-overview">
               <BarChart3 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Gráficos</span>
               <span className="sm:hidden">Gráf.</span>
             </TabsTrigger>
             {!simpleModeEnabled ? (
-              <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0" data-tour="finance-tab-cashflow">
+              <TabsTrigger value="cashflow" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center" data-tour="finance-tab-cashflow">
                 <ArrowRightLeft className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Entradas & Saídas</span>
                 <span className="sm:hidden">E&S</span>
               </TabsTrigger>
             ) : null}
-            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0" data-tour="finance-tab-transactions">
+            <TabsTrigger value="transactions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center" data-tour="finance-tab-transactions">
               <List className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Transações</span>
               <span className="sm:hidden">Trans.</span>
             </TabsTrigger>
             {!simpleModeEnabled ? (
-              <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0" data-tour="finance-tab-commissions">
+              <TabsTrigger value="commissions" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center" data-tour="finance-tab-commissions">
                 <Wallet className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Comissões</span>
                 <span className="sm:hidden">Com.</span>
               </TabsTrigger>
             ) : null}
             {!simpleModeEnabled ? (
-              <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0" data-tour="finance-tab-salaries">
+              <TabsTrigger value="salaries" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center" data-tour="finance-tab-salaries">
                 <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Salários</span>
                 <span className="sm:hidden">Sal.</span>
               </TabsTrigger>
             ) : null}
             {!simpleModeEnabled ? (
-              <TabsTrigger value="bills_payable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0">
+              <TabsTrigger value="bills_payable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center">
                 <ArrowDownCircle className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Contas a Pagar</span>
                 <span className="sm:hidden">C.Pagar</span>
               </TabsTrigger>
             ) : null}
             {!simpleModeEnabled ? (
-              <TabsTrigger value="bills_receivable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0">
+              <TabsTrigger value="bills_receivable" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center">
                 <ArrowUpCircle className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Contas a Receber</span>
                 <span className="sm:hidden">C.Receber</span>
               </TabsTrigger>
             ) : null}
             {!simpleModeEnabled ? (
-              <TabsTrigger value="projection" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-4 md:px-5 flex-shrink-0">
+              <TabsTrigger value="projection" className="gap-1 md:gap-2 text-xs md:text-sm py-2 px-6 shrink-0 md:shrink w-auto md:w-full justify-start md:justify-center">
                 <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Projeção</span>
                 <span className="sm:hidden">Proj.</span>
