@@ -310,9 +310,9 @@ function hexToHsl(hex: string): string | null {
   const clean = hex.replace("#", "");
   const res = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(clean);
   if (!res) return null;
-  let r = parseInt(res[1], 16) / 255;
-  let g = parseInt(res[2], 16) / 255;
-  let b = parseInt(res[3], 16) / 255;
+  const r = parseInt(res[1], 16) / 255;
+  const g = parseInt(res[2], 16) / 255;
+  const b = parseInt(res[3], 16) / 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h = 0, s = 0;
   const l = (max + min) / 2;
@@ -336,7 +336,7 @@ export default function AgendarOnline() {
   const primaryParam  = searchParams.get("primary") || "";   // hex without #
   const welcomeParam  = searchParams.get("welcome") || "";
   const logoParam     = searchParams.get("logo") || "";
-  const isEmbed       = searchParams.get("embed") === "1";
+  const _isEmbed      = searchParams.get("embed") === "1";
 
   const [isLoading, setIsLoading] = useState(true);
   const [ctx, setCtx] = useState<ContextResponse | null>(null);

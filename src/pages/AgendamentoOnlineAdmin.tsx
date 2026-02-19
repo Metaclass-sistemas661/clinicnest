@@ -97,7 +97,7 @@ export default function AgendamentoOnlineAdmin() {
 
   const scriptSnippet = useMemo(() => {
     if (!previewUrl) return "⚠ Configure o slug na aba Configurações para gerar o código.";
-    return `<div id="bg-booking"></div>\n<script>\n!function(){\n  var e=document.createElement("iframe");\n  e.src="${previewUrl}";\n  e.style.cssText="width:100%;height:720px;border:none;border-radius:12px;";\n  e.loading="lazy";\n  document.getElementById("bg-booking").appendChild(e);\n}();\n<\/script>`;
+    return `<div id="bg-booking"></div>\n<script>\n!function(){\n  var e=document.createElement("iframe");\n  e.src="${previewUrl}";\n  e.style.cssText="width:100%;height:720px;border:none;border-radius:12px;";\n  e.loading="lazy";\n  document.getElementById("bg-booking").appendChild(e);\n}();\n</script>`;
   }, [previewUrl]);
 
   const activeSnippet = snippetType === "iframe" ? iframeSnippet : scriptSnippet;
@@ -131,6 +131,7 @@ export default function AgendamentoOnlineAdmin() {
           online_booking_slug: s || null,
           online_booking_min_lead_minutes: Number(minLeadMinutes || 0) || 60,
           online_booking_cancel_min_lead_minutes: Number(cancelMinLeadMinutes || 0) || 240,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
         .eq("id", tenant.id);
       if (error) throw error;
