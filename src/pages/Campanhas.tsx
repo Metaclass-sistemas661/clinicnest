@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,11 +35,14 @@ import type { CampaignRow, CampaignDeliveryRow, CampaignStatus } from "@/types/s
 const campaignFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   subject: z.string().min(1, "Assunto é obrigatório"),
+  banner_url: z.string().trim().optional().nullable(),
+  preheader: z.string().trim().optional().nullable(),
   html: z.string().min(1, "Conteúdo é obrigatório"),
 });
 
 const statusConfig: Record<CampaignStatus, { label: string; variant: "default" | "secondary" | "outline" }> = {
   draft: { label: "Rascunho", variant: "secondary" },
+  sending: { label: "Enviando", variant: "secondary" },
   sent: { label: "Enviada", variant: "default" },
   cancelled: { label: "Cancelada", variant: "outline" },
 };
@@ -50,7 +53,19 @@ export default function Campanhas() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({ name: "", subject: "", html: "" });
+  const [formData, setFormData] = useState({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewCampaign, setPreviewCampaign] = useState<CampaignRow | null>(null);
+
+  const [isSendOpen, setIsSendOpen] = useState(false);
+  const [sendCampaign, setSendCampaign] = useState<CampaignRow | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [batchLimit, setBatchLimit] = useState(200);
+  const [afterClientId, setAfterClientId] = useState<string | null>(null);
+  const [sendStats, setSendStats] = useState({ sent: 0, skipped: 0, failed: 0, opted_out: 0, already_sent: 0 });
+  const [hasMore, setHasMore] = useState<boolean | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignRow | null>(null);
   const [deliveries, setDeliveries] = useState<CampaignDeliveryRow[]>([]);
@@ -95,6 +110,8 @@ export default function Campanhas() {
         tenant_id: profile.tenant_id,
         name: parsed.data.name,
         subject: parsed.data.subject,
+        banner_url: parsed.data.banner_url || null,
+        preheader: parsed.data.preheader || null,
         html: parsed.data.html,
         status: "draft" as CampaignStatus,
         created_by: profile.user_id ?? null,
@@ -102,13 +119,99 @@ export default function Campanhas() {
       if (error) throw error;
       toast.success("Campanha criada!");
       setIsDialogOpen(false);
-      setFormData({ name: "", subject: "", html: "" });
+      setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
       await fetchCampaigns();
     } catch (err) {
       logger.error("[Campanhas] create error", err);
       toast.error("Erro ao criar campanha");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const openPreview = (campaign: CampaignRow) => {
+    setPreviewCampaign(campaign);
+    setIsPreviewOpen(true);
+  };
+
+  const openSend = (campaign: CampaignRow) => {
+    setSendCampaign(campaign);
+    setTestEmail("");
+    setBatchLimit(200);
+    setAfterClientId(null);
+    setSendStats({ sent: 0, skipped: 0, failed: 0, opted_out: 0, already_sent: 0 });
+    setHasMore(null);
+    setIsSendOpen(true);
+  };
+
+  const runTestSend = async () => {
+    if (!sendCampaign) return;
+    if (!testEmail.trim()) {
+      toast.error("Informe um email para teste");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("run-campaign", {
+        body: { campaignId: sendCampaign.id, testEmail: testEmail.trim() },
+      });
+      if (error) {
+        toast.error(error.message || "Erro ao enviar teste");
+        return;
+      }
+      if (!data?.success) {
+        toast.error(data?.error || "Erro ao enviar teste");
+        return;
+      }
+      toast.success("Teste enviado!");
+    } catch (err) {
+      logger.error("[Campanhas] test send error", err);
+      toast.error("Erro ao enviar teste");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const runBatch = async () => {
+    if (!sendCampaign) return;
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("run-campaign", {
+        body: {
+          campaignId: sendCampaign.id,
+          limit: batchLimit,
+          afterClientId: afterClientId || undefined,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || "Erro ao enviar lote");
+        return;
+      }
+      if (!data?.success) {
+        toast.error(data?.error || "Erro ao enviar lote");
+        return;
+      }
+
+      setSendStats((prev) => ({
+        sent: prev.sent + Number(data?.sent || 0),
+        skipped: prev.skipped + Number(data?.skipped || 0),
+        failed: prev.failed + Number(data?.failed || 0),
+        opted_out: prev.opted_out + Number(data?.opted_out || 0),
+        already_sent: prev.already_sent + Number(data?.already_sent || 0),
+      }));
+      setHasMore(Boolean(data?.has_more));
+      setAfterClientId(typeof data?.next_after_client_id === "string" ? data.next_after_client_id : null);
+
+      await fetchCampaigns();
+      toast.success(`Lote concluído: ${Number(data?.sent || 0)} enviados, ${Number(data?.failed || 0)} falharam`);
+    } catch (err) {
+      logger.error("[Campanhas] batch send error", err);
+      toast.error("Erro ao enviar lote");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -146,7 +249,7 @@ export default function Campanhas() {
         <Button
           className="gradient-primary text-primary-foreground"
           onClick={() => {
-            setFormData({ name: "", subject: "", html: "" });
+            setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" });
             setIsDialogOpen(true);
           }}
           data-tour="campaigns-new"
@@ -170,7 +273,7 @@ export default function Campanhas() {
           action={
             <Button
               className="gradient-primary text-primary-foreground"
-              onClick={() => { setFormData({ name: "", subject: "", html: "" }); setIsDialogOpen(true); }}
+              onClick={() => { setFormData({ name: "", subject: "", banner_url: "", preheader: "", html: "" }); setIsDialogOpen(true); }}
             >
               <Plus className="mr-2 h-4 w-4" />
               Nova Campanha
@@ -199,15 +302,26 @@ export default function Campanhas() {
                     </p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>{new Date(c.created_at).toLocaleDateString("pt-BR")}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs"
-                        onClick={() => loadDeliveries(c)}
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        Entregas
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => openPreview(c)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Preview
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs"
+                          onClick={() => loadDeliveries(c)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Entregas
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -238,6 +352,26 @@ export default function Campanhas() {
                         <TableCell className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString("pt-BR")}</TableCell>
                         <TableCell className="text-muted-foreground">{c.sent_at ? new Date(c.sent_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openPreview(c)}
+                            aria-label={`Preview da campanha ${c.name}`}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Preview
+                          </Button>
+                          {isAdmin && (c.status === "draft" || c.status === "sending") ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openSend(c)}
+                              aria-label={`Enviar campanha ${c.name}`}
+                            >
+                              <Send className="h-4 w-4 mr-1" />
+                              Enviar
+                            </Button>
+                          ) : null}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -283,6 +417,22 @@ export default function Campanhas() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Preheader (opcional)</Label>
+              <Input
+                value={formData.preheader}
+                onChange={(e) => setFormData({ ...formData, preheader: e.target.value })}
+                placeholder="Texto curto que aparece na prévia do email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Banner URL (opcional)</Label>
+              <Input
+                value={formData.banner_url}
+                onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Conteúdo (HTML)</Label>
               <Textarea
                 value={formData.html}
@@ -292,7 +442,7 @@ export default function Campanhas() {
                 className="font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Cole o conteúdo HTML do email. O envio será feito ao alterar o status para "enviada".
+                Cole o conteúdo HTML do email. Você poderá fazer preview e enviar por lotes.
               </p>
             </div>
           </div>
@@ -304,6 +454,112 @@ export default function Campanhas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de preview */}
+      {previewCampaign && (
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Preview: {previewCampaign.name}</DialogTitle>
+              <DialogDescription>{previewCampaign.subject}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              {previewCampaign.preheader ? (
+                <div className="rounded-lg border p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Preheader</div>
+                  <div className="mt-1">{previewCampaign.preheader}</div>
+                </div>
+              ) : null}
+              {previewCampaign.banner_url ? (
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-muted-foreground">Banner</div>
+                  <img src={previewCampaign.banner_url} alt={previewCampaign.name} className="mt-2 w-full rounded-lg" />
+                </div>
+              ) : null}
+              <div className="rounded-lg border p-3">
+                <div className="text-xs text-muted-foreground">HTML</div>
+                <div className="mt-2 rounded-md border bg-background">
+                  <iframe
+                    title={`preview-${previewCampaign.id}`}
+                    className="w-full h-[520px] rounded-md"
+                    srcDoc={previewCampaign.html}
+                  />
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog de envio */}
+      {sendCampaign && (
+        <Dialog open={isSendOpen} onOpenChange={setIsSendOpen}>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Enviar: {sendCampaign.name}</DialogTitle>
+              <DialogDescription>Envio por lotes idempotente. Você pode reexecutar sem reenviar para quem já foi enviado.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="rounded-lg border p-3 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Enviados</div>
+                    <div className="font-semibold">{sendStats.sent}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Falhas</div>
+                    <div className="font-semibold">{sendStats.failed}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Opt-out</div>
+                    <div className="font-semibold">{sendStats.opted_out}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Já enviados</div>
+                    <div className="font-semibold">{sendStats.already_sent}</div>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Próximo cursor: {afterClientId ? afterClientId : "—"}
+                  {hasMore === null ? "" : hasMore ? " (ainda há mais)" : " (finalizado)"}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Email de teste</Label>
+                <div className="flex gap-2">
+                  <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="seuemail@dominio.com" />
+                  <Button variant="outline" onClick={runTestSend} disabled={isSending}>
+                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar teste"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tamanho do lote</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={String(batchLimit)}
+                    onChange={(e) => setBatchLimit(Number(e.target.value || 0))}
+                    inputMode="numeric"
+                  />
+                  <Button className="gradient-primary text-primary-foreground" onClick={runBatch} disabled={isSending}>
+                    {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</> : hasMore === false ? "Reenviar lote" : afterClientId ? "Continuar" : "Enviar lote"}
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  A campanha só será marcada como enviada quando não houver mais clientes a processar.
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsSendOpen(false)} disabled={isSending}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Dialog de entregas */}
       {selectedCampaign && (

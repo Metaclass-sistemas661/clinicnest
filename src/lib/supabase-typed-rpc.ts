@@ -19,6 +19,7 @@ import type {
   OpenCashSessionResult,
   AddCashMovementResult,
   CashSessionSummaryResult,
+  OpenCashSessionSummaryResult,
   CloseCashSessionResult,
   UpsertProfessionalWorkingHoursResult,
   CreateScheduleBlockResult,
@@ -435,6 +436,13 @@ export async function getCashSessionSummaryV1(params: {
   p_session_id: string;
 }): Promise<{ data: CashSessionSummaryResult | null; error: unknown }> {
   return rpc<CashSessionSummaryResult>("get_cash_session_summary_v1", params as Record<string, unknown>);
+}
+
+export async function getOpenCashSessionSummaryV1(): Promise<{
+  data: OpenCashSessionSummaryResult | null;
+  error: unknown;
+}> {
+  return rpc<OpenCashSessionSummaryResult>("get_open_cash_session_summary_v1");
 }
 
 export async function closeCashSessionV1(params: {

@@ -10,6 +10,8 @@ const log = createLogger("RUN-CAMPAIGN");
 type Body = {
   campaignId: string;
   limit?: number;
+  afterClientId?: string;
+  testEmail?: string;
 };
 
 function escapeHtml(raw: string): string {
@@ -19,6 +21,55 @@ function escapeHtml(raw: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function normalizeEmail(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.trim().toLowerCase();
+}
+
+function clampInt(n: unknown, min: number, max: number, fallback: number): number {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(min, Math.min(Math.floor(v), max));
+}
+
+function renderHtmlWithHeader(params: {
+  name: string;
+  subject: string;
+  bannerUrl?: string | null;
+  preheader?: string | null;
+  html: string;
+}): string {
+  const preheader = (params.preheader ?? "").trim();
+  const bannerUrl = (params.bannerUrl ?? "").trim();
+  const preheaderHtml = preheader
+    ? `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${escapeHtml(preheader)}</div>`
+    : "";
+  const bannerHtml = bannerUrl
+    ? `<div style="margin:0 0 16px 0;"><img src="${escapeHtml(bannerUrl)}" alt="${escapeHtml(params.name)}" style="width:100%;max-width:640px;height:auto;border-radius:14px;display:block;" /></div>`
+    : "";
+
+  // Se o admin já colou um HTML completo, não embrulhar em outro html/body.
+  const raw = String(params.html || "").trim();
+  const looksLikeFullDoc = /<html[\s>]/i.test(raw) || /<body[\s>]/i.test(raw);
+  if (looksLikeFullDoc) return raw;
+
+  return `
+  <div style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
+    ${preheaderHtml}
+    <div style="max-width:640px;margin:0 auto;padding:24px;">
+      <div style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:18px 20px;color:#fff;border-radius:16px;">
+        <div style="font-size:18px;font-weight:800;">BeautyGest</div>
+        <div style="opacity:.92;margin-top:6px;">${escapeHtml(params.subject)}</div>
+      </div>
+      <div style="padding:18px 6px 0 6px;">
+        ${bannerHtml}
+        ${raw}
+      </div>
+    </div>
+  </div>
+  `.trim();
 }
 
 async function sendEmailViaResend(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; id?: string; error?: string }> {
@@ -117,7 +168,9 @@ serve(async (req) => {
   }
 
   const campaignId = typeof body?.campaignId === "string" ? body.campaignId.trim() : "";
-  const limit = Math.max(1, Math.min(Number(body?.limit ?? 200), 1000));
+  const limit = clampInt(body?.limit, 1, 1000, 200);
+  const afterClientId = typeof body?.afterClientId === "string" ? body.afterClientId.trim() : "";
+  const testEmail = normalizeEmail(body?.testEmail);
   if (!campaignId) {
     return new Response(JSON.stringify({ error: "campaignId é obrigatório" }), {
       status: 400,
@@ -135,7 +188,7 @@ serve(async (req) => {
 
   const { data: campaign, error: campaignError } = await supabaseAdmin
     .from("campaigns")
-    .select("id, tenant_id, name, subject, html, status")
+    .select("id, tenant_id, name, subject, html, status, banner_url, preheader")
     .eq("tenant_id", auth.tenantId)
     .eq("id", campaignId)
     .maybeSingle();
@@ -147,19 +200,59 @@ serve(async (req) => {
     });
   }
 
-  if (campaign.status !== "draft") {
-    return new Response(JSON.stringify({ error: "Campanha não está em draft" }), {
+  if (campaign.status !== "draft" && campaign.status !== "sending") {
+    return new Response(JSON.stringify({ error: "Campanha não está pronta para envio" }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
-  const { data: recipients, error: recipientsError } = await supabaseAdmin
+  const safeSubject = String(campaign.subject || "");
+  const html = renderHtmlWithHeader({
+    name: String(campaign.name || ""),
+    subject: safeSubject,
+    bannerUrl: (campaign as any).banner_url ?? null,
+    preheader: (campaign as any).preheader ?? null,
+    html: String(campaign.html || ""),
+  });
+
+  // Test send: does not create deliveries, does not change campaign status.
+  if (testEmail) {
+    const text = `Campanha (teste): ${campaign.name}\n\n${safeSubject}`;
+    const res = await sendEmailViaResend(testEmail, safeSubject, html, text);
+    if (!res.ok) {
+      return new Response(JSON.stringify({ error: res.error || "Falha ao enviar teste" }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(
+      JSON.stringify({ success: true, mode: "test", to: testEmail, provider_message_id: res.id || null }),
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Mark campaign as sending to allow batch runs.
+  if (campaign.status === "draft") {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "sending" })
+      .eq("tenant_id", auth.tenantId)
+      .eq("id", campaign.id);
+  }
+
+  let recipientsQuery = supabaseAdmin
     .from("clients")
     .select("id, email")
     .eq("tenant_id", auth.tenantId)
     .not("email", "is", null)
-    .limit(limit);
+    .order("id", { ascending: true });
+
+  if (afterClientId) {
+    recipientsQuery = recipientsQuery.gt("id", afterClientId);
+  }
+
+  const { data: recipients, error: recipientsError } = await recipientsQuery.limit(limit);
 
   if (recipientsError) {
     return new Response(JSON.stringify({ error: "Erro ao listar destinatários" }), {
@@ -181,10 +274,14 @@ serve(async (req) => {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let opted_out = 0;
+  let already_sent = 0;
+  let last_client_id: string | null = null;
 
   for (const r of recipients || []) {
     const clientId = String((r as any).id);
     const toEmail = String((r as any).email || "").trim();
+    last_client_id = clientId;
 
     if (!toEmail) {
       skipped++;
@@ -192,28 +289,44 @@ serve(async (req) => {
     }
 
     if (optedOut.has(clientId)) {
-      skipped++;
+      opted_out++;
       continue;
     }
 
-    const safeSubject = String(campaign.subject || "");
-    const html = String(campaign.html || "");
-    const text = `Campanha: ${campaign.name}\n\n${safeSubject}`;
-
-    const delivery = await supabaseAdmin
+    // Idempotência: se já tiver delivery sent, não reenviar.
+    const { data: existing } = await supabaseAdmin
       .from("campaign_deliveries")
-      .insert({
-        tenant_id: auth.tenantId,
-        campaign_id: campaign.id,
-        client_id: clientId,
-        to_email: toEmail,
-        status: "sending",
-      })
+      .select("id,status")
+      .eq("tenant_id", auth.tenantId)
+      .eq("campaign_id", campaign.id)
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (existing?.status === "sent" || existing?.status === "delivered") {
+      already_sent++;
+      continue;
+    }
+
+    // Upsert delivery row (unique by campaign_id + client_id)
+    const upsertRes = await supabaseAdmin
+      .from("campaign_deliveries")
+      .upsert(
+        {
+          tenant_id: auth.tenantId,
+          campaign_id: campaign.id,
+          client_id: clientId,
+          to_email: toEmail,
+          status: "sending",
+          error: null,
+        },
+        { onConflict: "campaign_id,client_id" }
+      )
       .select("id")
       .maybeSingle();
 
-    const deliveryId = String((delivery.data as any)?.id || "");
+    const deliveryId = String((upsertRes.data as any)?.id || "");
 
+    const text = `Campanha: ${campaign.name}\n\n${safeSubject}`;
     const res = await sendEmailViaResend(toEmail, safeSubject, html, text);
 
     if (res.ok) {
@@ -232,14 +345,30 @@ serve(async (req) => {
     }
   }
 
-  await supabaseAdmin
-    .from("campaigns")
-    .update({ status: "sent", sent_at: new Date().toISOString() })
-    .eq("tenant_id", auth.tenantId)
-    .eq("id", campaign.id);
+  // Decide whether this batch likely finished the list.
+  const hasMore = (recipients || []).length === limit;
+  if (!hasMore) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "sent", sent_at: new Date().toISOString() })
+      .eq("tenant_id", auth.tenantId)
+      .eq("id", campaign.id);
+  }
 
   return new Response(
-    JSON.stringify({ success: true, sent, skipped, failed }),
+    JSON.stringify({
+      success: true,
+      mode: "batch",
+      sent,
+      skipped,
+      failed,
+      opted_out,
+      already_sent,
+      last_client_id,
+      has_more: hasMore,
+      next_after_client_id: hasMore ? last_client_id : null,
+      campaign_status: hasMore ? "sending" : "sent",
+    }),
     { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
   );
 });

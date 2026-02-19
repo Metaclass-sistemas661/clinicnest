@@ -142,6 +142,14 @@ export interface CashSessionSummaryResult {
   expected_closing_balance: number;
 }
 
+export interface OpenCashSessionSummaryResult {
+  success: boolean;
+  has_open_session: boolean;
+  session_id?: string;
+  summary?: CashSessionSummaryResult;
+  expected_closing_balance?: number;
+}
+
 export interface CloseCashSessionResult {
   success: boolean;
   session_id: string;
@@ -214,7 +222,7 @@ export interface CashbackLedgerRow {
 
 // ─── Campanhas (Milestone 6) ──────────────────────────────
 
-export type CampaignStatus = "draft" | "sent" | "cancelled";
+export type CampaignStatus = "draft" | "sending" | "sent" | "cancelled";
 
 export interface CampaignRow {
   id: string;
@@ -222,6 +230,8 @@ export interface CampaignRow {
   name: string;
   subject: string;
   html: string;
+  banner_url?: string | null;
+  preheader?: string | null;
   status: CampaignStatus;
   created_by: string | null;
   created_at: string;

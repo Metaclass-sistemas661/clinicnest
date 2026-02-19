@@ -19,7 +19,15 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 import type { SalaryPaymentRow } from "@/types/supabase-extensions";
-import { getDashboardSalaryTotals, getDashboardCommissionTotals, getDashboardProductLossTotal, getDashboardClientsCount, getProfessionalsWithSalary, getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import {
+  getDashboardSalaryTotals,
+  getDashboardCommissionTotals,
+  getDashboardProductLossTotal,
+  getDashboardClientsCount,
+  getOpenCashSessionSummaryV1,
+  getProfessionalsWithSalary,
+  getSalaryPayments,
+} from "@/lib/supabase-typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { processNumericRpc } from "@/lib/rpc-fallback";
 import { useSimpleMode } from "@/lib/simple-mode";
@@ -400,6 +408,7 @@ export default function Dashboard() {
       const [
         financialResult,
         dailyFinancialResult,
+        openCashSummaryResult,
         appointmentsResult,
         pendingResult,
         productsResult,
@@ -431,6 +440,8 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("transaction_date", todayDateStr)
           : Promise.resolve({ data: null }),
+        // 2b. Caixa aberto (admin) - saldo do dia baseado no caixa
+        isAdmin ? getOpenCashSessionSummaryV1() : Promise.resolve({ data: null, error: null }),
         // 3. Agendamentos de hoje
         supabase
           .from("appointments")
@@ -630,7 +641,17 @@ export default function Dashboard() {
           .filter((t) => t.type === "expense")
           .reduce((sum, t) => sum + Number(t.amount), 0);
       }
-      setDailyBalance(dailyIncome - dailyExpenses);
+
+      const openCashData = openCashSummaryResult?.data as
+        | { has_open_session?: boolean; expected_closing_balance?: number }
+        | null
+        | undefined;
+      const hasOpenSession = Boolean(openCashData?.has_open_session);
+      const cashExpected = Number(openCashData?.expected_closing_balance ?? 0);
+
+      // Opção A: quando existe caixa aberto, saldo do dia = saldo esperado do caixa.
+      // Caso não exista caixa aberto, mantém o saldo do dia baseado em transações financeiras do dia.
+      setDailyBalance(isAdmin && hasOpenSession ? cashExpected : dailyIncome - dailyExpenses);
 
       // Perdas de produtos: já calculado pelo RPC (ou fallback) - garantir que seja número válido
       const validProductLoss = isNaN(productLossTotalValue) || productLossTotalValue < 0 ? 0 : productLossTotalValue;
