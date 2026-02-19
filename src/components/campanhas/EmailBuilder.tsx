@@ -395,7 +395,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
 
   // ── Left panel controls ────────────────────────────────────────────────────
   const LeftPanel = (
-    <div className="h-full overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="p-4 space-y-5 pb-8">
 
         {/* IDENTIFICAÇÃO */}
