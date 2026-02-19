@@ -144,6 +144,16 @@ export default function Campanhas() {
     setIsSendOpen(true);
   };
 
+  const getAuthHeaders = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) {
+      throw new Error("Sessão ausente. Faça login novamente.");
+    }
+    return { Authorization: `Bearer ${token}` };
+  };
+
   const runTestSend = async () => {
     if (!sendCampaign) return;
     if (!testEmail.trim()) {
@@ -153,7 +163,9 @@ export default function Campanhas() {
 
     setIsSending(true);
     try {
+      const headers = await getAuthHeaders();
       const { data, error } = await supabase.functions.invoke("run-campaign", {
+        headers,
         body: { campaignId: sendCampaign.id, testEmail: testEmail.trim() },
       });
       if (error) {
@@ -178,7 +190,9 @@ export default function Campanhas() {
 
     setIsSending(true);
     try {
+      const headers = await getAuthHeaders();
       const { data, error } = await supabase.functions.invoke("run-campaign", {
+        headers,
         body: {
           campaignId: sendCampaign.id,
           limit: batchLimit,

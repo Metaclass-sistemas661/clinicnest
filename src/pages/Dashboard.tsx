@@ -649,9 +649,9 @@ export default function Dashboard() {
       const hasOpenSession = Boolean(openCashData?.has_open_session);
       const cashExpected = Number(openCashData?.expected_closing_balance ?? 0);
 
-      // Opção A: quando existe caixa aberto, saldo do dia = saldo esperado do caixa.
-      // Caso não exista caixa aberto, mantém o saldo do dia baseado em transações financeiras do dia.
-      setDailyBalance(isAdmin && hasOpenSession ? cashExpected : dailyIncome - dailyExpenses);
+      // "Saldo do Dia" deve refletir o movimento do dia (transações financeiras),
+      // independentemente de ter caixa aberto (que depende de payments).
+      setDailyBalance(isAdmin ? dailyIncome - dailyExpenses : 0);
 
       // Perdas de produtos: já calculado pelo RPC (ou fallback) - garantir que seja número válido
       const validProductLoss = isNaN(productLossTotalValue) || productLossTotalValue < 0 ? 0 : productLossTotalValue;
