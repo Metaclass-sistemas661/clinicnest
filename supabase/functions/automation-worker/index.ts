@@ -99,10 +99,14 @@ serve(async (req: Request) => {
     });
   }
 
-  const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
-  const provided = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+  // IMPORTANT: do NOT use Authorization header for this secret.
+  // Supabase Edge Functions validate Authorization as a Supabase JWT at the gateway level.
+  const provided =
+    req.headers.get("x-automation-worker-key")?.trim() ||
+    req.headers.get("x-worker-key")?.trim() ||
+    "";
   if (!provided || provided !== workerKey) {
-    return new Response(JSON.stringify({ error: "Não autorizado" }), {
+    return new Response(JSON.stringify({ error: "Não autorizado (x-automation-worker-key)" }), {
       status: 401,
       headers: { ...cors, "Content-Type": "application/json" },
     });
