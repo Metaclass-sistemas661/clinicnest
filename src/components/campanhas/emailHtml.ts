@@ -20,6 +20,7 @@ export interface BuilderState {
   secondaryColor: string;
   useGradient: boolean;
   bannerUrl: string;
+  bannerHeight: number; // px, 60–400
   preheader: string;
   headline: string;
   subheadline: string;
@@ -53,6 +54,7 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
     secondaryColor: "#db2777",
     useGradient: true,
     bannerUrl: "",
+    bannerHeight: 200,
     preheader: "",
     headline: "",
     subheadline: "",
@@ -146,11 +148,13 @@ function buildPreheaderHtml(preheader: string): string {
 
 function buildBannerRow(state: BuilderState): string {
   if (!state.bannerUrl.trim()) return "";
+  const h = state.bannerHeight ?? 200;
   return `
           <tr>
             <td style="padding:0;line-height:0;">
               <img src="${escHtml(state.bannerUrl)}" alt="${escHtml(state.salonName)}"
-                width="640" style="width:100%;max-width:640px;height:auto;display:block;border:0;" />
+                width="640" height="${h}"
+                style="width:100%;max-width:640px;height:${h}px;object-fit:cover;display:block;border:0;" />
             </td>
           </tr>`;
 }

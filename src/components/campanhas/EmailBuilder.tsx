@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload, Calendar } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload, Calendar, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -157,11 +157,17 @@ function BannerUrlInput({
   onChange,
   onUploadFile,
   isUploading,
+  height,
+  onHeightChange,
+  onDelete,
 }: {
   value: string;
   onChange: (v: string) => void;
   onUploadFile: (file: File) => Promise<void>;
   isUploading: boolean;
+  height: number;
+  onHeightChange: (v: number) => void;
+  onDelete: () => void;
 }) {
   const [mode, setMode] = useState<"upload" | "url">("upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -236,13 +242,45 @@ function BannerUrlInput({
       )}
 
       {isValidUrl && (
-        <div className="rounded-md overflow-hidden border bg-muted/30">
-          <img
-            src={value}
-            alt="Banner preview"
-            className="w-full max-h-32 object-cover"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-          />
+        <div className="space-y-2">
+          {/* Preview com botão deletar */}
+          <div className="relative rounded-md overflow-hidden border bg-muted/30">
+            <img
+              src={value}
+              alt="Banner preview"
+              className="w-full object-cover block"
+              style={{ height: `${Math.min(height, 160)}px` }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            />
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Remover imagem"
+              className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          {/* Slider de altura */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Altura no email</span>
+              <span className="text-xs font-medium tabular-nums">{height}px</span>
+            </div>
+            <input
+              type="range"
+              min={60}
+              max={400}
+              step={10}
+              value={height}
+              onChange={(e) => onHeightChange(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full cursor-pointer accent-primary"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>60px</span>
+              <span>400px</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -331,6 +369,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       campaignName: state.campaignName,
       subject: state.subject,
       bannerUrl: state.bannerUrl,
+      bannerHeight: state.bannerHeight,
       preheader: state.preheader,
       startDate: state.startDate,
       endDate: state.endDate,
@@ -518,6 +557,9 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
             onChange={(v) => set("bannerUrl", v)}
             onUploadFile={handleBannerUpload}
             isUploading={isUploadingBanner}
+            height={state.bannerHeight}
+            onHeightChange={(v) => set("bannerHeight", v)}
+            onDelete={() => set("bannerUrl", "")}
           />
         </div>
 

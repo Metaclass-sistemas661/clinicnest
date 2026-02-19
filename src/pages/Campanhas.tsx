@@ -422,7 +422,10 @@ export default function Campanhas() {
 
       {/* ── Email Builder Dialog ──────────────────────────────────────────── */}
       <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!isSaving) setIsDialogOpen(open); }}>
-        <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent
+          className="max-w-[98vw] w-[98vw] h-[95vh] max-h-[95vh] p-0 overflow-hidden [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogTitle className="sr-only">Nova Campanha</DialogTitle>
           {/* absolute inset-0 bypasses the DialogContent grid layout that prevents h-full from resolving correctly */}
           <div className="absolute inset-0 flex flex-col overflow-hidden">
