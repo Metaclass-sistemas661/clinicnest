@@ -30,8 +30,6 @@ export interface EmailBuilderProps {
     html: string;
     banner_url: string | null;
     preheader: string | null;
-    start_date: string | null;
-    end_date: string | null;
   }) => void;
   onCancel: () => void;
   isSaving?: boolean;
@@ -388,8 +386,6 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
       html: generateEmailHtml(state),
       banner_url: state.bannerUrl.trim() || null,
       preheader: state.preheader.trim() || null,
-      start_date: state.startDate || null,
-      end_date: state.endDate || null,
     });
   };
 

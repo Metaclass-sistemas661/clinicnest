@@ -101,8 +101,6 @@ export default function Campanhas() {
     html: string;
     banner_url: string | null;
     preheader: string | null;
-    start_date: string | null;
-    end_date: string | null;
   }) => {
     if (!profile?.tenant_id) return;
     setIsSaving(true);
@@ -115,8 +113,6 @@ export default function Campanhas() {
         banner_url: payload.banner_url,
         preheader: payload.preheader,
         html: payload.html,
-        start_date: payload.start_date,
-        end_date: payload.end_date,
         status: "draft" as CampaignStatus,
         created_by: profile.user_id ?? null,
       } as any);
