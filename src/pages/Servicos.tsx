@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { setServiceActiveV2, upsertServiceV2 } from "@/lib/supabase-typed-rpc";
-import { Scissors, Plus, Loader2, Clock, Pencil } from "lucide-react";
+import { Stethoscope, Plus, Loader2, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -142,11 +142,11 @@ export default function Servicos() {
       });
 
       if (error) {
-        toastRpcError(toast, error as any, editingService ? "Erro ao atualizar serviço" : "Erro ao cadastrar serviço");
+        toastRpcError(toast, error as any, editingService ? "Erro ao atualizar procedimento" : "Erro ao cadastrar procedimento");
         return;
       }
 
-      toast.success(editingService ? "Serviço atualizado com sucesso!" : "Serviço cadastrado com sucesso!");
+      toast.success(editingService ? "Procedimento atualizado com sucesso!" : "Procedimento cadastrado com sucesso!");
 
       setIsDialogOpen(false);
       setFormData({
@@ -159,7 +159,7 @@ export default function Servicos() {
       setEditingService(null);
       fetchServices();
     } catch (error) {
-      toast.error(editingService ? "Erro ao atualizar serviço" : "Erro ao cadastrar serviço");
+      toast.error(editingService ? "Erro ao atualizar procedimento" : "Erro ao cadastrar procedimento");
       logger.error(error);
     } finally {
       setIsSaving(false);
@@ -174,14 +174,14 @@ export default function Servicos() {
       });
 
       if (error) {
-        toastRpcError(toast, error as any, "Erro ao alterar status do serviço");
+        toastRpcError(toast, error as any, "Erro ao alterar status do procedimento");
         return;
       }
 
-      toast.success(service.is_active ? "Serviço desativado" : "Serviço ativado");
+      toast.success(service.is_active ? "Procedimento desativado" : "Procedimento ativado");
       fetchServices();
     } catch (_error) {
-      toast.error("Erro ao alterar status do serviço");
+      toast.error("Erro ao alterar status do procedimento");
     }
   };
 
@@ -194,34 +194,34 @@ export default function Servicos() {
 
   return (
     <MainLayout
-      title="Serviços"
-      subtitle={isAdmin ? "Gerencie os serviços oferecidos" : "Consulte os serviços do salão"}
+      title="Procedimentos & Consultas"
+      subtitle={isAdmin ? "Gerencie os procedimentos e consultas oferecidos" : "Consulte os procedimentos da clínica"}
       actions={
         isAdmin ? (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="services-new">
               <Plus className="mr-2 h-4 w-4" />
-              Novo Serviço
+              Novo Procedimento
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingService ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
+              <DialogTitle>{editingService ? "Editar Procedimento" : "Novo Procedimento"}</DialogTitle>
               <DialogDescription>
                 {editingService
-                  ? "Atualize os dados do serviço"
-                  : "Cadastre um novo serviço no salão"}
+                  ? "Atualize os dados do procedimento"
+                  : "Cadastre um novo procedimento ou consulta na clínica"}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label>Nome do Serviço</Label>
+                  <Label>Nome do Procedimento</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Corte Feminino"
+                    placeholder="Ex: Consulta Clínica, Eletrocardiograma..."
                     required
                   />
                 </div>
@@ -262,9 +262,9 @@ export default function Servicos() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-4 sm:col-span-2">
                   <div>
-                    <Label>Serviço Ativo</Label>
+                    <Label>Procedimento Ativo</Label>
                     <p className="text-sm text-muted-foreground">
-                      Serviços inativos não aparecem no agendamento
+                      Procedimentos inativos não aparecem no agendamento
                     </p>
                   </div>
                   <Switch
@@ -298,7 +298,7 @@ export default function Servicos() {
     >
       <Card>
         <CardHeader>
-          <CardTitle>Serviços Cadastrados</CardTitle>
+          <CardTitle>Procedimentos Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -310,9 +310,9 @@ export default function Servicos() {
             </div>
           ) : services.length === 0 ? (
             <EmptyState
-              icon={Scissors}
-              title="Nenhum serviço cadastrado"
-              description={isAdmin ? "Cadastre os serviços oferecidos pelo salão para usar na agenda." : "Ainda não há serviços cadastrados."}
+              icon={Stethoscope}
+              title="Nenhum procedimento cadastrado"
+              description={isAdmin ? "Cadastre os procedimentos e consultas oferecidos pela clínica para usar na agenda." : "Ainda não há procedimentos cadastrados."}
               action={isAdmin ? (
                 <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="services-new-empty">
                   <Plus className="mr-2 h-4 w-4" />

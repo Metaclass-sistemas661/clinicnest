@@ -32,7 +32,7 @@ export default function NpsPublico() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
 
-  const tenantName = data?.tenant_name || "BeautyGest";
+  const tenantName = data?.tenant_name || "ClinicNest";
 
   const canSubmit = useMemo(() => selectedScore != null && selectedScore >= 0 && selectedScore <= 10, [selectedScore]);
 
@@ -105,7 +105,7 @@ export default function NpsPublico() {
           <CardHeader>
             <CardTitle>Como foi seu atendimento em {tenantName}?</CardTitle>
             <CardDescription>
-              De 0 a 10, o quanto você recomendaria o salão para um amigo?
+              De 0 a 10, o quanto você recomendaria a clínica para um amigo?
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -12,8 +12,8 @@ const buildInfo = {
 
 // Expor para debug rápido no navegador
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).__BEAUTYGEST_BUILD__ = buildInfo;
-console.info("[BeautyGest Build]", buildInfo);
+(window as any).__CLINICNEST_BUILD__ = buildInfo;
+console.info("[ClinicNest Build]", buildInfo);
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 if (sentryDsn) {

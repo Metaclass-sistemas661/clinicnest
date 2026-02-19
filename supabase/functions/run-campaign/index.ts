@@ -96,7 +96,7 @@ async function sendEmailViaResend(to: string, subject: string, html: string, tex
     return { ok: false, error: "RESEND_API_KEY não configurada" };
   }
 
-  const emailFrom = Deno.env.get("EMAIL_FROM") || "BeautyGest <no-reply@metaclass.com.br>";
+  const emailFrom = Deno.env.get("EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>";
 
   try {
     const response = await fetch("https://api.resend.com/emails", {

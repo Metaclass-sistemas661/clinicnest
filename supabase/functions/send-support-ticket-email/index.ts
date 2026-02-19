@@ -33,7 +33,7 @@ async function sendEmailViaResend(
     return false;
   }
 
-  const emailFrom = Deno.env.get("SUPPORT_EMAIL_FROM") || "BeautyGest <no-reply@metaclass.com.br>";
+  const emailFrom = Deno.env.get("SUPPORT_EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>";
 
   try {
     const response = await fetch("https://api.resend.com/emails", {

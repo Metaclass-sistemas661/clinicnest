@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Stethoscope } from "lucide-react";
 import { useState } from "react";
 import { PromoBanner } from "./PromoBanner";
 import { openCookieConsentPreferences } from "@/lib/cookieConsent";
@@ -9,16 +9,21 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-violet-950 via-fuchsia-900 to-violet-950 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-teal-950 via-teal-900 to-cyan-950 backdrop-blur-xl border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-[72px] sm:h-[88px] items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <img
-              src="/beautyg-horizontal.svg"
-              alt="BeautyGest"
-              className="h-16 sm:h-20 w-auto max-w-[75vw] object-contain"
-              loading="eager"
-            />
+            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-teal-500/20 border border-teal-400/30">
+              <Stethoscope className="h-5 w-5 text-teal-300" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-300 to-cyan-200 bg-clip-text text-transparent tracking-tight leading-none">
+                ClinicNest
+              </span>
+              <span className="text-[10px] text-white/40 tracking-widest uppercase leading-tight">
+                by Metaclass
+              </span>
+            </div>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -43,14 +48,14 @@ export function Navbar() {
               </Button>
             </Link>
             <Link to="/cadastro">
-              <Button className="bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30">
+              <Button className="bg-gradient-to-r from-teal-500 to-cyan-400 hover:from-teal-600 hover:to-cyan-500 shadow-lg shadow-teal-500/30 text-white font-semibold">
                 Começar Grátis
               </Button>
             </Link>
           </div>
 
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 text-white"
             onClick={() => setIsOpen(!isOpen)}
             aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
             aria-expanded={isOpen}
@@ -95,7 +100,7 @@ export function Navbar() {
                   <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10">Entrar</Button>
                 </Link>
                 <Link to="/cadastro">
-                  <Button className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-500">Começar Grátis</Button>
+                  <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white font-semibold">Começar Grátis</Button>
                 </Link>
               </div>
             </div>
@@ -114,28 +119,28 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="space-y-4 lg:col-span-4">
-            <Link to="/" className="flex items-center gap-2">
-              <img
-                src="/beautygest-logo.png"
-                alt="BeautyGest"
-                className="h-10 w-10 rounded-lg bg-white/80 p-1"
-                loading="lazy"
-              />
-              <span className="font-display text-xl font-bold">BeautyGest</span>
+            <Link to="/" className="flex items-center gap-3">
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-teal-100 border border-teal-200">
+                <Stethoscope className="h-5 w-5 text-teal-600" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-display text-xl font-bold text-foreground leading-none">ClinicNest</span>
+                <span className="text-[10px] text-muted-foreground tracking-widest uppercase leading-tight">by Metaclass</span>
+              </div>
             </Link>
 
             <p className="max-w-sm text-sm text-muted-foreground">
-              Plataforma completa para agenda, equipe, financeiro e crescimento de salões de beleza.
+              Plataforma completa para agenda, prontuários, equipe e financeiro de clínicas e consultórios.
             </p>
 
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
+              <span className="rounded-full border border-teal-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
                 LGPD
               </span>
-              <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
+              <span className="rounded-full border border-teal-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
                 Infraestrutura segura
               </span>
-              <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
+              <span className="rounded-full border border-teal-200 bg-white/80 px-2.5 py-1 text-xs text-muted-foreground">
                 Suporte humanizado
               </span>
             </div>
@@ -225,8 +230,8 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-2 border-t border-border/70 pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {currentYear} BeautyGest. Todos os direitos reservados.</p>
-          <p>Feito para salões e profissionais da beleza no Brasil.</p>
+          <p>© {currentYear} ClinicNest. Todos os direitos reservados.</p>
+          <p>Feito para clínicas e consultórios no Brasil.</p>
         </div>
       </div>
     </footer>

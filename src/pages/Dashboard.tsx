@@ -812,7 +812,7 @@ export default function Dashboard() {
   return (
     <MainLayout
       title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
-      subtitle={`Bem-vindo ao ${tenant?.name || "seu salão"}`}
+      subtitle={`Bem-vindo ao ${tenant?.name || "ClinicNest"}`}
       actions={
         <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base">
           <Link to="/agenda" data-tour="dashboard-new-appointment">
@@ -1239,7 +1239,7 @@ export default function Dashboard() {
                               title="Clientes cadastrados"
                               value={clientsCount}
                               icon={Users}
-                              description="Total do salão"
+                              description="Total da clínica"
                             />
                           </Link>
                         </TooltipTrigger>

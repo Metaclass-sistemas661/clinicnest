@@ -33,7 +33,7 @@ const STEPS: TourStep[] = [
     id: "nav-agenda",
     route: "/dashboard",
     target: "sidebar-agenda",
-    title: "Agenda (o coração do salão)",
+    title: "Agenda (o coração da clínica)",
     description: "Agende horários e finalize atendimentos para alimentar o financeiro e relatórios.",
     placement: "right",
   },
@@ -92,7 +92,7 @@ const STEPS: TourStep[] = [
     route: "/agenda",
     target: "sidebar-ajuda",
     title: "Ajuda & documentação",
-    description: "Guia oficial do BeautyGest com busca e atalhos. Você pode reiniciar o tutorial por lá.",
+    description: "Guia oficial do ClinicNest com busca e atalhos. Você pode reiniciar o tutorial por lá.",
     placement: "right",
   },
   {

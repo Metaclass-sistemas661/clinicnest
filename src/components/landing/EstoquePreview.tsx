@@ -7,60 +7,60 @@ import { cn } from "@/lib/utils";
 
 export function EstoquePreview() {
   return (
-    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
-      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)", color: "hsl(200 15% 95%)" }}>
+      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Package className="h-5 w-5 text-white" />
-            <h3 className="text-white font-semibold text-sm">Estoque</h3>
+            <h3 className="text-white font-semibold text-sm">Insumos</h3>
           </div>
           <Button size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
             <Plus className="h-4 w-4 mr-1" />
-            Novo Produto
+            Novo Insumo
           </Button>
         </div>
 
         {/* Content */}
-        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar produtos..."
+                placeholder="Buscar insumos..."
                 className="pl-10 bg-card border-border"
-                style={{ backgroundColor: "hsl(250 25% 10%)" }}
+                style={{ backgroundColor: "hsl(200 25% 10%)" }}
               />
             </div>
           </div>
 
           {/* Products List */}
-          <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
+          <Card className="border-border" style={{ backgroundColor: "hsl(200 25% 10%)" }}>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Produtos em Estoque
+                Insumos em Estoque
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { name: "Shampoo Profissional", quantity: 45, minStock: 20, price: "R$ 35,00", status: "ok" },
-                  { name: "Condicionador", quantity: 12, minStock: 15, price: "R$ 32,00", status: "low" },
-                  { name: "Tinta Permanente", quantity: 28, minStock: 10, price: "R$ 45,00", status: "ok" },
-                  { name: "Máscara Capilar", quantity: 8, minStock: 10, price: "R$ 55,00", status: "low" },
+                  { name: "Luvas Descartáveis (cx)", quantity: 45, minStock: 20, price: "R$ 35,00", status: "ok" },
+                  { name: "Seringas 5ml", quantity: 12, minStock: 15, price: "R$ 32,00", status: "low" },
+                  { name: "Álcool 70% (L)", quantity: 28, minStock: 10, price: "R$ 18,00", status: "ok" },
+                  { name: "Máscaras Cirúrgicas (cx)", quantity: 8, minStock: 10, price: "R$ 55,00", status: "low" },
                 ].map((product, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                    style={{ backgroundColor: "hsl(250 25% 10%)" }}
+                    style={{ backgroundColor: "hsl(200 25% 10%)" }}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className={cn(
                         "h-12 w-12 rounded-lg flex items-center justify-center",
-                        product.status === "low" 
-                          ? "bg-red-500/20 text-red-400" 
+                        product.status === "low"
+                          ? "bg-red-500/20 text-red-400"
                           : "bg-green-500/20 text-green-400"
                       )}>
                         <Package className="h-6 w-6" />
@@ -93,7 +93,7 @@ export function EstoquePreview() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-foreground">{product.price}</p>
-                      <p className="text-xs text-muted-foreground">Preço de venda</p>
+                      <p className="text-xs text-muted-foreground">Custo unitário</p>
                     </div>
                   </div>
                 ))}

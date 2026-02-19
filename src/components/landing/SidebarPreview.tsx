@@ -3,12 +3,12 @@ import {
   Calendar,
   DollarSign,
   Package,
-  Scissors,
+  FileText,
   Users,
   UserCog,
   Settings,
   CreditCard,
-  Sparkles,
+  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,15 +18,15 @@ const navCategories = [
     items: [
       { title: "Dashboard", icon: LayoutDashboard, active: false },
       { title: "Agenda", icon: Calendar, active: false },
-      { title: "Serviços", icon: Scissors, active: false },
-      { title: "Clientes", icon: Users, active: false },
+      { title: "Prontuários", icon: FileText, active: false },
+      { title: "Pacientes", icon: Users, active: false },
     ],
   },
   {
     label: "Financeiro",
     items: [
       { title: "Financeiro", icon: DollarSign, active: false },
-      { title: "Produtos", icon: Package, active: false },
+      { title: "Insumos", icon: Package, active: false },
     ],
   },
   {
@@ -49,32 +49,32 @@ export function SidebarPreview({ activePage }: SidebarPreviewProps) {
     const pageMap: Record<string, string> = {
       dashboard: "Dashboard",
       agenda: "Agenda",
-      clientes: "Clientes",
+      clientes: "Pacientes",
       financeiro: "Financeiro",
-      estoque: "Produtos",
+      estoque: "Insumos",
     };
     return pageMap[activePage] === title;
   };
 
   return (
-    <div 
+    <div
       className="fixed left-0 top-0 h-full w-72 border-r border-border flex flex-col"
-      style={{ 
-        backgroundColor: "hsl(250 25% 8%)",
-        background: "linear-gradient(180deg, hsl(250 25% 8%) 0%, hsl(250 25% 7%) 100%)"
+      style={{
+        backgroundColor: "hsl(200 25% 8%)",
+        background: "linear-gradient(180deg, hsl(200 25% 8%) 0%, hsl(200 25% 7%) 100%)"
       }}
     >
       {/* Header */}
       <div className="flex h-20 items-center justify-between border-b border-white/10 px-4">
         <div className="flex items-center gap-3">
           <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
-            <Sparkles className="h-5 w-5 text-white" />
+            <Stethoscope className="h-5 w-5 text-white" />
           </div>
           <div>
             <span className="font-display text-lg font-bold text-foreground">
-              Salão Beauty
+              ClinicNest
             </span>
-            <p className="text-xs text-muted-foreground">Gestão Profissional</p>
+            <p className="text-xs text-muted-foreground">by Metaclass</p>
           </div>
         </div>
       </div>
@@ -123,7 +123,7 @@ export function SidebarPreview({ activePage }: SidebarPreviewProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">
-                Ana Silva
+                Dra. Ana Silva
               </p>
               <p className="text-xs text-muted-foreground">
                 Administrador

@@ -73,6 +73,14 @@ const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCa
 const Vouchers = lazyWithRetry(() => import("@/pages/Vouchers"));
 const Cupons = lazyWithRetry(() => import("@/pages/Cupons"));
 
+// Páginas médicas (novas)
+const Prontuarios = lazyWithRetry(() => import("@/pages/Prontuarios"));
+const Convenios = lazyWithRetry(() => import("@/pages/Convenios"));
+const Receituarios = lazyWithRetry(() => import("@/pages/Receituarios"));
+const Laudos = lazyWithRetry(() => import("@/pages/Laudos"));
+const Triagem = lazyWithRetry(() => import("@/pages/Triagem"));
+const Especialidades = lazyWithRetry(() => import("@/pages/Especialidades"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -395,6 +403,65 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                {/* Rotas médicas */}
+                <Route
+                  path="/prontuarios"
+                  element={
+                    <ProtectedRoute>
+                      <Prontuarios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/triagem"
+                  element={
+                    <ProtectedRoute>
+                      <Triagem />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/receituarios"
+                  element={
+                    <ProtectedRoute>
+                      <Receituarios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/laudos"
+                  element={
+                    <ProtectedRoute>
+                      <Laudos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/especialidades"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Especialidades />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/convenios"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Convenios />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/integracoes"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Integracoes />
+                    </ProtectedRoute>
+                  }
+                />
+
                 <Route path="/contas-pagar" element={<Navigate to="/financeiro?tab=bills_payable" replace />} />
                 <Route path="/contas-receber" element={<Navigate to="/financeiro?tab=bills_receivable" replace />} />
                 <Route path="/fluxo-de-caixa" element={<Navigate to="/financeiro?tab=projection" replace />} />

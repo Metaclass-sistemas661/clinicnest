@@ -117,7 +117,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
                 Seu período de teste expirou
               </DialogTitle>
               <DialogDescription className="text-base">
-                Entre em contato com o administrador do salão para continuar usando o BeautyGest.
+                Entre em contato com o administrador do clínica para continuar usando o ClinicNest.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-center mt-6">
@@ -131,7 +131,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
           <>
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-500 shadow-lg">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-cyan-500 shadow-lg">
               <Crown className="h-8 w-8 text-white" />
             </div>
           </div>
@@ -139,7 +139,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
             Seu período de teste expirou
           </DialogTitle>
           <DialogDescription className="text-base">
-            Para continuar usando o BeautyGest, escolha um plano e desbloqueie todas as funcionalidades.
+            Para continuar usando o ClinicNest, escolha um plano e desbloqueie todas as funcionalidades.
           </DialogDescription>
         </DialogHeader>
 

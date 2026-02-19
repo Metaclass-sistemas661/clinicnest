@@ -203,7 +203,7 @@ export default function GerenciarAssinatura() {
                 <Skeleton className="h-4 w-52" />
               </div>
             ) : !subscription ? (
-              <p className="text-sm text-muted-foreground">Nenhuma assinatura encontrada para este salão.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma assinatura encontrada para esta clínica.</p>
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">

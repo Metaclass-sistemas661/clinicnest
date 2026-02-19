@@ -3,27 +3,34 @@
 -- =====================================================
 
 -- 1. Tabela commission_payments para armazenar comissões geradas
-CREATE TABLE public.commission_payments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  professional_id UUID NOT NULL, -- user_id do profissional (auth.uid)
-  appointment_id UUID REFERENCES public.appointments(id) ON DELETE SET NULL,
-  amount NUMERIC NOT NULL DEFAULT 0,
-  service_price NUMERIC NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
-  payment_date TIMESTAMPTZ,
-  notes TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+DO $$
+BEGIN
+  CREATE TABLE public.commission_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+    professional_id UUID NOT NULL, -- user_id do profissional (auth.uid)
+    appointment_id UUID REFERENCES public.appointments(id) ON DELETE SET NULL,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    service_price NUMERIC NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid')),
+    payment_date TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  );
+EXCEPTION
+  WHEN duplicate_table THEN
+    NULL;
+END $$;
 
 -- Índices para performance
-CREATE INDEX idx_commission_payments_tenant ON public.commission_payments(tenant_id);
-CREATE INDEX idx_commission_payments_professional ON public.commission_payments(professional_id);
-CREATE INDEX idx_commission_payments_status ON public.commission_payments(status);
-CREATE INDEX idx_commission_payments_created ON public.commission_payments(created_at);
+CREATE INDEX IF NOT EXISTS idx_commission_payments_tenant ON public.commission_payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_commission_payments_professional ON public.commission_payments(professional_id);
+CREATE INDEX IF NOT EXISTS idx_commission_payments_status ON public.commission_payments(status);
+CREATE INDEX IF NOT EXISTS idx_commission_payments_created ON public.commission_payments(created_at);
 
 -- Trigger para updated_at
+DROP TRIGGER IF EXISTS update_commission_payments_updated_at ON public.commission_payments;
 CREATE TRIGGER update_commission_payments_updated_at
   BEFORE UPDATE ON public.commission_payments
   FOR EACH ROW
@@ -33,33 +40,58 @@ CREATE TRIGGER update_commission_payments_updated_at
 ALTER TABLE public.commission_payments ENABLE ROW LEVEL SECURITY;
 
 -- Staff vê apenas suas próprias comissões
-CREATE POLICY "Staff can view own commissions"
-  ON public.commission_payments FOR SELECT
-  USING (
-    tenant_id = get_user_tenant_id(auth.uid()) 
-    AND (professional_id = auth.uid() OR is_tenant_admin(auth.uid(), tenant_id))
-  );
+DO $$
+BEGIN
+  CREATE POLICY "Staff can view own commissions"
+    ON public.commission_payments FOR SELECT
+    USING (
+      tenant_id = get_user_tenant_id(auth.uid()) 
+      AND (professional_id = auth.uid() OR is_tenant_admin(auth.uid(), tenant_id))
+    );
+EXCEPTION
+  WHEN duplicate_object THEN
+    NULL;
+END $$;
 
 -- Admin pode criar comissões
-CREATE POLICY "Admins can create commissions"
-  ON public.commission_payments FOR INSERT
-  WITH CHECK (is_tenant_admin(auth.uid(), tenant_id) OR tenant_id = get_user_tenant_id(auth.uid()));
+DO $$
+BEGIN
+  CREATE POLICY "Admins can create commissions"
+    ON public.commission_payments FOR INSERT
+    WITH CHECK (is_tenant_admin(auth.uid(), tenant_id) OR tenant_id = get_user_tenant_id(auth.uid()));
+EXCEPTION
+  WHEN duplicate_object THEN
+    NULL;
+END $$;
 
 -- Admin pode atualizar (pagar) comissões
-CREATE POLICY "Admins can update commissions"
-  ON public.commission_payments FOR UPDATE
-  USING (is_tenant_admin(auth.uid(), tenant_id))
-  WITH CHECK (is_tenant_admin(auth.uid(), tenant_id));
+DO $$
+BEGIN
+  CREATE POLICY "Admins can update commissions"
+    ON public.commission_payments FOR UPDATE
+    USING (is_tenant_admin(auth.uid(), tenant_id))
+    WITH CHECK (is_tenant_admin(auth.uid(), tenant_id));
+EXCEPTION
+  WHEN duplicate_object THEN
+    NULL;
+END $$;
 
 -- Admin pode deletar
-CREATE POLICY "Admins can delete commissions"
-  ON public.commission_payments FOR DELETE
-  USING (is_tenant_admin(auth.uid(), tenant_id));
+DO $$
+BEGIN
+  CREATE POLICY "Admins can delete commissions"
+    ON public.commission_payments FOR DELETE
+    USING (is_tenant_admin(auth.uid(), tenant_id));
+EXCEPTION
+  WHEN duplicate_object THEN
+    NULL;
+END $$;
 
 -- =====================================================
 -- 2. RPC: complete_appointment_with_sale
 -- Conclui agendamento e cria registro de comissão
 -- =====================================================
+DROP FUNCTION IF EXISTS public.complete_appointment_with_sale(UUID, UUID, INTEGER);
 CREATE OR REPLACE FUNCTION public.complete_appointment_with_sale(
   p_appointment_id UUID,
   p_product_id UUID DEFAULT NULL,
@@ -153,6 +185,7 @@ $$;
 -- 3. RPC: get_dashboard_commission_totals
 -- Retorna totais de comissões para dashboard
 -- =====================================================
+DROP FUNCTION IF EXISTS public.get_dashboard_commission_totals(UUID, BOOLEAN, UUID);
 CREATE OR REPLACE FUNCTION public.get_dashboard_commission_totals(
   p_tenant_id UUID,
   p_is_admin BOOLEAN,

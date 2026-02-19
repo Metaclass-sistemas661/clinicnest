@@ -7,10 +7,21 @@ ALTER TABLE public.appointments
     CHECK (source IN ('internal', 'online', 'whatsapp'));
 
 -- Backfill: agendamentos que vieram do booking público já têm public_booking_token
-UPDATE public.appointments
-  SET source = 'online'
-  WHERE public_booking_token IS NOT NULL
-    AND (source IS NULL OR source = 'internal');
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'appointments'
+      AND column_name = 'public_booking_token'
+  ) THEN
+    UPDATE public.appointments
+      SET source = 'online'
+      WHERE public_booking_token IS NOT NULL
+        AND (source IS NULL OR source = 'internal');
+  END IF;
+END $$;
 
 -- Índice para consultas por source
 CREATE INDEX IF NOT EXISTS idx_appointments_source

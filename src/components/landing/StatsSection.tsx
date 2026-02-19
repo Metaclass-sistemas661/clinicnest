@@ -53,15 +53,15 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
   }, [isVisible, value]);
 
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
-    violet: { bg: "bg-violet-100", text: "text-violet-600", border: "border-violet-200" },
+    teal: { bg: "bg-teal-100", text: "text-teal-600", border: "border-teal-200" },
     green: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
     blue: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
-    fuchsia: { bg: "bg-fuchsia-100", text: "text-fuchsia-600", border: "border-fuchsia-200" },
+    cyan: { bg: "bg-cyan-100", text: "text-cyan-600", border: "border-cyan-200" },
   };
-  const colors = colorClasses[color] || colorClasses.violet;
+  const colors = colorClasses[color] || colorClasses.teal;
 
   return (
-    <div 
+    <div
       ref={ref}
       className="relative group p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col"
     >
@@ -69,7 +69,7 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
         <Icon className={`h-7 w-7 ${colors.text}`} aria-hidden="true" />
       </div>
       <div className="space-y-1 flex-1">
-        <div className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+        <div className="font-display text-3xl sm:text-4xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
           {count.toLocaleString("pt-BR")}{suffix}
         </div>
         <p className="text-muted-foreground font-medium text-sm sm:text-base">{label}</p>
@@ -80,14 +80,14 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
 
 export function StatsSection() {
   const stats = [
-    { icon: Building2, value: 500, suffix: "+", label: "Salões Usando", color: "violet" },
-    { icon: CalendarCheck, value: 50000, suffix: "+", label: "Agendamentos/Mês", color: "green" },
-    { icon: Heart, value: 98, suffix: "%", label: "De Satisfação", color: "fuchsia" },
+    { icon: Building2, value: 500, suffix: "+", label: "Clínicas Atendidas", color: "teal" },
+    { icon: CalendarCheck, value: 50000, suffix: "+", label: "Consultas/Mês", color: "green" },
+    { icon: Heart, value: 98, suffix: "%", label: "De Satisfação", color: "cyan" },
     { icon: DollarSign, value: 2, suffix: "M+", label: "Gerenciados (R$)", color: "blue" },
   ];
 
   return (
-    <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-violet-50/50">
+    <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <p className="text-lg text-muted-foreground">

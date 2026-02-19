@@ -116,7 +116,7 @@ export default function ConfirmarAgendamento() {
               <div>
                 <h1 className="text-xl font-bold">Link inválido</h1>
                 <p className="mt-2 text-sm text-muted-foreground max-w-xs">
-                  Não encontramos um agendamento associado a este link. Verifique o e-mail ou entre em contato com o salão.
+                  Não encontramos um agendamento associado a este link. Verifique o e-mail ou entre em contato com a clínica.
                 </p>
               </div>
             </>
@@ -130,7 +130,7 @@ export default function ConfirmarAgendamento() {
               <div>
                 <h1 className="text-xl font-bold">Erro ao confirmar</h1>
                 <p className="mt-2 text-sm text-muted-foreground max-w-xs">
-                  Ocorreu um problema ao processar sua confirmação. Tente novamente ou entre em contato com o salão.
+                  Ocorreu um problema ao processar sua confirmação. Tente novamente ou entre em contato com a clínica.
                 </p>
               </div>
               <Button

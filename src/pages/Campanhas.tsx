@@ -296,7 +296,7 @@ export default function Campanhas() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
-  const defaultSalonName = tenant?.name ?? profile?.full_name ?? "Meu Salão";
+  const defaultSalonName = tenant?.name ?? profile?.full_name ?? "Minha Clínica";
 
   return (
     <MainLayout

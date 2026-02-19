@@ -459,7 +459,7 @@ export default function Disponibilidade() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {isAdmin && <SelectItem value="global">Salão (global)</SelectItem>}
+                      {isAdmin && <SelectItem value="global">Clínica (global)</SelectItem>}
                       {professionals
                         .filter((p) => (isAdmin ? true : p.id === profile?.id))
                         .map((p) => (
@@ -508,7 +508,7 @@ export default function Disponibilidade() {
                     <div key={b.id} className="rounded-lg border p-3 flex items-start justify-between gap-4 hover:bg-muted/50 transition-colors">
                       <div className="space-y-1">
                         <div className="text-sm font-medium">
-                          {b.professional_id ? `Profissional: ${b.professional?.full_name ?? "—"}` : "Global (salão)"}
+                          {b.professional_id ? `Profissional: ${b.professional?.full_name ?? "—"}` : "Global (clínica)"}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(b.start_at).toLocaleString("pt-BR")} → {new Date(b.end_at).toLocaleString("pt-BR")}
@@ -519,7 +519,7 @@ export default function Disponibilidade() {
                         variant="outline"
                         size="sm"
                         onClick={() => setBlockToDelete(b.id)}
-                        aria-label={`Remover bloqueio de ${b.professional?.full_name ?? "salão"}`}
+                        aria-label={`Remover bloqueio de ${b.professional?.full_name ?? "clínica"}`}
                       >
                         Remover
                       </Button>

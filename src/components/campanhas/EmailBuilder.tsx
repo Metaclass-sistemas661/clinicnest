@@ -353,7 +353,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const [state, setState] = useState<BuilderState>(() =>
-    makeDefaultState("promocao", defaultSalonName || "Meu Salão")
+    makeDefaultState("promocao", defaultSalonName || "Minha Clínica")
   );
 
   const debouncedState = useDebounced(state, 280);
@@ -525,9 +525,9 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
           <SectionLabel icon={Palette}>Marca</SectionLabel>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-sm">Nome do Salão</Label>
+              <Label className="text-sm">Nome da Clínica</Label>
               <Input
-                placeholder="Nome do seu salão"
+                placeholder="Nome da sua clínica"
                 value={state.salonName}
                 onChange={(e) => set("salonName", e.target.value)}
               />
@@ -616,7 +616,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
             <div className="space-y-1.5">
               <Label className="text-sm">Link do Botão</Label>
               <Input
-                placeholder="https://beautygest.app/agendar/..."
+                placeholder="https://clinicnest.metaclass.com.br/agendar/..."
                 value={state.ctaUrl}
                 onChange={(e) => set("ctaUrl", e.target.value)}
               />
@@ -638,7 +638,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
             onChange={(e) => set("footerText", e.target.value)}
             rows={3}
             className="resize-none text-sm"
-            placeholder="© 2026 Seu Salão. Para cancelar o recebimento, responda este email."
+            placeholder="© 2026 Sua Clínica. Para cancelar o recebimento, responda este email."
           />
         </div>
 

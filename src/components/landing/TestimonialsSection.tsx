@@ -3,28 +3,28 @@ import { Badge } from "@/components/ui/badge";
 
 const testimonials = [
   {
-    name: "Carla Santos",
-    role: "Proprietária do Studio Carla",
+    name: "Dra. Carla Santos",
+    role: "Clínica Carla Santos — Clínica Geral",
     location: "São Paulo, SP",
-    content: "O BeautyGest transformou a forma como gerencio meu salão. Reduzi 80% do tempo com agendamentos e meus clientes adoram a praticidade!",
+    content: "O ClinicNest transformou a forma como gerencio minha clínica. Reduzi 80% do tempo com agendamentos e meus pacientes adoram a praticidade dos lembretes automáticos!",
     avatar: "CS",
-    metric: "80% menos tempo",
+    metric: "80% menos tempo administrativo",
     verified: true,
   },
   {
-    name: "Roberto Lima",
-    role: "Barbearia Vintage",
+    name: "Dr. Roberto Lima",
+    role: "Consultório Lima — Ortopedia",
     location: "Rio de Janeiro, RJ",
-    content: "Antes eu perdia dinheiro sem saber onde. Agora tenho controle total das finanças e aumentei meu lucro em 40% em apenas 3 meses.",
+    content: "Antes eu perdia dinheiro sem saber onde. Agora tenho controle total das finanças da clínica e aumentei meu lucro em 40% em apenas 3 meses com os relatórios.",
     avatar: "RL",
     metric: "+40% de lucro",
     verified: true,
   },
   {
-    name: "Amanda Oliveira",
-    role: "Espaço Beauty Amanda",
+    name: "Dra. Amanda Oliveira",
+    role: "Clínica Integrada Amanda — Dermatologia",
     location: "Belo Horizonte, MG",
-    content: "A melhor decisão que tomei foi adotar o BeautyGest. Minha equipe ficou mais organizada e meus clientes mais satisfeitos.",
+    content: "A melhor decisão que tomei foi adotar o ClinicNest. Minha equipe ficou mais organizada, os prontuários são digitais e meus pacientes mais satisfeitos.",
     avatar: "AO",
     metric: "100% satisfeita",
     verified: true,
@@ -33,20 +33,20 @@ const testimonials = [
 
 export function TestimonialsSection() {
   return (
-    <section id="testimonials" className="py-20 sm:py-32 bg-gradient-to-b from-violet-50 to-background relative">
+    <section id="testimonials" className="py-20 sm:py-32 bg-gradient-to-b from-teal-50 to-background relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 mb-6">
-            <Star className="h-4 w-4 text-violet-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-violet-600">Depoimentos</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+            <Star className="h-4 w-4 text-teal-600" aria-hidden="true" />
+            <span className="text-sm font-medium text-teal-600">Depoimentos</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Quem usa,{" "}
-            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">recomenda</span>
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">recomenda</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Veja o que nossos clientes têm a dizer sobre a transformação dos seus negócios.
+            Veja o que médicos e gestores têm a dizer sobre a transformação das suas clínicas.
           </p>
         </div>
 
@@ -58,7 +58,7 @@ export function TestimonialsSection() {
               className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col"
             >
               {/* Quote */}
-              <div className="absolute -top-4 -left-2 text-6xl text-violet-200 font-serif" aria-hidden="true">
+              <div className="absolute -top-4 -left-2 text-6xl text-teal-200 font-serif" aria-hidden="true">
                 "
               </div>
 
@@ -83,14 +83,14 @@ export function TestimonialsSection() {
 
               {/* Metric Badge */}
               {testimonial.metric && (
-                <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-100">
+                <div className="mb-4 p-3 rounded-lg bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-100">
                   <p className="text-xs text-muted-foreground mb-1">Resultado alcançado:</p>
-                  <p className="text-sm font-semibold text-violet-700">{testimonial.metric}</p>
+                  <p className="text-sm font-semibold text-teal-700">{testimonial.metric}</p>
                 </div>
               )}
 
               <div className="flex items-center gap-4 flex-shrink-0 mt-auto pt-4 border-t border-border/50">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 flex items-center justify-center text-white font-semibold flex-shrink-0 relative" aria-hidden="true">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-600 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 relative" aria-hidden="true">
                   {testimonial.avatar}
                   {testimonial.verified && (
                     <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-green-500 border-2 border-white flex items-center justify-center">

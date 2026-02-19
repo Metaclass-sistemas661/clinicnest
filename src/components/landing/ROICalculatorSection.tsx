@@ -41,7 +41,7 @@ export function ROICalculatorSection() {
   const results = calculateROI();
 
   return (
-    <section className="py-20 sm:py-32 bg-gradient-to-b from-violet-50/50 to-background">
+    <section className="py-20 sm:py-32 bg-gradient-to-b from-teal-50/50 to-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -52,12 +52,12 @@ export function ROICalculatorSection() {
             </div>
             <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
               Descubra quanto você pode{" "}
-              <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
                 economizar
               </span>
             </h2>
             <p className="text-lg text-muted-foreground">
-              Calcule o retorno sobre investimento do BeautyGest para o seu salão.
+              Calcule o retorno sobre investimento do ClinicNest para a sua clínica.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export function ROICalculatorSection() {
             {/* Input Form */}
             <Card>
               <CardHeader>
-                <CardTitle>Informações do seu Salão</CardTitle>
+                <CardTitle>Informações da sua Clínica</CardTitle>
                 <CardDescription>
                   Preencha os dados para calcular seu ROI personalizado
                 </CardDescription>
@@ -115,7 +115,7 @@ export function ROICalculatorSection() {
                 </CardTitle>
                 <CardDescription>
                   {results
-                    ? "Veja quanto o BeautyGest pode economizar para você"
+                    ? "Veja quanto o ClinicNest pode economizar para você"
                     : "Preencha os campos ao lado para ver os resultados"}
                 </CardDescription>
               </CardHeader>
@@ -140,7 +140,7 @@ export function ROICalculatorSection() {
                       </div>
                     </div>
 
-                    <div className="p-6 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white">
+                    <div className="p-6 rounded-lg bg-gradient-to-r from-teal-600 to-cyan-500 text-white">
                       <p className="text-sm mb-2">Benefício Total Mensal Estimado</p>
                       <p className="text-4xl font-bold">R$ {parseFloat(results.totalBenefit).toLocaleString("pt-BR")}</p>
                     </div>
@@ -153,7 +153,7 @@ export function ROICalculatorSection() {
 
                       <div className="flex justify-between items-center p-3 rounded-lg bg-white border">
                         <span className="text-sm font-medium">Payback</span>
-                        <span className="text-lg font-bold text-violet-600">
+                        <span className="text-lg font-bold text-teal-600">
                           {results.paybackMonths} meses
                         </span>
                       </div>
@@ -162,7 +162,7 @@ export function ROICalculatorSection() {
                     <a href="/cadastro" className="block">
                       <Button
                         size="lg"
-                        className="w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600"
+                        className="w-full bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600"
                       >
                         Começar Teste Grátis
                       </Button>

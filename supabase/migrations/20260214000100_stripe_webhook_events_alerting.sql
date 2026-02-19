@@ -1,8 +1,15 @@
-alter table public.stripe_webhook_events
-  add column if not exists alert_sent_at timestamptz,
-  add column if not exists alert_attempts integer not null default 0,
-  add column if not exists alert_last_error text;
+DO $$
+BEGIN
+  IF to_regclass('public.stripe_webhook_events') IS NULL THEN
+    RETURN;
+  END IF;
 
-create index if not exists stripe_webhook_events_failed_unalerted_idx
-  on public.stripe_webhook_events (received_at)
-  where status = 'failed' and alert_sent_at is null;
+  ALTER TABLE public.stripe_webhook_events
+    ADD COLUMN IF NOT EXISTS alert_sent_at timestamptz,
+    ADD COLUMN IF NOT EXISTS alert_attempts integer not null default 0,
+    ADD COLUMN IF NOT EXISTS alert_last_error text;
+
+  CREATE INDEX IF NOT EXISTS stripe_webhook_events_failed_unalerted_idx
+    ON public.stripe_webhook_events (received_at)
+    WHERE status = 'failed' AND alert_sent_at IS NULL;
+END $$;

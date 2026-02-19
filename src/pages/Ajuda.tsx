@@ -40,12 +40,12 @@ type DocSection = {
 const SECTIONS: DocSection[] = [
   {
     id: "comecando",
-    title: "Começando no BeautyGest",
+    title: "Começando no ClinicNest",
     icon: Sparkles,
     tags: ["primeiro acesso", "configuração", "setup"],
-    summary: "Configure o salão, cadastre serviços e comece a usar a agenda em poucos minutos.",
+    summary: "Configure o clínica, cadastre serviços e comece a usar a agenda em poucos minutos.",
     steps: [
-      "Acesse Configurações e confira os dados do salão.",
+      "Acesse Configurações e confira os dados do clínica.",
       "Cadastre seus serviços com preço e duração.",
       "Cadastre clientes (ou comece pela agenda e crie ao agendar).",
       "Comece a agendar e finalize atendimentos para alimentar o financeiro.",
@@ -135,11 +135,11 @@ const SECTIONS: DocSection[] = [
     id: "configuracoes",
     title: "Configurações",
     icon: Settings,
-    tags: ["salão", "dados", "perfil"],
-    summary: "Onde você define os dados do salão e ajustes operacionais.",
+    tags: ["clínica", "dados", "perfil"],
+    summary: "Onde você define os dados do clínica e ajustes operacionais.",
     steps: [
       "Mantenha CPF/CNPJ de cobrança preenchido para evitar bloqueio no checkout.",
-      "Revise dados do salão para comunicações e relatórios.",
+      "Revise dados do clínica para comunicações e relatórios.",
     ],
     actions: [{ label: "Abrir Configurações", href: "/configuracoes" }],
   },
@@ -189,7 +189,7 @@ export default function Ajuda() {
   return (
     <MainLayout
       title="Ajuda & Documentação"
-      subtitle="Guia oficial BeautyGest — aprenda rápido e use com confiança"
+      subtitle="Guia oficial ClinicNest — aprenda rápido e use com confiança"
       actions={
         <div className="flex items-center gap-2 flex-wrap justify-end py-1">
           <Tabs value="ajuda" onValueChange={(v) => v === "suporte" && navigate("/suporte")}>
@@ -245,7 +245,7 @@ export default function Ajuda() {
             </div>
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase tracking-wider">BeautyGest</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">ClinicNest</span>
             </div>
           </div>
         </CardHeader>

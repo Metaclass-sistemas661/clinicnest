@@ -27,23 +27,23 @@ const features = [
   {
     id: "dashboard",
     title: "Dashboard",
-    description: "Visão completa do seu negócio",
+    description: "Visão completa da clínica",
     icon: BarChart3,
-    color: "violet",
+    color: "teal",
   },
   {
     id: "agenda",
     title: "Agenda",
-    description: "Gerencie agendamentos",
+    description: "Gerencie consultas",
     icon: Calendar,
     color: "blue",
   },
   {
     id: "clientes",
-    title: "Clientes",
-    description: "Histórico e fidelização",
+    title: "Pacientes",
+    description: "Histórico e prontuários",
     icon: Users,
-    color: "fuchsia",
+    color: "cyan",
   },
   {
     id: "financeiro",
@@ -54,8 +54,8 @@ const features = [
   },
   {
     id: "estoque",
-    title: "Estoque",
-    description: "Gestão de produtos",
+    title: "Insumos",
+    description: "Gestão de materiais médicos",
     icon: Package,
     color: "orange",
   },
@@ -80,7 +80,7 @@ const advancedModules = [
   {
     icon: Bell,
     title: "Notificações internas",
-    description: "Alertas em tempo real para rotina do salão.",
+    description: "Alertas em tempo real para rotina da clínica.",
   },
   {
     icon: CreditCard,
@@ -95,9 +95,9 @@ export function ProductShowcaseSection() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const colorClasses: Record<string, { bg: string; text: string; border: string }> = {
-    violet: { bg: "bg-violet-100", text: "text-violet-600", border: "border-violet-200" },
+    teal: { bg: "bg-teal-100", text: "text-teal-600", border: "border-teal-200" },
     blue: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
-    fuchsia: { bg: "bg-fuchsia-100", text: "text-fuchsia-600", border: "border-fuchsia-200" },
+    cyan: { bg: "bg-cyan-100", text: "text-cyan-600", border: "border-cyan-200" },
     green: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
     orange: { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" },
   };
@@ -107,13 +107,13 @@ export function ProductShowcaseSection() {
   // Mapeamento de IDs para URLs
   const getFeatureUrl = (featureId: string) => {
     const urlMap: Record<string, string> = {
-      dashboard: "beautygest.metaclass.com.br/dashboard",
-      agenda: "beautygest.metaclass.com.br/agenda",
-      clientes: "beautygest.metaclass.com.br/clientes",
-      financeiro: "beautygest.metaclass.com.br/financeiro",
-      estoque: "beautygest.metaclass.com.br/estoque",
+      dashboard: "clinicnest.metaclass.com.br/dashboard",
+      agenda: "clinicnest.metaclass.com.br/agenda",
+      clientes: "clinicnest.metaclass.com.br/clientes",
+      financeiro: "clinicnest.metaclass.com.br/financeiro",
+      estoque: "clinicnest.metaclass.com.br/estoque",
     };
-    return urlMap[featureId] || "beautygest.metaclass.com.br";
+    return urlMap[featureId] || "clinicnest.metaclass.com.br";
   };
 
   // Função para detectar se está no mobile
@@ -124,12 +124,12 @@ export function ProductShowcaseSection() {
   // Handler para mudança de feature com scroll automático no mobile
   const handleFeatureChange = (featureId: string) => {
     setActiveFeature(featureId);
-    
+
     // Scroll automático apenas no mobile
     if (isMobile() && previewRef.current) {
       setTimeout(() => {
-        previewRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
+        previewRef.current?.scrollIntoView({
+          behavior: 'smooth',
           block: 'start',
           inline: 'nearest'
         });
@@ -138,28 +138,28 @@ export function ProductShowcaseSection() {
   };
 
   return (
-    <section id="showcase" className="py-20 sm:py-32 bg-gradient-to-b from-background via-violet-50/30 to-background relative overflow-hidden">
+    <section id="showcase" className="py-20 sm:py-32 bg-gradient-to-b from-background via-teal-50/30 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 border border-violet-200 mb-6">
-            <BarChart3 className="h-4 w-4 text-violet-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-violet-600">Explore o Sistema</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+            <BarChart3 className="h-4 w-4 text-teal-600" aria-hidden="true" />
+            <span className="text-sm font-medium text-teal-600">Explore o Sistema</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Conheça o{" "}
-            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
-              BeautyGest
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+              ClinicNest
             </span>{" "}
             por dentro
           </h2>
           <p className="text-lg text-muted-foreground">
-            Explore os principais módulos e veja como nosso sistema organiza a operação completa do salão.
+            Explore os principais módulos e veja como nosso sistema organiza a operação completa da clínica.
           </p>
         </div>
 
         {/* Menu Fixo - Sticky no Mobile */}
-        <div 
+        <div
           ref={menuRef}
           className="mb-8 sticky top-28 sm:top-32 z-30 bg-background/95 backdrop-blur-sm py-2 md:static md:mb-8 md:bg-transparent md:backdrop-blur-none md:py-0"
         >
@@ -178,7 +178,7 @@ export function ProductShowcaseSection() {
                     "md:hover:shadow-lg",
                     isActive
                       ? `${colors.border} bg-white shadow-lg`
-                      : "border-border bg-card md:hover:border-violet-200"
+                      : "border-border bg-card md:hover:border-teal-200"
                   )}
                 >
                   <div
@@ -215,7 +215,7 @@ export function ProductShowcaseSection() {
         {/* Informações Encapsuladas - Lado a Lado */}
         {activeFeatureData && (
           <div className="grid sm:grid-cols-3 gap-4 mb-8">
-            <Card className="border-2 border-violet-100 bg-violet-50/50">
+            <Card className="border-2 border-teal-100 bg-teal-50/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
@@ -229,7 +229,7 @@ export function ProductShowcaseSection() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-violet-100 bg-violet-50/50">
+            <Card className="border-2 border-teal-100 bg-teal-50/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
@@ -243,7 +243,7 @@ export function ProductShowcaseSection() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-violet-100 bg-violet-50/50">
+            <Card className="border-2 border-teal-100 bg-teal-50/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", colorClasses[activeFeatureData.color].bg)}>
@@ -275,7 +275,7 @@ export function ProductShowcaseSection() {
             </div>
 
             {/* Dynamic Preview - Largura Total */}
-            <div className="border-x border-b border-gray-700 rounded-b-lg overflow-x-auto" style={{ backgroundColor: "hsl(250 25% 7%)", minHeight: "650px" }}>
+            <div className="border-x border-b border-gray-700 rounded-b-lg overflow-x-auto" style={{ backgroundColor: "hsl(200 25% 7%)", minHeight: "650px" }}>
               {activeFeature === "dashboard" && <DashboardPreview />}
               {activeFeature === "agenda" && <AgendaPreview />}
               {activeFeature === "clientes" && <ClientesPreview />}
@@ -284,22 +284,22 @@ export function ProductShowcaseSection() {
             </div>
 
             {/* Floating Badge */}
-            <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-10">
+            <div className="absolute -bottom-4 -right-4 bg-gradient-to-r from-teal-600 to-cyan-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 z-10">
               <span className="text-sm font-semibold">100% Funcional</span>
               <Check className="h-4 w-4" />
             </div>
           </div>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-violet-100 bg-white/80 p-6 sm:p-8">
+        <div className="mt-10 rounded-2xl border border-teal-100 bg-white/80 p-6 sm:p-8">
           <h3 className="font-display text-xl font-semibold mb-4">Módulos avançados inclusos</h3>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {advancedModules.map((module) => {
               const Icon = module.icon;
               return (
                 <div key={module.title} className="rounded-xl border border-border bg-card p-4">
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100 mb-3">
-                    <Icon className="h-5 w-5 text-violet-600" />
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 mb-3">
+                    <Icon className="h-5 w-5 text-teal-600" />
                   </div>
                   <p className="text-sm font-semibold mb-1">{module.title}</p>
                   <p className="text-xs text-muted-foreground">{module.description}</p>
@@ -312,10 +312,10 @@ export function ProductShowcaseSection() {
         {/* CTA */}
         <div className="text-center mt-16">
           <p className="text-muted-foreground mb-6">
-            Pronto para ver tudo isso funcionando no seu salão?
+            Pronto para ver tudo isso funcionando na sua clínica?
           </p>
           <a href="/cadastro">
-            <Button size="lg" className="bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 text-lg px-8 py-6 h-auto">
+            <Button size="lg" className="bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-lg px-8 py-6 h-auto">
               Começar Teste Grátis de 5 Dias
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>

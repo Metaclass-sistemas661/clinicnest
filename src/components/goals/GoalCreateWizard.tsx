@@ -174,10 +174,10 @@ export function GoalCreateWizard({
                 onValueChange={(v) => onFormChange({ professional_id: v === "all" ? null : v })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Salão todo" />
+                  <SelectValue placeholder="Clínica toda" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Salão todo</SelectItem>
+                  <SelectItem value="all">Clínica toda</SelectItem>
                   {professionals.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.full_name}

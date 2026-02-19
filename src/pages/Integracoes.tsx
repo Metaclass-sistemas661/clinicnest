@@ -345,7 +345,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
         <AlertCircle className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
         <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
           <p className="font-semibold">Como funciona a sincronização</p>
-          <p>Quando um agendamento é confirmado, o sistema cria automaticamente um evento no Google Calendar do profissional responsável. Cancelamentos removem o evento. A sincronização é unidirecional (BeautyGest → Google).</p>
+          <p>Quando um agendamento é confirmado, o sistema cria automaticamente um evento no Google Calendar do profissional responsável. Cancelamentos removem o evento. A sincronização é unidirecional (ClinicNest → Google).</p>
         </div>
       </div>
     </div>
@@ -427,7 +427,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
     const payload = {
       event: "test",
       timestamp: new Date().toISOString(),
-      data: { message: "Teste de webhook BeautyGest", tenant_id: tenantId },
+      data: { message: "Teste de webhook ClinicNest", tenant_id: tenantId },
     };
     try {
       const res = await fetch(wh.url, {
@@ -455,7 +455,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            Receba notificações HTTP em tempo real quando eventos ocorrem no BeautyGest.
+            Receba notificações HTTP em tempo real quando eventos ocorrem no ClinicNest.
           </p>
         </div>
         <Button className="gap-2" onClick={() => setShowForm(true)} disabled={showForm}>
@@ -512,7 +512,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Use este secret para validar que as requisições vêm do BeautyGest (header <code className="font-mono">X-Webhook-Secret</code>).</p>
+              <p className="text-xs text-muted-foreground">Use este secret para validar que as requisições vêm do ClinicNest (header <code className="font-mono">X-Webhook-Secret</code>).</p>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -644,7 +644,7 @@ X-Webhook-Secret: whsec_...
   "data": {
     "id": "uuid-do-agendamento",
     "client_name": "Maria Silva",
-    "service_name": "Corte e Escova",
+    "service_name": "Consulta Clínica Geral",
     "professional_name": "Ana Lima",
     "scheduled_at": "2026-02-20T10:00:00Z",
     "tenant_id": "uuid-do-salao"
@@ -974,7 +974,7 @@ export default function Integracoes() {
     {
       icon: Zap,
       title: "Zapier & Make",
-      description: "Conecte o BeautyGest a mais de 5.000 aplicativos sem código",
+      description: "Conecte o ClinicNest a mais de 5.000 aplicativos sem código",
       status: "not_configured" as const,
       tab: "api",
       color: "bg-orange-50 dark:bg-orange-950/40 text-orange-600",
@@ -982,7 +982,7 @@ export default function Integracoes() {
   ];
 
   return (
-    <MainLayout title="Integrações" subtitle="Conecte o BeautyGest a ferramentas externas">
+    <MainLayout title="Integrações" subtitle="Conecte o ClinicNest a ferramentas externas">
       <div className="space-y-6 pb-10">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
@@ -1023,8 +1023,8 @@ export default function Integracoes() {
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-3 text-sm">
                   {[
-                    { title: "Webhooks", desc: "Eventos em tempo real enviados para seus sistemas quando algo acontece no BeautyGest." },
-                    { title: "API Keys", desc: "Acesse dados do BeautyGest de forma programática via endpoints REST autenticados." },
+                    { title: "Webhooks", desc: "Eventos em tempo real enviados para seus sistemas quando algo acontece no ClinicNest." },
+                    { title: "API Keys", desc: "Acesse dados do ClinicNest de forma programática via endpoints REST autenticados." },
                     { title: "Zapier/Make", desc: "Conecte sem código a 5.000+ apps usando o módulo de Webhooks de cada plataforma." },
                   ].map((item) => (
                     <div key={item.title} className="space-y-1">

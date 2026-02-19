@@ -4,17 +4,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  CalendarDays,
   Eye,
   EyeOff,
-  Headset,
   Loader2,
   ArrowRight,
   ShieldCheck,
-  Wallet,
+  Stethoscope,
+  CalendarDays,
+  FileText,
   Users,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,216 +46,254 @@ export default function Login() {
 
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
-    if (m.includes("invalid login credentials")) {
-      return "E-mail ou senha incorretos.";
-    }
-    if (m.includes("email not confirmed")) {
-      return "Confirme seu e-mail antes de entrar.";
-    }
-    if (m.includes("too many requests")) {
-      return "Muitas tentativas. Aguarde um pouco e tente novamente.";
-    }
+    if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
+    if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
+    if (m.includes("too many requests")) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
     return message;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     const { error } = await signIn(email, password);
-
     if (error) {
-      toast.error("Erro ao fazer login", {
-        description: normalizeAuthError(error.message),
-      });
+      toast.error("Erro ao fazer login", { description: normalizeAuthError(error.message) });
       setIsLoading(false);
       return;
     }
-
     toast.success("Login realizado com sucesso!");
     prefetchMainRoutes();
     navigate("/dashboard", { replace: true });
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-white to-violet-50/40 p-4">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
-      </div>
+    <div className="flex min-h-screen">
 
-      <div className="relative z-10 w-full max-w-6xl animate-slide-up">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
-          <div className="hidden lg:flex flex-col rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-10">
-            <div className="mb-10">
-              <div className="mb-6 relative inline-block">
-                <img
-                  src="/beautyg-horizontal.svg"
-                  alt="BeautyGest"
-                  className="h-20 w-auto max-w-[360px] object-contain"
-                  loading="eager"
-                />
-                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-white/10 to-white/0 blur-2xl -z-10" />
-              </div>
-              <p className="mt-3 text-white/80 max-w-md">
-                Gestão profissional para salões, com foco em agilidade e organização.
-              </p>
+      {/* ── Painel Esquerdo — Foto + Branding ── */}
+      <div className="relative hidden lg:flex lg:w-[55%] xl:w-[60%] flex-col overflow-hidden">
+
+        {/* Foto de fundo */}
+        <img
+          src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1400&q=80"
+          alt="Médica sorrindo em consultório moderno"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          loading="eager"
+        />
+
+        {/* Overlay gradiente teal */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(15,76,76,0.92) 0%, rgba(13,110,110,0.80) 40%, rgba(8,145,178,0.70) 100%)",
+          }}
+        />
+
+        {/* Conteúdo sobre a foto */}
+        <div className="relative z-10 flex flex-col h-full p-10 xl:p-14">
+
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-auto">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm border border-white/20">
+              <Stethoscope className="h-6 w-6 text-white" />
             </div>
-
-            <div className="space-y-4 max-w-md">
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <CalendarDays className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Agenda e atendimento</div>
-                  <div className="text-sm text-white/75">Organize horários, serviços e profissionais.</div>
-                </div>
+            <div>
+              <div className="font-display text-2xl font-bold text-white tracking-tight leading-none">
+                ClinicNest
               </div>
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <Users className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Clientes e recorrência</div>
-                  <div className="text-sm text-white/75">Histórico e relacionamento em um só lugar.</div>
-                </div>
-              </div>
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <Wallet className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Financeiro e comissões</div>
-                  <div className="text-sm text-white/75">Controle entradas, saídas e repasses.</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-white/80">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-white" />
-                <span>Conexão segura</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Headset className="h-4 w-4 text-white" />
-                <span>Suporte por e-mail</span>
-              </div>
+              <div className="text-[10px] text-white/50 tracking-widest uppercase">by Metaclass</div>
             </div>
           </div>
 
-          <div className="w-full max-w-md justify-self-center">
-            <div className="mb-10 flex flex-col items-center lg:hidden rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-6 text-center">
-              <img
-                src="/beautyg-horizontal.svg"
-                alt="BeautyGest"
-                className="h-16 w-auto max-w-[280px] object-contain"
-                loading="eager"
-              />
-              <p className="mt-3 text-white/80">Gestão profissional para seu salão</p>
-            </div>
+          {/* Headline central */}
+          <div className="mt-auto mb-10">
+            <h1 className="font-display text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
+              Sua clínica,
+              <br />
+              <span className="text-cyan-300">organizada e crescendo.</span>
+            </h1>
+            <p className="text-white/75 text-lg max-w-md leading-relaxed">
+              Prontuários, agenda, financeiro e equipe — tudo em um sistema seguro e intuitivo.
+            </p>
+          </div>
 
-            <Card className="border-violet-100/60 bg-white/80 shadow-2xl backdrop-blur-md">
-              <CardHeader className="space-y-2 text-center pb-2">
-                <CardTitle className="text-2xl font-display">Bem-vindo de volta</CardTitle>
-                <CardDescription>
-                  Entre com suas credenciais para acessar
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleSubmit}>
-                <CardContent className="space-y-5 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                      required
-                      className="h-12 rounded-xl border-white/20 bg-white/50 backdrop-blur-sm focus:border-primary focus:ring-primary"
-                    />
+          {/* Feature pills */}
+          <div className="flex flex-col gap-3 mb-10">
+            {[
+              { icon: CalendarDays, label: "Agenda médica inteligente", sub: "Confirmações e lembretes automáticos" },
+              { icon: FileText, label: "Prontuário eletrônico", sub: "Histórico clínico seguro e acessível" },
+              { icon: Users, label: "Gestão de equipe", sub: "Permissões, comissões e metas" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm px-5 py-3.5"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/20 flex-shrink-0">
+                    <Icon className="h-5 w-5 text-cyan-300" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="current-password"
-                        required
-                        className="h-12 rounded-xl border-white/20 bg-white/50 pr-12 backdrop-blur-sm focus:border-primary focus:ring-primary"
-                      />
-                      <button
-                        type="button"
-                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
+                  <div>
+                    <div className="text-sm font-semibold text-white leading-tight">{item.label}</div>
+                    <div className="text-xs text-white/60 mt-0.5">{item.sub}</div>
                   </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-5 pt-2">
-                  <Button
-                    type="submit"
-                    className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
-                    disabled={isLoading || !email.trim() || !password}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Entrando...
-                      </>
-                    ) : (
-                      <>
-                        Entrar
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </>
-                    )}
-                  </Button>
-                  <div className="space-y-2 text-center">
-                    <Link
-                      to="/forgot-password"
-                      className="text-sm font-medium text-primary hover:text-accent transition-colors"
-                    >
-                      Esqueci minha senha
-                    </Link>
-                    <p className="text-sm text-muted-foreground">
-                      Não tem uma conta?{" "}
-                      <Link
-                        to="/cadastro"
-                        className="font-semibold text-primary hover:text-accent transition-colors"
-                      >
-                        Cadastre-se gratuitamente
-                      </Link>
-                    </p>
-                  </div>
-                  <div className="pt-2 text-center text-xs text-muted-foreground">
-                    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-                      <Link to="/termos-de-uso" className="hover:text-foreground transition-colors">
-                        Termos de Uso
-                      </Link>
-                      <span className="opacity-40">|</span>
-                      <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">
-                        Política de Privacidade
-                      </Link>
-                      <span className="opacity-40">|</span>
-                      <a
-                        href="mailto:contato@metaclass.com.br"
-                        className="hover:text-foreground transition-colors"
-                      >
-                        Suporte
-                      </a>
-                    </div>
-                    <div className="mt-2">© {new Date().getFullYear()} BeautyGest</div>
-                  </div>
-                </CardFooter>
-              </form>
-            </Card>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Rodapé da foto */}
+          <div className="flex items-center justify-between text-white/50 text-xs">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-teal-400" />
+              <span>LGPD Compliant · SSL Certificado</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              ))}
+              <span className="ml-1.5">4.9 · +500 clínicas</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── Painel Direito — Formulário ── */}
+      <div className="flex w-full lg:w-[45%] xl:w-[40%] flex-col items-center justify-center bg-white px-6 py-12 sm:px-10 xl:px-16">
+
+        {/* Logo mobile */}
+        <div className="flex lg:hidden items-center gap-3 mb-10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600">
+            <Stethoscope className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-display text-xl font-bold text-teal-700 leading-none">ClinicNest</div>
+            <div className="text-[9px] text-muted-foreground tracking-widest uppercase">by Metaclass</div>
+          </div>
+        </div>
+
+        <div className="w-full max-w-sm">
+          {/* Cabeçalho */}
+          <div className="mb-8">
+            <h2 className="font-display text-3xl font-bold text-gray-900 mb-2">Bem-vindo de volta</h2>
+            <p className="text-muted-foreground text-sm">Entre com suas credenciais para acessar sua clínica.</p>
+          </div>
+
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                E-mail
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  Senha
+                </Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              disabled={isLoading || !email.trim() || !password}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                <>
+                  Entrar na plataforma
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Divisor */}
+          <div className="my-6 flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-100" />
+            <span className="text-xs text-muted-foreground">ou</span>
+            <div className="flex-1 h-px bg-gray-100" />
+          </div>
+
+          {/* Link para cadastro */}
+          <p className="text-center text-sm text-muted-foreground">
+            Ainda não tem uma conta?{" "}
+            <Link
+              to="/cadastro"
+              className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+            >
+              Comece grátis por 5 dias
+            </Link>
+          </p>
+
+          {/* Trust badges */}
+          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
+              <span>Conexão segura</span>
+            </div>
+            <span className="opacity-30">·</span>
+            <span>LGPD</span>
+            <span className="opacity-30">·</span>
+            <span>Sem cartão de crédito</span>
+          </div>
+
+          {/* Footer links */}
+          <div className="mt-8 text-center text-xs text-muted-foreground/60 space-y-1">
+            <div className="flex items-center justify-center gap-3">
+              <Link to="/termos-de-uso" className="hover:text-foreground transition-colors">Termos de Uso</Link>
+              <span className="opacity-40">·</span>
+              <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
+              <span className="opacity-40">·</span>
+              <a href="mailto:contato@metaclass.com.br" className="hover:text-foreground transition-colors">Suporte</a>
+            </div>
+            <div>© {new Date().getFullYear()} ClinicNest by Metaclass</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -10,6 +10,7 @@ export interface Tenant {
   phone: string | null;
   email: string | null;
   address: string | null;
+  product?: 'salon' | 'clinic';
   billing_cpf_cnpj?: string | null;
   online_booking_enabled?: boolean;
   online_booking_slug?: string | null;
@@ -32,6 +33,7 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
+  allowed_product?: 'salon' | 'clinic';
   show_goals_progress_in_header?: boolean;
   created_at: string;
   updated_at: string;

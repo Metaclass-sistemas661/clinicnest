@@ -184,7 +184,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Quantidade total de clientes cadastrados no salão.</TooltipContent>
+            <TooltipContent side="bottom">Quantidade total de pacientes cadastrados na clínica.</TooltipContent>
           </Tooltip>
 
           <Tooltip>

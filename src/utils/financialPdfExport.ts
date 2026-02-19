@@ -365,7 +365,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text("BeautyGest", margin, 17);
+    doc.text("ClinicNest", margin, 17);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);

@@ -351,7 +351,7 @@ export default function MinhasConfiguracoes() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Solicite acesso, correção, portabilidade, eliminação, oposição ou revogação de
-                consentimento. O administrador do seu salão acompanha e responde por aqui.
+                consentimento. O administrador da sua clínica acompanha e responde por aqui.
               </p>
 
               <form onSubmit={handleCreateLgpdRequest} className="space-y-3 rounded-lg border border-border/70 p-3">

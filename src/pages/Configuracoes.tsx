@@ -95,7 +95,7 @@ const lgpdStatusLabel: Record<LgpdRequestStatus, string> = {
 };
 
 const auditActionLabel: Record<string, string> = {
-  tenant_settings_updated: "Dados do salão atualizados",
+  tenant_settings_updated: "Dados da clínica atualizados",
   lgpd_retention_policy_updated: "Política de retenção LGPD atualizada",
   lgpd_request_status_updated: "Status da solicitação LGPD atualizado",
   lgpd_data_exported: "Exportação de dados do titular",
@@ -103,7 +103,7 @@ const auditActionLabel: Record<string, string> = {
 };
 
 const auditEntityLabel: Record<string, string> = {
-  tenants: "Salão",
+  tenants: "Clínica",
   lgpd_retention_policies: "Política de retenção",
   lgpd_data_requests: "Solicitação LGPD",
   profiles: "Titular",
@@ -208,7 +208,7 @@ export default function Configuracoes() {
         headers,
         body: {
           phone: whatsappTestPhone.trim(),
-          message: "Teste de conexão WhatsApp - BeautyGest",
+          message: "Teste de conexão WhatsApp - ClinicNest",
           tenant_id: tenant.id,
         },
       });
@@ -728,7 +728,7 @@ export default function Configuracoes() {
   return (
     <MainLayout
       title="Configurações"
-      subtitle="Dados do salão e governança LGPD"
+      subtitle="Dados da clínica e governança LGPD"
     >
       <div className="grid w-full gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-3">
@@ -738,7 +738,7 @@ export default function Configuracoes() {
                 <Building className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Dados do Salão</CardTitle>
+                <CardTitle>Dados da Clínica</CardTitle>
                 <CardDescription>Informações básicas do estabelecimento</CardDescription>
               </div>
             </div>
@@ -746,11 +746,11 @@ export default function Configuracoes() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label>Nome do Salão</Label>
+                <Label>Nome da Clínica</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do seu salão"
+                  placeholder="Nome da sua clínica"
                   required
                   data-tour="settings-salon-name"
                 />
@@ -1014,7 +1014,7 @@ export default function Configuracoes() {
               </div>
             ) : lgpdRequests.length === 0 ? (
               <div className="rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
-                Nenhuma solicitação LGPD aberta para este salão.
+                Nenhuma solicitação LGPD aberta para esta clínica.
               </div>
             ) : (
               lgpdRequests.map((request) => {

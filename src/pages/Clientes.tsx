@@ -33,7 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Scissors, Package, DollarSign, Info, Gift, Clock } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -502,21 +502,21 @@ export default function Clientes() {
 
   return (
     <MainLayout
-      title="Clientes"
-      subtitle={isAdmin ? "Gerencie seus clientes" : "Clientes do salão"}
+      title="Pacientes"
+      subtitle={isAdmin ? "Gerencie os pacientes da clínica" : "Pacientes da clínica"}
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new">
               <Plus className="mr-2 h-4 w-4" />
-              Novo Cliente
+              Novo Paciente
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingClient ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
+              <DialogTitle>{editingClient ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
               <DialogDescription>
-                {editingClient ? "Atualize os dados do cliente" : "Cadastre um novo cliente"}
+                {editingClient ? "Atualize os dados do paciente" : "Cadastre um novo paciente na clínica"}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
@@ -535,13 +535,13 @@ export default function Clientes() {
                 </div>
                 <div className="space-y-2">
                   <Label>Observações</Label>
-                  <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Anotações sobre o cliente..." rows={3} />
+                  <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Observações clínicas, alergias conhecidas, convênio..." rows={3} />
                 </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                 <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="clients-save">
-                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingClient ? "Atualizar" : "Cadastrar"}
+                  {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingClient ? "Atualizar Paciente" : "Cadastrar Paciente"}
                 </Button>
               </DialogFooter>
             </form>
@@ -579,7 +579,7 @@ export default function Clientes() {
               onClick={() => setClientFilter("mine")}
               data-tour="clients-filter-mine"
             >
-              Meus clientes ({myClientIds.size})
+              Meus pacientes ({myClientIds.size})
             </Button>
           </div>
         )}
@@ -588,10 +588,10 @@ export default function Clientes() {
       <Card>
         <CardHeader>
           <CardTitle>
-            {isLoading ? "Clientes Cadastrados" : `Clientes Cadastrados (${sortedAndFilteredClients.length})`}
+            {isLoading ? "Pacientes Cadastrados" : `Pacientes Cadastrados (${sortedAndFilteredClients.length})`}
           </CardTitle>
           {isAdmin && clientSpending.length > 0 && (
-            <CardDescription>Ordenado por consumo — clientes que mais consomem no topo</CardDescription>
+            <CardDescription>Ordenado por consumo — pacientes que mais utilizam a clínica no topo</CardDescription>
           )}
         </CardHeader>
         <CardContent>
@@ -605,8 +605,8 @@ export default function Clientes() {
           ) : filteredClients.length === 0 ? (
             <EmptyState
               icon={Users}
-              title={searchQuery ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-              description={searchQuery ? "Tente ajustar os termos da busca." : "Cadastre seu primeiro cliente para começar."}
+              title={searchQuery ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
+              description={searchQuery ? "Tente ajustar os termos da busca." : "Cadastre seu primeiro paciente para começar."}
               action={
                 !searchQuery && (
                   <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new-empty">
@@ -774,7 +774,7 @@ export default function Clientes() {
 
                         {spending.services_detail.length > 0 && (
                           <div>
-                            <h4 className="font-medium text-sm mb-2 flex items-center gap-2"><Scissors className="h-4 w-4" />Serviços realizados</h4>
+                            <h4 className="font-medium text-sm mb-2 flex items-center gap-2"><Stethoscope className="h-4 w-4" />Procedimentos realizados</h4>
                             <div className="rounded-lg border divide-y text-sm">
                               {spending.services_detail.map((s, i) => (
                                 <div key={i} className="flex justify-between items-center px-3 py-2">

@@ -392,7 +392,7 @@ export default function Produtos() {
   return (
     <MainLayout
       title="Produtos"
-      subtitle={isAdmin ? "Gerencie o estoque do salão" : "Consulte produtos e estoque"}
+      subtitle={isAdmin ? "Gerencie o estoque da clínica" : "Consulte produtos e estoque"}
       actions={
         isAdmin ? (
         <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-end">

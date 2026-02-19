@@ -339,10 +339,10 @@ export default function Suporte() {
   const whatsappNumber = (import.meta as any).env?.VITE_SUPPORT_WHATSAPP_NUMBER as string | undefined;
   const whatsappText = useMemo(() => {
     if (!selectedTicket) return "";
-    const tenantName = tenant?.name || "BeautyGest";
+    const tenantName = tenant?.name || "ClinicNest";
     const email = profile?.email || "";
     return [
-      `Olá! Preciso de suporte no BeautyGest.`,
+      `Olá! Preciso de suporte no ClinicNest.`,
       `Tenant: ${tenantName}`,
       `Ticket: ${selectedTicket.id}`,
       `Assunto: ${selectedTicket.subject}`,

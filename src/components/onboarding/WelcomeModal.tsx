@@ -51,9 +51,9 @@ export function WelcomeModal() {
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-xl">Bem-vindo ao BeautyGest!</DialogTitle>
+              <DialogTitle className="text-xl">Bem-vindo ao ClinicNest!</DialogTitle>
               <DialogDescription>
-                Seu painel de gestão para salões de beleza
+                Seu painel de gestão para clínicas e consultórios
               </DialogDescription>
             </div>
           </div>

@@ -154,7 +154,7 @@ export default function AgendamentoOnlineAdmin() {
 
   const iframeSnippet = useMemo(() => {
     if (!previewUrl) return "⚠ Configure o slug na aba Configurações para gerar o código.";
-    const name = tenant?.name ?? "Salão";
+    const name = tenant?.name ?? "Clínica";
     return `<!-- Agendamento Online - ${name} -->\n<iframe\n  src="${previewUrl}"\n  style="width:100%;height:720px;border:none;border-radius:12px;"\n  loading="lazy"\n  title="Agendar Horário - ${name}"\n></iframe>`;
   }, [previewUrl, tenant]);
 
@@ -590,7 +590,7 @@ export default function AgendamentoOnlineAdmin() {
                   <Textarea
                     value={welcomeMsg}
                     onChange={(e) => setWelcomeMsg(e.target.value)}
-                    placeholder="Ex: Bem-vindo ao Salão Bella! Agende seu horário em instantes."
+                    placeholder="Ex: Bem-vindo à Clínica Bella! Agende sua consulta em instantes."
                     rows={2}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -650,7 +650,7 @@ export default function AgendamentoOnlineAdmin() {
                   {/* Name + welcome */}
                   <div>
                     <p className="text-base font-bold tracking-tight text-foreground">
-                      {tenant?.name || "Nome do Salão"}
+                      {tenant?.name || "Nome da Clínica"}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground max-w-[200px]">
                       {welcomeMsg.trim() || "Agende em segundos. Sem WhatsApp, sem espera."}

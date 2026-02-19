@@ -2,7 +2,7 @@ import {
   Calendar,
   Users,
   DollarSign,
-  Scissors,
+  FileText,
   Package,
   Wallet,
   Target,
@@ -16,50 +16,50 @@ const features = [
   {
     icon: Calendar,
     title: "Agenda Inteligente",
-    description: "Gerencie todos os agendamentos em um calendário visual e intuitivo. Receba lembretes automáticos.",
-    color: "violet"
+    description: "Gerencie consultas em um calendário visual e intuitivo. Receba lembretes automáticos e reduza faltas.",
+    color: "teal"
   },
   {
     icon: Users,
-    title: "Gestão de Clientes",
-    description: "Histórico completo, preferências e dados de contato organizados para fidelizar seus clientes.",
+    title: "Gestão de Pacientes",
+    description: "Histórico completo, preferências e dados de contato organizados para um atendimento personalizado.",
     color: "blue"
   },
   {
     icon: DollarSign,
     title: "Controle Financeiro",
-    description: "Acompanhe receitas, despesas, fluxo de caixa e exporte relatórios financeiros.",
+    description: "Acompanhe receitas, despesas, fluxo de caixa e exporte relatórios financeiros detalhados.",
     color: "green"
   },
   {
-    icon: Scissors,
-    title: "Serviços e Catálogo",
-    description: "Cadastre serviços com preço, duração e disponibilidade para usar na agenda.",
-    color: "fuchsia"
+    icon: FileText,
+    title: "Prontuário Eletrônico",
+    description: "Registre consultas, anamneses e histórico clínico dos pacientes de forma segura e organizada.",
+    color: "cyan"
   },
   {
     icon: Package,
-    title: "Produtos e Estoque",
-    description: "Controle entrada, saída, categorias, estoque mínimo e perdas por danificados.",
+    title: "Insumos e Estoque",
+    description: "Controle materiais médicos, medicamentos, estoque mínimo e alertas de reposição.",
     color: "orange"
   },
   {
     icon: Wallet,
     title: "Equipe e Remuneração",
-    description: "Gerencie equipe, permissões, comissões e salários com controle por profissional.",
+    description: "Gerencie equipe, permissões, comissões e salários com controle por profissional de saúde.",
     color: "blue"
   },
   {
     icon: Target,
     title: "Metas e Performance",
     description: "Crie metas, acompanhe progresso, aprove sugestões e monitore resultados da equipe.",
-    color: "violet"
+    color: "teal"
   },
   {
     icon: Bell,
     title: "Notificações Internas",
-    description: "Receba alertas sobre agendamentos, metas, comissões e salários em tempo real.",
-    color: "violet"
+    description: "Receba alertas sobre consultas, metas, comissões e salários em tempo real.",
+    color: "teal"
   },
   {
     icon: CreditCard,
@@ -75,16 +75,16 @@ export function FeaturesSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-fuchsia-100 border border-fuchsia-200 mb-6">
-            <Sparkles className="h-4 w-4 text-fuchsia-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-fuchsia-600">Recursos Completos</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+            <Sparkles className="h-4 w-4 text-teal-600" aria-hidden="true" />
+            <span className="text-sm font-medium text-teal-600">Recursos Completos</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Tudo que você precisa para{" "}
-            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">crescer</span>
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">crescer</span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Uma plataforma completa para operação, equipe, financeiro e metas do seu salão.
+            Uma plataforma completa para operação, equipe, financeiro e metas da sua clínica.
           </p>
         </div>
 
@@ -93,18 +93,18 @@ export function FeaturesSection() {
           {features.map((feature) => {
             const Icon = feature.icon;
             const colorClasses: Record<string, { bg: string; text: string }> = {
-              violet: { bg: "bg-violet-100", text: "text-violet-600" },
+              teal: { bg: "bg-teal-100", text: "text-teal-600" },
               blue: { bg: "bg-blue-100", text: "text-blue-600" },
               green: { bg: "bg-green-100", text: "text-green-600" },
-              fuchsia: { bg: "bg-fuchsia-100", text: "text-fuchsia-600" },
+              cyan: { bg: "bg-cyan-100", text: "text-cyan-600" },
               orange: { bg: "bg-orange-100", text: "text-orange-600" },
             };
-            const colors = colorClasses[feature.color] || colorClasses.violet;
-            
+            const colors = colorClasses[feature.color] || colorClasses.teal;
+
             return (
               <div
                 key={feature.title}
-                className="group relative p-6 sm:p-8 rounded-2xl border bg-card hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:border-violet-200 h-full flex flex-col"
+                className="group relative p-6 sm:p-8 rounded-2xl border bg-card hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:border-teal-200 h-full flex flex-col"
               >
                 {/* Animated Icon */}
                 <div className="relative mb-6">
@@ -121,7 +121,7 @@ export function FeaturesSection() {
                   )} />
                 </div>
                 <div className="flex-1 flex flex-col">
-                  <h3 className="font-display text-xl font-semibold mb-3 group-hover:text-violet-600 transition-colors">
+                  <h3 className="font-display text-xl font-semibold mb-3 group-hover:text-teal-600 transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-muted-foreground flex-1">
@@ -130,7 +130,7 @@ export function FeaturesSection() {
                   {/* Decorative element */}
                   <div className="mt-4 pt-4 border-t border-border/50">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-teal-500 animate-pulse" />
                       <span>Incluído em todos os planos</span>
                     </div>
                   </div>

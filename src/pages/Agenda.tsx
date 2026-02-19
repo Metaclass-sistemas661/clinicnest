@@ -570,7 +570,7 @@ export default function Agenda() {
   return (
     <MainLayout
       title="Agenda"
-      subtitle={isAdmin ? "Gerencie os agendamentos do salão" : "Gerencie seus agendamentos"}
+      subtitle={isAdmin ? "Gerencie os agendamentos da clínica" : "Gerencie seus agendamentos"}
       actions={
         <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center sm:justify-end">
           <div className="flex items-center rounded-lg border border-border bg-card text-foreground">

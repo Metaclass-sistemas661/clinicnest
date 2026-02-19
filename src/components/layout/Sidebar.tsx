@@ -9,7 +9,6 @@ import {
   Receipt,
   ShoppingCart,
   Truck,
-  Scissors,
   Users,
   UserCog,
   User,
@@ -19,7 +18,6 @@ import {
   Wallet,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Menu,
   Clock,
   Target,
@@ -34,6 +32,15 @@ import {
   Tag,
   Ticket,
   Plug,
+  Stethoscope,
+  ClipboardList,
+  FileText,
+  HeartPulse,
+  Building2,
+  FlaskConical,
+  Activity,
+  Star,
+  FilePlus2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -61,11 +68,22 @@ const navCategories: NavCategory[] = [
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { title: "Agenda", href: "/agenda", icon: Calendar },
-      { title: "Comandas", href: "/comandas", icon: Receipt },
+      { title: "Atendimentos", href: "/comandas", icon: Receipt },
       { title: "Caixa", href: "/caixa", icon: Wallet },
       { title: "Disponibilidade", href: "/disponibilidade", icon: Clock },
-      { title: "Serviços", href: "/servicos", icon: Scissors },
-      { title: "Clientes", href: "/clientes", icon: Users },
+      { title: "Procedimentos", href: "/servicos", icon: Stethoscope },
+      { title: "Pacientes", href: "/clientes", icon: Users },
+    ],
+  },
+  {
+    label: "Clínico",
+    items: [
+      { title: "Prontuários", href: "/prontuarios", icon: ClipboardList },
+      { title: "Triagem & Anamnese", href: "/triagem", icon: Activity },
+      { title: "Receituários", href: "/receituarios", icon: FilePlus2 },
+      { title: "Laudos & Exames", href: "/laudos", icon: FlaskConical },
+      { title: "Especialidades", href: "/especialidades", icon: HeartPulse, adminOnly: true },
+      { title: "Convênios", href: "/convenios", icon: Building2, adminOnly: true },
     ],
   },
   {
@@ -74,7 +92,7 @@ const navCategories: NavCategory[] = [
       { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
       { title: "Minhas Comissões", href: "/minhas-comissoes", icon: Wallet, staffOnly: true },
       { title: "Meus Salários", href: "/meus-salarios", icon: DollarSign, staffOnly: true },
-      { title: "Produtos", href: "/produtos", icon: Package },
+      { title: "Insumos & Produtos", href: "/produtos", icon: Package },
       { title: "Compras", href: "/compras", icon: ShoppingCart, adminOnly: true },
       { title: "Fornecedores", href: "/fornecedores", icon: Truck, adminOnly: true },
       { title: "Relatório DRE", href: "/relatorio-financeiro", icon: BarChart3, adminOnly: true },
@@ -100,7 +118,7 @@ const navCategories: NavCategory[] = [
       { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
       { title: "Integrações", href: "/integracoes", icon: Plug, adminOnly: true },
       { title: "Auditoria & Diagnóstico", href: "/auditoria", icon: Shield, adminOnly: true },
-      { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Configurações da Clínica", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
@@ -117,6 +135,12 @@ const prefetchByHref: Record<string, () => void> = {
   "/disponibilidade": () => void import("@/pages/Disponibilidade"),
   "/servicos": () => void import("@/pages/Servicos"),
   "/clientes": () => void import("@/pages/Clientes"),
+  "/prontuarios": () => void import("@/pages/Prontuarios"),
+  "/triagem": () => void import("@/pages/Triagem"),
+  "/receituarios": () => void import("@/pages/Receituarios"),
+  "/laudos": () => void import("@/pages/Laudos"),
+  "/especialidades": () => void import("@/pages/Especialidades"),
+  "/convenios": () => void import("@/pages/Convenios"),
   "/financeiro": () => void import("@/pages/Financeiro"),
   "/produtos": () => void import("@/pages/Produtos"),
   "/compras": () => void import("@/pages/Compras"),
@@ -153,10 +177,10 @@ function prefetchRoute(href: string) {
   }
 }
 
-function SidebarContent({ 
-  isCollapsed, 
-  onNavigate 
-}: { 
+function SidebarContent({
+  isCollapsed,
+  onNavigate
+}: {
   isCollapsed: boolean;
   onNavigate?: () => void;
 }) {
@@ -180,19 +204,19 @@ function SidebarContent({
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="relative flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
-              <Sparkles className="h-5 w-5 text-white" />
+              <HeartPulse className="h-5 w-5 text-white" />
             </div>
             <div>
               <span className="font-display text-base md:text-lg font-bold text-foreground">
-                {tenant?.name || "BeautyGest"}
+                {tenant?.name || "ClinicNest"}
               </span>
-              <p className="text-xs text-muted-foreground">Gestão Profissional</p>
+              <p className="text-xs text-muted-foreground">Gestão de Clínicas</p>
             </div>
           </div>
         )}
         {isCollapsed && (
           <div className="mx-auto flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
-            <Sparkles className="h-5 w-5 text-white" />
+            <HeartPulse className="h-5 w-5 text-white" />
           </div>
         )}
       </div>
@@ -320,9 +344,9 @@ export function Sidebar() {
         <div className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-vibrant shadow-glow">
-              <Sparkles className="h-4 w-4 text-white" />
+              <HeartPulse className="h-4 w-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-foreground">BeautyGest</span>
+            <span className="font-display text-lg font-bold text-foreground">ClinicNest</span>
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>

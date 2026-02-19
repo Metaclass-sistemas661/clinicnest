@@ -434,7 +434,7 @@ serve(async (req) => {
     }
 
     const adminEmail = (Deno.env.get("CONTACT_ADMIN_EMAIL") ?? "contato@metaclass.com.br").trim();
-    const emailFrom = (Deno.env.get("CONTACT_EMAIL_FROM") ?? "BeautyGest <no-reply@metaclass.com.br>")
+    const emailFrom = (Deno.env.get("CONTACT_EMAIL_FROM") ?? "ClinicNest <no-reply@metaclass.com.br>")
       .trim();
     const channelHuman = channelLabel(channel);
     const requestTypeHuman =

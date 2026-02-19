@@ -48,7 +48,7 @@ export function classifyRpcError(error: RpcLikeError): { kind: RpcErrorKind; mes
     case "OUTSIDE_WORKING_HOURS":
       return { kind: "outside_working_hours", message: "Fora do horário de trabalho configurado para este profissional." };
     case "BOOKING_DISABLED":
-      return { kind: "booking_disabled", message: "Agendamento online indisponível para este salão." };
+      return { kind: "booking_disabled", message: "Agendamento online indisponível para esta clínica." };
     case "BOOKING_TOO_SOON":
       return { kind: "booking_too_soon", message: "Este horário não respeita a antecedência mínima para agendamento online." };
     case "BOOKING_CANCEL_TOO_LATE":

@@ -621,7 +621,7 @@ export default function Metas() {
             <DialogHeader>
               <DialogTitle>Nova meta</DialogTitle>
               <DialogDescription>
-                Crie uma meta para o salão, produtos ou profissionais
+                Crie uma meta para a clínica, procedimentos ou profissionais
               </DialogDescription>
             </DialogHeader>
             <Tabs
@@ -722,10 +722,10 @@ export default function Metas() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Salão todo" />
+                      <SelectValue placeholder="Clínica toda" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Salão todo</SelectItem>
+                      <SelectItem value="all">Clínica toda</SelectItem>
                       {professionals.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.full_name}

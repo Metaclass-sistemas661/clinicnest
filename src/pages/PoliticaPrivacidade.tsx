@@ -33,13 +33,13 @@ export default function PoliticaPrivacidade() {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-3xl">
           <div className="max-w-none space-y-8 text-muted-foreground">
             <p className="text-base leading-relaxed">
-              O BeautyGest está comprometido com a proteção da sua privacidade. Esta Política
+              O ClinicNest está comprometido com a proteção da sua privacidade. Esta Política
               descreve como coletamos, usamos, armazenamos e protegemos suas informações quando
               você utiliza nossa plataforma.
             </p>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 1. Dados que coletamos
               </h2>
               <p className="text-base leading-relaxed mb-3">Podemos coletar:</p>
@@ -52,11 +52,11 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 2. Finalidade do tratamento
               </h2>
               <p className="text-base leading-relaxed">
-                Utilizamos os dados para: prestar e melhorar o serviço BeautyGest, processar
+                Utilizamos os dados para: prestar e melhorar o serviço ClinicNest, processar
                 pagamentos, enviar comunicações relevantes (incluindo suporte), garantir
                 segurança e cumprimento de obrigações legais, e realizar análises agregadas e
                 anônimas para melhorar nossa oferta.
@@ -64,18 +64,18 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 3. Base legal
               </h2>
               <p className="text-base leading-relaxed">
                 O tratamento é realizado com base na execução do contrato, no seu consentimento
-                quando aplicável, no legítimo interesse do BeautyGest e no cumprimento de
+                quando aplicável, no legítimo interesse do ClinicNest e no cumprimento de
                 obrigações legais, em conformidade com a Lei Geral de Proteção de Dados (LGPD).
               </p>
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 4. Compartilhamento de dados
               </h2>
               <p className="text-base leading-relaxed">
@@ -87,7 +87,7 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 5. Retenção e segurança
               </h2>
               <p className="text-base leading-relaxed">
@@ -99,7 +99,7 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 6. Seus direitos (LGPD)
               </h2>
               <p className="text-base leading-relaxed mb-3">
@@ -112,7 +112,7 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 7. Cookies e tecnologias similares
               </h2>
               <p className="text-base leading-relaxed">
@@ -136,7 +136,7 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 8. Alterações
               </h2>
               <p className="text-base leading-relaxed">
@@ -147,7 +147,7 @@ export default function PoliticaPrivacidade() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 9. Contato
               </h2>
               <p className="text-base leading-relaxed">

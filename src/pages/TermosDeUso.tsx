@@ -32,17 +32,17 @@ export default function TermosDeUso() {
         <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 max-w-3xl">
           <div className="max-w-none space-y-8 text-muted-foreground">
             <p className="text-base leading-relaxed">
-              Bem-vindo ao BeautyGest. Ao acessar ou utilizar nossa plataforma, você concorda com os
+              Bem-vindo ao ClinicNest. Ao acessar ou utilizar nossa plataforma, você concorda com os
               presentes Termos de Uso. Recomendamos a leitura atenta antes de utilizar nossos
               serviços.
             </p>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 1. Aceitação dos termos
               </h2>
               <p className="text-base leading-relaxed">
-                O uso do sistema BeautyGest (“Plataforma”) implica a aceitação integral destes
+                O uso do sistema ClinicNest (“Plataforma”) implica a aceitação integral destes
                 Termos. Caso não concorde com qualquer disposição, solicitamos que não utilize a
                 Plataforma. A continuação do uso após alterações constitui aceitação das novas
                 condições.
@@ -50,55 +50,55 @@ export default function TermosDeUso() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 2. Descrição do serviço
               </h2>
               <p className="text-base leading-relaxed">
-                O BeautyGest é uma solução de gestão para salões de beleza e profissionais da área,
-                oferecendo recursos como agenda, cadastro de clientes, controle financeiro,
-                serviços, produtos e relatórios. O escopo exato do serviço depende do plano
+                O ClinicNest é uma solução de gestão para clínicas e consultórios médicos,
+                oferecendo recursos como agenda, prontuário eletrônico, controle financeiro,
+                serviços, convênios e relatórios. O escopo exato do serviço depende do plano
                 contratado.
               </p>
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 3. Cadastro e responsabilidade
               </h2>
               <p className="text-base leading-relaxed">
                 O usuário é responsável pela veracidade dos dados informados no cadastro e por
                 manter a confidencialidade de sua senha. O uso da conta é de sua exclusiva
-                responsabilidade. O BeautyGest não se responsabiliza por uso indevido em caso de
+                responsabilidade. O ClinicNest não se responsabiliza por uso indevido em caso de
                 negligência do usuário.
               </p>
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 4. Uso aceitável
               </h2>
               <p className="text-base leading-relaxed">
                 É vedado utilizar a Plataforma para fins ilícitos, ofensivos ou que prejudiquem
                 terceiros. O usuário compromete-se a não violar leis aplicáveis, não difundir
                 malware, não tentar acessar áreas restritas do sistema sem autorização e a respeitar
-                a propriedade intelectual do BeautyGest e de terceiros.
+                a propriedade intelectual do ClinicNest e de terceiros.
               </p>
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 5. Propriedade intelectual
               </h2>
               <p className="text-base leading-relaxed">
                 Todo o conteúdo da Plataforma (interface, textos, marcas, lógica de negócio e
-                demais elementos) é de propriedade do BeautyGest ou de seus licenciadores. Nenhuma
+                demais elementos) é de propriedade do ClinicNest ou de seus licenciadores. Nenhuma
                 licença ou direito de uso é concedido além do acesso à Plataforma nos termos
                 contratados.
               </p>
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 6. Pagamento e cancelamento
               </h2>
               <p className="text-base leading-relaxed">
@@ -110,11 +110,11 @@ export default function TermosDeUso() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 7. Limitação de responsabilidade
               </h2>
               <p className="text-base leading-relaxed">
-                O BeautyGest se empenha em manter a Plataforma estável e segura, porém não se
+                O ClinicNest se empenha em manter a Plataforma estável e segura, porém não se
                 responsabiliza por danos indiretos, lucros cessantes ou perda de dados decorrentes
                 do uso ou da impossibilidade de uso do serviço, dentro dos limites permitidos pela
                 lei.
@@ -122,7 +122,7 @@ export default function TermosDeUso() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 8. Alterações
               </h2>
               <p className="text-base leading-relaxed">
@@ -133,7 +133,7 @@ export default function TermosDeUso() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 9. Lei aplicável e foro
               </h2>
               <p className="text-base leading-relaxed">
@@ -144,7 +144,7 @@ export default function TermosDeUso() {
             </div>
 
             <div>
-              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-violet-200 pb-2">
+              <h2 className="font-display text-xl font-semibold text-foreground mb-3 border-b border-teal-200 pb-2">
                 10. Contato
               </h2>
               <p className="text-base leading-relaxed">

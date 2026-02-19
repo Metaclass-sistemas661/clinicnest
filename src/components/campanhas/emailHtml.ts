@@ -76,7 +76,7 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
       ctaColor: "#db2777",
       headline: "Promoção Especial Para Você! 🎉",
       subheadline: "Aproveite nossos descontos exclusivos por tempo limitado",
-      bodyText: "Não perca essa oportunidade única de cuidar de você com os melhores tratamentos do salão.\n\nAgende agora e garanta sua vaga com desconto especial para clientes fiéis!",
+      bodyText: "Não perca essa oportunidade única de cuidar de você com os melhores tratamentos da clínica.\n\nAgende agora e garanta sua vaga com desconto especial para clientes fiéis!",
       ctaText: "Aproveitar Desconto",
     };
   }
@@ -88,7 +88,7 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
       secondaryColor: "#334155",
       useGradient: false,
       ctaColor: "#1e293b",
-      headline: "Novidades do Salão",
+      headline: "Novidades da Clínica",
       subheadline: "Fique por dentro das últimas novidades e tendências",
       bodyText: "Temos muitas novidades para compartilhar com você este mês.\n\nNovos serviços, produtos e muito mais esperando por você.",
       ctaText: "Saiba Mais",
@@ -102,8 +102,8 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
     secondaryColor: "#d97706",
     useGradient: true,
     ctaColor: "#b45309",
-    headline: "Novidade no Salão!",
-    subheadline: "Conheça nosso mais novo serviço exclusivo",
+    headline: "Novidade na Clínica!",
+    subheadline: "Conheça nosso mais novo procedimento exclusivo",
     bodyText: "Estamos muito animados em apresentar algo especial criado pensando em você.\n\nExperimente e sinta a diferença dos nossos tratamentos premium.",
     ctaText: "Conhecer Agora",
   };

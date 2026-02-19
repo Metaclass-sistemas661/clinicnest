@@ -462,7 +462,7 @@ export default function Equipe() {
   return (
     <MainLayout
       title="Equipe"
-      subtitle="Gerencie os membros do salão"
+      subtitle="Gerencie os membros da clínica"
       actions={
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

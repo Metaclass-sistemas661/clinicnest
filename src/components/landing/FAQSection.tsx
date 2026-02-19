@@ -9,11 +9,11 @@ import {
 const faqs = [
   {
     question: "Preciso de conhecimento técnico para usar?",
-    answer: "Absolutamente não! O BeautyGest foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos fluxos guiados no sistema e suporte humanizado para tirar dúvidas."
+    answer: "Absolutamente não! O ClinicNest foi criado para ser simples e intuitivo. Se você sabe usar um celular, consegue usar nossa plataforma. Além disso, oferecemos fluxos guiados no sistema e suporte humanizado para tirar dúvidas."
   },
   {
     question: "Posso usar no celular?",
-    answer: "Sim! O BeautyGest funciona perfeitamente em qualquer dispositivo: computador, tablet ou celular. Você pode gerenciar seu salão de qualquer lugar, a qualquer hora."
+    answer: "Sim! O ClinicNest funciona perfeitamente em qualquer dispositivo: computador, tablet ou celular. Você pode gerenciar sua clínica de qualquer lugar, a qualquer hora."
   },
   {
     question: "Como funciona o período de teste?",
@@ -24,8 +24,8 @@ const faqs = [
     answer: "Cancelar é simples e rápido. Basta acessar as configurações da sua conta e clicar em 'Cancelar assinatura'. Sem burocracia, sem perguntas, sem multas."
   },
   {
-    question: "Meus dados estão seguros?",
-    answer: "Totalmente! Utilizamos criptografia de ponta a ponta e servidores seguros. Seus dados e os dados dos seus clientes estão protegidos com a mesma tecnologia usada por grandes bancos."
+    question: "Meus dados e os dados dos pacientes estão seguros?",
+    answer: "Totalmente! Utilizamos criptografia de ponta a ponta e servidores seguros. Seus dados e os dados dos seus pacientes estão protegidos conforme a LGPD, com a mesma tecnologia usada por grandes bancos."
   },
   {
     question: "Vocês oferecem suporte?",
@@ -45,12 +45,12 @@ export function FAQSection() {
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Tire suas{" "}
-            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
               dúvidas
             </span>
           </h2>
           <p className="text-lg text-muted-foreground">
-            Respostas para as perguntas mais comuns sobre o BeautyGest.
+            Respostas para as perguntas mais comuns sobre o ClinicNest.
           </p>
         </div>
 

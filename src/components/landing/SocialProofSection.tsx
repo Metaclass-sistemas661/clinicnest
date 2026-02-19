@@ -11,8 +11,8 @@ const certifications = [
   {
     icon: Award,
     title: "Melhor Plataforma 2024",
-    description: "Reconhecido pela Associação Brasileira de Salões",
-    color: "violet",
+    description: "Reconhecido pela Associação Brasileira de Clínicas",
+    color: "teal",
   },
   {
     icon: CheckCircle2,
@@ -22,24 +22,24 @@ const certifications = [
   },
   {
     icon: TrendingUp,
-    title: "+500 Salões Ativos",
+    title: "+500 Clínicas Ativas",
     description: "Crescendo todos os dias",
-    color: "fuchsia",
+    color: "cyan",
   },
 ];
 
 const logos = [
-  "Studio Carla",
-  "Barbearia Vintage",
-  "Espaço Beauty",
-  "Salão Elegance",
-  "Beauty Center",
-  "Hair Studio",
+  "Clínica São Lucas",
+  "Consultório Lima",
+  "Centro Médico Vida",
+  "Clínica Integrada",
+  "Instituto da Saúde",
+  "Consultório Digital",
 ];
 
 export function SocialProofSection() {
   return (
-    <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-violet-50/50">
+    <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Certifications */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -47,13 +47,13 @@ export function SocialProofSection() {
             const Icon = cert.icon;
             const colorClasses: Record<string, string> = {
               green: "bg-green-100 text-green-600",
-              violet: "bg-violet-100 text-violet-600",
+              teal: "bg-teal-100 text-teal-600",
               blue: "bg-blue-100 text-blue-600",
-              fuchsia: "bg-fuchsia-100 text-fuchsia-600",
+              cyan: "bg-cyan-100 text-cyan-600",
             };
 
             return (
-              <Card key={cert.title} className="text-center border-2 hover:border-violet-200 transition-all">
+              <Card key={cert.title} className="text-center border-2 hover:border-teal-200 transition-all">
                 <CardContent className="p-6">
                   <div className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4 ${colorClasses[cert.color]}`}>
                     <Icon className="h-8 w-8" />
@@ -69,7 +69,7 @@ export function SocialProofSection() {
         {/* Client Logos */}
         <div className="text-center mb-8">
           <p className="text-sm text-muted-foreground mb-6">
-            Confiado por centenas de salões em todo o Brasil
+            Confiado por centenas de clínicas em todo o Brasil
           </p>
           <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8 lg:gap-12">
             {logos.map((logo, idx) => (
@@ -86,19 +86,19 @@ export function SocialProofSection() {
         {/* Trust Stats */}
         <div className="flex flex-row items-start justify-center gap-1 sm:gap-4 md:gap-6 max-w-3xl mx-auto px-2">
           <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               98%
             </div>
             <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
           </div>
           <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               4.9/5
             </div>
             <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
           </div>
           <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
               Seg-Sáb
             </div>
             <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Humanizado</p>

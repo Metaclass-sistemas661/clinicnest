@@ -146,7 +146,7 @@ export async function sendEmailViaResend(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: Deno.env.get("EMAIL_FROM") || "BeautyGest <no-reply@metaclass.com.br>",
+        from: Deno.env.get("EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>",
         to: to,
         subject: subject,
         html: html,

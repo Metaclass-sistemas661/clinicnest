@@ -11,25 +11,25 @@ import { cn } from "@/lib/utils";
 
 export function DashboardPreview() {
   return (
-    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
+    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)", color: "hsl(200 15% 95%)" }}>
       {/* Mock Dashboard Container */}
-      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
         {/* Mock Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
               <Calendar className="h-5 w-5 text-white" />
             </div>
             <div>
               <h3 className="text-white font-semibold text-sm">Dashboard</h3>
-              <p className="text-white/80 text-xs">Visão geral do seu salão</p>
+              <p className="text-white/80 text-xs">Visão geral da sua clínica</p>
             </div>
           </div>
           <Badge className="bg-white/20 text-white border-white/30">Hoje</Badge>
         </div>
 
         {/* Mock Content */}
-        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
           {/* Stats Grid - Cards maiores e não comprimidos */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             <div className="dark">
@@ -43,7 +43,7 @@ export function DashboardPreview() {
             </div>
             <div className="dark">
               <StatCard
-                title="Agendamentos Hoje"
+                title="Consultas Hoje"
                 value="8"
                 icon={Calendar}
                 variant="info"
@@ -51,7 +51,7 @@ export function DashboardPreview() {
             </div>
             <div className="dark">
               <StatCard
-                title="Total de Clientes"
+                title="Total de Pacientes"
                 value="342"
                 icon={Users}
                 variant="default"
@@ -59,7 +59,7 @@ export function DashboardPreview() {
             </div>
             <div className="dark">
               <StatCard
-                title="Estoque Baixo"
+                title="Insumos Baixos"
                 value="3"
                 icon={Package}
                 variant="warning"
@@ -68,25 +68,25 @@ export function DashboardPreview() {
           </div>
 
           {/* Mock Table - Mais espaçada */}
-          <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
+          <Card className="border-border" style={{ backgroundColor: "hsl(200 25% 10%)" }}>
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-foreground">Agendamentos de Hoje</CardTitle>
-              <CardDescription className="text-sm">Próximos compromissos</CardDescription>
+              <CardTitle className="text-lg text-foreground">Consultas de Hoje</CardTitle>
+              <CardDescription className="text-sm">Próximos atendimentos</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { time: "09:00", client: "Maria Silva", service: "Corte + Escova", status: "confirmed" },
-                  { time: "10:30", client: "João Santos", service: "Barba Completa", status: "confirmed" },
-                  { time: "14:00", client: "Ana Costa", service: "Coloração", status: "pending" },
+                  { time: "09:00", client: "Maria Silva", service: "Consulta Clínica", status: "confirmed" },
+                  { time: "10:30", client: "João Santos", service: "Retorno Cardiologia", status: "confirmed" },
+                  { time: "14:00", client: "Ana Costa", service: "Avaliação Dermatológica", status: "pending" },
                 ].map((apt, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                    style={{ backgroundColor: "hsl(250 25% 10%)" }}
+                    style={{ backgroundColor: "hsl(200 25% 10%)" }}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-sm font-semibold text-white">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center text-sm font-semibold text-white">
                         {apt.time}
                       </div>
                       <div>

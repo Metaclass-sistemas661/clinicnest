@@ -70,47 +70,71 @@ export type Database = {
       }
       appointments: {
         Row: {
+          cid_code: string | null
           client_id: string | null
           commission_amount: number | null
+          consultation_type: string | null
           created_at: string
           duration_minutes: number
           id: string
+          insurance_authorization: string | null
+          insurance_plan_id: string | null
           notes: string | null
           price: number
           professional_id: string | null
+          room_id: string | null
           scheduled_at: string
           service_id: string | null
+          specialty_id: string | null
           status: Database["public"]["Enums"]["appointment_status"]
+          telemedicine: boolean
+          telemedicine_url: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          cid_code?: string | null
           client_id?: string | null
           commission_amount?: number | null
+          consultation_type?: string | null
           created_at?: string
           duration_minutes?: number
           id?: string
+          insurance_authorization?: string | null
+          insurance_plan_id?: string | null
           notes?: string | null
           price?: number
           professional_id?: string | null
+          room_id?: string | null
           scheduled_at: string
           service_id?: string | null
+          specialty_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
+          telemedicine?: boolean
+          telemedicine_url?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          cid_code?: string | null
           client_id?: string | null
           commission_amount?: number | null
+          consultation_type?: string | null
           created_at?: string
           duration_minutes?: number
           id?: string
+          insurance_authorization?: string | null
+          insurance_plan_id?: string | null
           notes?: string | null
           price?: number
           professional_id?: string | null
+          room_id?: string | null
           scheduled_at?: string
           service_id?: string | null
+          specialty_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
+          telemedicine?: boolean
+          telemedicine_url?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -147,31 +171,70 @@ export type Database = {
       }
       clients: {
         Row: {
+          address_city: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
+          birth_date: string | null
+          blood_type: string | null
+          cpf: string | null
           created_at: string
           email: string | null
+          emergency_name: string | null
+          emergency_phone: string | null
+          gender: string | null
           id: string
+          insurance_card_number: string | null
+          insurance_plan_id: string | null
           name: string
           notes: string | null
+          occupation: string | null
           phone: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          birth_date?: string | null
+          blood_type?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          gender?: string | null
           id?: string
+          insurance_card_number?: string | null
+          insurance_plan_id?: string | null
           name: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
+          birth_date?: string | null
+          blood_type?: string | null
+          cpf?: string | null
           created_at?: string
           email?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          gender?: string | null
           id?: string
+          insurance_card_number?: string | null
+          insurance_plan_id?: string | null
           name?: string
           notes?: string | null
+          occupation?: string | null
           phone?: string | null
           tenant_id?: string
           updated_at?: string
@@ -1009,36 +1072,54 @@ export type Database = {
       }
       services: {
         Row: {
+          cbhpm_code: string | null
           created_at: string
           description: string | null
           duration_minutes: number
           id: string
+          insurance_plan_id: string | null
+          insurance_price: number | null
           is_active: boolean
           name: string
           price: number
+          service_type: string | null
+          specialty_id: string | null
           tenant_id: string
+          tuss_code: string | null
           updated_at: string
         }
         Insert: {
+          cbhpm_code?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          insurance_plan_id?: string | null
+          insurance_price?: number | null
           is_active?: boolean
           name: string
           price?: number
+          service_type?: string | null
+          specialty_id?: string | null
           tenant_id: string
+          tuss_code?: string | null
           updated_at?: string
         }
         Update: {
+          cbhpm_code?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          insurance_plan_id?: string | null
+          insurance_price?: number | null
           is_active?: boolean
           name?: string
           price?: number
+          service_type?: string | null
+          specialty_id?: string | null
           tenant_id?: string
+          tuss_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1174,32 +1255,56 @@ export type Database = {
       tenants: {
         Row: {
           address: string | null
+          anvisa_license: string | null
+          clinic_type: string | null
+          cnes_code: string | null
+          cnpj: string | null
           created_at: string
           default_commission_percent: number | null
           email: string | null
           id: string
+          logo_url: string | null
+          medical_license: string | null
           name: string
           phone: string | null
+          responsible_crm: string | null
+          responsible_doctor: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          anvisa_license?: string | null
+          clinic_type?: string | null
+          cnes_code?: string | null
+          cnpj?: string | null
           created_at?: string
           default_commission_percent?: number | null
           email?: string | null
           id?: string
+          logo_url?: string | null
+          medical_license?: string | null
           name: string
           phone?: string | null
+          responsible_crm?: string | null
+          responsible_doctor?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          anvisa_license?: string | null
+          clinic_type?: string | null
+          cnes_code?: string | null
+          cnpj?: string | null
           created_at?: string
           default_commission_percent?: number | null
           email?: string | null
           id?: string
+          logo_url?: string | null
+          medical_license?: string | null
           name?: string
           phone?: string | null
+          responsible_crm?: string | null
+          responsible_doctor?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1280,6 +1385,1797 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      // ============================================================
+      // TABELAS ADICIONADAS - Presentes no banco mas ausentes nos tipos
+      // ============================================================
+      appointment_cashback_earnings: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          earned_amount: number
+          earned_at: string
+          tenant_id: string
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          earned_amount: number
+          earned_at?: string
+          tenant_id: string
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          earned_amount?: number
+          earned_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      appointment_package_consumptions: {
+        Row: {
+          appointment_id: string
+          consumed_at: string
+          id: string
+          package_id: string
+          tenant_id: string
+        }
+        Insert: {
+          appointment_id: string
+          consumed_at?: string
+          id?: string
+          package_id: string
+          tenant_id: string
+        }
+        Update: {
+          appointment_id?: string
+          consumed_at?: string
+          id?: string
+          package_id?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      automations: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          is_active: boolean
+          message_template: string
+          name: string
+          tenant_id: string
+          trigger_config: Json
+          trigger_type: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message_template: string
+          name: string
+          tenant_id: string
+          trigger_config: Json
+          trigger_type: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          message_template?: string
+          name?: string
+          tenant_id?: string
+          trigger_config?: Json
+          trigger_type?: string
+        }
+        Relationships: []
+      }
+      bills_payable: {
+        Row: {
+          amount: number
+          cancel_reason: string | null
+          category: string
+          cost_center_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          is_recurring: boolean
+          notes: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          payment_method: string | null
+          recurrence_type: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          cancel_reason?: string | null
+          category: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method?: string | null
+          recurrence_type?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cancel_reason?: string | null
+          category?: string
+          cost_center_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method?: string | null
+          recurrence_type?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bills_receivable: {
+        Row: {
+          amount: number
+          category: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          received_amount: number | null
+          received_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          received_amount?: number | null
+          received_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          received_amount?: number | null
+          received_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          banner_url: string | null
+          created_at: string
+          created_by: string | null
+          html: string
+          id: string
+          name: string
+          preheader: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          banner_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          html: string
+          id?: string
+          name: string
+          preheader?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          banner_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          html?: string
+          id?: string
+          name?: string
+          preheader?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cash_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+          session_id: string
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          session_id: string
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          session_id?: string
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      cash_sessions: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_balance_expected: number | null
+          closing_balance_reported: number | null
+          closing_difference: number | null
+          closing_notes: string | null
+          created_at: string
+          id: string
+          opened_at: string
+          opened_by: string | null
+          opening_balance: number
+          opening_notes: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance_expected?: number | null
+          closing_balance_reported?: number | null
+          closing_difference?: number | null
+          closing_notes?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_balance: number
+          opening_notes?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_balance_expected?: number | null
+          closing_balance_reported?: number | null
+          closing_difference?: number | null
+          closing_notes?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          opened_by?: string | null
+          opening_balance?: number
+          opening_notes?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cashback_ledger: {
+        Row: {
+          actor_user_id: string | null
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          delta_amount: number
+          id: string
+          notes: string | null
+          order_id: string | null
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          delta_amount: number
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          delta_amount?: number
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      cashback_wallets: {
+        Row: {
+          balance: number
+          client_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          client_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          client_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_marketing_preferences: {
+        Row: {
+          client_id: string
+          marketing_opt_out: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          marketing_opt_out?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          marketing_opt_out?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_package_ledger: {
+        Row: {
+          actor_user_id: string | null
+          appointment_id: string | null
+          created_at: string
+          delta_sessions: number
+          id: string
+          notes: string | null
+          package_id: string
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          delta_sessions: number
+          id?: string
+          notes?: string | null
+          package_id: string
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          created_at?: string
+          delta_sessions?: number
+          id?: string
+          notes?: string | null
+          package_id?: string
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      client_packages: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          notes: string | null
+          purchased_at: string
+          remaining_sessions: number
+          service_id: string
+          status: string
+          tenant_id: string
+          total_sessions: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          purchased_at?: string
+          remaining_sessions: number
+          service_id: string
+          status?: string
+          tenant_id: string
+          total_sessions: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          purchased_at?: string
+          remaining_sessions?: number
+          service_id?: string
+          status?: string
+          tenant_id?: string
+          total_sessions?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cost_centers: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discount_coupons: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          service_id: string | null
+          tenant_id: string
+          type: string
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          service_id?: string | null
+          tenant_id: string
+          type: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          service_id?: string | null
+          tenant_id?: string
+          type?: string
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
+      loyalty_tiers: {
+        Row: {
+          color: string
+          created_at: string | null
+          discount_percent: number
+          icon: string
+          id: string
+          min_points: number
+          name: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          discount_percent: number
+          icon: string
+          id?: string
+          min_points: number
+          name: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          discount_percent?: number
+          icon?: string
+          id?: string
+          min_points?: number
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      nps_responses: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          responded_at: string | null
+          score: number | null
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          score?: number | null
+          tenant_id: string
+          token: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          score?: number | null
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          order_id: string
+          product_id: string | null
+          professional_id: string | null
+          quantity: number
+          service_id: string | null
+          tenant_id: string
+          total_cost_snapshot: number | null
+          total_price: number
+          unit_cost_snapshot: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          order_id: string
+          product_id?: string | null
+          professional_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          tenant_id: string
+          total_cost_snapshot?: number | null
+          total_price: number
+          unit_cost_snapshot?: number | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          order_id?: string
+          product_id?: string | null
+          professional_id?: string | null
+          quantity?: number
+          service_id?: string | null
+          tenant_id?: string
+          total_cost_snapshot?: number | null
+          total_price?: number
+          unit_cost_snapshot?: number | null
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          applied_coupon_id: string | null
+          applied_voucher_id: string | null
+          appointment_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          discount_amount: number
+          id: string
+          notes: string | null
+          paid_at: string | null
+          professional_id: string | null
+          status: string
+          subtotal_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          applied_coupon_id?: string | null
+          applied_voucher_id?: string | null
+          appointment_id: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          professional_id?: string | null
+          status?: string
+          subtotal_amount?: number
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          applied_coupon_id?: string | null
+          applied_voucher_id?: string | null
+          appointment_id?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          professional_id?: string | null
+          status?: string
+          subtotal_amount?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          paid_at: string | null
+          payment_method_id: string
+          reference: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          order_id: string
+          paid_at?: string | null
+          payment_method_id: string
+          reference?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          paid_at?: string | null
+          payment_method_id?: string
+          reference?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      points_ledger: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          delta: number
+          id: string
+          notes: string | null
+          reason: string
+          ref_id: string | null
+          tenant_id: string
+          wallet_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          delta: number
+          id?: string
+          notes?: string | null
+          reason: string
+          ref_id?: string | null
+          tenant_id: string
+          wallet_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          delta?: number
+          id?: string
+          notes?: string | null
+          reason?: string
+          ref_id?: string | null
+          tenant_id?: string
+          wallet_id?: string
+        }
+        Relationships: []
+      }
+      points_wallets: {
+        Row: {
+          balance: number
+          client_id: string
+          created_at: string | null
+          id: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          balance?: number
+          client_id: string
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          balance?: number
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      professional_working_hours: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          start_time: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          start_time: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          start_time?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_items: {
+        Row: {
+          created_at: string
+          id: string
+          line_total: number
+          prev_cost: number | null
+          prev_quantity: number | null
+          product_id: string
+          purchase_id: string
+          quantity: number
+          stock_movement_id: string | null
+          tenant_id: string
+          unit_cost: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_total: number
+          prev_cost?: number | null
+          prev_quantity?: number | null
+          product_id: string
+          purchase_id: string
+          quantity: number
+          stock_movement_id?: string | null
+          tenant_id: string
+          unit_cost: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          prev_cost?: number | null
+          prev_quantity?: number | null
+          product_id?: string
+          purchase_id?: string
+          quantity?: number
+          stock_movement_id?: string | null
+          tenant_id?: string
+          unit_cost?: number
+        }
+        Relationships: []
+      }
+      purchases: {
+        Row: {
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string | null
+          financial_transaction_id: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          purchased_at: string
+          purchased_with_company_cash: boolean
+          status: string
+          supplier_id: string | null
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_transaction_id?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          purchased_at?: string
+          purchased_with_company_cash?: boolean
+          status?: string
+          supplier_id?: string | null
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          financial_transaction_id?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          purchased_at?: string
+          purchased_with_company_cash?: boolean
+          status?: string
+          supplier_id?: string | null
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salary_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          days_in_month: number | null
+          days_worked: number | null
+          id: string
+          notes: string | null
+          paid_by: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_month: number
+          payment_reference: string | null
+          payment_year: number
+          professional_commission_id: string | null
+          professional_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          days_in_month?: number | null
+          days_worked?: number | null
+          id?: string
+          notes?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_month: number
+          payment_reference?: string | null
+          payment_year: number
+          professional_commission_id?: string | null
+          professional_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          days_in_month?: number | null
+          days_worked?: number | null
+          id?: string
+          notes?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_month?: number
+          payment_reference?: string | null
+          payment_year?: number
+          professional_commission_id?: string | null
+          professional_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      schedule_blocks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_at: string
+          id: string
+          professional_id: string | null
+          reason: string | null
+          start_at: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_at: string
+          id?: string
+          professional_id?: string | null
+          reason?: string | null
+          start_at: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_at?: string
+          id?: string
+          professional_id?: string | null
+          reason?: string | null
+          start_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          message: string
+          metadata: Json
+          sender: string
+          tenant_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message: string
+          metadata?: Json
+          sender: string
+          tenant_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string
+          metadata?: Json
+          sender?: string
+          tenant_id?: string
+          ticket_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          channel: string
+          created_at: string
+          created_by: string
+          id: string
+          last_message_at: string
+          priority: string
+          status: string
+          subject: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          channel?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          last_message_at?: string
+          priority?: string
+          status?: string
+          subject: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          channel?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          last_message_at?: string
+          priority?: string
+          status?: string
+          subject?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_tour_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          step_index: number
+          tenant_id: string
+          tour_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step_index?: number
+          tenant_id: string
+          tour_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          step_index?: number
+          tenant_id?: string
+          tour_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      voucher_redemptions: {
+        Row: {
+          id: string
+          order_id: string | null
+          redeemed_at: string | null
+          redeemed_by: string | null
+          tenant_id: string
+          voucher_id: string
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          tenant_id: string
+          voucher_id: string
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+          tenant_id?: string
+          voucher_id?: string
+        }
+        Relationships: []
+      }
+      vouchers: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          notes: string | null
+          service_id: string | null
+          status: string
+          tenant_id: string
+          type: string
+          valor: number
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          service_id?: string | null
+          status?: string
+          tenant_id: string
+          type: string
+          valor: number
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          service_id?: string | null
+          status?: string
+          tenant_id?: string
+          type?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      // ============================================================
+      // TABELAS MÉDICAS (criadas pela migração 001_medical_tables.sql)
+      // ============================================================
+      specialties: {
+        Row: {
+          avg_duration_minutes: number
+          color: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          avg_duration_minutes?: number
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          avg_duration_minutes?: number
+          color?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      insurance_plans: {
+        Row: {
+          ans_code: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          reimbursement_days: number
+          requires_authorization: boolean
+          tenant_id: string
+          tiss_version: string | null
+          updated_at: string
+        }
+        Insert: {
+          ans_code?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          reimbursement_days?: number
+          requires_authorization?: boolean
+          tenant_id: string
+          tiss_version?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ans_code?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          reimbursement_days?: number
+          requires_authorization?: boolean
+          tenant_id?: string
+          tiss_version?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      medical_records: {
+        Row: {
+          anamnesis: string | null
+          appointment_id: string | null
+          cid_code: string | null
+          chief_complaint: string | null
+          client_id: string
+          created_at: string
+          diagnosis: string | null
+          id: string
+          is_confidential: boolean
+          notes: string | null
+          physical_exam: string | null
+          prescriptions: string | null
+          professional_id: string | null
+          record_date: string
+          specialty_id: string | null
+          tenant_id: string
+          treatment_plan: string | null
+          updated_at: string
+        }
+        Insert: {
+          anamnesis?: string | null
+          appointment_id?: string | null
+          cid_code?: string | null
+          chief_complaint?: string | null
+          client_id: string
+          created_at?: string
+          diagnosis?: string | null
+          id?: string
+          is_confidential?: boolean
+          notes?: string | null
+          physical_exam?: string | null
+          prescriptions?: string | null
+          professional_id?: string | null
+          record_date?: string
+          specialty_id?: string | null
+          tenant_id: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anamnesis?: string | null
+          appointment_id?: string | null
+          cid_code?: string | null
+          chief_complaint?: string | null
+          client_id?: string
+          created_at?: string
+          diagnosis?: string | null
+          id?: string
+          is_confidential?: boolean
+          notes?: string | null
+          physical_exam?: string | null
+          prescriptions?: string | null
+          professional_id?: string | null
+          record_date?: string
+          specialty_id?: string | null
+          tenant_id?: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      triage_records: {
+        Row: {
+          allergies: string | null
+          appointment_id: string | null
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
+          chief_complaint: string
+          client_id: string
+          created_at: string
+          current_medications: string | null
+          heart_rate: number | null
+          height_cm: number | null
+          id: string
+          medical_history: string | null
+          notes: string | null
+          oxygen_saturation: number | null
+          pain_scale: number | null
+          performed_by: string | null
+          priority: string
+          respiratory_rate: number | null
+          temperature: number | null
+          tenant_id: string
+          triaged_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          allergies?: string | null
+          appointment_id?: string | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          chief_complaint: string
+          client_id: string
+          created_at?: string
+          current_medications?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          medical_history?: string | null
+          notes?: string | null
+          oxygen_saturation?: number | null
+          pain_scale?: number | null
+          performed_by?: string | null
+          priority?: string
+          respiratory_rate?: number | null
+          temperature?: number | null
+          tenant_id: string
+          triaged_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          allergies?: string | null
+          appointment_id?: string | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          chief_complaint?: string
+          client_id?: string
+          created_at?: string
+          current_medications?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          medical_history?: string | null
+          notes?: string | null
+          oxygen_saturation?: number | null
+          pain_scale?: number | null
+          performed_by?: string | null
+          priority?: string
+          respiratory_rate?: number | null
+          temperature?: number | null
+          tenant_id?: string
+          triaged_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          digital_signature: string | null
+          expires_at: string | null
+          id: string
+          instructions: string | null
+          issued_at: string
+          medications: string
+          prescription_type: string
+          printed_at: string | null
+          professional_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          validity_days: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          digital_signature?: string | null
+          expires_at?: string | null
+          id?: string
+          instructions?: string | null
+          issued_at?: string
+          medications: string
+          prescription_type?: string
+          printed_at?: string | null
+          professional_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          validity_days?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          digital_signature?: string | null
+          expires_at?: string | null
+          id?: string
+          instructions?: string | null
+          issued_at?: string
+          medications?: string
+          prescription_type?: string
+          printed_at?: string | null
+          professional_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          validity_days?: number
+        }
+        Relationships: []
+      }
+      exam_results: {
+        Row: {
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          exam_name: string
+          exam_type: string
+          file_name: string | null
+          file_url: string | null
+          id: string
+          interpretation: string | null
+          lab_name: string | null
+          notes: string | null
+          performed_at: string | null
+          reference_values: string | null
+          requested_by: string | null
+          result_text: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          exam_name: string
+          exam_type?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          interpretation?: string | null
+          lab_name?: string | null
+          notes?: string | null
+          performed_at?: string | null
+          reference_values?: string | null
+          requested_by?: string | null
+          result_text?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          exam_name?: string
+          exam_type?: string
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          interpretation?: string | null
+          lab_name?: string | null
+          notes?: string | null
+          performed_at?: string | null
+          reference_values?: string | null
+          requested_by?: string | null
+          result_text?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          capacity: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      consent_forms: {
+        Row: {
+          appointment_id: string | null
+          client_id: string
+          content: string
+          created_at: string
+          form_type: string
+          id: string
+          ip_address: string | null
+          is_revoked: boolean
+          revocation_reason: string | null
+          revoked_at: string | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_by_name: string | null
+          tenant_id: string
+          title: string
+          witnessed_by: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id: string
+          content: string
+          created_at?: string
+          form_type?: string
+          id?: string
+          ip_address?: string | null
+          is_revoked?: boolean
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_by_name?: string | null
+          tenant_id: string
+          title: string
+          witnessed_by?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string
+          content?: string
+          created_at?: string
+          form_type?: string
+          id?: string
+          ip_address?: string | null
+          is_revoked?: boolean
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_by_name?: string | null
+          tenant_id?: string
+          title?: string
+          witnessed_by?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

@@ -1,6 +1,8 @@
 -- Migration: Criar comissão diretamente no RPC ao concluir atendimento
 -- Garante que a comissão seja criada sem depender do trigger (evita problemas de RLS/trigger)
 
+DROP FUNCTION IF EXISTS public.complete_appointment_with_sale(UUID, UUID, INT);
+
 CREATE OR REPLACE FUNCTION public.complete_appointment_with_sale(
   p_appointment_id UUID,
   p_product_id UUID DEFAULT NULL,

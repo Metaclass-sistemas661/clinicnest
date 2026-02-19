@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 
 export function AgendaPreview() {
   return (
-    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
-      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)", color: "hsl(200 15% 95%)" }}>
+      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Calendar className="h-5 w-5 text-white" />
             <h3 className="text-white font-semibold text-sm">Agenda</h3>
@@ -21,7 +21,7 @@ export function AgendaPreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
           {/* Calendar View */}
           <div className="mb-6">
             <div className="grid grid-cols-7 gap-2 mb-4">
@@ -35,9 +35,9 @@ export function AgendaPreview() {
                   key={i}
                   className={cn(
                     "h-12 rounded-lg border flex items-center justify-center text-sm",
-                    i === 3 ? "bg-violet-500/20 border-violet-500/50 text-violet-400 font-semibold" : "bg-card border-border text-muted-foreground"
+                    i === 3 ? "bg-teal-500/20 border-teal-500/50 text-teal-400 font-semibold" : "bg-card border-border text-muted-foreground"
                   )}
-                  style={{ backgroundColor: i === 3 ? "hsl(262 80% 65% / 0.2)" : "hsl(250 25% 10%)" }}
+                  style={{ backgroundColor: i === 3 ? "hsl(174 72% 38% / 0.2)" : "hsl(200 25% 10%)" }}
                 >
                   {i + 1}
                 </div>
@@ -46,7 +46,7 @@ export function AgendaPreview() {
           </div>
 
           {/* Appointments List */}
-          <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
+          <Card className="border-border" style={{ backgroundColor: "hsl(200 25% 10%)" }}>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-foreground flex items-center gap-2">
                 <Clock className="h-5 w-5" />
@@ -56,18 +56,18 @@ export function AgendaPreview() {
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { time: "09:00", client: "Maria Silva", service: "Corte Feminino", professional: "Ana", status: "confirmed" },
-                  { time: "10:30", client: "João Santos", service: "Barba", professional: "Carlos", status: "confirmed" },
-                  { time: "14:00", client: "Ana Costa", service: "Coloração", professional: "Ana", status: "pending" },
-                  { time: "15:30", client: "Pedro Lima", service: "Corte Masculino", professional: "Carlos", status: "confirmed" },
+                  { time: "09:00", client: "Maria Silva", service: "Consulta Clínica Geral", professional: "Dra. Ana", status: "confirmed" },
+                  { time: "10:30", client: "João Santos", service: "Retorno Cardiologia", professional: "Dr. Carlos", status: "confirmed" },
+                  { time: "14:00", client: "Ana Costa", service: "Avaliação Dermatológica", professional: "Dra. Ana", status: "pending" },
+                  { time: "15:30", client: "Pedro Lima", service: "Consulta Pediátrica", professional: "Dr. Carlos", status: "confirmed" },
                 ].map((apt, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                    style={{ backgroundColor: "hsl(250 25% 10%)" }}
+                    style={{ backgroundColor: "hsl(200 25% 10%)" }}
                   >
                     <div className="flex items-center gap-4 flex-1">
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">
+                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center text-sm font-semibold text-white flex-shrink-0">
                         {apt.time}
                       </div>
                       <div className="flex-1 min-w-0">

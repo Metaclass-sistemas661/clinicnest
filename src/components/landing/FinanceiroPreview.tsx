@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 export function FinanceiroPreview() {
   return (
-    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)", color: "hsl(250 15% 95%)" }}>
-      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+    <div className="relative dark min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)", color: "hsl(200 15% 95%)" }}>
+      <div className="w-full rounded-2xl overflow-hidden min-h-full" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 p-4 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-teal-600 to-cyan-500 p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <DollarSign className="h-5 w-5 text-white" />
             <h3 className="text-white font-semibold text-sm">Financeiro</h3>
@@ -22,7 +22,7 @@ export function FinanceiroPreview() {
         </div>
 
         {/* Content */}
-        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(250 25% 7%)" }}>
+        <div className="p-6 lg:p-8" style={{ backgroundColor: "hsl(200 25% 7%)" }}>
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
             <div className="dark">
@@ -60,22 +60,22 @@ export function FinanceiroPreview() {
           </div>
 
           {/* Transactions List */}
-          <Card className="border-border" style={{ backgroundColor: "hsl(250 25% 10%)" }}>
+          <Card className="border-border" style={{ backgroundColor: "hsl(200 25% 10%)" }}>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg text-foreground">Últimas Transações</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { type: "income", description: "Serviço - Corte + Escova", amount: "R$ 120,00", date: "Hoje, 09:00" },
-                  { type: "expense", description: "Compra de produtos", amount: "R$ 350,00", date: "Hoje, 08:30" },
-                  { type: "income", description: "Venda de produto", amount: "R$ 85,00", date: "Ontem, 16:00" },
-                  { type: "income", description: "Serviço - Coloração", amount: "R$ 280,00", date: "Ontem, 14:00" },
+                  { type: "income", description: "Consulta Clínica Geral", amount: "R$ 250,00", date: "Hoje, 09:00" },
+                  { type: "expense", description: "Compra de insumos médicos", amount: "R$ 350,00", date: "Hoje, 08:30" },
+                  { type: "income", description: "Retorno Cardiologia", amount: "R$ 180,00", date: "Ontem, 16:00" },
+                  { type: "income", description: "Avaliação Dermatológica", amount: "R$ 320,00", date: "Ontem, 14:00" },
                 ].map((transaction, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                    style={{ backgroundColor: "hsl(250 25% 10%)" }}
+                    style={{ backgroundColor: "hsl(200 25% 10%)" }}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className={cn(

@@ -182,7 +182,7 @@ export default function MinhasMetas() {
 
   if (isLoading) {
     return (
-      <MainLayout title="Minhas Metas" subtitle="Suas metas do salão">
+      <MainLayout title="Minhas Metas" subtitle="Suas metas do clínica">
         <div className="grid gap-4 md:grid-cols-2">
           {[1, 2].map((i) => (
             <Skeleton key={i} className="h-40" />

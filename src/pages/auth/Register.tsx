@@ -4,18 +4,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowRight,
   CalendarDays,
+  Clock,
   Eye,
   EyeOff,
-  Headset,
+  FileText,
   Loader2,
   Mail,
   ShieldCheck,
+  Star,
+  Stethoscope,
   Users,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,12 +42,7 @@ export default function Register() {
   const isConfirmValid = confirmPassword.length > 0 && password === confirmPassword;
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const canContinueStep1 =
-    !!fullName.trim() &&
-    !!salonName.trim() &&
-    !!phone.trim() &&
-    isPhoneValid &&
-    !!email.trim() &&
-    isEmailValid;
+    !!fullName.trim() && !!salonName.trim() && !!phone.trim() && isPhoneValid && !!email.trim() && isEmailValid;
   const canSubmit =
     !isLoading &&
     !!fullName.trim() &&
@@ -64,403 +60,409 @@ export default function Register() {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-
-    if (!isPhoneValid) {
-      toast.error("Informe um telefone válido.");
-      return;
-    }
-
-    if (!isEmailValid) {
-      toast.error("Informe um e-mail válido.");
-      return;
-    }
-
+    if (!isPhoneValid) { toast.error("Informe um telefone válido."); return; }
+    if (!isEmailValid) { toast.error("Informe um e-mail válido."); return; }
     setStep(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!fullName.trim() || !salonName.trim() || !phone.trim() || !email.trim() || !password || !confirmPassword) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-
-    if (!isPhoneValid) {
-      toast.error("Informe um telefone válido.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("As senhas não coincidem");
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres");
-      return;
-    }
-
-    if (!legalAccepted) {
-      toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
-      return;
-    }
+    if (!isPhoneValid) { toast.error("Informe um telefone válido."); return; }
+    if (password !== confirmPassword) { toast.error("As senhas não coincidem"); return; }
+    if (password.length < 6) { toast.error("A senha deve ter pelo menos 6 caracteres"); return; }
+    if (!legalAccepted) { toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade."); return; }
 
     setIsLoading(true);
-
-    const { error } = await signUp(
-      email,
-      password,
-      fullName,
-      salonName,
-      phone,
-      new Date().toISOString()
-    );
-
+    const { error } = await signUp(email, password, fullName, salonName, phone, new Date().toISOString());
     if (error) {
-      toast.error("Erro ao criar conta", {
-        description: error.message,
-      });
+      toast.error("Erro ao criar conta", { description: error.message });
       setIsLoading(false);
       return;
     }
-
     toast.success("Conta criada! Verifique seu e-mail para confirmar.");
     setSubmitted(true);
     setIsLoading(false);
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-white to-violet-50/40 p-4">
-      {/* Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -right-40 -bottom-40 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
-      </div>
+    <div className="flex min-h-screen">
 
-      <div className="relative z-10 w-full max-w-6xl animate-slide-up">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
-          <div className="hidden lg:flex flex-col rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-10">
-            <div className="mb-10">
-              <div className="mb-6 relative inline-block">
-                <img
-                  src="/beautyg-horizontal.svg"
-                  alt="BeautyGest"
-                  className="h-20 w-auto max-w-[360px] object-contain"
-                  loading="eager"
-                />
-                <div className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-white/10 to-white/0 blur-2xl -z-10" />
-              </div>
-              <p className="mt-3 text-white/80 max-w-md">
-                Crie sua conta e confirme seu e-mail para começar.
-              </p>
+      {/* ── Painel Esquerdo — Foto + Branding ── */}
+      <div className="relative hidden lg:flex lg:w-[45%] xl:w-[50%] flex-col overflow-hidden">
+
+        {/* Foto de fundo */}
+        <img
+          src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1400&q=80"
+          alt="Médica sorrindo em consultório moderno"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+          loading="eager"
+        />
+
+        {/* Overlay gradiente teal */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(15,76,76,0.93) 0%, rgba(13,110,110,0.82) 45%, rgba(8,145,178,0.72) 100%)",
+          }}
+        />
+
+        {/* Conteúdo sobre a foto */}
+        <div className="relative z-10 flex flex-col h-full p-10 xl:p-12">
+
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-auto">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm border border-white/20">
+              <Stethoscope className="h-6 w-6 text-white" />
             </div>
-
-            <div className="space-y-4 max-w-md">
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <CalendarDays className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Agenda e atendimento</div>
-                  <div className="text-sm text-white/75">Organize horários, serviços e profissionais.</div>
-                </div>
-              </div>
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <Users className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Clientes e recorrência</div>
-                  <div className="text-sm text-white/75">Histórico e relacionamento em um só lugar.</div>
-                </div>
-              </div>
-              <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
-                <Wallet className="h-5 w-5 text-white mt-0.5" />
-                <div>
-                  <div className="font-medium text-white">Financeiro e comissões</div>
-                  <div className="text-sm text-white/75">Controle entradas, saídas e repasses.</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-white/80">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-white" />
-                <span>Conexão segura</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Headset className="h-4 w-4 text-white" />
-                <span>Suporte por e-mail</span>
-              </div>
+            <div>
+              <div className="font-display text-2xl font-bold text-white tracking-tight leading-none">ClinicNest</div>
+              <div className="text-[10px] text-white/50 tracking-widest uppercase">by Metaclass</div>
             </div>
           </div>
 
-          <div className="w-full max-w-md justify-self-center">
-            <div className="mb-10 flex flex-col items-center lg:hidden rounded-3xl bg-gradient-to-br from-violet-950 via-fuchsia-900 to-violet-950 p-6 text-center">
-              <img
-                src="/beautyg-horizontal.svg"
-                alt="BeautyGest"
-                className="h-16 w-auto max-w-[280px] object-contain"
-                loading="eager"
-              />
-              <p className="mt-3 text-white/80">Gestão profissional para seu salão</p>
-            </div>
+          {/* Headline */}
+          <div className="mt-auto mb-8">
+            <h1 className="font-display text-3xl xl:text-4xl font-bold text-white leading-tight mb-3">
+              Comece grátis.
+              <br />
+              <span className="text-cyan-300">Sem cartão de crédito.</span>
+            </h1>
+            <p className="text-white/70 text-base max-w-sm leading-relaxed">
+              5 dias para explorar tudo. Configure sua clínica em menos de 10 minutos.
+            </p>
+          </div>
 
-            <Card className="border-violet-100/60 bg-white/80 shadow-2xl backdrop-blur-md">
-              <CardHeader className="space-y-1 text-center pb-2">
-                <CardTitle className="text-2xl font-display">Crie sua conta</CardTitle>
-                <CardDescription>
-                  Confirme seu e-mail para liberar o acesso.
-                </CardDescription>
-              </CardHeader>
-
-              {submitted ? (
-                <CardContent className="space-y-4 pt-2">
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-700">
-                      <Mail className="h-7 w-7" />
-                    </div>
-                    <h2 className="font-display text-xl font-semibold text-foreground">
-                      Verifique seu e-mail
-                    </h2>
-                    <p className="mt-2 text-sm text-muted-foreground max-w-sm">
-                      Enviamos um link de confirmação para <span className="font-medium text-foreground">{email}</span>.
-                      Abra sua caixa de entrada e confirme para continuar.
-                    </p>
-                    <div className="mt-6 flex w-full flex-col gap-3">
-                      <Button
-                        type="button"
-                        onClick={() => navigate("/login")}
-                        className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow"
-                      >
-                        Ir para o login
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Se não encontrar, verifique o spam ou promoções.
-                      </p>
-                    </div>
+          {/* Bullets */}
+          <div className="flex flex-col gap-3 mb-8">
+            {[
+              { icon: CalendarDays, label: "Agenda médica pronta para usar" },
+              { icon: FileText, label: "Prontuários eletrônicos seguros" },
+              { icon: Users, label: "Gestão de equipe e comissões" },
+              { icon: Clock, label: "Setup completo em menos de 10 min" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/20 flex-shrink-0">
+                    <Icon className="h-4 w-4 text-cyan-300" />
                   </div>
-                </CardContent>
-              ) : (
-                <form onSubmit={handleSubmit}>
-                  <CardContent className="space-y-4 pt-2">
-                    <div className="flex items-center justify-center gap-2 pb-1 text-xs text-muted-foreground">
-                      <span className={step === 1 ? "font-medium text-foreground" : ""}>1. Dados</span>
-                      <span className="opacity-40">›</span>
-                      <span className={step === 2 ? "font-medium text-foreground" : ""}>2. Acesso</span>
-                    </div>
+                  <span className="text-sm text-white/80">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
 
-                    {step === 1 ? (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="fullName" className="text-sm font-medium">Seu nome</Label>
-                          <Input
-                            id="fullName"
-                            type="text"
-                            placeholder="Maria Silva"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="salonName" className="text-sm font-medium">Nome do salão</Label>
-                          <Input
-                            id="salonName"
-                            type="text"
-                            placeholder="Salão Beleza & Estilo"
-                            value={salonName}
-                            onChange={(e) => setSalonName(e.target.value)}
-                            required
-                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone" className="text-sm font-medium">Telefone / Celular</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            inputMode="tel"
-                            placeholder="(11) 99999-9999"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            onInput={(e) => {
-                              const input = e.currentTarget;
-                              input.value = input.value.replace(/[^0-9()\-\s]/g, "");
-                            }}
-                            required
-                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="seu@email.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            autoComplete="email"
-                            required
-                            className="h-11 rounded-xl border-violet-100 bg-white/70 backdrop-blur-sm"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                            <div className="relative">
-                              <Input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="new-password"
-                                required
-                                className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
-                              />
-                              <button
-                                type="button"
-                                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                                onClick={() => setShowPassword((v) => !v)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              >
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar</Label>
-                            <div className="relative">
-                              <Input
-                                id="confirmPassword"
-                                type={showConfirmPassword ? "text" : "password"}
-                                placeholder="••••••••"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                autoComplete="new-password"
-                                required
-                                className="h-11 rounded-xl border-violet-100 bg-white/70 pr-10 backdrop-blur-sm"
-                              />
-                              <button
-                                type="button"
-                                aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
-                                onClick={() => setShowConfirmPassword((v) => !v)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              >
-                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
-                          <label htmlFor="legalAccepted" className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <input
-                              id="legalAccepted"
-                              type="checkbox"
-                              checked={legalAccepted}
-                              onChange={(e) => setLegalAccepted(e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-violet-200"
-                              required
-                            />
-                            <span>
-                              Li e aceito os{" "}
-                              <Link to="/termos-de-uso" className="font-medium text-primary hover:text-accent underline underline-offset-2">
-                                Termos de Uso
-                              </Link>
-                              {" "+"e a"+" "}
-                              <Link to="/politica-de-privacidade" className="font-medium text-primary hover:text-accent underline underline-offset-2">
-                                Política de Privacidade
-                              </Link>
-                              .
-                            </span>
-                          </label>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-
-                  <CardFooter className="flex flex-col gap-4 pt-2">
-                    {step === 1 ? (
-                      <Button
-                        type="button"
-                        className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
-                        onClick={handleContinue}
-                        disabled={isLoading || !canContinueStep1}
-                      >
-                        Continuar
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                      </Button>
-                    ) : (
-                      <>
-                        <div className="grid w-full grid-cols-2 gap-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="h-12 w-full rounded-xl"
-                            onClick={() => setStep(1)}
-                            disabled={isLoading}
-                          >
-                            Voltar
-                          </Button>
-                          <Button
-                            type="submit"
-                            className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
-                            disabled={!canSubmit}
-                          >
-                            {isLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Criando...
-                              </>
-                            ) : (
-                              <>
-                                Criar conta
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </>
-                    )}
-
-                    <p className="text-center text-sm text-muted-foreground">
-                      Já tem uma conta?{" "}
-                      <Link
-                        to="/login"
-                        className="font-semibold text-primary hover:text-accent transition-colors"
-                      >
-                        Faça login
-                      </Link>
-                    </p>
-                    <div className="pt-1 text-center text-xs text-muted-foreground">
-                      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-                        <Link to="/termos-de-uso" className="hover:text-foreground transition-colors">
-                          Termos de Uso
-                        </Link>
-                        <span className="opacity-40">|</span>
-                        <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">
-                          Política de Privacidade
-                        </Link>
-                        <span className="opacity-40">|</span>
-                        <a
-                          href="mailto:contato@metaclass.com.br"
-                          className="hover:text-foreground transition-colors"
-                        >
-                          Suporte
-                        </a>
-                      </div>
-                      <div className="mt-2">© {new Date().getFullYear()} BeautyGest</div>
-                    </div>
-                  </CardFooter>
-                </form>
-              )}
-            </Card>
+          {/* Rodapé */}
+          <div className="flex items-center justify-between text-white/50 text-xs">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5 text-teal-400" />
+              <span>LGPD · SSL · Dados protegidos</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+              ))}
+              <span className="ml-1.5">4.9 · +500 clínicas</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ── Painel Direito — Formulário ── */}
+      <div className="flex w-full lg:w-[55%] xl:w-[50%] flex-col items-center justify-center bg-white px-6 py-10 sm:px-10 xl:px-14 overflow-y-auto">
+
+        {/* Logo mobile */}
+        <div className="flex lg:hidden items-center gap-3 mb-8">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600">
+            <Stethoscope className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <div className="font-display text-xl font-bold text-teal-700 leading-none">ClinicNest</div>
+            <div className="text-[9px] text-muted-foreground tracking-widest uppercase">by Metaclass</div>
+          </div>
+        </div>
+
+        <div className="w-full max-w-sm">
+
+          {submitted ? (
+            /* ── Tela de confirmação de e-mail ── */
+            <div className="flex flex-col items-center text-center py-8">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
+                <Mail className="h-8 w-8 text-teal-600" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">Verifique seu e-mail</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Enviamos um link de confirmação para{" "}
+                <span className="font-semibold text-gray-800">{email}</span>.
+                Abra sua caixa de entrada e confirme para continuar.
+              </p>
+              <Button
+                onClick={() => navigate("/login")}
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25"
+              >
+                Ir para o login
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Não encontrou? Verifique o spam ou promoções.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Cabeçalho */}
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <button
+                      type="button"
+                      onClick={() => step === 2 && setStep(1)}
+                      className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold transition-colors ${
+                        step >= 1 ? "bg-teal-600 text-white" : "bg-gray-100 text-muted-foreground"
+                      }`}
+                    >
+                      1
+                    </button>
+                    <span className={step === 1 ? "font-medium text-gray-700" : "text-muted-foreground"}>Dados</span>
+                  </div>
+                  <div className="flex-1 h-px bg-gray-200 mx-1" />
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div
+                      className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold transition-colors ${
+                        step === 2 ? "bg-teal-600 text-white" : "bg-gray-100 text-muted-foreground"
+                      }`}
+                    >
+                      2
+                    </div>
+                    <span className={step === 2 ? "font-medium text-gray-700" : "text-muted-foreground"}>Acesso</span>
+                  </div>
+                </div>
+                <h2 className="font-display text-2xl font-bold text-gray-900 mt-4">
+                  {step === 1 ? "Crie sua conta" : "Defina sua senha"}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {step === 1
+                    ? "Dados da clínica e responsável."
+                    : "Crie uma senha segura para acessar a plataforma."}
+                </p>
+              </div>
+
+              {/* Formulário */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {step === 1 ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">Seu nome completo</Label>
+                      <Input
+                        id="fullName"
+                        type="text"
+                        placeholder="Dra. Maria Silva"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="salonName" className="text-sm font-medium text-gray-700">Nome da clínica</Label>
+                      <Input
+                        id="salonName"
+                        type="text"
+                        placeholder="Clínica São Lucas"
+                        value={salonName}
+                        onChange={(e) => setSalonName(e.target.value)}
+                        required
+                        className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Telefone / WhatsApp</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="(11) 99999-9999"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        onInput={(e) => {
+                          const input = e.currentTarget;
+                          input.value = input.value.replace(/[^0-9()\-\s]/g, "");
+                        }}
+                        required
+                        className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium text-gray-700">E-mail</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        required
+                        className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleContinue}
+                      disabled={!canContinueStep1}
+                      className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:scale-[1.01] transition-all"
+                    >
+                      Continuar
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-sm font-medium text-gray-700">Senha</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="new-password"
+                            required
+                            className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white pr-10 focus:border-teal-500 focus:ring-teal-500"
+                          />
+                          <button
+                            type="button"
+                            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirmar</Label>
+                        <div className="relative">
+                          <Input
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            autoComplete="new-password"
+                            required
+                            className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white pr-10 focus:border-teal-500 focus:ring-teal-500"
+                          />
+                          <button
+                            type="button"
+                            aria-label={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Aceite dos termos */}
+                    <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-3.5">
+                      <label htmlFor="legalAccepted" className="flex items-start gap-2.5 text-sm text-muted-foreground cursor-pointer">
+                        <input
+                          id="legalAccepted"
+                          type="checkbox"
+                          checked={legalAccepted}
+                          onChange={(e) => setLegalAccepted(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 rounded border-teal-300 accent-teal-600"
+                          required
+                        />
+                        <span>
+                          Li e aceito os{" "}
+                          <Link to="/termos-de-uso" className="font-medium text-teal-600 hover:text-teal-700 underline underline-offset-2">
+                            Termos de Uso
+                          </Link>
+                          {" e a "}
+                          <Link to="/politica-de-privacidade" className="font-medium text-teal-600 hover:text-teal-700 underline underline-offset-2">
+                            Política de Privacidade
+                          </Link>
+                          .
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-12 rounded-xl border-gray-200"
+                        onClick={() => setStep(1)}
+                        disabled={isLoading}
+                      >
+                        Voltar
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="h-12 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:scale-[1.01] transition-all"
+                        disabled={!canSubmit}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          <>
+                            Criar conta
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </form>
+
+              {/* Link para login */}
+              <p className="text-center text-sm text-muted-foreground mt-5">
+                Já tem uma conta?{" "}
+                <Link to="/login" className="font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                  Faça login
+                </Link>
+              </p>
+
+              {/* Trust badges */}
+              <div className="mt-6 flex items-center justify-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
+                  <span>Conexão segura</span>
+                </div>
+                <span className="opacity-30">·</span>
+                <span>LGPD</span>
+                <span className="opacity-30">·</span>
+                <span>5 dias grátis</span>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-6 text-center text-xs text-muted-foreground/60 space-y-1">
+                <div className="flex items-center justify-center gap-3">
+                  <Link to="/termos-de-uso" className="hover:text-foreground transition-colors">Termos</Link>
+                  <span className="opacity-40">·</span>
+                  <Link to="/politica-de-privacidade" className="hover:text-foreground transition-colors">Privacidade</Link>
+                  <span className="opacity-40">·</span>
+                  <a href="mailto:contato@metaclass.com.br" className="hover:text-foreground transition-colors">Suporte</a>
+                </div>
+                <div>© {new Date().getFullYear()} ClinicNest by Metaclass</div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

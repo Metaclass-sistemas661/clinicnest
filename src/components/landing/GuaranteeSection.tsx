@@ -6,7 +6,7 @@ const guarantees = [
     icon: Clock,
     title: "5 Dias Grátis",
     description: "Teste todas as funcionalidades sem compromisso",
-    color: "violet"
+    color: "teal"
   },
   {
     icon: Shield,
@@ -24,20 +24,20 @@ const guarantees = [
     icon: Lock,
     title: "Dados Protegidos",
     description: "Criptografia de ponta a ponta e servidores seguros",
-    color: "fuchsia"
+    color: "cyan"
   },
 ];
 
 export function GuaranteeSection() {
   const colorClasses: Record<string, { bg: string; text: string }> = {
-    violet: { bg: "bg-violet-100", text: "text-violet-600" },
+    teal: { bg: "bg-teal-100", text: "text-teal-600" },
     green: { bg: "bg-green-100", text: "text-green-600" },
     blue: { bg: "bg-blue-100", text: "text-blue-600" },
-    fuchsia: { bg: "bg-fuchsia-100", text: "text-fuchsia-600" },
+    cyan: { bg: "bg-cyan-100", text: "text-cyan-600" },
   };
 
   return (
-    <section className="py-20 sm:py-32 bg-gradient-to-b from-background to-violet-50/50">
+    <section className="py-20 sm:py-32 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -47,7 +47,7 @@ export function GuaranteeSection() {
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             Sua{" "}
-            <span className="bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
               confiança
             </span>{" "}
             é nossa prioridade
@@ -62,7 +62,7 @@ export function GuaranteeSection() {
           {guarantees.map((guarantee) => {
             const Icon = guarantee.icon;
             const colors = colorClasses[guarantee.color];
-            
+
             return (
               <div
                 key={guarantee.title}
@@ -77,13 +77,13 @@ export function GuaranteeSection() {
                     <Icon className={cn("h-10 w-10", colors.text)} aria-hidden="true" />
                   </div>
                   {/* Checkmark badge */}
-                  <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-green-500 flex items-center justify-center border-4 border-white">
+                  <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-teal-500 flex items-center justify-center border-4 border-white">
                     <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 </div>
-                
+
                 <div className="flex-1 flex flex-col">
                   <h3 className="font-display text-xl font-semibold mb-2">
                     {guarantee.title}
