@@ -36,6 +36,28 @@ type TenantSettings = {
   whatsapp_instance: string | null;
 };
 
+type SelectResult<T> = { data: T; error: unknown };
+
+type AppointmentRow = {
+  id: string;
+  client_id: string | null;
+  service_id: string | null;
+  professional_id: string | null;
+  scheduled_at: string | null;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type ClientRow = { id: string; name: string | null; phone: string | null; email: string | null };
+type ServiceRow = { id: string; name: string | null };
+type ProfileRow = { id: string; full_name: string | null };
+type NpsRow = { appointment_id: string; token: string | null };
+
+type BirthdayClientRow = ClientRow & { birth_date: string | null };
+type ApptRecentRow = { client_id: string };
+type ApptWindowRow = { client_id: string; scheduled_at: string | null };
+
 type DispatchResult = { sent: number; skipped: number; failed: number };
 
 // ─── Template & formatting helpers ────────────────────────────────────────────
@@ -71,6 +93,21 @@ function formatTimeBR(iso: string): string {
 /** dispatch_period for recurring automations */
 function yearPeriod(): string {
   return String(new Date().getFullYear());
+}
+
+function getErrorMessage(err: unknown): string {
+  if (!err) return "";
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && "message" in err) {
+    const m = (err as { message?: unknown }).message;
+    return typeof m === "string" ? m : JSON.stringify(m);
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
 }
 
 function yearMonthPeriod(): string {
@@ -269,11 +306,11 @@ async function processAppointmentTrigger(
   }
 
   for (const [tenantId, tenantRules] of byTenant) {
-    const { data: tenant } = await supabase
+    const { data: tenant } = (await supabase
       .from("tenants")
       .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
       .eq("id", tenantId)
-      .maybeSingle() as any;
+      .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
     if (!tenant) {
       totals.skipped += tenantRules.length;
@@ -307,59 +344,59 @@ async function processAppointmentTrigger(
       apptQuery = apptQuery.eq("status", "completed").gte("updated_at", since);
     }
 
-    const { data: appts, error: apptErr } = await apptQuery;
+    const { data: appts, error: apptErr } = (await apptQuery) as unknown as SelectResult<AppointmentRow[] | null>;
     if (apptErr) {
-      log("appointment query error", { trigger: triggerType, tenant: tenantId, error: apptErr.message });
+      log("appointment query error", { trigger: triggerType, tenant: tenantId, error: getErrorMessage(apptErr) });
       continue;
     }
     if (!appts?.length) continue;
 
     // Batch-fetch related data
-    const clientIds = [...new Set(appts.map((a: any) => a.client_id).filter(Boolean))];
-    const serviceIds = [...new Set(appts.map((a: any) => a.service_id).filter(Boolean))];
-    const profIds = [...new Set(appts.map((a: any) => a.professional_id).filter(Boolean))];
-    const apptIds = appts.map((a: any) => a.id);
+    const clientIds = [...new Set(appts.map((a) => a.client_id).filter((v): v is string => Boolean(v)))];
+    const serviceIds = [...new Set(appts.map((a) => a.service_id).filter((v): v is string => Boolean(v)))];
+    const profIds = [...new Set(appts.map((a) => a.professional_id).filter((v): v is string => Boolean(v)))];
+    const apptIds = appts.map((a) => a.id);
 
     const [clientsRes, servicesRes, profsRes, npsRes] = await Promise.all([
-      supabase.from("clients").select("id, name, phone, email").in("id", clientIds as string[]),
+      (supabase.from("clients").select("id, name, phone, email").in("id", clientIds)) as unknown as SelectResult<ClientRow[] | null>,
       serviceIds.length
-        ? supabase.from("services").select("id, name").in("id", serviceIds as string[])
-        : Promise.resolve({ data: [] }),
+        ? ((supabase.from("services").select("id, name").in("id", serviceIds)) as unknown as SelectResult<ServiceRow[] | null>)
+        : Promise.resolve({ data: [] as ServiceRow[] }),
       profIds.length
-        ? supabase.from("profiles").select("id, full_name").in("id", profIds as string[])
-        : Promise.resolve({ data: [] }),
+        ? ((supabase.from("profiles").select("id, full_name").in("id", profIds)) as unknown as SelectResult<ProfileRow[] | null>)
+        : Promise.resolve({ data: [] as ProfileRow[] }),
       triggerType === "appointment_completed"
-        ? supabase.from("nps_responses").select("appointment_id, token").in("appointment_id", apptIds)
-        : Promise.resolve({ data: [] }),
+        ? ((supabase.from("nps_responses").select("appointment_id, token").in("appointment_id", apptIds)) as unknown as SelectResult<NpsRow[] | null>)
+        : Promise.resolve({ data: [] as NpsRow[] }),
     ]);
 
     const clientMap = new Map<string, { id: string; name: string | null; phone: string | null; email: string | null }>(
-      (clientsRes.data ?? []).map((c: any) => [String(c.id), c]),
+      (clientsRes.data ?? []).map((c) => [String(c.id), c]),
     );
     const serviceMap = new Map<string, string>(
-      (servicesRes.data ?? []).map((s: any) => [String(s.id), String(s.name ?? "")]),
+      (servicesRes.data ?? []).map((s) => [String(s.id), String(s.name ?? "")]),
     );
     const profMap = new Map<string, string>(
-      (profsRes.data ?? []).map((p: any) => [String(p.id), String(p.full_name ?? "")]),
+      (profsRes.data ?? []).map((p) => [String(p.id), String(p.full_name ?? "")]),
     );
     const npsMap = new Map<string, string>(
-      (npsRes.data ?? []).map((n: any) => [String(n.appointment_id), String(n.token ?? "")]),
+      (npsRes.data ?? []).map((n) => [String(n.appointment_id), String(n.token ?? "")]),
     );
 
-    for (const appt of appts as any[]) {
-      const client = clientMap.get(appt.client_id);
+    for (const appt of appts) {
+      const client = appt.client_id ? clientMap.get(appt.client_id) : undefined;
       if (!client) { totals.skipped++; continue; }
 
-      const serviceName = serviceMap.get(appt.service_id) ?? "";
-      const profName = profMap.get(appt.professional_id) ?? "";
+      const serviceName = appt.service_id ? (serviceMap.get(appt.service_id) ?? "") : "";
+      const profName = appt.professional_id ? (profMap.get(appt.professional_id) ?? "") : "";
       const npsToken = npsMap.get(appt.id);
       const npsLink = npsToken && publicUrl ? `${publicUrl}/nps/${npsToken}` : "";
 
       const vars: Record<string, string> = {
         client_name: client.name ?? "",
         service_name: serviceName,
-        date: formatDateBR(appt.scheduled_at),
-        time: formatTimeBR(appt.scheduled_at),
+        date: formatDateBR(appt.scheduled_at ?? ""),
+        time: formatTimeBR(appt.scheduled_at ?? ""),
         professional_name: profName,
         salon_name: tenant.name ?? "",
         nps_link: npsLink,
@@ -406,27 +443,27 @@ async function processBirthdayTrigger(
   }
 
   for (const [tenantId, tenantRules] of byTenant) {
-    const { data: tenant } = await supabase
+    const { data: tenant } = (await supabase
       .from("tenants")
       .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
       .eq("id", tenantId)
-      .maybeSingle() as any;
+      .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
 
     // Fetch all clients with a birth_date for this tenant
-    const { data: clients, error } = await supabase
+    const { data: clients, error } = (await supabase
       .from("clients")
       .select("id, name, phone, email, birth_date")
       .eq("tenant_id", tenantId)
-      .not("birth_date", "is", null) as any;
+      .not("birth_date", "is", null)) as unknown as SelectResult<BirthdayClientRow[] | null>;
 
     if (error) {
-      log("birthday query error", { tenant: tenantId, error: error.message });
+      log("birthday query error", { tenant: tenantId, error: getErrorMessage(error) });
       continue;
     }
 
     // Filter to clients whose birthday is today (month + day match)
-    const todayClients = (clients ?? []).filter((c: any) => {
+    const todayClients = (clients ?? []).filter((c) => {
       if (!c.birth_date) return false;
       // birth_date is YYYY-MM-DD; parse month/day safely
       const parts = String(c.birth_date).split("-");
@@ -485,11 +522,11 @@ async function processInactiveTrigger(
   }
 
   for (const [tenantId, tenantRules] of byTenant) {
-    const { data: tenant } = await supabase
+    const { data: tenant } = (await supabase
       .from("tenants")
       .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
       .eq("id", tenantId)
-      .maybeSingle() as any;
+      .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
 
     // For each automation rule, process its configured inactive_days threshold
@@ -503,7 +540,7 @@ async function processInactiveTrigger(
         .toISOString().split("T")[0];
 
       // Get the most recent appointment per client (non-cancelled) within the lower/upper range
-      const { data: apptRows, error: apptErr } = await supabase
+      const { data: apptRows, error: apptErr } = (await supabase
         .from("appointments")
         .select("client_id, scheduled_at")
         .eq("tenant_id", tenantId)
@@ -511,10 +548,10 @@ async function processInactiveTrigger(
         .gte("scheduled_at", lowerBound)
         .lte("scheduled_at", upperBound)
         .order("scheduled_at", { ascending: false })
-        .limit(500) as any;
+        .limit(500)) as unknown as SelectResult<ApptWindowRow[] | null>;
 
       if (apptErr) {
-        log("inactive appt query error", { tenant: tenantId, error: apptErr.message });
+        log("inactive appt query error", { tenant: tenantId, error: getErrorMessage(apptErr) });
         continue;
       }
 
@@ -531,23 +568,23 @@ async function processInactiveTrigger(
 
       // Exclude clients who had a MORE RECENT appointment (after upperBound)
       if (candidateClientIds.length) {
-        const { data: recentRows } = await supabase
+        const { data: recentRows } = (await supabase
           .from("appointments")
           .select("client_id")
           .eq("tenant_id", tenantId)
           .neq("status", "cancelled")
           .in("client_id", candidateClientIds)
-          .gt("scheduled_at", upperBound) as any;
+          .gt("scheduled_at", upperBound)) as unknown as SelectResult<ApptRecentRow[] | null>;
 
-        const recentSet = new Set((recentRows ?? []).map((r: any) => r.client_id));
+        const recentSet = new Set((recentRows ?? []).map((r) => r.client_id));
         const trueInactiveIds = candidateClientIds.filter((id) => !recentSet.has(id));
 
         if (!trueInactiveIds.length) continue;
 
-        const { data: clients } = await supabase
+        const { data: clients } = (await supabase
           .from("clients")
           .select("id, name, phone, email")
-          .in("id", trueInactiveIds) as any;
+          .in("id", trueInactiveIds)) as unknown as SelectResult<ClientRow[] | null>;
 
         for (const client of (clients ?? [])) {
           const vars: Record<string, string> = {
@@ -627,10 +664,10 @@ serve(async (req: Request) => {
   const sinceMinutes = Math.max(1, Number(new URL(req.url).searchParams.get("since_minutes") ?? 10));
 
   try {
-    const { data: allRules, error: rulesErr } = await supabase
+    const { data: allRules, error: rulesErr } = (await supabase
       .from("automations")
       .select("*")
-      .eq("is_active", true) as any;
+      .eq("is_active", true)) as unknown as SelectResult<AutomationRule[] | null>;
 
     if (rulesErr) throw rulesErr;
 

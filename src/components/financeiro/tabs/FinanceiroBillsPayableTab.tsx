@@ -159,7 +159,8 @@ export function FinanceiroBillsPayableTab() {
     for (const b of bills) {
       if (b.status === "paid") { paid.push(b); continue; }
       if (b.status === "cancelled") { cancelled.push(b); continue; }
-      isAfter(today, startOfDay(parseISO(b.due_date))) ? overdue.push(b) : pending.push(b);
+      if (isAfter(today, startOfDay(parseISO(b.due_date)))) overdue.push(b);
+      else pending.push(b);
     }
     return { pending, overdue, paid, cancelled };
   }, [bills, today]);

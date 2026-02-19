@@ -13,6 +13,15 @@ type Body = {
   tenant_id?: string;
 };
 
+type TenantRow = {
+  id: string;
+  whatsapp_api_url: string | null;
+  whatsapp_api_key: string | null;
+  whatsapp_instance: string | null;
+};
+
+type SelectResult<T> = { data: T; error: unknown };
+
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   return digits;
@@ -91,11 +100,11 @@ serve(async (req) => {
     });
   }
 
-  const { data: tenant, error: tenantError } = await supabaseAdmin
+  const { data: tenant, error: tenantError } = (await supabaseAdmin
     .from("tenants")
     .select("id, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
     .eq("id", tenantId)
-    .maybeSingle();
+    .maybeSingle()) as unknown as SelectResult<TenantRow | null>;
 
   if (tenantError || !tenant) {
     return new Response(JSON.stringify({ error: "Tenant não encontrado" }), {
@@ -104,9 +113,9 @@ serve(async (req) => {
     });
   }
 
-  const apiUrl = String((tenant as any).whatsapp_api_url || "").trim();
-  const apiKey = String((tenant as any).whatsapp_api_key || "").trim();
-  const instance = String((tenant as any).whatsapp_instance || "").trim();
+  const apiUrl = String(tenant.whatsapp_api_url || "").trim();
+  const apiKey = String(tenant.whatsapp_api_key || "").trim();
+  const instance = String(tenant.whatsapp_instance || "").trim();
 
   if (!apiUrl || !apiKey || !instance) {
     return new Response(

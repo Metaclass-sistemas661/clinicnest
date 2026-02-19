@@ -14,6 +14,23 @@ type Body = {
   testEmail?: string;
 };
 
+type CampaignRow = {
+  id: string;
+  tenant_id: string;
+  name: string | null;
+  subject: string | null;
+  html: string | null;
+  status: string;
+  banner_url: string | null;
+  preheader: string | null;
+};
+
+type RecipientRow = { id: string; email: string | null };
+
+type MarketingPrefRow = { client_id: string; marketing_opt_out: boolean | null };
+
+type SelectResult<T> = { data: T; error: unknown };
+
 function escapeHtml(raw: string): string {
   return raw
     .replaceAll("&", "&amp;")
@@ -186,12 +203,12 @@ serve(async (req) => {
     });
   }
 
-  const { data: campaign, error: campaignError } = await supabaseAdmin
+  const { data: campaign, error: campaignError } = (await supabaseAdmin
     .from("campaigns")
     .select("id, tenant_id, name, subject, html, status, banner_url, preheader")
     .eq("tenant_id", auth.tenantId)
     .eq("id", campaignId)
-    .maybeSingle();
+    .maybeSingle()) as unknown as SelectResult<CampaignRow | null>;
 
   if (campaignError || !campaign) {
     return new Response(JSON.stringify({ error: "Campanha não encontrada" }), {
@@ -211,8 +228,8 @@ serve(async (req) => {
   const html = renderHtmlWithHeader({
     name: String(campaign.name || ""),
     subject: safeSubject,
-    bannerUrl: (campaign as any).banner_url ?? null,
-    preheader: (campaign as any).preheader ?? null,
+    bannerUrl: campaign.banner_url ?? null,
+    preheader: campaign.preheader ?? null,
     html: String(campaign.html || ""),
   });
 
@@ -252,7 +269,9 @@ serve(async (req) => {
     recipientsQuery = recipientsQuery.gt("id", afterClientId);
   }
 
-  const { data: recipients, error: recipientsError } = await recipientsQuery.limit(limit);
+  const { data: recipients, error: recipientsError } = (await recipientsQuery.limit(limit)) as unknown as SelectResult<
+    RecipientRow[] | null
+  >;
 
   if (recipientsError) {
     return new Response(JSON.stringify({ error: "Erro ao listar destinatários" }), {
@@ -261,15 +280,19 @@ serve(async (req) => {
     });
   }
 
-  const clientIds = (recipients || []).map((r: any) => String(r.id));
+  const clientIds = (recipients || []).map((r) => String(r.id));
 
-  const { data: prefs } = await supabaseAdmin
+  const { data: prefs } = (await supabaseAdmin
     .from("client_marketing_preferences")
     .select("client_id, marketing_opt_out")
     .eq("tenant_id", auth.tenantId)
-    .in("client_id", clientIds);
+    .in("client_id", clientIds)) as unknown as SelectResult<MarketingPrefRow[] | null>;
 
-  const optedOut = new Set((prefs || []).filter((p: any) => p.marketing_opt_out === true).map((p: any) => String(p.client_id)));
+  const optedOut = new Set(
+    (prefs || [])
+      .filter((p) => p.marketing_opt_out === true)
+      .map((p) => String(p.client_id))
+  );
 
   let sent = 0;
   let skipped = 0;
@@ -279,8 +302,8 @@ serve(async (req) => {
   let last_client_id: string | null = null;
 
   for (const r of recipients || []) {
-    const clientId = String((r as any).id);
-    const toEmail = String((r as any).email || "").trim();
+    const clientId = String(r.id);
+    const toEmail = String(r.email || "").trim();
     last_client_id = clientId;
 
     if (!toEmail) {
@@ -324,7 +347,7 @@ serve(async (req) => {
       .select("id")
       .maybeSingle();
 
-    const deliveryId = String((upsertRes.data as any)?.id || "");
+    const deliveryId = String((upsertRes.data as { id?: unknown } | null)?.id || "");
 
     const text = `Campanha: ${campaign.name}\n\n${safeSubject}`;
     const res = await sendEmailViaResend(toEmail, safeSubject, html, text);
