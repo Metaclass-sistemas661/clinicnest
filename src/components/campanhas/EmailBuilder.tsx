@@ -718,13 +718,13 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
           </TabsContent>
         </Tabs>
       ) : (
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Left controls */}
-          <div className="w-[380px] flex-shrink-0 border-r flex flex-col overflow-hidden">
+          <div className="w-[380px] flex-shrink-0 border-r flex flex-col overflow-hidden min-h-0">
             {LeftPanel}
           </div>
           {/* Right preview */}
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             {RightPanel}
           </div>
         </div>
