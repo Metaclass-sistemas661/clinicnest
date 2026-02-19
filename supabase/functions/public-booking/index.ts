@@ -6,7 +6,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const log = createLogger("PUBLIC-BOOKING");
 
-type Action = "get_context" | "get_slots" | "create" | "cancel";
+type Action = "get_context" | "get_slots" | "create" | "cancel" | "confirm";
 
 type Body =
   | { action: "get_context"; slug: string }
@@ -22,7 +22,8 @@ type Body =
       client_phone?: string | null;
       notes?: string | null;
     }
-  | { action: "cancel"; token: string; reason?: string | null };
+  | { action: "cancel"; token: string; reason?: string | null }
+  | { action: "confirm"; token: string };
 
 function toTrimmedString(value: unknown, maxLength: number): string {
   if (typeof value !== "string") return "";
@@ -103,6 +104,7 @@ function getBookingConfirmationEmailHtml(input: {
   professionalName: string;
   scheduledAtLocal: string;
   cancelUrl: string;
+  confirmUrl: string;
   clientName: string;
 }): string {
   return `
@@ -134,6 +136,7 @@ function getBookingConfirmationEmailHtml(input: {
                 <div style="color:#374151;font-size:14px;margin-bottom:6px;">Profissional: <strong>${escapeHtml(input.professionalName)}</strong></div>
                 <div style="color:#374151;font-size:14px;">Horário: <strong>${escapeHtml(input.scheduledAtLocal)}</strong></div>
               </div>
+              ${input.confirmUrl ? `<p style="margin:14px 0 0;"><a href="${input.confirmUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;">Confirmar presença</a></p>` : ""}
               <p style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">Se precisar cancelar, utilize o link abaixo (sujeito à política de antecedência do salão):</p>
               <p style="margin:10px 0 0;"><a href="${input.cancelUrl}" style="color:#7c3aed;font-weight:700;">Cancelar agendamento</a></p>
             </td>
@@ -158,6 +161,7 @@ function getBookingConfirmationEmailText(input: {
   professionalName: string;
   scheduledAtLocal: string;
   cancelUrl: string;
+  confirmUrl: string;
   clientName: string;
 }): string {
   return `
@@ -170,6 +174,7 @@ Seu agendamento foi registrado com sucesso:
 - Profissional: ${input.professionalName}
 - Horário: ${input.scheduledAtLocal}
 
+${input.confirmUrl ? `Confirmar presença:\n${input.confirmUrl}\n` : ""}
 Para cancelar (sujeito à política do salão):
 ${input.cancelUrl}
   `.trim();
@@ -508,7 +513,8 @@ serve(async (req) => {
       ]);
 
       const siteUrl = normalizeSiteUrl(Deno.env.get("SITE_URL") || Deno.env.get("PUBLIC_SITE_URL"));
-      const cancelUrl = siteUrl ? `${siteUrl}/agendar/${encodeURIComponent(slug)}?cancelToken=${encodeURIComponent(token)}` : "";
+      const cancelUrl  = siteUrl ? `${siteUrl}/agendar/${encodeURIComponent(slug)}?cancelToken=${encodeURIComponent(token)}` : "";
+      const confirmUrl = siteUrl ? `${siteUrl}/confirmar/${encodeURIComponent(token)}` : "";
 
       if (clientEmail) {
         const scheduledLocal = new Date(scheduledAt).toLocaleString("pt-BR", {
@@ -523,6 +529,7 @@ serve(async (req) => {
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,
           cancelUrl: cancelUrl || "",
+          confirmUrl: confirmUrl || "",
           clientName,
         });
 
@@ -532,6 +539,7 @@ serve(async (req) => {
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,
           cancelUrl: cancelUrl || "",
+          confirmUrl: confirmUrl || "",
           clientName,
         });
 
@@ -576,6 +584,70 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, ...(data as any) }), {
+        status: 200,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "confirm") {
+      const token = toTrimmedString((body as any).token, 80);
+
+      if (!token) {
+        return new Response(JSON.stringify({ error: "token é obrigatório" }), {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      // Busca o agendamento pelo token público
+      const { data: apt, error: aptError } = await supabaseAdmin
+        .from("appointments")
+        .select("id, status, confirmed_at")
+        .eq("public_booking_token", token)
+        .maybeSingle();
+
+      if (aptError) {
+        return new Response(JSON.stringify({ success: false, message: aptError.message }), {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!apt) {
+        return new Response(JSON.stringify({ success: false, message: "Agendamento não encontrado" }), {
+          status: 404,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      if ((apt as any).status === "cancelled") {
+        return new Response(
+          JSON.stringify({ success: false, message: "Este agendamento já foi cancelado" }),
+          { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Se já confirmado, retorna sucesso silencioso (idempotente)
+      if ((apt as any).confirmed_at) {
+        return new Response(JSON.stringify({ success: true, already_confirmed: true }), {
+          status: 200,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("appointments")
+        .update({ confirmed_at: new Date().toISOString() })
+        .eq("public_booking_token", token);
+
+      if (updateError) {
+        return new Response(JSON.stringify({ success: false, message: updateError.message }), {
+          status: 500,
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, already_confirmed: false }), {
         status: 200,
         headers: { ...cors, "Content-Type": "application/json" },
       });

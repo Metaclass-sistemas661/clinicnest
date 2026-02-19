@@ -71,7 +71,7 @@ import {
   type SalaryRow,
   type ProfessionalForSalary,
 } from "@/components/financeiro/tabs";
-import { DamagedProductLoss, type CommissionPayment } from "@/utils/financialPdfExport";
+import { DamagedProductLoss, type CommissionPayment, generateFinancialReport } from "@/utils/financialPdfExport";
 import type { FinancialTransaction, TransactionType } from "@/types/database";
 import { useSimpleMode } from "@/lib/simple-mode";
 
@@ -159,69 +159,70 @@ export default function Financeiro() {
   );
 
 
-  // Handle PDF export with custom date range
+  // Handle PDF export — geração client-side via jsPDF (sem dependência de servidor)
   const handleExportPdf = useCallback(async (startDate: Date, endDate: Date) => {
+    if (!profile?.tenant_id) {
+      toast.error("Perfil não encontrado.");
+      return;
+    }
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-      const accessToken = data.session?.access_token;
-      if (!accessToken) {
-        toast.error("Sessão expirada. Faça login novamente.");
-        return;
-      }
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr   = format(endDate,   "yyyy-MM-dd");
 
-      const resp = await fetch("/api/finance-report-pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        }),
+      // Buscar transações no período escolhido
+      const { data: txData, error: txError } = await supabase
+        .from("financial_transactions")
+        .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
+        .eq("tenant_id", profile.tenant_id)
+        .gte("transaction_date", startStr)
+        .lte("transaction_date", endStr)
+        .order("transaction_date", { ascending: true });
+
+      if (txError) throw txError;
+
+      // Buscar comissões no período
+      const endOfDay = new Date(endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const { data: commData } = await supabase
+        .from("commission_payments")
+        .select("id,professional_id,appointment_id,amount,service_price,commission_type,status,created_at,payment_date")
+        .eq("tenant_id", profile.tenant_id)
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endOfDay.toISOString())
+        .order("created_at", { ascending: true });
+
+      // Nome do tenant para o cabeçalho do PDF
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("name")
+        .eq("id", profile.tenant_id)
+        .maybeSingle();
+
+      const txArr = (txData || []) as FinancialTransaction[];
+      const totalInc = txArr.filter((t) => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+      const totalExp = txArr.filter((t) => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+
+      await generateFinancialReport({
+        transactions: txArr,
+        startDate,
+        endDate,
+        tenantName: (tenantData as { name?: string } | null)?.name ?? undefined,
+        totalIncome: totalInc,
+        totalExpense: totalExp,
+        balance: totalInc - totalExp,
+        commissions: (commData || []) as CommissionPayment[],
+        damagedLosses: productLosses,
+        totalProductLoss,
       });
-
-      if (!resp.ok) {
-        let message = "Erro ao gerar o PDF";
-        try {
-          const j = await resp.json();
-          if (j?.error) message = String(j.error);
-        } catch {
-          // ignore
-        }
-        throw new Error(message);
-      }
-
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const fileName = `relatorio-financeiro-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.pdf`;
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
 
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
       logger.error("Error generating PDF:", error);
       const msg = error instanceof Error ? error.message : "Erro ao gerar o PDF";
-      const isBlocked = typeof msg === "string" && msg.toLowerCase().includes("exportação em pdf disponível apenas");
-      if (isBlocked) {
-        toast.error(msg, {
-          action: {
-            label: "Ver planos",
-            onClick: () => navigate("/assinatura"),
-          },
-        });
-        return;
-      }
       toast.error(msg || "Erro ao gerar o PDF");
     }
-  }, [navigate]);
+  }, [profile?.tenant_id, productLosses, totalProductLoss]);
 
   const fetchTransactions = useCallback(async () => {
     if (!profile?.tenant_id) return;

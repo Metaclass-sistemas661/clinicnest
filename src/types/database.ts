@@ -91,6 +91,9 @@ export interface Appointment {
   status: AppointmentStatus;
   price: number;
   notes: string | null;
+  source: 'internal' | 'online' | 'whatsapp' | null;
+  confirmed_at: string | null;
+  public_booking_token: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields

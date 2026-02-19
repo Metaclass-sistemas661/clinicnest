@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
+import { NewOnlineBookingListener } from "@/components/admin/NewOnlineBookingListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
@@ -32,6 +33,7 @@ const Contato = lazyWithRetry(() => import("@/pages/Contato"));
 const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 
 const AgendarOnline = lazyWithRetry(() => import("@/pages/AgendarOnline"));
+const ConfirmarAgendamento = lazyWithRetry(() => import("@/pages/ConfirmarAgendamento"));
 
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
@@ -73,10 +75,15 @@ const queryClient = new QueryClient({
   },
 });
 
-function GlobalAdminProfitListener() {
+function GlobalAdminListeners() {
   const auth = useAuth();
   if (!auth?.user || !auth?.isAdmin) return null;
-  return <AdminProfitRealtimeListener />;
+  return (
+    <>
+      <AdminProfitRealtimeListener />
+      <NewOnlineBookingListener />
+    </>
+  );
 }
 
 const App = () => (
@@ -92,7 +99,7 @@ const App = () => (
               <GoalMotivationProvider>
               <TourProvider>
                 <InternalDarkMode />
-                <GlobalAdminProfitListener />
+                <GlobalAdminListeners />
                 <ErrorBoundary>
                   <Suspense fallback={<RouteFallback />}>
                   <Routes>
@@ -107,6 +114,7 @@ const App = () => (
                 <Route path="/contato" element={<Contato />} />
                 <Route path="/canal-lgpd" element={<CanalLgpd />} />
                 <Route path="/agendar/:slug" element={<AgendarOnline />} />
+                <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
 
                 {/* Protected routes */}
                 <Route
