@@ -44,6 +44,12 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
   return null;
 }
 
+export function isAdvancedReportsAllowed(planKey: unknown): boolean {
+  const parsed = parsePlanKey(planKey);
+  if (!parsed) return false;
+  return parsed.tier === "pro" || parsed.tier === "premium";
+}
+
 export function useSubscription() {
   const { session, user } = useAuth();
   const hasLoadedOnce = useRef(false);
@@ -105,7 +111,7 @@ export function useSubscription() {
         .from('subscriptions')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
-        .single();
+        .maybeSingle();
 
       const now = new Date();
       const trialEnd = sub?.trial_end ? new Date(sub.trial_end) : null;
@@ -122,7 +128,7 @@ export function useSubscription() {
       const periodNotExpired = periodEnd ? now <= periodEnd : false;
       const isInactive = sub?.status === 'inactive';
       const subscribed = Boolean(periodNotExpired && (isActive || isInactive) && sub?.plan);
-      const hasAccess = subscribed || (isTrialing && !trialExpired);
+      const hasAccess = !sub || subscribed || (isTrialing && !trialExpired);
 
       applyResult({
         subscribed,

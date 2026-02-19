@@ -53,6 +53,7 @@ import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useSimpleMode } from "@/lib/simple-mode";
+import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import {
   goalTypeLabels,
   periodLabels,
@@ -92,6 +93,7 @@ export default function Metas() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
+  const { status: subscription } = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -124,6 +126,18 @@ export default function Metas() {
     try {
       setIsAdvancedBlocked(false);
       setAdvancedBlockedMessage(null);
+
+      if (!isAdvancedReportsAllowed(subscription.plan)) {
+        setIsAdvancedBlocked(true);
+        setAdvancedBlockedMessage(
+          "Relatórios avançados disponíveis apenas nos planos Pro e Premium. Faça upgrade em Assinatura para liberar."
+        );
+        setGoals([]);
+        setProfessionals([]);
+        setProducts([]);
+        setTemplates([]);
+        return;
+      }
 
       const [goalsRes, profilesRes, productsRes, templatesRes] = await Promise.all([
         getGoalsWithProgress({
@@ -171,7 +185,7 @@ export default function Metas() {
     if (profile?.tenant_id && isAdmin) {
       fetchData(showArchived);
     }
-  }, [profile?.tenant_id, isAdmin, showArchived]);
+  }, [profile?.tenant_id, isAdmin, showArchived, subscription.plan]);
 
   useEffect(() => {
     if (simpleModeEnabled) {

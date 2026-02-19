@@ -20,11 +20,10 @@ import {
   Archive,
   Download,
   ShieldAlert,
-  Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
 
 type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
@@ -726,17 +725,27 @@ export default function Configuracoes() {
               </div>
 
               <div className="rounded-lg border border-border/70 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Agendamento Online</p>
+                    <p className="text-sm font-medium text-foreground">Interface</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Configure o link público e regras de antecedência em uma tela dedicada.
+                      Ajuste a experiência para um modo mais simples e direto.
                     </p>
                   </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/agendamento-online">Abrir</Link>
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="simple-mode" className="cursor-pointer text-sm">
+                      Interface simplificada
+                    </Label>
+                    <Switch
+                      id="simple-mode"
+                      checked={simpleModeEnabled}
+                      onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
+                    />
+                  </div>
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Oculta seções avançadas e reduz opções para uso mais rápido.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Endereço</Label>
@@ -772,61 +781,7 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Gift className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>Fidelidade & Cashback</CardTitle>
-                <CardDescription>Programa de recompensas em uma tela dedicada</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 p-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">Configuração avançada</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ajuste percentual, ativação e regras do cashback em uma aba exclusiva.
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/fidelidade-cashback">Abrir</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="xl:col-span-1">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Interface</CardTitle>
-            </div>
-            <CardDescription>
-              Ajuste a experiência para um modo mais simples e direto.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2">
-              <div>
-                <Label htmlFor="simple-mode" className="cursor-pointer">
-                  Interface simplificada
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Oculta seções avançadas e reduz opções para uso mais rápido.
-                </p>
-              </div>
-              <Switch
-                id="simple-mode"
-                checked={simpleModeEnabled}
-                onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        
 
         <Card className="xl:col-span-1">
           <CardHeader>
@@ -1130,7 +1085,7 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-1">
+        <Card className="xl:col-span-3">
           <CardHeader>
             <div className="flex items-center gap-2">
               <History className="h-4 w-4 text-primary" />
@@ -1140,7 +1095,7 @@ export default function Configuracoes() {
               Últimas ações administrativas registradas para fins de conformidade.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent>
             {isLoadingGovernance ? (
               <div className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1151,31 +1106,33 @@ export default function Configuracoes() {
                 Nenhum log administrativo recente.
               </div>
             ) : (
-              auditLogs.map((log) => {
-                const metadataItems = getAuditMetadataItems(log);
-                return (
-                  <div key={log.id} className="rounded-lg border border-border/70 p-3">
-                    <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
-                      {new Date(log.created_at).toLocaleString("pt-BR")}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {getEntityLabel(log.entity_type)}
-                      {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
-                    </p>
-                    {metadataItems.length > 0 ? (
-                      <div className="mt-2 space-y-1">
-                        {metadataItems.map((item) => (
-                          <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })
+              <div className="max-h-[520px] overflow-y-auto pr-1 space-y-2">
+                {auditLogs.map((log) => {
+                  const metadataItems = getAuditMetadataItems(log);
+                  return (
+                    <div key={log.id} className="rounded-lg border border-border/70 p-3">
+                      <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
+                        {new Date(log.created_at).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {getEntityLabel(log.entity_type)}
+                        {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
+                      </p>
+                      {metadataItems.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {metadataItems.map((item) => (
+                            <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
+                              <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>

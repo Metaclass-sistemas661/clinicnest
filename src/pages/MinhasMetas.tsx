@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
 import { useSimpleMode } from "@/lib/simple-mode";
+import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import {
   goalTypeLabels,
   periodLabels,
@@ -44,6 +45,7 @@ interface GoalSuggestion {
 export default function MinhasMetas() {
   const { profile, isAdmin, refreshProfile } = useAuth();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
+  const { status: subscription } = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
   const [suggestions, setSuggestions] = useState<GoalSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +67,17 @@ export default function MinhasMetas() {
     if (!profile?.tenant_id || !profile?.id || isAdmin) return;
 
     try {
+      if (!isAdvancedReportsAllowed(subscription.plan)) {
+        setGoals([]);
+        const { data: suggestionsRes } = await supabase
+          .from("goal_suggestions")
+          .select("id, name, goal_type, target_value, period, status, created_at, rejection_reason")
+          .eq("professional_id", profile.id)
+          .order("created_at", { ascending: false });
+        setSuggestions((suggestionsRes || []) as GoalSuggestion[]);
+        return;
+      }
+
       const [goalsRes, suggestionsRes] = await Promise.all([
         getGoalsWithProgress({
           p_tenant_id: profile.tenant_id,
@@ -150,7 +163,7 @@ export default function MinhasMetas() {
     if (profile?.tenant_id && profile?.id && !isAdmin) {
       fetchData();
     }
-  }, [profile?.tenant_id, profile?.id, isAdmin]);
+  }, [profile?.tenant_id, profile?.id, isAdmin, subscription.plan]);
 
   if (isAdmin) {
     return (

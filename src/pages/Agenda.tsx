@@ -38,10 +38,12 @@ import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
+import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
   const goalMotivation = useGoalMotivation();
+  const { status: subscription } = useSubscription();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -452,6 +454,15 @@ export default function Agenda() {
 
         // Popup de meta: buscar metas do profissional e mostrar mensagem motivacional + comissão + quanto falta
         try {
+          if (!isAdvancedReportsAllowed(subscription.plan)) {
+            goalMotivation?.showGoalMotivation({
+              commissionAmount,
+              goals: [],
+            });
+            // Popup de meta já foi mostrado; não exibir popup de comissão separado
+            return { type: "goal_motivation" };
+          }
+
           const { data: goalsData } = await getGoalsWithProgress({
             p_tenant_id: profile.tenant_id,
             p_include_archived: false,

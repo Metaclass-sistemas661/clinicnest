@@ -7,6 +7,7 @@ import { Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { GoalWithProgress } from "@/lib/goals";
 import { getProgressIndicatorClass } from "@/lib/goals";
+import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 
 function formatValue(g: GoalWithProgress): string {
   const isRevenue =
@@ -19,10 +20,17 @@ function formatValue(g: GoalWithProgress): string {
 
 export function GoalsProgressBar() {
   const { profile, isAdmin } = useAuth();
+  const { status: subscription } = useSubscription();
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
 
   useEffect(() => {
     if (!profile?.tenant_id) return;
+
+    // Evitar 400 no RPC em planos que não liberam relatórios/metas avançadas
+    if (!isAdvancedReportsAllowed(subscription.plan)) {
+      setGoals([]);
+      return;
+    }
 
     // Staff: só exibir se a preferência show_goals_progress_in_header estiver ativa
     if (!isAdmin && profile.show_goals_progress_in_header === false) {
@@ -57,7 +65,7 @@ export function GoalsProgressBar() {
     };
 
     fetchGoals();
-  }, [profile?.tenant_id, profile?.id, profile?.show_goals_progress_in_header, isAdmin]);
+  }, [profile?.tenant_id, profile?.id, profile?.show_goals_progress_in_header, isAdmin, subscription.plan]);
 
   if (goals.length === 0) return null;
 
