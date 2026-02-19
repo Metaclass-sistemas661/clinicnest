@@ -125,7 +125,7 @@ begin
   v_end_at := p_scheduled_at + make_interval(mins => v_duration);
 
   -- Working hours validation (Milestone 3)
-  v_within := public.is_slot_within_working_hours_v1(v_tenant.id, p_professional_profile_id, p_scheduled_at, v_duration);
+  v_within := public.is_slot_within_working_hours_v1(v_tenant.id, p_professional_profile_id, p_scheduled_at, v_end_at);
   if v_within is distinct from true then
     perform public.raise_app_error('OUTSIDE_WORKING_HOURS', 'Fora do horário de trabalho configurado para este profissional');
   end if;

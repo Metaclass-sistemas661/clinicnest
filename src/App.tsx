@@ -63,6 +63,9 @@ const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSegu
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
 const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
 
+const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
+const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
+
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
 
@@ -115,6 +118,7 @@ const App = () => (
                 <Route path="/canal-lgpd" element={<CanalLgpd />} />
                 <Route path="/agendar/:slug" element={<AgendarOnline />} />
                 <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
+                <Route path="/nps/:token" element={<NpsPublico />} />
 
                 {/* Protected routes */}
                 <Route
@@ -343,6 +347,15 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <Campanhas />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/automacoes"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <Automacoes />
                     </ProtectedRoute>
                   }
                 />

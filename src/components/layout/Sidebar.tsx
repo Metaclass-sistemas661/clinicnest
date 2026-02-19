@@ -30,6 +30,7 @@ import {
   BarChart3,
   Globe,
   Gift,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -87,6 +88,7 @@ const navCategories: NavCategory[] = [
       { title: "Configurações do Salão", href: "/configuracoes", icon: Settings, adminOnly: true },
       { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
       { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, adminOnly: true },
+      { title: "Automações", href: "/automacoes", icon: Zap, adminOnly: true },
       { title: "Meu Perfil", href: "/minhas-configuracoes", icon: User },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
@@ -121,6 +123,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
   "/meus-salarios": () => void import("@/pages/MeusSalarios"),
   "/campanhas": () => void import("@/pages/Campanhas"),
+  "/automacoes": () => void import("@/pages/Automacoes"),
   "/relatorio-financeiro": () => void import("@/pages/RelatorioFinanceiro"),
   "/ajuda": () => void import("@/pages/Ajuda"),
   "/suporte": () => void import("@/pages/Suporte"),

@@ -20,6 +20,7 @@ import {
   Archive,
   Download,
   ShieldAlert,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -123,6 +124,9 @@ export default function Configuracoes() {
     email: "",
     address: "",
     billingCpfCnpj: "",
+    whatsappApiUrl: "",
+    whatsappApiKey: "",
+    whatsappInstance: "",
   });
   const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
   const [requestDrafts, setRequestDrafts] = useState<
@@ -157,9 +161,15 @@ export default function Configuracoes() {
         email: tenant.email || "",
         address: tenant.address || "",
         billingCpfCnpj: tenant.billing_cpf_cnpj || "",
+        whatsappApiUrl: (tenant as any).whatsapp_api_url || "",
+        whatsappApiKey: (tenant as any).whatsapp_api_key || "",
+        whatsappInstance: (tenant as any).whatsapp_instance || "",
       });
     }
   }, [tenant]);
+
+  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
+  const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
 
   useEffect(() => {
     const state = location.state as any;
@@ -172,6 +182,54 @@ export default function Configuracoes() {
     if (status === "completed") return "default";
     if (status === "rejected") return "destructive";
     return "secondary";
+  };
+
+  const getAuthHeaders = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) {
+      throw new Error("Sessão ausente. Faça login novamente.");
+    }
+    return { Authorization: `Bearer ${token}` };
+  };
+
+  const handleTestWhatsapp = async () => {
+    if (!tenant?.id) return;
+    if (!whatsappTestPhone.trim()) {
+      toast.error("Informe um telefone para teste");
+      return;
+    }
+
+    setIsTestingWhatsapp(true);
+    try {
+      const headers = await getAuthHeaders();
+      const { data, error } = await supabase.functions.invoke("whatsapp-sender", {
+        headers,
+        body: {
+          phone: whatsappTestPhone.trim(),
+          message: "Teste de conexão WhatsApp - BeautyGest",
+          tenant_id: tenant.id,
+        },
+      });
+
+      if (error) {
+        toast.error(error.message || "Falha ao testar conexão");
+        return;
+      }
+
+      if (!data?.success) {
+        toast.error(data?.error || "Falha ao testar conexão");
+        return;
+      }
+
+      toast.success("Mensagem de teste enviada!");
+    } catch (err) {
+      logger.error("[Configuracoes] test whatsapp error", err);
+      toast.error("Erro ao testar WhatsApp");
+    } finally {
+      setIsTestingWhatsapp(false);
+    }
   };
 
   const getActionLabel = (action: string) => auditActionLabel[action] || action;
@@ -436,6 +494,9 @@ export default function Configuracoes() {
           email: formData.email || null,
           address: formData.address || null,
           billing_cpf_cnpj: formData.billingCpfCnpj || null,
+          whatsapp_api_url: formData.whatsappApiUrl.trim() || null,
+          whatsapp_api_key: formData.whatsappApiKey.trim() || null,
+          whatsapp_instance: formData.whatsappInstance.trim() || null,
         })
         .eq("id", tenant.id);
 
@@ -446,6 +507,8 @@ export default function Configuracoes() {
         email: formData.email || null,
         phone: formData.phone || null,
         billing_cpf_cnpj: formData.billingCpfCnpj || null,
+        whatsapp_api_url: formData.whatsappApiUrl.trim() || null,
+        whatsapp_instance: formData.whatsappInstance.trim() || null,
       });
 
       toast.success("Configurações salvas com sucesso!");
@@ -755,6 +818,69 @@ export default function Configuracoes() {
                   placeholder="Rua, número, bairro, cidade"
                   data-tour="settings-salon-address"
                 />
+              </div>
+
+              <div className="rounded-lg border border-border/70 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">WhatsApp (Evolution API)</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure a integração para disparar mensagens automáticas.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Evolution API URL</Label>
+                    <Input
+                      value={formData.whatsappApiUrl}
+                      onChange={(e) => setFormData({ ...formData, whatsappApiUrl: e.target.value })}
+                      placeholder="https://sua-evolution-api.exemplo"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>API Key</Label>
+                    <Input
+                      value={formData.whatsappApiKey}
+                      onChange={(e) => setFormData({ ...formData, whatsappApiKey: e.target.value })}
+                      placeholder="Chave da API"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Instância</Label>
+                    <Input
+                      value={formData.whatsappInstance}
+                      onChange={(e) => setFormData({ ...formData, whatsappInstance: e.target.value })}
+                      placeholder="Nome/ID da instância"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Telefone para teste</Label>
+                    <Input
+                      value={whatsappTestPhone}
+                      onChange={(e) => setWhatsappTestPhone(e.target.value)}
+                      placeholder="Ex.: 5511999999999"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => void handleTestWhatsapp()}
+                      disabled={isTestingWhatsapp}
+                    >
+                      {isTestingWhatsapp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Testar conexão
+                    </Button>
+                  </div>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 A comissão de cada profissional é definida na aba Equipe (percentual ou valor fixo por atendimento).
