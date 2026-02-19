@@ -305,11 +305,38 @@ function SectionHeader({
   );
 }
 
+// ── Hex → HSL (for CSS variable injection) ───────────────────────────────────
+function hexToHsl(hex: string): string | null {
+  const clean = hex.replace("#", "");
+  const res = /^([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(clean);
+  if (!res) return null;
+  let r = parseInt(res[1], 16) / 255;
+  let g = parseInt(res[2], 16) / 255;
+  let b = parseInt(res[3], 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AgendarOnline() {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const cancelToken = searchParams.get("cancelToken") || "";
+  const cancelToken   = searchParams.get("cancelToken") || "";
+  const primaryParam  = searchParams.get("primary") || "";   // hex without #
+  const welcomeParam  = searchParams.get("welcome") || "";
+  const logoParam     = searchParams.get("logo") || "";
+  const isEmbed       = searchParams.get("embed") === "1";
 
   const [isLoading, setIsLoading] = useState(true);
   const [ctx, setCtx] = useState<ContextResponse | null>(null);
@@ -330,6 +357,22 @@ export default function AgendarOnline() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Inject custom primary color when widget is embedded with ?primary=HEX
+  useEffect(() => {
+    if (!primaryParam) return;
+    const hsl = hexToHsl(primaryParam);
+    if (!hsl) return;
+    const id = "bg-embed-theme";
+    let el = document.getElementById(id) as HTMLStyleElement | null;
+    if (!el) {
+      el = document.createElement("style");
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    el.textContent = `:root { --primary: ${hsl}; --ring: ${hsl}; }`;
+    return () => { document.getElementById(id)?.remove(); };
+  }, [primaryParam]);
 
   const canLoadSlots = useMemo(
     () => Boolean(serviceId && professionalId && date),
@@ -624,15 +667,19 @@ export default function AgendarOnline() {
 
         {/* Branding */}
         <div className="flex flex-col items-center gap-3 py-2 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10">
-            <Scissors className="h-8 w-8" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10 overflow-hidden">
+            {logoParam ? (
+              <img src={logoParam} alt={ctx.tenant.name} className="h-full w-full object-contain p-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            ) : (
+              <Scissors className="h-8 w-8" />
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {ctx.tenant.name}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Agende em segundos. Sem WhatsApp, sem espera.
+              {welcomeParam || "Agende em segundos. Sem WhatsApp, sem espera."}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
