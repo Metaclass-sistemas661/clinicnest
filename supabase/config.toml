@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.automation-worker]
 verify_jwt = false
+
+[functions.twilio-video-token]
+verify_jwt = true
