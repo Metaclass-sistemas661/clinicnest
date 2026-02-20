@@ -36,6 +36,7 @@ import {
   FlaskConical,
   Activity,
   FilePlus2,
+  Scissors,
   Video,
   MessageSquare,
   FileCode2,
