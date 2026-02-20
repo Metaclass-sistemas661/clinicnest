@@ -1,4 +1,4 @@
-import { Shield, Award, CheckCircle2, TrendingUp } from "lucide-react";
+import { Shield, Zap, CheckCircle2, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const certifications = [
@@ -9,9 +9,9 @@ const certifications = [
     color: "green",
   },
   {
-    icon: Award,
-    title: "Melhor Plataforma 2024",
-    description: "Reconhecido pela Associação Brasileira de Clínicas",
+    icon: Zap,
+    title: "Setup em Minutos",
+    description: "Clínica configurada e operacional rapidamente",
     color: "teal",
   },
   {
