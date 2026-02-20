@@ -1,11 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7c3aed"/>
-      <stop offset="1" stop-color="#a855f7"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#0f766e"/>
+      <stop offset="55%"  stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#0e7490"/>
     </linearGradient>
+    <!-- Subtle inner highlight -->
+    <radialGradient id="shine" cx="35%" cy="28%" r="55%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#g)"/>
-  <path d="M150 192c28-42 72-66 122-66 50 0 94 24 122 66-20 0-38 4-54 12-18-22-42-34-68-34-26 0-50 12-68 34-16-8-34-12-54-12z" fill="#fff" fill-opacity="0.18"/>
-  <text x="256" y="318" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="200" font-weight="800" letter-spacing="-10" fill="#ffffff">VB</text>
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+  <!-- Inner shine -->
+  <rect width="512" height="512" rx="96" ry="96" fill="url(#shine)"/>
+
+  <!-- ── Stethoscope icon (white) ──────────────────────────────────────── -->
+
+  <!-- Binaural tubes: U-shape connecting the two earpieces -->
+  <path
+    d="M 162 148 C 162 200, 186 236, 256 244 C 326 236, 350 200, 350 148"
+    fill="none"
+    stroke="white"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Main flexible tube: from U-junction down-right to chest piece -->
+  <path
+    d="M 256 244 C 256 300, 268 345, 312 376 C 335 393, 362 400, 380 390"
+    fill="none"
+    stroke="white"
+    stroke-width="34"
+    stroke-linecap="round"
+  />
+
+  <!-- Chest piece — outer ring (diaphragm) -->
+  <circle cx="382" cy="396" r="62" fill="none" stroke="white" stroke-width="34"/>
+  <!-- Chest piece — centre membrane dot -->
+  <circle cx="382" cy="396" r="18" fill="white"/>
+
+  <!-- Left earpiece tip -->
+  <circle cx="162" cy="120" r="28" fill="white"/>
+  <!-- Right earpiece tip -->
+  <circle cx="350" cy="120" r="28" fill="white"/>
 </svg>
