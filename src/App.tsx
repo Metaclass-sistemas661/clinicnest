@@ -43,8 +43,11 @@ const Compras = lazyWithRetry(() => import("@/pages/Compras"));
 const Fornecedores = lazyWithRetry(() => import("@/pages/Fornecedores"));
 const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
 const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
-const Comandas = lazyWithRetry(() => import("@/pages/Comandas"));
-const Caixa = lazyWithRetry(() => import("@/pages/Caixa"));
+const Teleconsulta = lazyWithRetry(() => import("@/pages/Teleconsulta"));
+const ModelosProntuario = lazyWithRetry(() => import("@/pages/ModelosProntuario"));
+const FaturamentoTISS = lazyWithRetry(() => import("@/pages/FaturamentoTISS"));
+const Chat = lazyWithRetry(() => import("@/pages/Chat"));
+const Unidades = lazyWithRetry(() => import("@/pages/Unidades"));
 const Disponibilidade = lazyWithRetry(() => import("@/pages/Disponibilidade"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
@@ -217,18 +220,18 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/comandas"
+                  path="/teleconsulta"
                   element={
                     <ProtectedRoute>
-                      <Comandas />
+                      <Teleconsulta />
                     </ProtectedRoute>
                   }
                 />
                 <Route
-                  path="/caixa"
+                  path="/unidades"
                   element={
-                    <ProtectedRoute>
-                      <Caixa />
+                    <ProtectedRoute requireAdmin>
+                      <Unidades />
                     </ProtectedRoute>
                   }
                 />
@@ -458,6 +461,30 @@ const App = () => (
                   element={
                     <ProtectedRoute requireAdmin>
                       <Integracoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/modelos-prontuario"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <ModelosProntuario />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/faturamento-tiss"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <FaturamentoTISS />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/chat"
+                  element={
+                    <ProtectedRoute>
+                      <Chat />
                     </ProtectedRoute>
                   }
                 />
