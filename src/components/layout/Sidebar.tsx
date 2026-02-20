@@ -356,7 +356,7 @@ function SidebarContent({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed: boolean) => void } = {}) {
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -425,7 +425,11 @@ export function Sidebar() {
           "absolute -right-4 top-24 z-50 h-8 w-8 rounded-full border bg-card shadow-lg hover:bg-primary hover:text-primary-foreground transition-all",
         )}
         aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={() => {
+          const next = !isCollapsed;
+          setIsCollapsed(next);
+          onCollapsedChange?.(next);
+        }}
       >
         {isCollapsed ? (
           <ChevronRight className="h-4 w-4" />

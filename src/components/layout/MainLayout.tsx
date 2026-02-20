@@ -37,6 +37,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
   const userId = auth?.user?.id ?? null;
   const { lastRefreshedAt } = usePersistedLastRefresh(tenantId, userId);
   const [now, setNow] = useState(() => new Date());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 30 * 1000);
@@ -73,10 +74,10 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
       )}
       {!isAdmin && <ProfessionalGoalMotivationDialog />}
       <div className="min-h-screen bg-background">
-        <Sidebar />
+        <Sidebar onCollapsedChange={setSidebarCollapsed} />
         <main className={cn(
           "min-h-screen transition-all duration-300",
-          isMobile ? "ml-0" : "ml-72"
+          isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-72"
         )}>
           <GoalsProgressBar />
           {/* Header: título + sino (staff) + actions */}

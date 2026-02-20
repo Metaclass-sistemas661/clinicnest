@@ -826,167 +826,228 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== PROMOTIONAL BANNER CAROUSEL ===== */}
-          <div className="relative overflow-hidden rounded-2xl shadow-xl">
-            {/* Slide track */}
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
-            >
-              {/* SLIDE 0 — Indique e Ganhe */}
-              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 px-7 py-8 sm:px-10 sm:py-10 text-white">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
-                <div className="pointer-events-none absolute right-6 top-4 h-16 w-16 rounded-full bg-white/5" />
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
-                      <Gift className="h-3.5 w-3.5" />
-                      Programa de Indicação
+          {/* Outer wrapper is relative for arrows; inner has overflow-hidden for slide clipping */}
+          <div className="relative">
+            <div className="relative overflow-hidden rounded-2xl shadow-xl">
+              {/* Slide track */}
+              <div
+                className="flex transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
+              >
+                {/* SLIDE 0 — Indique e Ganhe */}
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute right-6 top-4 h-16 w-16 rounded-full bg-white/5" />
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                        <Gift className="h-3.5 w-3.5" />
+                        Programa de Indicação
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                        Indique e Ganhe <span className="text-yellow-300">R$50</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-violet-100 max-w-sm leading-relaxed">
+                        Convide outra clínica ao ClinicNest e ganhe R$50 de desconto direto na sua próxima fatura!
+                      </p>
+                      <Link
+                        to="/assinatura"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-violet-700 shadow-md transition-all hover:bg-yellow-300 hover:text-violet-900"
+                      >
+                        Quero indicar agora
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
-                      Indique e Ganhe <span className="text-yellow-300">R$50</span>
-                    </h2>
-                    <p className="text-sm sm:text-base text-violet-100 max-w-sm leading-relaxed">
-                      Convide outra clínica ao ClinicNest e ganhe R$50 de desconto direto na sua próxima fatura!
-                    </p>
-                    <Link
-                      to="/assinatura"
-                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-violet-700 shadow-md transition-all hover:bg-yellow-300 hover:text-violet-900"
-                    >
-                      Quero indicar agora
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
+                    <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                      <Gift className="h-14 w-14 text-yellow-300 drop-shadow-md" />
+                    </div>
                   </div>
-                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
-                    <Gift className="h-14 w-14 text-yellow-300 drop-shadow-md" />
+                </div>
+
+                {/* SLIDE 1 — Teleconsulta */}
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-6">
+                    <div className="flex-1 min-w-0 pb-0 sm:pb-2">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                        <Video className="h-3.5 w-3.5" />
+                        Funcionalidade Premium
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                        Teleconsulta <span className="text-cyan-200">Integrada</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-blue-100 max-w-sm leading-relaxed">
+                        Atenda seus pacientes remotamente com segurança, praticidade e rastreabilidade — tudo no ClinicNest.
+                      </p>
+                      <Link
+                        to="/agenda"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md transition-all hover:bg-cyan-200 hover:text-blue-900"
+                      >
+                        Agendar teleconsulta
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                    {/* Teleconsulta SVG illustration — laptop with video call */}
+                    <div className="hidden sm:block shrink-0 self-end" style={{ width: 200, height: 138 }}>
+                      <svg viewBox="0 0 200 138" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-xl">
+                        {/* Screen frame */}
+                        <rect x="8" y="4" width="184" height="112" rx="8" fill="rgba(255,255,255,0.13)" stroke="rgba(255,255,255,0.28)" strokeWidth="1.5"/>
+                        {/* Screen inner */}
+                        <rect x="16" y="12" width="168" height="96" rx="5" fill="rgba(0,0,0,0.18)"/>
+                        {/* Video call – left participant */}
+                        <rect x="20" y="16" width="78" height="64" rx="4" fill="rgba(255,255,255,0.07)"/>
+                        <circle cx="59" cy="40" r="15" fill="rgba(255,255,255,0.18)"/>
+                        {/* Medical cross in left avatar */}
+                        <rect x="54.5" y="36.5" width="9" height="2.5" rx="1.2" fill="rgba(255,255,255,0.6)"/>
+                        <rect x="57.25" y="34" width="2.5" height="9" rx="1.2" fill="rgba(255,255,255,0.6)"/>
+                        <rect x="22" y="64" width="76" height="14" rx="3" fill="rgba(255,255,255,0.05)"/>
+                        <rect x="26" y="67" width="40" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+                        {/* Video call – right participant */}
+                        <rect x="102" y="16" width="78" height="64" rx="4" fill="rgba(255,255,255,0.07)"/>
+                        <circle cx="141" cy="40" r="15" fill="rgba(255,255,255,0.18)"/>
+                        <path d="M136 36 a5 5 0 1 1 10 0" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" fill="rgba(255,255,255,0.12)" strokeLinecap="round"/>
+                        <rect x="104" y="64" width="76" height="14" rx="3" fill="rgba(255,255,255,0.05)"/>
+                        <rect x="108" y="67" width="36" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+                        {/* Control bar */}
+                        <rect x="16" y="84" width="168" height="20" rx="4" fill="rgba(0,0,0,0.15)"/>
+                        <circle cx="76" cy="94" r="7" fill="rgba(255,255,255,0.22)"/>
+                        <circle cx="100" cy="94" r="7" fill="rgba(239,68,68,0.6)"/>
+                        <circle cx="124" cy="94" r="7" fill="rgba(255,255,255,0.22)"/>
+                        {/* Laptop stand */}
+                        <rect x="76" y="116" width="48" height="6" rx="3" fill="rgba(255,255,255,0.16)"/>
+                        <rect x="56" y="122" width="88" height="5" rx="2.5" fill="rgba(255,255,255,0.11)"/>
+                        {/* Online dot */}
+                        <circle cx="180" cy="14" r="4.5" fill="rgba(74,222,128,0.9)"/>
+                        <circle cx="180" cy="14" r="8" fill="rgba(74,222,128,0.18)"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SLIDE 2 — Prontuário Digital */}
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                        <FileText className="h-3.5 w-3.5" />
+                        Em Destaque
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                        Prontuário <span className="text-emerald-200">Digital</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-emerald-100 max-w-sm leading-relaxed">
+                        Anamneses, prescrições e histórico completo do paciente — seguro, organizado e em conformidade com a LGPD.
+                      </p>
+                      <Link
+                        to="/prontuarios"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-emerald-700 shadow-md transition-all hover:bg-emerald-200 hover:text-emerald-900"
+                      >
+                        Acessar prontuários
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                    <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                      <FileText className="h-14 w-14 text-emerald-200 drop-shadow-md" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SLIDE 3 — ClinicNest Premium */}
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-6">
+                    <div className="flex-1 min-w-0 pb-0 sm:pb-2">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                        <Star className="h-3.5 w-3.5" />
+                        ClinicNest Premium
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                        Gestão clínica <span className="text-cyan-200">completa</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-teal-100 max-w-sm leading-relaxed">
+                        Agenda, financeiro, estoque, equipe e prontuários integrados — tudo que sua clínica precisa para crescer.
+                      </p>
+                      <Link
+                        to="/assinatura"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-teal-700 shadow-md transition-all hover:bg-teal-100 hover:text-teal-900"
+                      >
+                        Ver planos
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                    {/* Gestão Clínica SVG illustration — medical dashboard */}
+                    <div className="hidden sm:block shrink-0 self-end" style={{ width: 210, height: 138 }}>
+                      <svg viewBox="0 0 210 138" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-xl">
+                        {/* Main card */}
+                        <rect x="4" y="6" width="202" height="128" rx="10" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5"/>
+                        {/* Header pills */}
+                        <rect x="14" y="16" width="58" height="20" rx="6" fill="rgba(255,255,255,0.18)"/>
+                        <rect x="80" y="16" width="52" height="20" rx="6" fill="rgba(255,255,255,0.12)"/>
+                        <rect x="140" y="16" width="60" height="20" rx="6" fill="rgba(255,255,255,0.12)"/>
+                        {/* Chart area */}
+                        <rect x="14" y="44" width="114" height="80" rx="6" fill="rgba(0,0,0,0.1)"/>
+                        {/* Chart bars */}
+                        <rect x="24" y="96" width="14" height="20" rx="3" fill="rgba(255,255,255,0.27)"/>
+                        <rect x="45" y="80" width="14" height="36" rx="3" fill="rgba(255,255,255,0.38)"/>
+                        <rect x="66" y="88" width="14" height="28" rx="3" fill="rgba(255,255,255,0.32)"/>
+                        <rect x="87" y="68" width="14" height="48" rx="3" fill="rgba(255,255,255,0.48)"/>
+                        <rect x="108" y="76" width="12" height="40" rx="3" fill="rgba(255,255,255,0.3)"/>
+                        {/* Trend line */}
+                        <polyline points="31,92 52,76 73,83 94,64 120,72" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="94" cy="64" r="3.5" fill="white"/>
+                        <circle cx="120" cy="72" r="3" fill="rgba(255,255,255,0.7)"/>
+                        {/* Right panel — patient list */}
+                        <rect x="136" y="44" width="64" height="13" rx="4" fill="rgba(255,255,255,0.2)"/>
+                        <circle cx="147" cy="50.5" r="5" fill="rgba(255,255,255,0.3)"/>
+                        <rect x="136" y="63" width="64" height="13" rx="4" fill="rgba(255,255,255,0.14)"/>
+                        <circle cx="147" cy="69.5" r="5" fill="rgba(255,255,255,0.2)"/>
+                        <rect x="136" y="82" width="64" height="13" rx="4" fill="rgba(255,255,255,0.14)"/>
+                        <circle cx="147" cy="88.5" r="5" fill="rgba(255,255,255,0.2)"/>
+                        <rect x="136" y="101" width="46" height="13" rx="4" fill="rgba(255,255,255,0.1)"/>
+                        {/* Stethoscope icon bottom right */}
+                        <circle cx="190" cy="120" r="10" fill="rgba(255,255,255,0.12)"/>
+                        <path d="M185 115 a5 5 0 0 1 10 0 v6 q0 4 -5 4" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                        <circle cx="185" cy="125" r="2.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" fill="none"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* SLIDE 1 — Teleconsulta */}
-              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 px-7 py-8 sm:px-10 sm:py-10 text-white">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
-                      <Video className="h-3.5 w-3.5" />
-                      Funcionalidade Premium
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
-                      Teleconsulta <span className="text-cyan-200">Integrada</span>
-                    </h2>
-                    <p className="text-sm sm:text-base text-blue-100 max-w-sm leading-relaxed">
-                      Atenda seus pacientes remotamente com segurança, praticidade e rastreabilidade — tudo no ClinicNest.
-                    </p>
-                    <Link
-                      to="/agenda"
-                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md transition-all hover:bg-cyan-200 hover:text-blue-900"
-                    >
-                      Agendar teleconsulta
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
-                    <Video className="h-14 w-14 text-cyan-200 drop-shadow-md" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SLIDE 2 — Prontuário Digital */}
-              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 px-7 py-8 sm:px-10 sm:py-10 text-white">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
-                      <FileText className="h-3.5 w-3.5" />
-                      Em Destaque
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
-                      Prontuário <span className="text-emerald-200">Digital</span>
-                    </h2>
-                    <p className="text-sm sm:text-base text-emerald-100 max-w-sm leading-relaxed">
-                      Anamneses, prescrições e histórico completo do paciente — seguro, organizado e em conformidade com a LGPD.
-                    </p>
-                    <Link
-                      to="/prontuarios"
-                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-emerald-700 shadow-md transition-all hover:bg-emerald-200 hover:text-emerald-900"
-                    >
-                      Acessar prontuários
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
-                    <FileText className="h-14 w-14 text-emerald-200 drop-shadow-md" />
-                  </div>
-                </div>
-              </div>
-
-              {/* SLIDE 3 — ClinicNest Premium */}
-              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 px-7 py-8 sm:px-10 sm:py-10 text-white">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
-                <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-[0.06]">
-                  <svg width="150" height="150" viewBox="0 0 120 120" fill="currentColor">
-                    <path d="M50 0h20v50h50v20H70v50H50V70H0V50h50V0z"/>
-                  </svg>
-                </div>
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
-                      <Star className="h-3.5 w-3.5" />
-                      ClinicNest Premium
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
-                      Gestão clínica <span className="text-cyan-200">completa</span>
-                    </h2>
-                    <p className="text-sm sm:text-base text-teal-100 max-w-sm leading-relaxed">
-                      Agenda, financeiro, estoque, equipe e prontuários integrados — tudo que sua clínica precisa para crescer.
-                    </p>
-                    <Link
-                      to="/assinatura"
-                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-teal-700 shadow-md transition-all hover:bg-teal-100 hover:text-teal-900"
-                    >
-                      Ver planos
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
-                    <Stethoscope className="h-14 w-14 text-cyan-200 drop-shadow-md" />
-                  </div>
-                </div>
+              {/* Navigation dots — inside overflow-hidden, sit above slides */}
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 z-10">
+                {[0, 1, 2, 3].map((i) => (
+                  <button
+                    key={i}
+                    onClick={() => setBannerSlide(i)}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${i === bannerSlide ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"}`}
+                    aria-label={`Ir para banner ${i + 1}`}
+                  />
+                ))}
               </div>
             </div>
 
-            {/* Prev arrow */}
+            {/* Prev arrow — on outer wrapper, never clipped by overflow-hidden */}
             <button
               onClick={() => setBannerSlide((p) => (p - 1 + 4) % 4)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
               aria-label="Banner anterior"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
 
-            {/* Next arrow */}
+            {/* Next arrow — on outer wrapper, never clipped by overflow-hidden */}
             <button
               onClick={() => setBannerSlide((p) => (p + 1) % 4)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
               aria-label="Próximo banner"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
-
-            {/* Navigation dots */}
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-              {[0, 1, 2, 3].map((i) => (
-                <button
-                  key={i}
-                  onClick={() => setBannerSlide(i)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${i === bannerSlide ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"}`}
-                  aria-label={`Ir para banner ${i + 1}`}
-                />
-              ))}
-            </div>
           </div>
 
           {/* ===== KPI METRICS GRID ===== */}
