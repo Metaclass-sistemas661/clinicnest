@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
@@ -99,6 +99,13 @@ export default function Dashboard() {
   const [salariesPaid, setSalariesPaid] = useState(0);
   const [mySalaryAmount, setMySalaryAmount] = useState<number | null>(null);
   const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
+  const [bannerSlide, setBannerSlide] = useState(0);
+
+  // Auto-advance promotional banner carousel
+  useEffect(() => {
+    const t = setInterval(() => setBannerSlide((p) => (p + 1) % 4), 5000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!profile?.tenant_id) return;
@@ -818,284 +825,259 @@ export default function Dashboard() {
       <TooltipProvider>
         <div className="space-y-6">
 
-          {/* ===== HERO BANNER ===== */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-700 via-teal-500 to-cyan-400 p-6 text-white shadow-lg">
-            {/* Decorative blobs */}
-            <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/5" />
-            <div className="pointer-events-none absolute -bottom-12 -right-12 h-52 w-52 rounded-full bg-white/5" />
-            {/* Medical cross watermark */}
-            <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-[0.07]">
-              <svg width="140" height="140" viewBox="0 0 120 120" fill="currentColor">
-                <path d="M50 0h20v50h50v20H70v50H50V70H0V50h50V0z"/>
-              </svg>
-            </div>
-            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20">
-                  <Stethoscope className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-base font-semibold leading-tight">
-                    {isAdmin ? "Painel Administrativo" : "Painel do Profissional"}
-                  </p>
-                  <p className="text-sm text-teal-100">Resumo do seu dia na clínica</p>
+          {/* ===== PROMOTIONAL BANNER CAROUSEL ===== */}
+          <div className="relative overflow-hidden rounded-2xl shadow-xl">
+            {/* Slide track */}
+            <div
+              className="flex transition-transform duration-700 ease-in-out"
+              style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
+            >
+              {/* SLIDE 0 — Indique e Ganhe */}
+              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 px-7 py-8 sm:px-10 sm:py-10 text-white">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute right-6 top-4 h-16 w-16 rounded-full bg-white/5" />
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                      <Gift className="h-3.5 w-3.5" />
+                      Programa de Indicação
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                      Indique e Ganhe <span className="text-yellow-300">R$50</span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-violet-100 max-w-sm leading-relaxed">
+                      Convide outra clínica ao ClinicNest e ganhe R$50 de desconto direto na sua próxima fatura!
+                    </p>
+                    <Link
+                      to="/assinatura"
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-violet-700 shadow-md transition-all hover:bg-yellow-300 hover:text-violet-900"
+                    >
+                      Quero indicar agora
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                    <Gift className="h-14 w-14 text-yellow-300 drop-shadow-md" />
+                  </div>
                 </div>
               </div>
-              {!isLoading && (
-                <div className="flex flex-wrap gap-2.5">
-                  <div className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm">
-                    <Calendar className="h-4 w-4 text-teal-100" />
-                    <div>
-                      <p className="tabular-nums text-xl font-bold leading-none">{stats.todayAppointments}</p>
-                      <p className="text-[11px] text-teal-100">hoje</p>
+
+              {/* SLIDE 1 — Teleconsulta */}
+              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 px-7 py-8 sm:px-10 sm:py-10 text-white">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                      <Video className="h-3.5 w-3.5" />
+                      Funcionalidade Premium
                     </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                      Teleconsulta <span className="text-cyan-200">Integrada</span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-blue-100 max-w-sm leading-relaxed">
+                      Atenda seus pacientes remotamente com segurança, praticidade e rastreabilidade — tudo no ClinicNest.
+                    </p>
+                    <Link
+                      to="/agenda"
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-blue-700 shadow-md transition-all hover:bg-cyan-200 hover:text-blue-900"
+                    >
+                      Agendar teleconsulta
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
                   </div>
-                  {stats.pendingAppointments > 0 && (
-                    <div className="flex items-center gap-2 rounded-xl bg-amber-300/30 px-4 py-2.5">
-                      <Clock className="h-4 w-4 text-amber-100" />
-                      <div>
-                        <p className="tabular-nums text-xl font-bold leading-none">{stats.pendingAppointments}</p>
-                        <p className="text-[11px] text-amber-100">pendentes</p>
-                      </div>
-                    </div>
-                  )}
-                  {isAdmin && stats.monthlyIncome > 0 && (
-                    <div className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm">
-                      <TrendingUp className="h-4 w-4 text-teal-100" />
-                      <div>
-                        <p className="tabular-nums text-lg font-bold leading-none">{formatCurrency(stats.monthlyIncome)}</p>
-                        <p className="text-[11px] text-teal-100">receita/mês</p>
-                      </div>
-                    </div>
-                  )}
+                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                    <Video className="h-14 w-14 text-cyan-200 drop-shadow-md" />
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* SLIDE 2 — Prontuário Digital */}
+              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 px-7 py-8 sm:px-10 sm:py-10 text-white">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                      <FileText className="h-3.5 w-3.5" />
+                      Em Destaque
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                      Prontuário <span className="text-emerald-200">Digital</span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-emerald-100 max-w-sm leading-relaxed">
+                      Anamneses, prescrições e histórico completo do paciente — seguro, organizado e em conformidade com a LGPD.
+                    </p>
+                    <Link
+                      to="/prontuarios"
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-emerald-700 shadow-md transition-all hover:bg-emerald-200 hover:text-emerald-900"
+                    >
+                      Acessar prontuários
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                    <FileText className="h-14 w-14 text-emerald-200 drop-shadow-md" />
+                  </div>
+                </div>
+              </div>
+
+              {/* SLIDE 3 — ClinicNest Premium */}
+              <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 px-7 py-8 sm:px-10 sm:py-10 text-white">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-[0.06]">
+                  <svg width="150" height="150" viewBox="0 0 120 120" fill="currentColor">
+                    <path d="M50 0h20v50h50v20H70v50H50V70H0V50h50V0z"/>
+                  </svg>
+                </div>
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-1 min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
+                      <Star className="h-3.5 w-3.5" />
+                      ClinicNest Premium
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                      Gestão clínica <span className="text-cyan-200">completa</span>
+                    </h2>
+                    <p className="text-sm sm:text-base text-teal-100 max-w-sm leading-relaxed">
+                      Agenda, financeiro, estoque, equipe e prontuários integrados — tudo que sua clínica precisa para crescer.
+                    </p>
+                    <Link
+                      to="/assinatura"
+                      className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-teal-700 shadow-md transition-all hover:bg-teal-100 hover:text-teal-900"
+                    >
+                      Ver planos
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                  <div className="hidden sm:flex shrink-0 h-28 w-28 items-center justify-center rounded-3xl bg-white/15 shadow-lg">
+                    <Stethoscope className="h-14 w-14 text-cyan-200 drop-shadow-md" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Prev arrow */}
+            <button
+              onClick={() => setBannerSlide((p) => (p - 1 + 4) % 4)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
+              aria-label="Banner anterior"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            {/* Next arrow */}
+            <button
+              onClick={() => setBannerSlide((p) => (p + 1) % 4)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
+              aria-label="Próximo banner"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+
+            {/* Navigation dots */}
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {[0, 1, 2, 3].map((i) => (
+                <button
+                  key={i}
+                  onClick={() => setBannerSlide(i)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${i === bannerSlide ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80"}`}
+                  aria-label={`Ir para banner ${i + 1}`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* ===== KPI STORIES BAR ===== */}
-          <div className="relative">
-            <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* ===== KPI METRICS GRID ===== */}
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            {/* Consultas hoje */}
+            <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="[&:hover]:no-underline">
+              <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-teal-200 hover:shadow-md">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100">
+                    <Calendar className="h-5 w-5 text-teal-600" />
+                  </div>
+                  <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700">Hoje</span>
+                </div>
+                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
+                <p className="mt-1.5 text-sm text-muted-foreground">Consultas agendadas</p>
+              </div>
+            </Link>
 
-              {/* Consultas hoje */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/agenda" className="block shrink-0" data-tour="dashboard-today-stat-appointments">
-                    <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-teal-200 hover:shadow-md">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-100 ring-2 ring-teal-200/50 transition-transform group-hover:scale-105">
-                        <Calendar className="h-5 w-5 text-teal-600" />
-                      </div>
-                      <div className="text-center">
-                        <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
-                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Consultas hoje</p>
-                      </div>
+            {/* Pendentes */}
+            <Link to="/agenda" data-tour="dashboard-today-stat-pending" className="[&:hover]:no-underline">
+              <div className={`group rounded-2xl border p-5 transition-all hover:shadow-md ${stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stats.pendingAppointments > 0 ? "bg-amber-100" : "bg-muted/50"}`}>
+                    <Clock className={`h-5 w-5 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+                  </div>
+                  {stats.pendingAppointments > 0 && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Atenção</span>
+                  )}
+                </div>
+                <p className={`text-3xl font-extrabold tabular-nums leading-none ${stats.pendingAppointments > 0 ? "text-amber-700" : ""}`}>
+                  {isLoading ? "—" : stats.pendingAppointments}
+                </p>
+                <p className="mt-1.5 text-sm text-muted-foreground">Pendentes de confirmação</p>
+              </div>
+            </Link>
+
+            {/* Receita do mês (admin) / Atendimentos do mês (staff) */}
+            {isAdmin ? (
+              <Link to="/financeiro" data-tour="dashboard-monthly-income" className="[&:hover]:no-underline">
+                <div className="group rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
+                      <TrendingUp className="h-5 w-5 text-emerald-600" />
                     </div>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>Agendamentos marcados para hoje</TooltipContent>
-              </Tooltip>
-
-              {/* Pendentes */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/agenda" className="block shrink-0" data-tour="dashboard-today-stat-pending">
-                    <div className={`group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.pendingAppointments > 0 ? "bg-amber-100 ring-amber-200/50" : "bg-muted/50 ring-border/30"}`}>
-                        <Clock className={`h-5 w-5 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
-                      </div>
-                      <div className="text-center">
-                        <p className={`tabular-nums text-xl font-bold leading-none ${stats.pendingAppointments > 0 ? "text-amber-600" : ""}`}>{isLoading ? "—" : stats.pendingAppointments}</p>
-                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pendentes</p>
-                      </div>
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Mês</span>
+                  </div>
+                  <p className="text-2xl font-extrabold tabular-nums leading-none text-emerald-700">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">Receita do mês</p>
+                </div>
+              </Link>
+            ) : (
+              <Link to="/minhas-comissoes" data-tour="dashboard-insights-my-performance" className="[&:hover]:no-underline">
+                <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-teal-200 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100">
+                      <Activity className="h-5 w-5 text-teal-600" />
                     </div>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent>Agendamentos não confirmados</TooltipContent>
-              </Tooltip>
+                    <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700">Mês</span>
+                  </div>
+                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">Atendimentos no mês</p>
+                </div>
+              </Link>
+            )}
 
-              {/* Saldo do dia — admin */}
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-today-stat-daily-balance">
-                      <div className={`group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${dailyBalance >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
-                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${dailyBalance >= 0 ? "bg-emerald-100 ring-emerald-200/50" : "bg-red-100 ring-red-200/50"}`}>
-                          <DollarSign className={`h-5 w-5 ${dailyBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`tabular-nums text-sm font-bold leading-none ${dailyBalance >= 0 ? "text-emerald-700" : "text-red-700"}`}>{isLoading ? "—" : formatCurrency(dailyBalance)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Saldo do dia</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Receitas − despesas registradas hoje</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Estoque baixo — admin */}
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/produtos" className="block shrink-0" data-tour="dashboard-today-stat-low-stock">
-                      <div className={`group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.lowStockProducts > 0 ? "border-orange-200 bg-orange-50" : "bg-card"}`}>
-                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.lowStockProducts > 0 ? "bg-orange-100 ring-orange-200/50" : "bg-muted/50 ring-border/30"}`}>
-                          <Package className={`h-5 w-5 ${stats.lowStockProducts > 0 ? "text-orange-600" : "text-muted-foreground"}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`tabular-nums text-xl font-bold leading-none ${stats.lowStockProducts > 0 ? "text-orange-600" : ""}`}>{isLoading ? "—" : stats.lowStockProducts}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Estoque baixo</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Produtos abaixo do estoque mínimo</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Total de pacientes — admin */}
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/clientes" className="block shrink-0" data-tour="dashboard-insights-clients">
-                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-blue-200 hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200/50 transition-transform group-hover:scale-105">
-                          <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : clientsCount}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pacientes</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Total de pacientes cadastrados</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Receita do mês — admin */}
-              {isAdmin && !simpleModeEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-monthly-income">
-                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 ring-2 ring-emerald-200/50 transition-transform group-hover:scale-105">
-                          <TrendingUp className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-sm font-bold leading-none text-emerald-700">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Receita/mês</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Total de receitas no mês</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Saldo do mês — admin */}
-              {isAdmin && !simpleModeEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-monthly-balance">
-                      <div className={`group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50" : "border-red-200 bg-red-50"}`}>
-                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.monthlyBalance >= 0 ? "bg-teal-100 ring-teal-200/50" : "bg-red-100 ring-red-200/50"}`}>
-                          <Activity className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
-                        </div>
-                        <div className="text-center">
-                          <p className={`tabular-nums text-sm font-bold leading-none ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Saldo/mês</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Resultado financeiro do mês</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Comissões pendentes — admin */}
-              {isAdmin && !simpleModeEnabled && commissionsPending > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro?tab=commissions" className="block shrink-0" data-tour="dashboard-monthly-commissions-pending">
-                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-orange-200 bg-orange-50 p-4 transition-all hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 ring-2 ring-orange-200/50 transition-transform group-hover:scale-105">
-                          <Wallet className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-sm font-bold leading-none text-orange-700">{formatCurrency(commissionsPending)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Comissões</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Comissões pendentes a pagar</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Meu desempenho — staff */}
-              {!isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/minhas-comissoes" className="block shrink-0" data-tour="dashboard-insights-my-performance">
-                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-teal-200 hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-100 ring-2 ring-teal-200/50 transition-transform group-hover:scale-105">
-                          <Activity className="h-5 w-5 text-teal-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Atendidos/mês</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Consultas concluídas no mês</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Pacientes atendidos — staff */}
-              {!isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="shrink-0 cursor-default" data-tour="dashboard-insights-my-clients">
-                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-blue-200 hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200/50 transition-transform group-hover:scale-105">
-                          <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : (staffMyClientsCount ?? 0)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pacientes meus</p>
-                        </div>
-                      </div>
+            {/* Pacientes (admin) / Pacientes meus (staff) */}
+            {isAdmin ? (
+              <Link to="/clientes" data-tour="dashboard-insights-clients" className="[&:hover]:no-underline">
+                <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-blue-200 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+                      <Users className="h-5 w-5 text-blue-600" />
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Pacientes únicos que você atendeu no mês</TooltipContent>
-                </Tooltip>
-              )}
-
-              {/* Comissões a receber — staff */}
-              {!isAdmin && professionalCommissionsToReceive > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/minhas-comissoes" className="block shrink-0" data-tour="dashboard-monthly-my-commissions">
-                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-orange-200 bg-orange-50 p-4 transition-all hover:shadow-md">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 ring-2 ring-orange-200/50 transition-transform group-hover:scale-105">
-                          <Wallet className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <div className="text-center">
-                          <p className="tabular-nums text-sm font-bold leading-none text-orange-700">{formatCurrency(professionalCommissionsToReceive)}</p>
-                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">A receber</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent>Comissões pendentes a receber</TooltipContent>
-                </Tooltip>
-              )}
-
-            </div>
-            {/* Fade right edge */}
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-background to-transparent" />
+                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Total</span>
+                  </div>
+                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : clientsCount}</p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">Pacientes cadastrados</p>
+                </div>
+              </Link>
+            ) : (
+              <div data-tour="dashboard-insights-my-clients" className="rounded-2xl border bg-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Meus</span>
+                </div>
+                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyClientsCount ?? 0)}</p>
+                <p className="mt-1.5 text-sm text-muted-foreground">Pacientes atendidos</p>
+              </div>
+            )}
           </div>
 
           {/* ===== ORDERED SECTIONS ===== */}
