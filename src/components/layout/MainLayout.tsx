@@ -137,7 +137,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                       <Link to="/clientes">Novo cliente</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/servicos">Novo serviço</Link>
+                      <Link to="/servicos">Novo procedimento</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>

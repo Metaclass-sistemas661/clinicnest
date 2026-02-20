@@ -80,6 +80,7 @@ const navCategories: NavCategory[] = [
       { title: "Triagem & Anamnese", href: "/triagem", icon: Activity },
       { title: "Receituários", href: "/receituarios", icon: FilePlus2 },
       { title: "Laudos & Exames", href: "/laudos", icon: FlaskConical },
+      { title: "Procedimentos", href: "/servicos", icon: Scissors, adminOnly: true },
       { title: "Especialidades", href: "/especialidades", icon: HeartPulse, adminOnly: true },
       { title: "Convênios", href: "/convenios", icon: Building2, adminOnly: true },
       { title: "Modelos de Prontuário", href: "/modelos-prontuario", icon: FileCode2, adminOnly: true },

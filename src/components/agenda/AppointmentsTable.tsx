@@ -367,7 +367,7 @@ export function AppointmentsTable({
                       {appointment.client?.name || "Cliente não informado"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {appointment.service?.name || "Serviço não informado"}
+                      {appointment.service?.name || "Procedimento não informado"}
                     </p>
                   </div>
                 </div>
@@ -476,7 +476,7 @@ export function AppointmentsTable({
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-[180px]">Data/Hora</TableHead>
               <TableHead>Cliente</TableHead>
-              <TableHead>Serviço</TableHead>
+              <TableHead>Procedimento</TableHead>
               <TableHead>Profissional</TableHead>
               <TableHead className="text-right">Valor</TableHead>
               <TableHead className="w-[120px]">Status</TableHead>
@@ -494,34 +494,26 @@ export function AppointmentsTable({
                 <TableRow key={appointment.id} className="group">
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-primary">
+                      <span className="text-sm font-medium">
                         {formatInAppTz(appointment.scheduled_at, "HH:mm")}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {formatInAppTz(appointment.scheduled_at, "dd/MM/yyyy")}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {appointment.duration_minutes} min
-                      </span>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
-                          {appointment.client?.name || "Não informado"}
-                        </span>
-                        {appointment.client?.phone && (
-                          <a
-                            href={`tel:${appointment.client.phone}`}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {appointment.client.phone}
-                          </a>
-                        )}
-                      </div>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{appointment.client?.name || "Cliente não informado"}</span>
+                      {appointment.client?.phone && (
+                        <a
+                          href={`tel:${appointment.client.phone}`}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {appointment.client.phone}
+                        </a>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -686,11 +678,11 @@ export function AppointmentsTable({
                   {appointmentToComplete?.client?.name ?? "Não informado"}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Serviço:</span>{" "}
+                  <span className="font-medium text-foreground">Procedimento:</span>{" "}
                   {appointmentToComplete?.service?.name ?? "Não informado"}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Valor do serviço:</span>{" "}
+                  <span className="font-medium text-foreground">Valor do procedimento:</span>{" "}
                   {formatCurrency(appointmentToComplete.price)}
                 </p>
               </div>
@@ -854,13 +846,13 @@ export function AppointmentsTable({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Serviço</Label>
+                <Label>Procedimento</Label>
                 <Select
                   value={editFormData.service_id}
                   onValueChange={(v) => setEditFormData({ ...editFormData, service_id: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o serviço" />
+                    <SelectValue placeholder="Selecione o procedimento" />
                   </SelectTrigger>
                   <SelectContent>
                     {services.map((service) => (

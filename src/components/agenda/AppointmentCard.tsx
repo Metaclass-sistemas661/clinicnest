@@ -152,39 +152,36 @@ export function AppointmentCard({
           <div className="flex">
             {/* Time column */}
             <div className="flex w-24 shrink-0 flex-col items-center justify-center bg-primary/5 p-4">
-              <span className="text-2xl font-bold text-primary">
+              <span className="text-sm font-semibold text-foreground">
                 {formatInAppTz(new Date(appointment.scheduled_at), "HH:mm")}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {appointment.service?.duration_minutes || appointment.duration_minutes} min
               </span>
             </div>
 
-            {/* Main content */}
-            <div className="flex flex-1 items-center justify-between p-4">
-              <div className="flex-1 min-w-0">
-                {/* Client info */}
-                <div className="flex items-center gap-2 mb-1">
-                  <User className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="font-semibold truncate">
-                    {appointment.client?.name || "Cliente não informado"}
-                  </span>
-                  {appointment.client?.phone && (
-                    <a
-                      href={`tel:${appointment.client.phone}`}
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                    >
-                      <Phone className="h-3 w-3" />
-                      {appointment.client.phone}
-                    </a>
-                  )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 justify-between p-4">
+                <div className="flex-1 min-w-0">
+                  {/* Client info */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-semibold truncate">
+                      {appointment.client?.name || "Cliente não informado"}
+                    </span>
+                    {appointment.client?.phone && (
+                      <a
+                        href={`tel:${appointment.client.phone}`}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        <Phone className="h-3 w-3" />
+                        {appointment.client.phone}
+                      </a>
+                    )}
                 </div>
 
                 {/* Service info */}
                 <div className="flex items-center gap-2 mb-1">
                   <Scissors className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground truncate">
-                    {appointment.service?.name || "Serviço não informado"}
+                    {appointment.service?.name || "Procedimento não informado"}
                   </span>
                 </div>
 
@@ -318,6 +315,7 @@ export function AppointmentCard({
                   </DropdownMenu>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </CardContent>

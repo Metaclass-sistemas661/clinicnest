@@ -271,7 +271,7 @@ export default function Agenda() {
             profUserId,
             "appointment_created",
             msg,
-            `${client?.name || "Cliente"} • ${service?.name || "Serviço"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
+            `${client?.name || "Cliente"} • ${service?.name || "Procedimento"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
             {}
           ).catch(() => {});
         }
@@ -530,7 +530,7 @@ export default function Agenda() {
       // Notificar profissional quando admin conclui atendimento dele
       if (appointment.professional_id && profile?.tenant_id) {
         const prof = professionals.find((p) => p.id === appointment.professional_id);
-        const serviceName = (result?.service_name ?? (appointment.service as { name?: string })?.name) || "Serviço";
+        const serviceName = (result?.service_name ?? (appointment.service as { name?: string })?.name) || "Procedimento";
         if (prof?.user_id) {
           notifyUser(
             profile.tenant_id,
@@ -660,7 +660,7 @@ export default function Agenda() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Serviço</Label>
+                    <Label>Procedimento</Label>
                     <Select
                       value={formData.service_id}
                       onValueChange={(v) => {
@@ -671,7 +671,7 @@ export default function Agenda() {
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o serviço" />
+                        <SelectValue placeholder="Selecione o procedimento" />
                       </SelectTrigger>
                       <SelectContent>
                         {services.map((service) => (
