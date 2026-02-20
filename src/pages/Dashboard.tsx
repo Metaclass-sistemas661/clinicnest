@@ -830,19 +830,16 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-teal-50 backdrop-blur-sm">
-                  <Stethoscope className="h-3.5 w-3.5" />
-                  {formatInAppTz(new Date(), "EEEE, d 'de' MMMM 'de' yyyy")}
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+                  <Stethoscope className="h-6 w-6 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold leading-tight">
-                  {profile?.full_name?.split(" ")[0] ? `Olá, ${profile.full_name.split(" ")[0]}!` : "Olá!"}
-                </h2>
-                <p className="mt-1 text-sm text-teal-100">
-                  {isAdmin
-                    ? `${tenant?.name || "ClinicNest"} — painel administrativo`
-                    : `${tenant?.name || "ClinicNest"} — painel do profissional`}
-                </p>
+                <div>
+                  <p className="text-base font-semibold leading-tight">
+                    {isAdmin ? "Painel Administrativo" : "Painel do Profissional"}
+                  </p>
+                  <p className="text-sm text-teal-100">Resumo do seu dia na clínica</p>
+                </div>
               </div>
               {!isLoading && (
                 <div className="flex flex-wrap gap-2.5">
