@@ -128,7 +128,7 @@ async function asaasFetch(params: {
       method: params.method,
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "salon-flow",
+        "User-Agent": "clinicnest",
         access_token: params.apiKey,
       },
       body: params.body ? JSON.stringify(params.body) : undefined,

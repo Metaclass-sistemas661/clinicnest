@@ -84,6 +84,31 @@ interface InsurancePlan {
   tiss_version: string | null;
 }
 
+interface AppointmentRaw {
+  id: string;
+  scheduled_at: string;
+  cid_code: string | null;
+  insurance_authorization: string | null;
+  insurance_plan_id: string;
+  clients: { name: string; cpf: string | null; insurance_card_number: string | null } | null;
+  services: { name: string; tuss_code: string | null; insurance_price: number } | null;
+  profiles: { full_name: string } | null;
+  insurance_plans: { name: string } | null;
+}
+
+interface TissGuideRaw {
+  id: string;
+  lot_number: string;
+  guide_number: string;
+  guide_type: string;
+  status: string;
+  created_at: string;
+  submitted_at: string | null;
+  xml_content: string | null;
+  insurance_plans: { name: string } | null;
+  appointments: { clients: { name: string } | null } | null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function statusBadge(status: string) {
@@ -127,6 +152,8 @@ export default function FaturamentoTISS() {
       void fetchPlans();
       void fetchGuides();
     }
+    // fetchPlans and fetchGuides are stable within a tenant session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.tenant_id]);
 
   // ── Planos ────────────────────────────────────────────────────────────────
@@ -175,15 +202,17 @@ export default function FaturamentoTISS() {
       if (error) throw error;
 
       // Verificar quais já foram faturados
-      const apptIds = (data ?? []).map((r: any) => r.id);
+      const apptIds = ((data ?? []) as AppointmentRaw[]).map((r) => r.id);
       const { data: billed } = await supabase
         .from("tiss_guides")
         .select("appointment_id")
         .eq("tenant_id", profile.tenant_id)
         .in("appointment_id", apptIds);
-      const billedIds = new Set((billed ?? []).map((b: any) => b.appointment_id));
+      const billedIds = new Set(
+        ((billed ?? []) as { appointment_id: string }[]).map((b) => b.appointment_id)
+      );
 
-      const mapped: EligibleAppointment[] = (data ?? []).map((r: any) => ({
+      const mapped: EligibleAppointment[] = ((data ?? []) as AppointmentRaw[]).map((r) => ({
         id: r.id,
         scheduled_at: r.scheduled_at,
         client_name: r.clients?.name ?? "—",
@@ -302,7 +331,7 @@ export default function FaturamentoTISS() {
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
-      const mapped: TissGuide[] = (data ?? []).map((r: any) => ({
+      const mapped: TissGuide[] = ((data ?? []) as TissGuideRaw[]).map((r) => ({
         id: r.id,
         lot_number: r.lot_number,
         guide_number: r.guide_number,
@@ -344,7 +373,7 @@ export default function FaturamentoTISS() {
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
 

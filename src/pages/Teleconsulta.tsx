@@ -36,7 +36,7 @@ interface TelemedicineAppointment {
 
 function generateJitsiUrl(appointmentId: string): string {
   const roomId = appointmentId.replace(/-/g, "").substring(0, 20);
-  return `https://meet.jit.si/clinicaflow-${roomId}`;
+  return `https://meet.jit.si/clinicnest-${roomId}`;
 }
 
 function statusLabel(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {

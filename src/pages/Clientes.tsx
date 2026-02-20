@@ -200,7 +200,7 @@ export default function Clientes() {
         setMarketingOptOut(mktPrefRes.data?.marketing_opt_out ?? false);
       } catch (err) {
         logger.error("Error loading client extras:", err);
-        toast.error("Erro ao carregar detalhes do cliente");
+        toast.error("Erro ao carregar detalhes do paciente");
       } finally {
         setIsDetailLoadingExtras(false);
       }
@@ -357,7 +357,7 @@ export default function Clientes() {
         );
       if (error) throw error;
       setMarketingOptOut(checked);
-      toast.success(checked ? "Cliente optou por não receber marketing" : "Preferência de marketing atualizada");
+      toast.success(checked ? "Paciente optou por não receber marketing" : "Preferência de marketing atualizada");
     } catch (err) {
       logger.error("[Clientes] toggleMarketing error", err);
       toast.error("Erro ao atualizar preferência");
@@ -418,7 +418,7 @@ export default function Clientes() {
       setClients((data as Client[]) || []);
     } catch (error) {
       logger.error("Error fetching clients:", error);
-      toast.error("Erro ao carregar clientes. Tente novamente.");
+      toast.error("Erro ao carregar pacientes. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -473,17 +473,17 @@ export default function Clientes() {
       });
 
       if (error) {
-        toastRpcError(toast, error as any, editingClient ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
+        toastRpcError(toast, error as any, editingClient ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
         return;
       }
 
-      toast.success(editingClient ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso!");
+      toast.success(editingClient ? "Paciente atualizado com sucesso!" : "Paciente cadastrado com sucesso!");
       setIsDialogOpen(false);
       setFormData({ name: "", phone: "", email: "", notes: "" });
       setEditingClient(null);
       fetchClients();
     } catch (error) {
-      toast.error(editingClient ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
+      toast.error(editingClient ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
       logger.error(error);
     } finally {
       setIsSaving(false);
@@ -611,7 +611,7 @@ export default function Clientes() {
                 !searchQuery && (
                   <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new-empty">
                     <Plus className="mr-2 h-4 w-4" />
-                    Novo Cliente
+                    Novo Paciente
                   </Button>
                 )
               }
@@ -639,7 +639,7 @@ export default function Clientes() {
                               <Package className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar cliente ${client.name}`} data-tour="clients-item-edit">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
@@ -718,7 +718,7 @@ export default function Clientes() {
                                   <Package className="h-4 w-4" />
                                 </Button>
                               )}
-                              <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar cliente ${client.name}`} data-tour="clients-item-edit">
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </div>
@@ -825,7 +825,7 @@ export default function Clientes() {
                     </Button>
                   )}
                   {detailPackages.length === 0 ? (
-                    <EmptyState icon={Package} title="Nenhum pacote" description="Este cliente ainda não possui pacotes de sessões." />
+                    <EmptyState icon={Package} title="Nenhum pacote" description="Este paciente ainda não possui pacotes de sessões." />
                   ) : (
                     <div className="rounded-lg border divide-y text-sm">
                       {detailPackages.map((p) => (
@@ -921,7 +921,7 @@ export default function Clientes() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Vender Pacote</DialogTitle>
-            <DialogDescription>Crie um pacote de sessões para o cliente</DialogDescription>
+            <DialogDescription>Crie um pacote de sessões para o paciente</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

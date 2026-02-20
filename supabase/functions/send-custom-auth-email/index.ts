@@ -6,12 +6,12 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const log = createLogger("SEND-CUSTOM-AUTH-EMAIL");
 
-// ─── Paleta ClinicaFlow ────────────────────────────────────────────────────
+// ─── Paleta ClinicNest ─────────────────────────────────────────────────────
 // Primary:  Teal médico  hsl(174 72% 38%) ≈ #17a096
 // Accent:   Azul         hsl(195 80% 40%) ≈ #0d7fa8
 const BRAND_GRADIENT = "linear-gradient(135deg, #17a096 0%, #0d7fa8 100%)";
 const BRAND_SHADOW   = "rgba(23, 160, 150, 0.35)";
-const BRAND_NAME     = "ClinicaFlow";
+const BRAND_NAME     = "ClinicNest";
 const BRAND_TAGLINE  = "Gestão Profissional para Clínicas";
 
 // ─── Header HTML compartilhado ─────────────────────────────────────────────
@@ -332,7 +332,7 @@ interface EmailBody {
 
 function normalizeSiteUrl(raw: string | undefined | null): string {
   const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return "https://clinicaflow.metaclass.com.br";
+  if (!s) return "https://clinicnest.metaclass.com.br";
   if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
   return `https://${s}`.replace(/\/+$/, "");
 }
