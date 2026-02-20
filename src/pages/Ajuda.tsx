@@ -235,7 +235,7 @@ export default function Ajuda() {
       }
     >
       <Card className="border-gradient overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white">
+        <CardHeader className="bg-gradient-to-r from-teal-600 to-cyan-500 text-white">
           <div className="flex items-start justify-between gap-4">
             <div>
               <CardTitle className="text-lg">Central de Ajuda</CardTitle>

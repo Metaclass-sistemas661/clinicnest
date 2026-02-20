@@ -119,7 +119,7 @@ export default function CanalLgpd() {
           <div
             className="absolute inset-0 opacity-90"
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
+              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #0891b2 100%)",
             }}
           />
           <div className="absolute inset-0 bg-black/10" />
@@ -142,7 +142,7 @@ export default function CanalLgpd() {
           <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-5">
             <div className="space-y-6 lg:col-span-2">
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white">
                   <FileText className="h-6 w-6" />
                 </div>
                 <h2 className="font-display text-lg font-semibold text-foreground">
@@ -156,7 +156,7 @@ export default function CanalLgpd() {
               </div>
 
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white">
                   <Clock3 className="h-6 w-6" />
                 </div>
                 <h2 className="font-display text-lg font-semibold text-foreground">Como respondemos</h2>
@@ -172,7 +172,7 @@ export default function CanalLgpd() {
                   solicitações na área{" "}
                   <Link
                     to="/minhas-configuracoes"
-                    className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600"
+                    className="font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800"
                   >
                     Minhas Configurações
                   </Link>
@@ -220,7 +220,7 @@ export default function CanalLgpd() {
                             name="name"
                             placeholder="Seu nome"
                             required
-                            className="focus:ring-violet-500"
+                            className="focus:ring-teal-500"
                           />
                         </div>
                         <div className="space-y-2">
@@ -232,7 +232,7 @@ export default function CanalLgpd() {
                             inputMode="tel"
                             placeholder="(11) 99999-9999"
                             required
-                            className="focus:ring-violet-500"
+                            className="focus:ring-teal-500"
                           />
                         </div>
                       </div>
@@ -245,7 +245,7 @@ export default function CanalLgpd() {
                           type="email"
                           placeholder="seu@email.com"
                           required
-                          className="border-violet-100 focus:ring-violet-500"
+                          className="border-teal-100 focus:ring-teal-500"
                         />
                       </div>
 
@@ -255,7 +255,7 @@ export default function CanalLgpd() {
                           id="lgpd-type"
                           value={requestType}
                           onChange={(e) => setRequestType(e.target.value as LgpdRequestType)}
-                          className="flex h-10 w-full rounded-md border border-violet-100 bg-background px-3 py-2 text-sm"
+                          className="flex h-10 w-full rounded-md border border-teal-100 bg-background px-3 py-2 text-sm"
                           required
                         >
                           {Object.entries(lgpdTypeLabel).map(([value, label]) => (
@@ -274,11 +274,11 @@ export default function CanalLgpd() {
                           placeholder="Descreva claramente o que você deseja solicitar."
                           required
                           rows={6}
-                          className="resize-none border-violet-100 focus:ring-violet-500"
+                          className="resize-none border-teal-100 focus:ring-teal-500"
                         />
                       </div>
 
-                      <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
+                      <div className="rounded-lg border border-teal-100 bg-teal-50/40 p-3">
                         <label
                           htmlFor="lgpd-consent"
                           className="flex items-start gap-2 text-sm text-muted-foreground"
@@ -288,21 +288,21 @@ export default function CanalLgpd() {
                             type="checkbox"
                             checked={consentAccepted}
                             onChange={(e) => setConsentAccepted(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 rounded border-violet-200"
+                            className="mt-0.5 h-4 w-4 rounded border-teal-200"
                             required
                           />
                           <span>
                             Concordo com os{" "}
                             <Link
                               to="/termos-de-uso"
-                              className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600"
+                              className="font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800"
                             >
                               Termos de Uso
                             </Link>
                             {" "}e a{" "}
                             <Link
                               to="/politica-de-privacidade"
-                              className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600"
+                              className="font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800"
                             >
                               Política de Privacidade
                             </Link>
@@ -314,7 +314,7 @@ export default function CanalLgpd() {
                       <Button
                         type="submit"
                         disabled={loading || !consentAccepted}
-                        className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30"
+                        className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 shadow-lg shadow-teal-500/30"
                       >
                         {loading ? (
                           "Enviando..."

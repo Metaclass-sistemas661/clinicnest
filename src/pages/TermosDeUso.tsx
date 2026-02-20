@@ -10,7 +10,7 @@ export default function TermosDeUso() {
           <div
             className="absolute inset-0 opacity-90"
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
+              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #0891b2 100%)",
             }}
           />
           <div className="absolute inset-0 bg-black/10" />
@@ -149,7 +149,7 @@ export default function TermosDeUso() {
               </h2>
               <p className="text-base leading-relaxed">
                 Para dúvidas sobre estes Termos de Uso, entre em contato através da nossa página
-                de <Link to="/contato" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Contato</Link>.
+                de <Link to="/contato" className="text-teal-600 hover:text-teal-700 font-medium underline underline-offset-2">Contato</Link>.
               </p>
             </div>
           </div>

@@ -259,11 +259,11 @@ export default function Assinatura() {
           return (
             <Card
               key={tier.key}
-              className={`relative ${tier.recommended ? "border-2 border-violet-500 shadow-lg shadow-violet-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
+              className={`relative ${tier.recommended ? "border-2 border-teal-500 shadow-lg shadow-teal-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
             >
               {tier.recommended && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white border-0">
+                  <Badge className="bg-gradient-to-r from-teal-600 to-cyan-500 text-white border-0">
                     <Sparkles className="mr-1 h-3 w-3" />
                     Mais Popular
                   </Badge>
@@ -329,7 +329,7 @@ export default function Assinatura() {
                   <Button
                     className={
                       tier.recommended
-                        ? "w-full bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:opacity-90"
+                        ? "w-full bg-gradient-to-r from-teal-600 to-cyan-500 hover:opacity-90"
                         : "w-full"
                     }
                     variant={tier.recommended ? "default" : "outline"}

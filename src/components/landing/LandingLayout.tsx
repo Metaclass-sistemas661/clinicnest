@@ -25,7 +25,7 @@ export function Navbar() {
                   Nest
                 </span>
               </div>
-              <span className="text-[8px] text-white/35 tracking-[0.15em] self-end -mt-0.5 leading-none">
+              <span className="text-[10px] text-white/55 tracking-[0.14em] self-end -mt-0.5 leading-none">
                 by metaclass
               </span>
             </div>

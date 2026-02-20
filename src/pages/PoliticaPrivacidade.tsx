@@ -11,7 +11,7 @@ export default function PoliticaPrivacidade() {
           <div
             className="absolute inset-0 opacity-90"
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
+              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #0891b2 100%)",
             }}
           />
           <div className="absolute inset-0 bg-black/10" />
@@ -107,7 +107,7 @@ export default function PoliticaPrivacidade() {
                 correção de dados incompletos ou desatualizados, anonimização, bloqueio ou
                 eliminação de dados desnecessários, portabilidade, revogação do consentimento e
                 informação sobre compartilhamento. Para exercer esses direitos, entre em contato
-                conosco pela página de <Link to="/canal-lgpd" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Canal LGPD</Link>.
+                conosco pela página de <Link to="/canal-lgpd" className="text-teal-600 hover:text-teal-700 font-medium underline underline-offset-2">Canal LGPD</Link>.
               </p>
             </div>
 
@@ -127,7 +127,7 @@ export default function PoliticaPrivacidade() {
                 <button
                   type="button"
                   onClick={openCookieConsentPreferences}
-                  className="font-medium text-violet-600 hover:text-fuchsia-600 underline underline-offset-2"
+                  className="font-medium text-teal-600 hover:text-teal-700 underline underline-offset-2"
                 >
                   Preferências de Cookies
                 </button>
@@ -152,7 +152,7 @@ export default function PoliticaPrivacidade() {
               </h2>
               <p className="text-base leading-relaxed">
                 Para questões sobre privacidade ou para exercer seus direitos, utilize nossa
-                página de <Link to="/canal-lgpd" className="text-violet-600 hover:text-fuchsia-600 font-medium underline underline-offset-2">Canal LGPD</Link>.
+                página de <Link to="/canal-lgpd" className="text-teal-600 hover:text-teal-700 font-medium underline underline-offset-2">Canal LGPD</Link>.
               </p>
             </div>
           </div>

@@ -117,7 +117,7 @@ export default function Contato() {
           <div
             className="absolute inset-0 opacity-90"
             style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
+              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #0891b2 100%)",
             }}
           />
           <div className="absolute inset-0 bg-black/10" />
@@ -143,19 +143,19 @@ export default function Contato() {
               {/* Info cards */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white mb-4">
                     <Mail className="h-6 w-6" />
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-1">E-mail</h3>
                   <a
                     href="mailto:contato@metaclass.com.br"
-                    className="text-violet-600 hover:text-fuchsia-600 font-medium"
+                    className="text-teal-600 hover:text-teal-700 font-medium"
                   >
                     contato@metaclass.com.br
                   </a>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white mb-4">
                     <MessageSquare className="h-6 w-6" />
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-1">Suporte</h3>
@@ -164,7 +164,7 @@ export default function Contato() {
                   </p>
                 </div>
                 <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 text-white mb-4">
                     <MapPin className="h-6 w-6" />
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-1">Atendimento</h3>
@@ -206,7 +206,7 @@ export default function Contato() {
                               name="name"
                               placeholder="Seu nome"
                               required
-                              className="focus:ring-violet-500"
+                              className="focus:ring-teal-500"
                             />
                           </div>
                           <div className="space-y-2">
@@ -217,7 +217,7 @@ export default function Contato() {
                               type="email"
                               placeholder="seu@email.com"
                               required
-                              className="focus:ring-violet-500"
+                              className="focus:ring-teal-500"
                             />
                           </div>
                         </div>
@@ -234,7 +234,7 @@ export default function Contato() {
                               const input = e.currentTarget;
                               input.value = input.value.replace(/[^0-9()\-\s+]/g, "");
                             }}
-                            className="border-violet-100 focus:ring-violet-500"
+                            className="border-teal-100 focus:ring-teal-500"
                           />
                         </div>
                         <div className="space-y-2">
@@ -243,7 +243,7 @@ export default function Contato() {
                           <Select value={subject} onValueChange={setSubject}>
                             <SelectTrigger
                               id="subject"
-                              className="border-violet-100 focus:ring-violet-500"
+                              className="border-teal-100 focus:ring-teal-500"
                             >
                               <SelectValue placeholder="Selecione um assunto" />
                             </SelectTrigger>
@@ -265,26 +265,26 @@ export default function Contato() {
                             placeholder="Como podemos ajudar?"
                             required
                             rows={5}
-                            className="resize-none border-violet-100 focus:ring-violet-500"
+                            className="resize-none border-teal-100 focus:ring-teal-500"
                           />
                         </div>
-                        <div className="rounded-lg border border-violet-100 bg-violet-50/40 p-3">
+                        <div className="rounded-lg border border-teal-100 bg-teal-50/40 p-3">
                           <label htmlFor="contact-consent" className="flex items-start gap-2 text-sm text-muted-foreground">
                             <input
                               id="contact-consent"
                               type="checkbox"
                               checked={consentAccepted}
                               onChange={(e) => setConsentAccepted(e.target.checked)}
-                              className="mt-0.5 h-4 w-4 rounded border-violet-200"
+                              className="mt-0.5 h-4 w-4 rounded border-teal-200"
                               required
                             />
                             <span>
                               Concordo com os{" "}
-                              <Link to="/termos-de-uso" className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600">
+                              <Link to="/termos-de-uso" className="font-medium text-teal-700 underline underline-offset-2 hover:text-fuchsia-600">
                                 Termos de Uso
                               </Link>
                               {" "}e a{" "}
-                              <Link to="/politica-de-privacidade" className="font-medium text-violet-700 underline underline-offset-2 hover:text-fuchsia-600">
+                              <Link to="/politica-de-privacidade" className="font-medium text-teal-700 underline underline-offset-2 hover:text-fuchsia-600">
                                 Política de Privacidade
                               </Link>
                               .
@@ -294,7 +294,7 @@ export default function Contato() {
                         <Button
                           type="submit"
                           disabled={loading || !consentAccepted}
-                          className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30"
+                          className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 shadow-lg shadow-teal-500/30"
                         >
                           {loading ? (
                             "Enviando..."
