@@ -42,9 +42,6 @@ import {
   type DashboardSectionKey,
 } from "@/lib/dashboard-preferences";
 import {
-  DashboardStatsGrid,
-  DashboardClientRanking,
-  DashboardGoalsCard,
   DashboardTodayAppointments,
   DashboardNextAppointmentCard,
   DashboardLowStockCard,
@@ -54,7 +51,6 @@ export default function Dashboard() {
   const { user, profile, tenant, isAdmin } = useAuth();
   const { enabled: simpleModeEnabled } = useSimpleMode(tenant?.id);
   const { markRefreshed } = useAppStatus();
-  const [insightsOpen, setInsightsOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [activityRows, setActivityRows] = useState<
     Array<{
@@ -211,7 +207,6 @@ export default function Dashboard() {
   const availableSections = useMemo(() => {
     const keys: DashboardSectionKey[] = ["quick_actions", "today", "month"];
     if (isAdmin && !simpleModeEnabled) keys.push("activity_feed");
-    if (!simpleModeEnabled) keys.push("insights");
     return keys;
   }, [isAdmin, simpleModeEnabled]);
 
@@ -232,9 +227,6 @@ export default function Dashboard() {
     return () => window.removeEventListener("focus", onFocus);
   }, [profile?.tenant_id]);
 
-  useEffect(() => {
-    if (simpleModeEnabled) setInsightsOpen(false);
-  }, [simpleModeEnabled]);
 
   // Garantir que o "Saldo do Dia" zere à meia-noite, mesmo com a página aberta.
   // Sem isso, o card pode ficar mostrando o dia anterior até o usuário dar refresh ou mudar de página.
@@ -827,44 +819,286 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER ===== */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-400 p-6 text-white shadow-lg">
-            <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full bg-white/5" />
-            <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
-            <div className="pointer-events-none absolute bottom-2 right-2 h-20 w-20 rounded-full bg-white/10" />
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-700 via-teal-500 to-cyan-400 p-6 text-white shadow-lg">
+            {/* Decorative blobs */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute -bottom-12 -right-12 h-52 w-52 rounded-full bg-white/5" />
+            {/* Medical cross watermark */}
+            <div className="pointer-events-none absolute right-8 top-1/2 -translate-y-1/2 opacity-[0.07]">
+              <svg width="140" height="140" viewBox="0 0 120 120" fill="currentColor">
+                <path d="M50 0h20v50h50v20H70v50H50V70H0V50h50V0z"/>
+              </svg>
+            </div>
             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="mb-1 flex items-center gap-2">
-                  <Stethoscope className="h-4 w-4 text-teal-100" />
-                  <p className="text-sm font-medium text-teal-100">
-                    {formatInAppTz(new Date(), "EEEE, d 'de' MMMM 'de' yyyy")}
-                  </p>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-teal-50 backdrop-blur-sm">
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  {formatInAppTz(new Date(), "EEEE, d 'de' MMMM 'de' yyyy")}
                 </div>
-                <h2 className="text-2xl font-bold">{tenant?.name || "ClinicNest"}</h2>
+                <h2 className="text-2xl font-bold leading-tight">
+                  {profile?.full_name?.split(" ")[0] ? `Olá, ${profile.full_name.split(" ")[0]}!` : "Olá!"}
+                </h2>
                 <p className="mt-1 text-sm text-teal-100">
-                  {isAdmin ? "Painel administrativo" : "Painel do profissional"}
+                  {isAdmin
+                    ? `${tenant?.name || "ClinicNest"} — painel administrativo`
+                    : `${tenant?.name || "ClinicNest"} — painel do profissional`}
                 </p>
               </div>
               {!isLoading && (
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-xl bg-white/15 px-4 py-2.5 text-center backdrop-blur-sm">
-                    <p className="tabular-nums text-2xl font-bold leading-none">{stats.todayAppointments}</p>
-                    <p className="mt-0.5 text-xs text-teal-100">consultas hoje</p>
+                <div className="flex flex-wrap gap-2.5">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm">
+                    <Calendar className="h-4 w-4 text-teal-100" />
+                    <div>
+                      <p className="tabular-nums text-xl font-bold leading-none">{stats.todayAppointments}</p>
+                      <p className="text-[11px] text-teal-100">hoje</p>
+                    </div>
                   </div>
                   {stats.pendingAppointments > 0 && (
-                    <div className="rounded-xl bg-amber-400/30 px-4 py-2.5 text-center">
-                      <p className="tabular-nums text-2xl font-bold leading-none">{stats.pendingAppointments}</p>
-                      <p className="mt-0.5 text-xs text-amber-100">pendentes</p>
+                    <div className="flex items-center gap-2 rounded-xl bg-amber-300/30 px-4 py-2.5">
+                      <Clock className="h-4 w-4 text-amber-100" />
+                      <div>
+                        <p className="tabular-nums text-xl font-bold leading-none">{stats.pendingAppointments}</p>
+                        <p className="text-[11px] text-amber-100">pendentes</p>
+                      </div>
                     </div>
                   )}
-                  {isAdmin && stats.lowStockProducts > 0 && (
-                    <div className="rounded-xl bg-amber-400/30 px-4 py-2.5 text-center">
-                      <p className="tabular-nums text-2xl font-bold leading-none">{stats.lowStockProducts}</p>
-                      <p className="mt-0.5 text-xs text-amber-100">estoque baixo</p>
+                  {isAdmin && stats.monthlyIncome > 0 && (
+                    <div className="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 backdrop-blur-sm">
+                      <TrendingUp className="h-4 w-4 text-teal-100" />
+                      <div>
+                        <p className="tabular-nums text-lg font-bold leading-none">{formatCurrency(stats.monthlyIncome)}</p>
+                        <p className="text-[11px] text-teal-100">receita/mês</p>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ===== KPI STORIES BAR ===== */}
+          <div className="relative">
+            <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+              {/* Consultas hoje */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/agenda" className="block shrink-0" data-tour="dashboard-today-stat-appointments">
+                    <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-teal-200 hover:shadow-md">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-100 ring-2 ring-teal-200/50 transition-transform group-hover:scale-105">
+                        <Calendar className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <div className="text-center">
+                        <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
+                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Consultas hoje</p>
+                      </div>
+                    </div>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Agendamentos marcados para hoje</TooltipContent>
+              </Tooltip>
+
+              {/* Pendentes */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/agenda" className="block shrink-0" data-tour="dashboard-today-stat-pending">
+                    <div className={`group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.pendingAppointments > 0 ? "bg-amber-100 ring-amber-200/50" : "bg-muted/50 ring-border/30"}`}>
+                        <Clock className={`h-5 w-5 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+                      </div>
+                      <div className="text-center">
+                        <p className={`tabular-nums text-xl font-bold leading-none ${stats.pendingAppointments > 0 ? "text-amber-600" : ""}`}>{isLoading ? "—" : stats.pendingAppointments}</p>
+                        <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pendentes</p>
+                      </div>
+                    </div>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>Agendamentos não confirmados</TooltipContent>
+              </Tooltip>
+
+              {/* Saldo do dia — admin */}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-today-stat-daily-balance">
+                      <div className={`group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${dailyBalance >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${dailyBalance >= 0 ? "bg-emerald-100 ring-emerald-200/50" : "bg-red-100 ring-red-200/50"}`}>
+                          <DollarSign className={`h-5 w-5 ${dailyBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`tabular-nums text-sm font-bold leading-none ${dailyBalance >= 0 ? "text-emerald-700" : "text-red-700"}`}>{isLoading ? "—" : formatCurrency(dailyBalance)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Saldo do dia</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Receitas − despesas registradas hoje</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Estoque baixo — admin */}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/produtos" className="block shrink-0" data-tour="dashboard-today-stat-low-stock">
+                      <div className={`group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.lowStockProducts > 0 ? "border-orange-200 bg-orange-50" : "bg-card"}`}>
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.lowStockProducts > 0 ? "bg-orange-100 ring-orange-200/50" : "bg-muted/50 ring-border/30"}`}>
+                          <Package className={`h-5 w-5 ${stats.lowStockProducts > 0 ? "text-orange-600" : "text-muted-foreground"}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`tabular-nums text-xl font-bold leading-none ${stats.lowStockProducts > 0 ? "text-orange-600" : ""}`}>{isLoading ? "—" : stats.lowStockProducts}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Estoque baixo</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Produtos abaixo do estoque mínimo</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Total de pacientes — admin */}
+              {isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/clientes" className="block shrink-0" data-tour="dashboard-insights-clients">
+                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-blue-200 hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200/50 transition-transform group-hover:scale-105">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : clientsCount}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pacientes</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Total de pacientes cadastrados</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Receita do mês — admin */}
+              {isAdmin && !simpleModeEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-monthly-income">
+                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 transition-all hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 ring-2 ring-emerald-200/50 transition-transform group-hover:scale-105">
+                          <TrendingUp className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-sm font-bold leading-none text-emerald-700">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Receita/mês</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Total de receitas no mês</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Saldo do mês — admin */}
+              {isAdmin && !simpleModeEnabled && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro" className="block shrink-0" data-tour="dashboard-monthly-balance">
+                      <div className={`group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50" : "border-red-200 bg-red-50"}`}>
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-full ring-2 transition-transform group-hover:scale-105 ${stats.monthlyBalance >= 0 ? "bg-teal-100 ring-teal-200/50" : "bg-red-100 ring-red-200/50"}`}>
+                          <Activity className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
+                        </div>
+                        <div className="text-center">
+                          <p className={`tabular-nums text-sm font-bold leading-none ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Saldo/mês</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Resultado financeiro do mês</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Comissões pendentes — admin */}
+              {isAdmin && !simpleModeEnabled && commissionsPending > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/financeiro?tab=commissions" className="block shrink-0" data-tour="dashboard-monthly-commissions-pending">
+                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-orange-200 bg-orange-50 p-4 transition-all hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 ring-2 ring-orange-200/50 transition-transform group-hover:scale-105">
+                          <Wallet className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-sm font-bold leading-none text-orange-700">{formatCurrency(commissionsPending)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Comissões</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Comissões pendentes a pagar</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Meu desempenho — staff */}
+              {!isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/minhas-comissoes" className="block shrink-0" data-tour="dashboard-insights-my-performance">
+                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-teal-200 hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-100 ring-2 ring-teal-200/50 transition-transform group-hover:scale-105">
+                          <Activity className="h-5 w-5 text-teal-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Atendidos/mês</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Consultas concluídas no mês</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Pacientes atendidos — staff */}
+              {!isAdmin && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="shrink-0 cursor-default" data-tour="dashboard-insights-my-clients">
+                      <div className="group flex w-[100px] flex-col items-center gap-2.5 rounded-2xl border bg-card p-4 transition-all hover:border-blue-200 hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-200/50 transition-transform group-hover:scale-105">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-xl font-bold leading-none">{isLoading ? "—" : (staffMyClientsCount ?? 0)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">Pacientes meus</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Pacientes únicos que você atendeu no mês</TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* Comissões a receber — staff */}
+              {!isAdmin && professionalCommissionsToReceive > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link to="/minhas-comissoes" className="block shrink-0" data-tour="dashboard-monthly-my-commissions">
+                      <div className="group flex w-[112px] flex-col items-center gap-2.5 rounded-2xl border border-orange-200 bg-orange-50 p-4 transition-all hover:shadow-md">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 ring-2 ring-orange-200/50 transition-transform group-hover:scale-105">
+                          <Wallet className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div className="text-center">
+                          <p className="tabular-nums text-sm font-bold leading-none text-orange-700">{formatCurrency(professionalCommissionsToReceive)}</p>
+                          <p className="mt-1 text-[11px] leading-tight text-muted-foreground">A receber</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>Comissões pendentes a receber</TooltipContent>
+                </Tooltip>
+              )}
+
+            </div>
+            {/* Fade right edge */}
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-background to-transparent" />
           </div>
 
           {/* ===== ORDERED SECTIONS ===== */}
@@ -1055,107 +1289,23 @@ export default function Dashboard() {
 
             if (sectionKey === "today") {
               return (
-                <Card key={sectionKey}>
-                  <CardHeader className="flex flex-row items-center gap-2 pb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
-                      <Calendar className="h-4 w-4 text-teal-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-semibold">Hoje</CardTitle>
-                      <CardDescription className="text-xs">{formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}</CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Metric tiles */}
-                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div data-tour="dashboard-today-stat-appointments" className="cursor-default rounded-xl border bg-card p-4 transition-all hover:border-teal-200/80 hover:shadow-sm">
-                            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
-                              <Calendar className="h-4 w-4 text-teal-600" />
-                            </div>
-                            <p className="tabular-nums text-2xl font-bold">{stats.todayAppointments}</p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">Consultas hoje</p>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Total de agendamentos marcados para hoje.</TooltipContent>
-                      </Tooltip>
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            data-tour="dashboard-today-stat-pending"
-                            className={`cursor-default rounded-xl border p-4 transition-all hover:shadow-sm ${
-                              stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"
-                            }`}
-                          >
-                            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stats.pendingAppointments > 0 ? "bg-amber-100" : "bg-muted/40"}`}>
-                              <Clock className={`h-4 w-4 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
-                            </div>
-                            <p className={`tabular-nums text-2xl font-bold ${stats.pendingAppointments > 0 ? "text-amber-600" : ""}`}>
-                              {stats.pendingAppointments}
-                            </p>
-                            <p className="mt-0.5 text-xs text-muted-foreground">
-                              {isAdmin ? "Pendentes" : "Meus pendentes"}
-                            </p>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Agendamentos que ainda não foram confirmados.</TooltipContent>
-                      </Tooltip>
-
-                      {isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/produtos" className="block" data-tour="dashboard-today-stat-low-stock">
-                              <div className={`rounded-xl border p-4 transition-all hover:shadow-sm ${stats.lowStockProducts > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
-                                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stats.lowStockProducts > 0 ? "bg-amber-100" : "bg-muted/40"}`}>
-                                  <Package className={`h-4 w-4 ${stats.lowStockProducts > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
-                                </div>
-                                <p className={`tabular-nums text-2xl font-bold ${stats.lowStockProducts > 0 ? "text-amber-600" : ""}`}>
-                                  {stats.lowStockProducts}
-                                </p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">Estoque baixo</p>
-                              </div>
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Produtos abaixo do estoque mínimo configurado.</TooltipContent>
-                        </Tooltip>
-                      )}
-
-                      {isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/financeiro" className="block" data-tour="dashboard-today-stat-daily-balance">
-                              <div className={`rounded-xl border p-4 transition-all hover:shadow-sm ${dailyBalance >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
-                                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${dailyBalance >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-                                  <DollarSign className={`h-4 w-4 ${dailyBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
-                                </div>
-                                <p className={`tabular-nums text-xl font-bold ${dailyBalance >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                                  {formatCurrency(dailyBalance)}
-                                </p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">Saldo do dia</p>
-                              </div>
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Saldo do dia = receitas - despesas registradas hoje.</TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-
-                    {/* Appointments + Low Stock / Next Appointment */}
-                    <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-                      <DashboardTodayAppointments
-                        appointments={myTodayAppointments}
-                        isAdmin={isAdmin}
-                        getStatusBadge={getStatusBadge}
-                      />
-                      {!isAdmin && nextAppointment && (
-                        <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
-                      )}
-                      {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div key={sectionKey} className="grid gap-4 md:gap-6 lg:grid-cols-3">
+                  {/* Agenda: 2/3 width */}
+                  <div className="lg:col-span-2">
+                    <DashboardTodayAppointments
+                      appointments={myTodayAppointments}
+                      isAdmin={isAdmin}
+                      getStatusBadge={getStatusBadge}
+                    />
+                  </div>
+                  {/* Right panel: 1/3 width */}
+                  <div className="space-y-4">
+                    {!isAdmin && nextAppointment && (
+                      <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
+                    )}
+                    {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+                  </div>
+                </div>
               );
             }
 
@@ -1167,7 +1317,7 @@ export default function Dashboard() {
                       <Activity className="h-4 w-4 text-teal-600" />
                     </div>
                     <div>
-                      <CardTitle className="text-base font-semibold">Mês atual</CardTitle>
+                      <CardTitle className="text-base font-semibold">Financeiro do mês</CardTitle>
                       <CardDescription className="text-xs">{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</CardDescription>
                     </div>
                   </CardHeader>
@@ -1187,7 +1337,6 @@ export default function Dashboard() {
                             <p className="mt-1 text-sm text-emerald-600/70">Receitas do mês</p>
                           </div>
                         </Link>
-
                         <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
                           <div className="rounded-2xl border border-red-200 bg-red-50 p-5 transition-all hover:border-red-300 hover:shadow-md">
                             <div className="mb-4 flex items-center justify-between">
@@ -1200,27 +1349,16 @@ export default function Dashboard() {
                             <p className="mt-1 text-sm text-red-600/70">Despesas do mês</p>
                           </div>
                         </Link>
-
                         <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
-                          <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${
-                            stats.monthlyBalance >= 0
-                              ? "border-teal-200 bg-teal-50 hover:border-teal-300"
-                              : "border-red-200 bg-red-50 hover:border-red-300"
-                          }`}>
+                          <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50 hover:border-teal-300" : "border-red-200 bg-red-50 hover:border-red-300"}`}>
                             <div className="mb-4 flex items-center justify-between">
                               <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stats.monthlyBalance >= 0 ? "bg-teal-100" : "bg-red-100"}`}>
                                 <DollarSign className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
                               </div>
-                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>
-                                Saldo
-                              </span>
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>Saldo</span>
                             </div>
-                            <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>
-                              {formatCurrency(stats.monthlyBalance)}
-                            </p>
-                            <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>
-                              Resultado do mês
-                            </p>
+                            <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{formatCurrency(stats.monthlyBalance)}</p>
+                            <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>Resultado do mês</p>
                           </div>
                         </Link>
                       </div>
@@ -1232,13 +1370,7 @@ export default function Dashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Link to="/financeiro?tab=commissions" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-commissions-pending">
-                              <StatCard
-                                title="Comissões pendentes"
-                                value={formatCurrency(commissionsPending)}
-                                icon={Wallet}
-                                variant={commissionsPending > 0 ? "warning" : "default"}
-                                description="Clique para gerenciar"
-                              />
+                              <StatCard title="Comissões pendentes" value={formatCurrency(commissionsPending)} icon={Wallet} variant={commissionsPending > 0 ? "warning" : "default"} description="Clique para gerenciar" />
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">Comissões geradas no mês e ainda não pagas.</TooltipContent>
@@ -1248,13 +1380,7 @@ export default function Dashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Link to="/financeiro?tab=salaries" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-salaries-pending">
-                              <StatCard
-                                title="Salários a pagar"
-                                value={formatCurrency(salariesToPay)}
-                                icon={CreditCard}
-                                variant={salariesToPay > 0 ? "warning" : "default"}
-                                description="Clique para gerenciar"
-                              />
+                              <StatCard title="Salários a pagar" value={formatCurrency(salariesToPay)} icon={CreditCard} variant={salariesToPay > 0 ? "warning" : "default"} description="Clique para gerenciar" />
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">Salários configurados que ainda não foram pagos no mês.</TooltipContent>
@@ -1264,13 +1390,7 @@ export default function Dashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
-                              <StatCard
-                                title="Minhas comissões (pendentes)"
-                                value={formatCurrency(professionalCommissionsToReceive)}
-                                icon={Wallet}
-                                variant={professionalCommissionsToReceive > 0 ? "warning" : "default"}
-                                description="Clique para ver detalhes"
-                              />
+                              <StatCard title="Minhas comissões (pendentes)" value={formatCurrency(professionalCommissionsToReceive)} icon={Wallet} variant={professionalCommissionsToReceive > 0 ? "warning" : "default"} description="Clique para ver detalhes" />
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">Comissões do mês que ainda não foram pagas para você.</TooltipContent>
@@ -1280,17 +1400,7 @@ export default function Dashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-salary">
-                              <StatCard
-                                title="Meu salário"
-                                value={formatCurrency(mySalaryAmount)}
-                                icon={DollarSign}
-                                variant="info"
-                                description={
-                                  lastSalaryPayment
-                                    ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
-                                    : "Salário fixo configurado"
-                                }
-                              />
+                              <StatCard title="Meu salário" value={formatCurrency(mySalaryAmount)} icon={DollarSign} variant="info" description={lastSalaryPayment ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}` : "Salário fixo configurado"} />
                             </Link>
                           </TooltipTrigger>
                           <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
@@ -1299,128 +1409,6 @@ export default function Dashboard() {
                     </div>
                   </CardContent>
                 </Card>
-              );
-            }
-
-            if (sectionKey === "insights") {
-              if (simpleModeEnabled) return null;
-              return (
-                <Collapsible key={sectionKey} open={insightsOpen} onOpenChange={setInsightsOpen}>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Insights</CardTitle>
-                        <CardDescription>Otimizações, rankings e indicadores detalhados</CardDescription>
-                      </div>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" size="sm" data-tour="dashboard-insights-toggle">
-                          {insightsOpen ? (
-                            <>
-                              Ocultar <ChevronUp className="ml-2 h-4 w-4" />
-                            </>
-                          ) : (
-                            <>
-                              Ver insights <ChevronDown className="ml-2 h-4 w-4" />
-                            </>
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                    </CardHeader>
-                    <CollapsibleContent>
-                      <CardContent className="space-y-6">
-                        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                          {isAdmin && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link to="/produtos" className="block [&:hover]:no-underline" data-tour="dashboard-insights-product-loss">
-                                  <StatCard
-                                    title="Perdas (danificados)"
-                                    value={formatCurrency(productLossTotal)}
-                                    icon={Package}
-                                    variant={productLossTotal > 0 ? "warning" : "default"}
-                                    description="Total no mês"
-                                  />
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">Total de baixas danificadas registradas no mês.</TooltipContent>
-                            </Tooltip>
-                          )}
-                          {isAdmin && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Link to="/clientes" className="block [&:hover]:no-underline" data-tour="dashboard-insights-clients">
-                                  <StatCard
-                                    title="Clientes cadastrados"
-                                    value={clientsCount}
-                                    icon={Users}
-                                    description="Total da clínica"
-                                  />
-                                </Link>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom">Quantidade total de clientes cadastrados.</TooltipContent>
-                            </Tooltip>
-                          )}
-                          {!isAdmin && (
-                            <div data-tour="dashboard-insights-my-performance">
-                              <StatCard
-                                title="Meu desempenho"
-                                value={staffCompletedThisMonth}
-                                icon={Calendar}
-                                description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados no mês`}
-                              />
-                            </div>
-                          )}
-                          {!isAdmin && (
-                            <div data-tour="dashboard-insights-my-clients">
-                              <StatCard
-                                title="Clientes que atendi"
-                                value={staffMyClientsCount ?? 0}
-                                icon={Users}
-                                description="Clientes únicos no mês"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {isAdmin && (
-                          <DashboardClientRanking clientRanking={clientRanking} formatCurrency={formatCurrency} />
-                        )}
-
-                        {isAdmin && professionalGoalsRanking.length > 0 && (
-                          <DashboardGoalsCard professionalGoalsRanking={professionalGoalsRanking} formatCurrency={formatCurrency} />
-                        )}
-
-                        <div data-tour="dashboard-insights-all-kpis">
-                          <DashboardStatsGrid
-                            isLoading={isLoading}
-                            isAdmin={isAdmin}
-                            dailyBalance={dailyBalance}
-                            monthlyBalance={stats.monthlyBalance}
-                            monthlyIncome={stats.monthlyIncome}
-                            monthlyExpenses={stats.monthlyExpenses}
-                            productLossTotal={productLossTotal}
-                            clientsCount={clientsCount}
-                            commissionsPending={commissionsPending}
-                            commissionsPaid={commissionsPaid}
-                            salariesToPay={salariesToPay}
-                            salariesPaid={salariesPaid}
-                            professionalCommissionsToReceive={professionalCommissionsToReceive}
-                            professionalCommissionsReceived={professionalCommissionsReceived}
-                            mySalaryAmount={mySalaryAmount}
-                            lastSalaryPayment={lastSalaryPayment}
-                            staffCompletedThisMonth={staffCompletedThisMonth}
-                            staffValueGeneratedThisMonth={staffValueGeneratedThisMonth}
-                            staffMyClientsCount={staffMyClientsCount}
-                            todayAppointments={stats.todayAppointments}
-                            pendingAppointments={stats.pendingAppointments}
-                            lowStockProducts={stats.lowStockProducts}
-                            formatCurrency={formatCurrency}
-                          />
-                        </div>
-                      </CardContent>
-                    </CollapsibleContent>
-                  </Card>
-                </Collapsible>
               );
             }
 
@@ -1445,8 +1433,8 @@ export default function Dashboard() {
                   const labelByKey: Record<DashboardSectionKey, string> = {
                     quick_actions: "Ações rápidas",
                     today: "Hoje",
-                    month: "Mês atual",
-                    activity_feed: "Atividade",
+                    month: "Financeiro do mês",
+                    activity_feed: "Atividade recente",
                     insights: "Insights",
                   };
 
