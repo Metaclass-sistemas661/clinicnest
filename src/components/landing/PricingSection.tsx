@@ -156,40 +156,68 @@ export function PricingSection() {
         </div>
 
         {/* ── Billing Toggle ── */}
-        <div className="flex items-center justify-center gap-4 mb-12">
-          <button
-            onClick={() => setBilling("monthly")}
-            className={cn(
-              "px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border",
-              billing === "monthly"
-                ? "bg-white border-teal-300 text-teal-700 shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Mensal
-          </button>
+        <div className="flex flex-col items-center gap-4 mb-12">
+          {/* Container pill */}
+          <div className="relative inline-flex items-stretch rounded-2xl bg-teal-950/8 border-2 border-teal-200 p-1.5 gap-1.5 shadow-inner">
+            {/* Mensal */}
+            <button
+              onClick={() => setBilling("monthly")}
+              className={cn(
+                "relative px-10 py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 select-none",
+                billing === "monthly"
+                  ? "bg-white text-teal-700 shadow-md shadow-teal-400/20 ring-1 ring-teal-200 scale-[1.02]"
+                  : "text-muted-foreground hover:text-teal-700"
+              )}
+            >
+              Mensal
+            </button>
 
-          <button
-            onClick={() => setBilling("annual")}
-            className={cn(
-              "relative px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border",
-              billing === "annual"
-                ? "bg-white border-teal-300 text-teal-700 shadow-sm"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Anual
-            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500 text-white">
-              -{annualSavingsPct}%
-            </span>
-          </button>
-        </div>
+            {/* Anual — highlighted as primary choice */}
+            <button
+              onClick={() => setBilling("annual")}
+              className={cn(
+                "relative px-10 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 select-none",
+                billing === "annual"
+                  ? "bg-gradient-to-r from-teal-600 to-cyan-500 text-white shadow-lg shadow-teal-500/40 scale-[1.02]"
+                  : "text-muted-foreground hover:text-teal-700"
+              )}
+            >
+              Anual
+              <span
+                className={cn(
+                  "ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-tight",
+                  billing === "annual"
+                    ? "bg-white/25 text-white"
+                    : "bg-green-500 text-white"
+                )}
+              >
+                -{annualSavingsPct}%
+              </span>
+            </button>
+          </div>
 
-        {billing === "annual" && (
-          <p className="text-center text-sm text-teal-700 font-medium mb-10 -mt-6">
-            Pague anualmente e ganhe <strong>3 meses grátis</strong> em qualquer plano.
+          {/* Subtitle line */}
+          <p className="text-sm text-center text-muted-foreground">
+            {billing === "annual" ? (
+              <span className="text-teal-700 font-medium">
+                🎉 Pague anualmente e ganhe{" "}
+                <strong>3 meses grátis</strong> em qualquer plano.
+              </span>
+            ) : (
+              <span>
+                Mude para{" "}
+                <button
+                  onClick={() => setBilling("annual")}
+                  className="text-teal-600 font-semibold underline underline-offset-2 hover:text-teal-700"
+                >
+                  Anual
+                </button>{" "}
+                e economize até{" "}
+                <span className="font-semibold text-green-600">{annualSavingsPct}%</span>
+              </span>
+            )}
           </p>
-        )}
+        </div>
 
         {/* ── Cards ── */}
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto items-start">

@@ -52,10 +52,10 @@ export function CookieConsentBanner() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[120] px-3 pb-3 sm:px-4 sm:pb-4">
-      <div className="mx-auto max-w-6xl rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-50 via-background to-fuchsia-50 shadow-2xl shadow-violet-500/25 ring-1 ring-violet-200/80 backdrop-blur supports-[backdrop-filter]:bg-background/95">
+      <div className="mx-auto max-w-6xl rounded-2xl border-2 border-teal-200 bg-gradient-to-r from-teal-50 via-background to-cyan-50 shadow-2xl shadow-teal-500/15 ring-1 ring-teal-100/80 backdrop-blur supports-[backdrop-filter]:bg-background/95">
         <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30">
+            <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-cyan-500 text-white shadow-lg shadow-teal-500/30">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -97,7 +97,7 @@ export function CookieConsentBanner() {
             <Button
               variant="outline"
               size="sm"
-              className="border-violet-300 bg-white/80 hover:bg-white"
+              className="border-teal-200 bg-white/80 hover:bg-white text-teal-700"
               onClick={() => {
                 setCookieConsentStatus("denied");
                 setConsent("denied");
@@ -108,7 +108,7 @@ export function CookieConsentBanner() {
             </Button>
             <Button
               size="sm"
-              className="bg-gradient-to-r from-violet-600 to-fuchsia-500 font-semibold hover:from-violet-700 hover:to-fuchsia-600"
+              className="bg-gradient-to-r from-teal-600 to-cyan-500 font-semibold hover:from-teal-700 hover:to-cyan-600 shadow-md shadow-teal-500/25"
               onClick={() => {
                 setCookieConsentStatus("granted");
                 setConsent("granted");

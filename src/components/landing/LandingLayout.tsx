@@ -16,12 +16,17 @@ export function Navbar() {
             <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-teal-500/20 border border-teal-400/30">
               <Stethoscope className="h-5 w-5 text-teal-300" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-display text-xl sm:text-2xl font-bold bg-gradient-to-r from-teal-300 to-cyan-200 bg-clip-text text-transparent tracking-tight leading-none">
-                ClinicNest
-              </span>
-              <span className="text-[10px] text-white/40 tracking-widest uppercase leading-tight">
-                by Metaclass
+            <div className="flex flex-col leading-none">
+              <div className="flex items-baseline gap-0">
+                <span className="font-display text-xl sm:text-2xl font-bold text-teal-300 tracking-tight leading-none">
+                  Clinic
+                </span>
+                <span className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight leading-none">
+                  Nest
+                </span>
+              </div>
+              <span className="text-[8px] text-white/35 tracking-[0.15em] self-end -mt-0.5 leading-none">
+                by metaclass
               </span>
             </div>
           </Link>
@@ -123,9 +128,14 @@ export function Footer() {
               <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-teal-100 border border-teal-200">
                 <Stethoscope className="h-5 w-5 text-teal-600" />
               </div>
-              <div className="flex flex-col">
-                <span className="font-display text-xl font-bold text-foreground leading-none">ClinicNest</span>
-                <span className="text-[10px] text-muted-foreground tracking-widest uppercase leading-tight">by Metaclass</span>
+              <div className="flex flex-col leading-none">
+                <div className="flex items-baseline gap-0">
+                  <span className="font-display text-xl font-bold text-teal-700 tracking-tight leading-none">Clinic</span>
+                  <span className="font-display text-xl font-bold text-foreground tracking-tight leading-none">Nest</span>
+                </div>
+                <span className="text-[8px] text-muted-foreground/70 tracking-[0.15em] self-end -mt-0.5 leading-none">
+                  by metaclass
+                </span>
               </div>
             </Link>
 
