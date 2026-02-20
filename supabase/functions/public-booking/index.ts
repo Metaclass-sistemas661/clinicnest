@@ -137,7 +137,7 @@ function getBookingConfirmationEmailHtml(input: {
                 <div style="color:#374151;font-size:14px;">Horário: <strong>${escapeHtml(input.scheduledAtLocal)}</strong></div>
               </div>
               ${input.confirmUrl ? `<p style="margin:14px 0 0;"><a href="${input.confirmUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;">Confirmar presença</a></p>` : ""}
-              <p style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">Se precisar cancelar, utilize o link abaixo (sujeito à política de antecedência do salão):</p>
+              <p style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">Se precisar cancelar, utilize o link abaixo (sujeito à política de antecedência da clínica):</p>
               <p style="margin:10px 0 0;"><a href="${input.cancelUrl}" style="color:#7c3aed;font-weight:700;">Cancelar agendamento</a></p>
             </td>
           </tr>
@@ -175,7 +175,7 @@ Seu agendamento foi registrado com sucesso:
 - Horário: ${input.scheduledAtLocal}
 
 ${input.confirmUrl ? `Confirmar presença:\n${input.confirmUrl}\n` : ""}
-Para cancelar (sujeito à política do salão):
+Para cancelar (sujeito à política da clínica):
 ${input.cancelUrl}
   `.trim();
 }
@@ -254,7 +254,7 @@ serve(async (req) => {
       );
 
       if (tenantError || !tenant) {
-        return new Response(JSON.stringify({ error: "Salão não encontrado" }), {
+        return new Response(JSON.stringify({ error: "Clínica não encontrada" }), {
           status: 404,
           headers: { ...cors, "Content-Type": "application/json" },
         });
@@ -335,7 +335,7 @@ serve(async (req) => {
         { p_slug: slug }
       );
       if (tenantError || !tenant) {
-        return new Response(JSON.stringify({ error: "Salão não encontrado" }), {
+        return new Response(JSON.stringify({ error: "Clínica não encontrada" }), {
           status: 404,
           headers: { ...cors, "Content-Type": "application/json" },
         });
@@ -524,7 +524,7 @@ serve(async (req) => {
         });
 
         const html = getBookingConfirmationEmailHtml({
-          tenantName: String((tenant as any).name ?? "BeautyGest"),
+          tenantName: String((tenant as any).name ?? "ClinicNest"),
           serviceName: String((service as any)?.name ?? "Serviço"),
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,
@@ -534,7 +534,7 @@ serve(async (req) => {
         });
 
         const text = getBookingConfirmationEmailText({
-          tenantName: String((tenant as any).name ?? "BeautyGest"),
+          tenantName: String((tenant as any).name ?? "ClinicNest"),
           serviceName: String((service as any)?.name ?? "Serviço"),
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,

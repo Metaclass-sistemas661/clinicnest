@@ -17,7 +17,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Senha Alterada - BeautyGest</title>
+  <title>Senha Alterada - ClinicNest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -28,8 +28,8 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">ClinicNest</h1>
+              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Clínicas</p>
             </td>
           </tr>
 
@@ -80,7 +80,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
                 Precisa de ajuda? Entre em contato com o administrador do sistema.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+                © ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -99,7 +99,7 @@ function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
  */
 function getPasswordChangedEmailText(name: string, loginUrl: string): string {
   return `
-Senha alterada com sucesso - BeautyGest
+Senha alterada com sucesso - ClinicNest
 
 Olá${name ? `, ${name}` : ""}!
 
@@ -114,13 +114,13 @@ Dica de segurança: Se você não realizou esta alteração, entre em contato co
 
 Precisa de ajuda? Entre em contato com o administrador do sistema.
 
-© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+© ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
   `.trim();
 }
 
 function normalizeSiteUrl(raw: string | undefined | null): string {
   const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return "https://beautygest.metaclass.com.br";
+  if (!s) return "https://clinicnest.metaclass.com.br";
   if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
   return `https://${s}`.replace(/\/+$/, "");
 }
@@ -283,7 +283,7 @@ serve(async (req) => {
     const loginUrl = `${siteUrl}/login`;
     const emailHtml = getPasswordChangedEmailHtml(name, loginUrl);
     const emailText = getPasswordChangedEmailText(name, loginUrl);
-    const subject = "Senha alterada com sucesso - BeautyGest";
+    const subject = "Senha alterada com sucesso - ClinicNest";
 
     const emailSent = await sendEmailViaResend(
       user.email || "",

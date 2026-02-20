@@ -32,18 +32,17 @@ type SubscriptionRow = {
   asaas_subscription_id?: string | null;
 };
 
-type TierKey = "basic" | "pro" | "premium";
-type IntervalKey = "monthly" | "quarterly" | "annual";
+type TierKey = "solo" | "clinica" | "premium";
+type IntervalKey = "monthly" | "annual";
 
 const tierNames: Record<TierKey, string> = {
-  basic: "Básico",
-  pro: "Pro",
+  solo: "Solo",
+  clinica: "Clínica",
   premium: "Premium",
 };
 
 const intervalNames: Record<IntervalKey, string> = {
   monthly: "Mensal",
-  quarterly: "Trimestral",
   annual: "Anual",
 };
 
@@ -52,18 +51,21 @@ function formatPlanLabel(plan: string | null): string {
   const s = plan.trim();
   if (!s) return "-";
 
-  // Legacy format: "monthly" | "quarterly" | "annual"
-  if (s === "monthly" || s === "quarterly" || s === "annual") {
-    return `Básico (${intervalNames[s]})`;
-  }
+  // Legado: só interval → Solo
+  if (s === "monthly" || s === "annual") return `Solo (${intervalNames[s]})`;
+  if (s === "quarterly") return "Solo (Mensal)";
 
   const [tierRaw, intervalRaw] = s.split("_");
-  if (
-    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
-    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
-  ) {
-    return `${tierNames[tierRaw]} (${intervalNames[intervalRaw]})`;
+  const interval: IntervalKey =
+    intervalRaw === "annual" ? "annual" : "monthly";
+
+  // Novos nomes
+  if (tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+    return `${tierNames[tierRaw]} (${intervalNames[interval]})`;
   }
+  // Legado: basic → Solo, pro → Clínica
+  if (tierRaw === "basic")   return `Solo (${intervalNames[interval]})`;
+  if (tierRaw === "pro")     return `Clínica (${intervalNames[interval]})`;
 
   return s;
 }

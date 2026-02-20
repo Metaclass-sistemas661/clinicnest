@@ -156,7 +156,7 @@ serve(async (req) => {
       .maybeSingle(),
   ]);
 
-  const tenantName = (tenant?.name || "BeautyGest").trim();
+  const tenantName = (tenant?.name || "ClinicNest").trim();
   const fullName = (profile?.full_name || "Usuário").trim();
 
   const supportTo = Deno.env.get("SUPPORT_EMAIL_TO") || "suporte@metaclass.com.br";
@@ -182,13 +182,13 @@ serve(async (req) => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ticket de suporte - BeautyGest</title>
+  <title>Ticket de suporte - ClinicNest</title>
 </head>
 <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#ffffff;">
   <div style="max-width:640px;margin:0 auto;padding:24px;">
     <div style="border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
       <div style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:22px 20px;color:#fff;">
-        <div style="font-size:20px;font-weight:800;">BeautyGest</div>
+        <div style="font-size:20px;font-weight:800;">ClinicNest</div>
         <div style="opacity:.92;margin-top:6px;">Novo ticket de suporte</div>
       </div>
       <div style="padding:18px 20px;">
@@ -220,7 +220,7 @@ serve(async (req) => {
   `.trim();
 
   const text = [
-    "Novo ticket de suporte - BeautyGest",
+    "Novo ticket de suporte - ClinicNest",
     "",
     `Tenant: ${tenantName}`,
     `Usuário: ${fullName} (${replyTo ?? "sem email"})`,

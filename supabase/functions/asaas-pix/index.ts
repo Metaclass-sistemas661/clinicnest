@@ -137,7 +137,7 @@ serve(async (req) => {
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "Chave Asaas não configurada. Configure em Configurações do Salão." }),
+        JSON.stringify({ error: "Chave Asaas não configurada. Configure em Configurações da Clínica." }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
@@ -163,7 +163,7 @@ serve(async (req) => {
         billingType: "PIX",
         value,
         dueDate: due_date,
-        description: description ?? "Cobrança BeautyGest",
+        description: description ?? "Cobrança ClinicNest",
       });
 
       log.info("Fetching PIX QR code...");

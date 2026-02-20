@@ -154,7 +154,7 @@ function buildEmailHtml(message: string, salonName: string): string {
 <body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:24px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
     <div style="background:linear-gradient(135deg,#7c3aed,#ec4899);padding:24px 32px">
-      <h1 style="color:#fff;margin:0;font-size:20px">${salonName || "Seu Salão"}</h1>
+      <h1 style="color:#fff;margin:0;font-size:20px">${salonName || "Sua Clínica"}</h1>
     </div>
     <div style="padding:24px 32px;color:#333;font-size:14px;line-height:1.6">
       ${lines}
@@ -181,7 +181,7 @@ async function sendEmail(
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
       body: JSON.stringify({
-        from: "BeautyGest <no-reply@beautygest.com.br>",
+        from: "ClinicNest <no-reply@metaclass.com.br>",
         to: [toName ? `${toName} <${toEmail}>` : toEmail],
         subject,
         html,
@@ -255,7 +255,7 @@ async function dispatch(
       return "skipped";
     }
     const salonName = tenant.name ?? "";
-    const subject = salonName ? `Mensagem de ${salonName}` : "Mensagem do seu salão";
+    const subject = salonName ? `Mensagem de ${salonName}` : "Mensagem da sua clínica";
     const html = buildEmailHtml(message, salonName);
     result = await sendEmail(resendKey, email, clientName, subject, html);
   }

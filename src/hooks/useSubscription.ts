@@ -14,8 +14,8 @@ export interface SubscriptionStatus {
   error: string | null;
 }
 
-export type SubscriptionTier = "basic" | "pro" | "premium";
-export type SubscriptionInterval = "monthly" | "quarterly" | "annual";
+export type SubscriptionTier = "solo" | "clinica" | "premium";
+export type SubscriptionInterval = "monthly" | "annual";
 
 export function normalizePlanKey(input: unknown): string | null {
   if (typeof input !== "string") return null;
@@ -27,19 +27,30 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
   const key = normalizePlanKey(planKey);
   if (!key) return null;
 
-  // Legacy format: "monthly" | "quarterly" | "annual"
-  if (key === "monthly" || key === "quarterly" || key === "annual") {
-    return { tier: "basic", interval: key };
+  // Legado: só interval sem tier → solo/monthly
+  if (key === "monthly" || key === "annual") {
+    return { tier: "solo", interval: key };
+  }
+  // Legado: quarterly → solo/monthly
+  if (key === "quarterly") {
+    return { tier: "solo", interval: "monthly" };
   }
 
-  // New format: "basic_monthly" | "pro_annual" ...
   const [tierRaw, intervalRaw] = key.split("_");
-  if (
-    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
-    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
-  ) {
-    return { tier: tierRaw, interval: intervalRaw };
+  const interval: SubscriptionInterval | null =
+    intervalRaw === "monthly" ? "monthly" :
+    intervalRaw === "annual"  ? "annual"  :
+    intervalRaw === "quarterly" ? "monthly" : // legado
+    null;
+  if (!interval) return null;
+
+  // Novos nomes
+  if (tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+    return { tier: tierRaw, interval };
   }
+  // Legado: basic → solo, pro → clinica
+  if (tierRaw === "basic") return { tier: "solo", interval };
+  if (tierRaw === "pro")   return { tier: "clinica", interval };
 
   return null;
 }
@@ -47,7 +58,7 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
 export function isAdvancedReportsAllowed(planKey: unknown): boolean {
   const parsed = parsePlanKey(planKey);
   if (!parsed) return false;
-  return parsed.tier === "pro" || parsed.tier === "premium";
+  return parsed.tier === "clinica" || parsed.tier === "premium";
 }
 
 export function useSubscription() {

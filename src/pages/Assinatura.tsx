@@ -12,36 +12,32 @@ import { CreditCard, Check, Sparkles, Crown, Loader2, Calendar, RefreshCw, Setti
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
 
-type TierKey = "basic" | "pro" | "premium";
-type IntervalKey = "monthly" | "quarterly" | "annual";
+type TierKey = "solo" | "clinica" | "premium";
+type IntervalKey = "monthly" | "annual";
 
 const intervalNames: Record<IntervalKey, string> = {
   monthly: "Mensal",
-  quarterly: "Trimestral",
   annual: "Anual",
 };
 
 const tierNames: Record<TierKey, string> = {
-  basic: "Básico",
-  pro: "Pro",
+  solo: "Solo",
+  clinica: "Clínica",
   premium: "Premium",
 };
 
 const PRICING: Record<TierKey, Record<IntervalKey, { label: string; amountCents: number; savings?: string }>> = {
-  basic: {
-    monthly: { label: "R$79,90", amountCents: 7990 },
-    quarterly: { label: "R$219,90", amountCents: 21990, savings: "Economize ~8%" },
-    annual: { label: "R$719,00", amountCents: 71900, savings: "Economize ~25%" },
+  solo: {
+    monthly: { label: "R$149,90", amountCents: 14990 },
+    annual:  { label: "R$1.349,00", amountCents: 134900, savings: "Economize ~25%" },
   },
-  pro: {
-    monthly: { label: "R$119,90", amountCents: 11990 },
-    quarterly: { label: "R$329,90", amountCents: 32990, savings: "Economize ~8%" },
-    annual: { label: "R$1.079,00", amountCents: 107900, savings: "Economize ~25%" },
+  clinica: {
+    monthly: { label: "R$249,90", amountCents: 24990 },
+    annual:  { label: "R$2.249,00", amountCents: 224900, savings: "Economize ~25%" },
   },
   premium: {
-    monthly: { label: "R$169,90", amountCents: 16990 },
-    quarterly: { label: "R$469,90", amountCents: 46990, savings: "Economize ~8%" },
-    annual: { label: "R$1.499,00", amountCents: 149900, savings: "Economize ~25%" },
+    monthly: { label: "R$399,90", amountCents: 39990 },
+    annual:  { label: "R$3.599,00", amountCents: 359900, savings: "Economize ~25%" },
   },
 };
 
@@ -52,59 +48,77 @@ const tiers: Array<{
   features: string[];
 }> = [
   {
-    key: "basic",
-    description: "Essencial para começar",
+    key: "solo",
+    description: "Médico, psicólogo, fisioterapeuta individual",
     features: [
-      "Equipe: 2 usuários (inclui 1 admin)",
-      "Clientes: até 300",
-      "Histórico: 6 meses",
-      "Controle financeiro",
-      "Suporte por email",
+      "1 profissional + 1 admin",
+      "Até 500 pacientes",
+      "Agenda médica completa",
+      "Prontuário eletrônico",
+      "Financeiro básico",
+      "Gestão de insumos",
+      "Histórico de 12 meses",
+      "Suporte por e-mail",
     ],
   },
   {
-    key: "pro",
-    description: "Para crescer com controle",
+    key: "clinica",
+    description: "Clínicas com equipe e múltiplos profissionais",
     recommended: true,
     features: [
-      "Equipe: 5 usuários (inclui 1 admin)",
-      "Clientes: até 2.000",
-      "Histórico: 24 meses",
-      "Relatórios avançados",
-      "Exportação",
-      "Suporte prioritário",
+      "Até 5 profissionais + admin",
+      "Até 3.000 pacientes",
+      "Agenda médica completa",
+      "Prontuário eletrônico completo",
+      "Convênios e faturamento",
+      "Financeiro avançado",
+      "Comissões, metas e performance",
+      "Relatórios e exportação",
+      "Histórico ilimitado",
+      "Suporte via chat (Seg–Sáb)",
     ],
   },
   {
     key: "premium",
-    description: "Tudo liberado",
+    description: "Policlínicas, centros médicos e alta demanda",
     features: [
-      "Equipe ilimitada (inclui 1 admin)",
-      "Clientes ilimitados",
+      "Profissionais ilimitados",
+      "Pacientes ilimitados",
+      "Prontuário + modelos personalizados",
+      "Convênios e faturamento TISS",
+      "Financeiro e DRE avançado",
+      "Comissões, metas e performance",
+      "Exportação completa (PDF/Excel)",
+      "API de integração",
       "Histórico ilimitado",
-      "Relatórios e exportação completos",
-      "PDFs e automações avançadas",
+      "Suporte prioritário via WhatsApp",
     ],
   },
 ];
 
+/** Converte chave de plano armazenada no banco para { tier, interval } */
 function parseStoredPlan(plan: string | null): { tier: TierKey; interval: IntervalKey } | null {
   if (!plan) return null;
   const s = plan.trim();
   if (!s) return null;
 
-  // Legacy format: "monthly" | "quarterly" | "annual"
-  if (s === "monthly" || s === "quarterly" || s === "annual") {
-    return { tier: "basic", interval: s };
+  // Legado: "monthly" | "annual" sem tier → solo
+  if (s === "monthly" || s === "annual") {
+    return { tier: "solo", interval: s };
   }
 
   const [tierRaw, intervalRaw] = s.split("_");
-  if (
-    (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") &&
-    (intervalRaw === "monthly" || intervalRaw === "quarterly" || intervalRaw === "annual")
-  ) {
-    return { tier: tierRaw, interval: intervalRaw };
+  const interval = intervalRaw === "monthly" || intervalRaw === "annual" ? intervalRaw : null;
+  if (!interval) return null;
+
+  // Novos nomes
+  if (tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+    return { tier: tierRaw, interval };
   }
+
+  // Legado: basic → solo, pro → clinica
+  if (tierRaw === "basic") return { tier: "solo", interval };
+  if (tierRaw === "pro")   return { tier: "clinica", interval };
 
   return null;
 }
@@ -112,23 +126,23 @@ function parseStoredPlan(plan: string | null): { tier: TierKey; interval: Interv
 export default function Assinatura() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const { 
-    subscribed, 
-    trialing, 
+  const {
+    subscribed,
+    trialing,
     trial_expired: _trial_expired,
-    days_remaining, 
-    plan, 
+    days_remaining,
+    plan,
     subscription_end,
     isLoading,
     createCheckout,
     checkSubscription,
   } = useSubscription();
-  
+
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const [selectedInterval, setSelectedInterval] = useState<Record<TierKey, IntervalKey>>({
-    basic: "monthly",
-    pro: "annual",
+    solo:    "annual",
+    clinica: "annual",
     premium: "annual",
   });
 
@@ -255,7 +269,7 @@ export default function Assinatura() {
           const interval = selectedInterval[tier.key];
           const currentPrice = PRICING[tier.key][interval];
           const loadingKey = `${tier.key}_${interval}`;
-          
+
           return (
             <Card
               key={tier.key}
@@ -287,13 +301,12 @@ export default function Assinatura() {
                     value={interval}
                     onValueChange={(v) => {
                       if (!v) return;
-                      if (v !== "monthly" && v !== "quarterly" && v !== "annual") return;
+                      if (v !== "monthly" && v !== "annual") return;
                       setSelectedInterval((prev) => ({ ...prev, [tier.key]: v }));
                     }}
                     className="justify-start"
                   >
                     <ToggleGroupItem value="monthly" data-tour={`subscription-interval-${tier.key}-monthly`}>Mensal</ToggleGroupItem>
-                    <ToggleGroupItem value="quarterly" data-tour={`subscription-interval-${tier.key}-quarterly`}>Trimestral</ToggleGroupItem>
                     <ToggleGroupItem value="annual" data-tour={`subscription-interval-${tier.key}-annual`}>Anual</ToggleGroupItem>
                   </ToggleGroup>
                 </div>
@@ -301,7 +314,7 @@ export default function Assinatura() {
                 <div className="pt-4">
                   <span className="text-4xl font-bold">{currentPrice.label}</span>
                   <span className="text-muted-foreground">
-                    {interval === "monthly" ? "/mês" : interval === "quarterly" ? "/trimestre" : "/ano"}
+                    {interval === "monthly" ? "/mês" : "/ano"}
                   </span>
                 </div>
                 {currentPrice.savings && (
@@ -335,7 +348,7 @@ export default function Assinatura() {
                     variant={tier.recommended ? "default" : "outline"}
                     onClick={() => handleSubscribe(tier.key)}
                     disabled={loadingPlan !== null}
-                    data-tour={tier.key === "pro" ? "subscription-choose-pro" : tier.key === "premium" ? "subscription-choose-premium" : "subscription-choose-basic"}
+                    data-tour={tier.key === "clinica" ? "subscription-choose-clinica" : tier.key === "premium" ? "subscription-choose-premium" : "subscription-choose-solo"}
                   >
                     {loadingPlan === loadingKey ? (
                       <>

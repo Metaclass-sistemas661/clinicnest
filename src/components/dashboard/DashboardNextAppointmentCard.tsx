@@ -1,8 +1,8 @@
 import { memo } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Clock, Stethoscope, ArrowRight } from "lucide-react";
 import { formatInAppTz } from "@/lib/date";
 import type { Appointment } from "@/types/database";
 
@@ -16,35 +16,45 @@ export const DashboardNextAppointmentCard = memo(function DashboardNextAppointme
   getStatusBadge,
 }: DashboardNextAppointmentCardProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Próximo atendimento</CardTitle>
-        <CardDescription>
-          Seu próximo agendamento de hoje
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3 md:p-4 gap-2 sm:gap-4">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-              <Clock className="h-4 w-4 md:h-5 md:w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-medium text-sm md:text-base truncate">
-                {nextAppointment.client?.name || "Cliente não informado"}
-              </p>
-              <p className="text-xs md:text-sm text-muted-foreground truncate">
-                {nextAppointment.service?.name} •{" "}
-                {formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}
-              </p>
-            </div>
+    <Card className="overflow-hidden">
+      <div className="bg-gradient-to-br from-teal-600 to-cyan-500 p-5 text-white">
+        <div className="mb-4 flex items-center gap-2">
+          <Clock className="h-4 w-4 text-teal-100" />
+          <span className="text-sm font-medium text-teal-100">Próximo atendimento</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20">
+            <Stethoscope className="h-7 w-7 text-white" />
           </div>
-          <div className="self-end sm:self-auto">
-            {getStatusBadge(nextAppointment.status)}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xl font-bold leading-tight">
+              {nextAppointment.client?.name || "Paciente não informado"}
+            </p>
+            {nextAppointment.service?.name && (
+              <p className="mt-0.5 truncate text-sm text-teal-100">
+                {nextAppointment.service.name}
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="tabular-nums text-3xl font-bold leading-none">
+              {formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}
+            </p>
+            <p className="mt-1 text-xs text-teal-100">hoje</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" asChild className="mt-4">
-          <Link to="/agenda" data-tour="dashboard-next-appointment-view-agenda">Ver agenda</Link>
+      </div>
+      <CardContent className="flex items-center justify-between p-3">
+        {getStatusBadge(nextAppointment.status)}
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-xs text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+        >
+          <Link to="/agenda" data-tour="dashboard-next-appointment-view-agenda">
+            Ver agenda <ArrowRight className="ml-1 h-3 w-3" />
+          </Link>
         </Button>
       </CardContent>
     </Card>

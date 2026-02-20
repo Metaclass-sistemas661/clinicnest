@@ -9,7 +9,7 @@ export function getWelcomeEmailHtml(name: string, magicLink: string): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bem-vindo ao BeautyGest</title>
+  <title>Bem-vindo ao ClinicNest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -20,8 +20,8 @@ export function getWelcomeEmailHtml(name: string, magicLink: string): string {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">ClinicNest</h1>
+              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Clínicas</p>
             </td>
           </tr>
 
@@ -35,7 +35,7 @@ export function getWelcomeEmailHtml(name: string, magicLink: string): string {
               </p>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Agora você tem acesso completo ao <strong>BeautyGest</strong>, o sistema de gestão que vai transformar a forma como você gerencia seu salão.
+                Agora você tem acesso completo ao <strong>ClinicNest</strong>, o sistema de gestão que vai transformar a forma como você gerencia sua clínica.
               </p>
 
               <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
@@ -81,7 +81,7 @@ export function getWelcomeEmailHtml(name: string, magicLink: string): string {
                 suporte@metaclass.com.br
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+                © ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -97,11 +97,11 @@ export function getWelcomeEmailHtml(name: string, magicLink: string): string {
 
 export function getWelcomeEmailText(name: string, magicLink: string): string {
   return `
-Bem-vindo ao BeautyGest, ${name}!
+Bem-vindo ao ClinicNest, ${name}!
 
 Seu pagamento foi confirmado com sucesso.
 
-Agora você tem acesso completo ao BeautyGest, o sistema de gestão que vai transformar a forma como você gerencia seu salão.
+Agora você tem acesso completo ao ClinicNest, o sistema de gestão que vai transformar a forma como você gerencia sua clínica.
 
 Clique no link abaixo para acessar sua conta:
 ${magicLink}
@@ -118,7 +118,7 @@ O que você pode fazer agora:
 Precisa de ajuda? Entre em contato conosco:
 suporte@metaclass.com.br
 
-© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+© ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
   `.trim();
 }
 

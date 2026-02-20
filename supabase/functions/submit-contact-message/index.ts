@@ -154,7 +154,7 @@ function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nova mensagem - BeautyGest</title>
+  <title>Nova mensagem - ClinicNest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
   <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
@@ -163,8 +163,8 @@ function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput
         <table width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #ffffff;">
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 34px 28px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 30px; font-weight: 700;">BeautyGest</h1>
-              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 15px;">Gestao profissional para saloes de beleza</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 30px; font-weight: 700;">ClinicNest</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 15px;">Gestão profissional para clínicas</p>
             </td>
           </tr>
 
@@ -229,10 +229,10 @@ function getContactNotificationEmailHtml(input: ContactNotificationTemplateInput
           <tr>
             <td style="background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 20px 28px; text-align: center;">
               <p style="margin: 0 0 6px; color: #6b7280; font-size: 13px;">
-                Email transacional automatico do site BeautyGest.
+                Email transacional automático do site ClinicNest.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+                © ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
               </p>
             </td>
           </tr>

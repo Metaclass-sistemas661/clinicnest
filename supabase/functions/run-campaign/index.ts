@@ -78,7 +78,7 @@ function renderHtmlWithHeader(params: {
     ${preheaderHtml}
     <div style="max-width:640px;margin:0 auto;padding:24px;">
       <div style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:18px 20px;color:#fff;border-radius:16px;">
-        <div style="font-size:18px;font-weight:800;">BeautyGest</div>
+        <div style="font-size:18px;font-weight:800;">ClinicNest</div>
         <div style="opacity:.92;margin-top:6px;">${escapeHtml(params.subject)}</div>
       </div>
       <div style="padding:18px 6px 0 6px;">

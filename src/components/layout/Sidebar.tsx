@@ -10,7 +10,6 @@ import {
   Truck,
   Users,
   UserCog,
-  User,
   Settings,
   LogOut,
   CreditCard,
@@ -31,7 +30,6 @@ import {
   Tag,
   Ticket,
   Plug,
-  Stethoscope,
   ClipboardList,
   HeartPulse,
   Building2,
@@ -43,8 +41,6 @@ import {
   FileCode2,
   Building,
   Calculator,
-  Boxes,
-  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -130,6 +126,14 @@ const navCategories: NavCategory[] = [
       { title: "Integrações", href: "/integracoes", icon: Plug, adminOnly: true },
       { title: "Auditoria", href: "/auditoria", icon: Shield, adminOnly: true },
       { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { title: "Notificações", href: "/notificacoes", icon: Bell },
+      { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
+      { title: "Ajuda", href: "/ajuda", icon: BookOpen },
     ],
   },
 ];
@@ -298,68 +302,35 @@ function SidebarContent({
         {!isCollapsed && (
           <div className="mb-3 md:mb-4 rounded-xl border-gradient bg-card p-3 md:p-4">
             <div className="flex items-center gap-3">
-              {/* Avatar: foto ou inicial */}
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.full_name || "Avatar"}
-                  className="h-9 w-9 md:h-10 md:w-10 rounded-xl object-cover"
-                />
-              ) : (
-                <div className="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-xl gradient-accent text-white font-bold text-sm md:text-base">
-                  {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {profile?.full_name || "Usuário"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {isAdmin ? "Administrador" : "Profissional"}
-                </p>
-              </div>
-              <ThemeToggle />
-            </div>
-            {/* Links rápidos do usuário */}
-            <div className="mt-3 flex items-center gap-1 border-t border-border/40 pt-3">
               <Link
                 to="/minhas-configuracoes"
+                onClick={onNavigate}
                 onMouseEnter={() => prefetchRoute("/minhas-configuracoes")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                className="flex flex-1 items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                 title="Meu Perfil"
               >
-                <User className="h-3.5 w-3.5" />
-                <span>Perfil</span>
+                {/* Avatar: foto ou inicial */}
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.full_name || "Avatar"}
+                    className="h-9 w-9 md:h-10 md:w-10 rounded-xl object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-xl gradient-accent text-white font-bold text-sm md:text-base">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {profile?.full_name || "Usuário"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isAdmin ? "Administrador" : "Profissional"}
+                  </p>
+                </div>
               </Link>
-              <Link
-                to="/notificacoes"
-                onMouseEnter={() => prefetchRoute("/notificacoes")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                title="Notificações"
-              >
-                <Bell className="h-3.5 w-3.5" />
-                <span>Alertas</span>
-              </Link>
-              {isAdmin && (
-                <Link
-                  to="/assinatura"
-                  onMouseEnter={() => prefetchRoute("/assinatura")}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                  title="Assinatura"
-                >
-                  <CreditCard className="h-3.5 w-3.5" />
-                  <span>Plano</span>
-                </Link>
-              )}
-              <Link
-                to="/ajuda"
-                onMouseEnter={() => prefetchRoute("/ajuda")}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                title="Ajuda"
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                <span>Ajuda</span>
-              </Link>
+              <ThemeToggle />
             </div>
           </div>
         )}

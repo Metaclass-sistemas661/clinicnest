@@ -127,7 +127,7 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bem-vindo ao BeautyGest</title>
+  <title>Bem-vindo ao ClinicNest</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
@@ -138,8 +138,8 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">BeautyGest</h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Salões</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">ClinicNest</h1>
+              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Gestão Profissional para Clínicas</p>
             </td>
           </tr>
 
@@ -149,7 +149,7 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
               <h2 style="margin: 0 0 20px; color: #1f2937; font-size: 24px;">Bem-vindo à equipe, ${name}! 🎉</h2>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Você foi cadastrado como <strong>${roleLabel}</strong> no sistema BeautyGest.
+                Você foi cadastrado como <strong>${roleLabel}</strong> no sistema ClinicNest.
               </p>
               
               <p style="margin: 0 0 16px; color: #4b5563; font-size: 16px; line-height: 1.6;">
@@ -198,7 +198,7 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
                 Precisa de ajuda? Entre em contato com o administrador do sistema.
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+                © ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -215,9 +215,9 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
 function getTeamMemberWelcomeEmailText(name: string, email: string, loginUrl: string, role: string): string {
   const roleLabel = role === "admin" ? "Administrador" : "Profissional";
   return `
-Bem-vindo à equipe do BeautyGest, ${name}!
+Bem-vindo à equipe do ClinicNest, ${name}!
 
-Você foi cadastrado como ${roleLabel} no sistema BeautyGest.
+Você foi cadastrado como ${roleLabel} no sistema ClinicNest.
 
 Suas credenciais de acesso são:
 E-mail: ${email}
@@ -232,13 +232,13 @@ ${role === "admin" ? "- Acessar relatórios financeiros\n- Gerenciar produtos e 
 
 Precisa de ajuda? Entre em contato com o administrador do sistema.
 
-© ${new Date().getFullYear()} BeautyGest. Todos os direitos reservados.
+© ${new Date().getFullYear()} ClinicNest. Todos os direitos reservados.
   `.trim();
 }
 
 function normalizeSiteUrl(raw: string | undefined | null): string {
   const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return "https://beautygest.metaclass.com.br";
+  if (!s) return "https://clinicnest.metaclass.com.br";
   if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
   return `https://${s}`.replace(/\/+$/, "");
 }
@@ -468,7 +468,7 @@ serve(async (req) => {
       
       emailSent = await sendEmailViaResend(
         emailTrim,
-        "Bem-vindo à equipe do BeautyGest! ",
+        "Bem-vindo à equipe do ClinicNest! ",
         emailHtml,
         emailText
       );

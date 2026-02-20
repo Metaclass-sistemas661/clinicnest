@@ -28,4 +28,4 @@ O `createLogger` de `_shared/logging.ts` mascara automaticamente PII, valores mo
 
 ## CORS
 
-Por padrão usa-se `corsHeaders` com `*`. Para **restringir origens em produção**, defina no Supabase (Settings → Edge Functions → Secrets) o secret `SUPABASE_CORS_ORIGINS` com origens separadas por vírgula (ex.: `https://beautygest.metaclass.com.br`). Em seguida, nas funções, troque o uso de `corsHeaders` por `getCorsHeaders(req)` (import de `_shared/cors.ts`) e use o retorno nos headers das respostas.
+Por padrão usa-se `corsHeaders` com `*`. Para **restringir origens em produção**, defina no Supabase (Settings → Edge Functions → Secrets) o secret `CORS_ALLOWED_ORIGINS` com origens separadas por vírgula (ex.: `https://clinicnest.metaclass.com.br`). Em seguida, nas funções, troque o uso de `corsHeaders` por `getCorsHeaders(req)` (import de `_shared/cors.ts`) e use o retorno nos headers das respostas.

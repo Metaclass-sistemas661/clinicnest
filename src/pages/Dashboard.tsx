@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
@@ -824,7 +824,50 @@ export default function Dashboard() {
       }
     >
       <TooltipProvider>
-        <div className="space-y-8">
+        <div className="space-y-6">
+
+          {/* ===== HERO BANNER ===== */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-400 p-6 text-white shadow-lg">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute bottom-2 right-2 h-20 w-20 rounded-full bg-white/10" />
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-teal-100" />
+                  <p className="text-sm font-medium text-teal-100">
+                    {formatInAppTz(new Date(), "EEEE, d 'de' MMMM 'de' yyyy")}
+                  </p>
+                </div>
+                <h2 className="text-2xl font-bold">{tenant?.name || "ClinicNest"}</h2>
+                <p className="mt-1 text-sm text-teal-100">
+                  {isAdmin ? "Painel administrativo" : "Painel do profissional"}
+                </p>
+              </div>
+              {!isLoading && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="rounded-xl bg-white/15 px-4 py-2.5 text-center backdrop-blur-sm">
+                    <p className="tabular-nums text-2xl font-bold leading-none">{stats.todayAppointments}</p>
+                    <p className="mt-0.5 text-xs text-teal-100">consultas hoje</p>
+                  </div>
+                  {stats.pendingAppointments > 0 && (
+                    <div className="rounded-xl bg-amber-400/30 px-4 py-2.5 text-center">
+                      <p className="tabular-nums text-2xl font-bold leading-none">{stats.pendingAppointments}</p>
+                      <p className="mt-0.5 text-xs text-amber-100">pendentes</p>
+                    </div>
+                  )}
+                  {isAdmin && stats.lowStockProducts > 0 && (
+                    <div className="rounded-xl bg-amber-400/30 px-4 py-2.5 text-center">
+                      <p className="tabular-nums text-2xl font-bold leading-none">{stats.lowStockProducts}</p>
+                      <p className="mt-0.5 text-xs text-amber-100">estoque baixo</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ===== ORDERED SECTIONS ===== */}
           {dashboardPrefs.order.map((sectionKey) => {
             if (!availableSections.includes(sectionKey)) return null;
             if (dashboardPrefs.hidden?.[sectionKey]) return null;
@@ -935,53 +978,72 @@ export default function Dashboard() {
                 >
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Atividade</CardTitle>
-                        <CardDescription>Últimas ações registradas</CardDescription>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
+                          <Activity className="h-4 w-4 text-teal-600" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base font-semibold">Atividade recente</CardTitle>
+                          <CardDescription className="text-xs">Últimas ações registradas na clínica</CardDescription>
+                        </div>
                       </div>
                       <CollapsibleTrigger asChild>
                         <Button variant="outline" size="sm">
                           {activityOpen ? (
-                            <>
-                              Ocultar <ChevronUp className="ml-2 h-4 w-4" />
-                            </>
+                            <>Ocultar <ChevronUp className="ml-2 h-4 w-4" /></>
                           ) : (
-                            <>
-                              Ver <ChevronDown className="ml-2 h-4 w-4" />
-                            </>
+                            <>Ver <ChevronDown className="ml-2 h-4 w-4" /></>
                           )}
                         </Button>
                       </CollapsibleTrigger>
                     </CardHeader>
                     <CollapsibleContent>
-                      <CardContent className="space-y-2">
+                      <CardContent className="pt-0">
                         {activityLoading ? (
-                          <div className="text-sm text-muted-foreground">Carregando...</div>
+                          <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+                            Carregando atividades...
+                          </div>
                         ) : activityRows.length === 0 ? (
-                          <div className="text-sm text-muted-foreground">Sem atividades recentes.</div>
+                          <div className="py-6 text-center text-sm text-muted-foreground">
+                            Sem atividades recentes.
+                          </div>
                         ) : (
-                          <div className="space-y-2">
-                            {activityRows.map((r) => (
-                              <div key={r.id} className="rounded-lg border border-border/70 p-3">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-medium">{r.action}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {(r.entity_type ?? "").toString()}
-                                      {r.entity_id ? ` (${String(r.entity_id).slice(0, 8)}...)` : ""}
-                                    </p>
+                          <div className="relative pl-5">
+                            <div className="absolute left-1.5 top-2 bottom-2 w-px bg-border" />
+                            {activityRows.map((r) => {
+                              const et = r.entity_type ?? "";
+                              const dotColor =
+                                et === "appointment" ? "bg-teal-500" :
+                                et === "client" ? "bg-blue-500" :
+                                et.includes("financial") ? "bg-emerald-500" :
+                                et === "product" ? "bg-amber-500" :
+                                et.includes("commission") ? "bg-orange-500" :
+                                (et.includes("subscription") || et.includes("checkout")) ? "bg-purple-500" :
+                                "bg-gray-400";
+                              const actionLabel = r.action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                              return (
+                                <div key={r.id} className="group relative flex gap-3 py-2">
+                                  <div className={`absolute -left-3.5 z-10 mt-1.5 h-3 w-3 rounded-full border-2 border-background shadow-sm ${dotColor}`} />
+                                  <div className="min-w-0 flex-1 rounded-lg px-2 py-1 transition-colors group-hover:bg-muted/40">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="truncate text-sm font-medium">{actionLabel}</p>
+                                      <p className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+                                        {formatInAppTz(new Date(r.created_at), "dd/MM HH:mm")}
+                                      </p>
+                                    </div>
+                                    {r.entity_type && (
+                                      <p className="truncate text-xs text-muted-foreground">{r.entity_type}</p>
+                                    )}
                                   </div>
-                                  <p className="whitespace-nowrap text-xs text-muted-foreground">
-                                    {formatInAppTz(new Date(r.created_at), "dd/MM HH:mm")}
-                                  </p>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
-                        <div className="flex justify-end">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to="/auditoria">Ver auditoria</Link>
+                        <div className="mt-3 flex justify-end">
+                          <Button variant="ghost" size="sm" asChild className="text-xs text-teal-600 hover:bg-teal-50 hover:text-teal-700">
+                            <Link to="/auditoria">Ver auditoria completa →</Link>
                           </Button>
                         </div>
                       </CardContent>
@@ -994,79 +1056,103 @@ export default function Dashboard() {
             if (sectionKey === "today") {
               return (
                 <Card key={sectionKey}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Hoje</CardTitle>
-                    <CardDescription>{formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}</CardDescription>
+                  <CardHeader className="flex flex-row items-center gap-2 pb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
+                      <Calendar className="h-4 w-4 text-teal-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Hoje</CardTitle>
+                      <CardDescription className="text-xs">{formatInAppTz(new Date(), "EEEE, d 'de' MMMM")}</CardDescription>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* Metric tiles */}
                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div data-tour="dashboard-today-stat-appointments">
-                    <StatCard title="Agendamentos" value={stats.todayAppointments} icon={Calendar} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Total de agendamentos marcados para hoje.</TooltipContent>
-              </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div data-tour="dashboard-today-stat-appointments" className="cursor-default rounded-xl border bg-card p-4 transition-all hover:border-teal-200/80 hover:shadow-sm">
+                            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
+                              <Calendar className="h-4 w-4 text-teal-600" />
+                            </div>
+                            <p className="tabular-nums text-2xl font-bold">{stats.todayAppointments}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">Consultas hoje</p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Total de agendamentos marcados para hoje.</TooltipContent>
+                      </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div data-tour="dashboard-today-stat-pending">
-                    <StatCard
-                      title={isAdmin ? "Pendentes" : "Meus pendentes"}
-                      value={stats.pendingAppointments}
-                      icon={Wallet}
-                      variant={stats.pendingAppointments > 0 ? "warning" : "default"}
-                      description={isAdmin ? "Aguardando confirmação" : "Aguardando confirmação do admin"}
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Agendamentos que ainda não foram confirmados.</TooltipContent>
-              </Tooltip>
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div data-tour="dashboard-today-stat-low-stock">
-                      <StatCard
-                        title="Estoque baixo"
-                        value={stats.lowStockProducts}
-                        icon={Package}
-                        variant={stats.lowStockProducts > 0 ? "warning" : "default"}
-                        description="Produtos abaixo do mínimo"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Produtos abaixo do estoque mínimo configurado.</TooltipContent>
-                </Tooltip>
-              )}
-              {isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div data-tour="dashboard-today-stat-daily-balance">
-                      <StatCard
-                        title="Saldo do dia"
-                        value={formatCurrency(dailyBalance)}
-                        icon={DollarSign}
-                        variant={dailyBalance >= 0 ? "success" : "danger"}
-                        description="Zera à meia-noite"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Saldo do dia = receitas - despesas registradas hoje.</TooltipContent>
-                </Tooltip>
-              )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            data-tour="dashboard-today-stat-pending"
+                            className={`cursor-default rounded-xl border p-4 transition-all hover:shadow-sm ${
+                              stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"
+                            }`}
+                          >
+                            <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stats.pendingAppointments > 0 ? "bg-amber-100" : "bg-muted/40"}`}>
+                              <Clock className={`h-4 w-4 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+                            </div>
+                            <p className={`tabular-nums text-2xl font-bold ${stats.pendingAppointments > 0 ? "text-amber-600" : ""}`}>
+                              {stats.pendingAppointments}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {isAdmin ? "Pendentes" : "Meus pendentes"}
+                            </p>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Agendamentos que ainda não foram confirmados.</TooltipContent>
+                      </Tooltip>
+
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/produtos" className="block" data-tour="dashboard-today-stat-low-stock">
+                              <div className={`rounded-xl border p-4 transition-all hover:shadow-sm ${stats.lowStockProducts > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
+                                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${stats.lowStockProducts > 0 ? "bg-amber-100" : "bg-muted/40"}`}>
+                                  <Package className={`h-4 w-4 ${stats.lowStockProducts > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+                                </div>
+                                <p className={`tabular-nums text-2xl font-bold ${stats.lowStockProducts > 0 ? "text-amber-600" : ""}`}>
+                                  {stats.lowStockProducts}
+                                </p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">Estoque baixo</p>
+                              </div>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Produtos abaixo do estoque mínimo configurado.</TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/financeiro" className="block" data-tour="dashboard-today-stat-daily-balance">
+                              <div className={`rounded-xl border p-4 transition-all hover:shadow-sm ${dailyBalance >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                                <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${dailyBalance >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
+                                  <DollarSign className={`h-4 w-4 ${dailyBalance >= 0 ? "text-emerald-600" : "text-red-600"}`} />
+                                </div>
+                                <p className={`tabular-nums text-xl font-bold ${dailyBalance >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                                  {formatCurrency(dailyBalance)}
+                                </p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">Saldo do dia</p>
+                              </div>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Saldo do dia = receitas - despesas registradas hoje.</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
 
+                    {/* Appointments + Low Stock / Next Appointment */}
                     <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-              <DashboardTodayAppointments
-                appointments={myTodayAppointments}
-                isAdmin={isAdmin}
-                getStatusBadge={getStatusBadge}
-              />
-              {!isAdmin && nextAppointment && (
-                <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
-              )}
-              {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+                      <DashboardTodayAppointments
+                        appointments={myTodayAppointments}
+                        isAdmin={isAdmin}
+                        getStatusBadge={getStatusBadge}
+                      />
+                      {!isAdmin && nextAppointment && (
+                        <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
+                      )}
+                      {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
                     </div>
                   </CardContent>
                 </Card>
@@ -1076,112 +1162,140 @@ export default function Dashboard() {
             if (sectionKey === "month") {
               return (
                 <Card key={sectionKey}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Mês atual</CardTitle>
-                    <CardDescription>{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</CardDescription>
+                  <CardHeader className="flex flex-row items-center gap-2 pb-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
+                      <Activity className="h-4 w-4 text-teal-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold">Mês atual</CardTitle>
+                      <CardDescription className="text-xs">{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</CardDescription>
+                    </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-4">
+                    {/* Admin: 3 hero financial cards */}
+                    {isAdmin && (
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
+                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
+                            <div className="mb-4 flex items-center justify-between">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                              </div>
+                              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Entradas</span>
+                            </div>
+                            <p className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.monthlyIncome)}</p>
+                            <p className="mt-1 text-sm text-emerald-600/70">Receitas do mês</p>
+                          </div>
+                        </Link>
+
+                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
+                          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 transition-all hover:border-red-300 hover:shadow-md">
+                            <div className="mb-4 flex items-center justify-between">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                                <TrendingDown className="h-5 w-5 text-red-600" />
+                              </div>
+                              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Saídas</span>
+                            </div>
+                            <p className="text-2xl font-bold text-red-700">{formatCurrency(stats.monthlyExpenses)}</p>
+                            <p className="mt-1 text-sm text-red-600/70">Despesas do mês</p>
+                          </div>
+                        </Link>
+
+                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
+                          <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${
+                            stats.monthlyBalance >= 0
+                              ? "border-teal-200 bg-teal-50 hover:border-teal-300"
+                              : "border-red-200 bg-red-50 hover:border-red-300"
+                          }`}>
+                            <div className="mb-4 flex items-center justify-between">
+                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stats.monthlyBalance >= 0 ? "bg-teal-100" : "bg-red-100"}`}>
+                                <DollarSign className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
+                              </div>
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>
+                                Saldo
+                              </span>
+                            </div>
+                            <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>
+                              {formatCurrency(stats.monthlyBalance)}
+                            </p>
+                            <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>
+                              Resultado do mês
+                            </p>
+                          </div>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* Secondary stats */}
                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
-                    <StatCard
-                      title="Saldo do mês"
-                      value={formatCurrency(stats.monthlyBalance)}
-                      icon={DollarSign}
-                      variant={stats.monthlyBalance >= 0 ? "success" : "danger"}
-                      description="Receitas - despesas"
-                    />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Saldo do mês = receitas - despesas do mês atual.</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
-                    <StatCard title="Receitas" value={formatCurrency(stats.monthlyIncome)} icon={DollarSign} variant="success" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Soma das entradas (receitas) no mês atual.</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
-                    <StatCard title="Despesas" value={formatCurrency(stats.monthlyExpenses)} icon={DollarSign} variant="danger" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Soma das saídas (despesas) no mês atual.</TooltipContent>
-              </Tooltip>
-              {isAdmin && !simpleModeEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro?tab=commissions" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-commissions-pending">
-                      <StatCard
-                        title="Comissões pendentes"
-                        value={formatCurrency(commissionsPending)}
-                        icon={Wallet}
-                        variant={commissionsPending > 0 ? "warning" : "default"}
-                        description="Clique para gerenciar"
-                      />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Comissões geradas no mês e ainda não pagas.</TooltipContent>
-                </Tooltip>
-              )}
-              {isAdmin && !simpleModeEnabled && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/financeiro?tab=salaries" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-salaries-pending">
-                      <StatCard
-                        title="Salários a pagar"
-                        value={formatCurrency(salariesToPay)}
-                        icon={CreditCard}
-                        variant={salariesToPay > 0 ? "warning" : "default"}
-                        description="Clique para gerenciar"
-                      />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Salários configurados que ainda não foram pagos no mês.</TooltipContent>
-                </Tooltip>
-              )}
-              {!isAdmin && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
-                      <StatCard
-                        title="Minhas comissões (pendentes)"
-                        value={formatCurrency(professionalCommissionsToReceive)}
-                        icon={Wallet}
-                        variant={professionalCommissionsToReceive > 0 ? "warning" : "default"}
-                        description="Clique para ver detalhes"
-                      />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Comissões do mês que ainda não foram pagas para você.</TooltipContent>
-                </Tooltip>
-              )}
-              {!isAdmin && mySalaryAmount !== null && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-salary">
-                      <StatCard
-                        title="Meu salário"
-                        value={formatCurrency(mySalaryAmount)}
-                        icon={DollarSign}
-                        variant="info"
-                        description={
-                          lastSalaryPayment
-                            ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
-                            : "Salário fixo configurado"
-                        }
-                      />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
-                </Tooltip>
-              )}
+                      {isAdmin && !simpleModeEnabled && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/financeiro?tab=commissions" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-commissions-pending">
+                              <StatCard
+                                title="Comissões pendentes"
+                                value={formatCurrency(commissionsPending)}
+                                icon={Wallet}
+                                variant={commissionsPending > 0 ? "warning" : "default"}
+                                description="Clique para gerenciar"
+                              />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Comissões geradas no mês e ainda não pagas.</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {isAdmin && !simpleModeEnabled && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/financeiro?tab=salaries" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-salaries-pending">
+                              <StatCard
+                                title="Salários a pagar"
+                                value={formatCurrency(salariesToPay)}
+                                icon={CreditCard}
+                                variant={salariesToPay > 0 ? "warning" : "default"}
+                                description="Clique para gerenciar"
+                              />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Salários configurados que ainda não foram pagos no mês.</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {!isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
+                              <StatCard
+                                title="Minhas comissões (pendentes)"
+                                value={formatCurrency(professionalCommissionsToReceive)}
+                                icon={Wallet}
+                                variant={professionalCommissionsToReceive > 0 ? "warning" : "default"}
+                                description="Clique para ver detalhes"
+                              />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Comissões do mês que ainda não foram pagas para você.</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {!isAdmin && mySalaryAmount !== null && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-salary">
+                              <StatCard
+                                title="Meu salário"
+                                value={formatCurrency(mySalaryAmount)}
+                                icon={DollarSign}
+                                variant="info"
+                                description={
+                                  lastSalaryPayment
+                                    ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}`
+                                    : "Salário fixo configurado"
+                                }
+                              />
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1215,57 +1329,57 @@ export default function Dashboard() {
                     <CollapsibleContent>
                       <CardContent className="space-y-6">
                         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                    {isAdmin && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link to="/produtos" className="block [&:hover]:no-underline" data-tour="dashboard-insights-product-loss">
-                            <StatCard
-                              title="Perdas (danificados)"
-                              value={formatCurrency(productLossTotal)}
-                              icon={Package}
-                              variant={productLossTotal > 0 ? "warning" : "default"}
-                              description="Total no mês"
-                            />
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Total de baixas danificadas registradas no mês.</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {isAdmin && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link to="/clientes" className="block [&:hover]:no-underline" data-tour="dashboard-insights-clients">
-                            <StatCard
-                              title="Clientes cadastrados"
-                              value={clientsCount}
-                              icon={Users}
-                              description="Total da clínica"
-                            />
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Quantidade total de clientes cadastrados.</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {!isAdmin && (
-                      <div data-tour="dashboard-insights-my-performance">
-                        <StatCard
-                          title="Meu desempenho"
-                          value={staffCompletedThisMonth}
-                          icon={Calendar}
-                          description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados no mês`}
-                        />
-                      </div>
-                    )}
-                    {!isAdmin && (
-                      <div data-tour="dashboard-insights-my-clients">
-                        <StatCard
-                          title="Clientes que atendi"
-                          value={staffMyClientsCount ?? 0}
-                          icon={Users}
-                          description="Clientes únicos no mês"
-                        />
-                      </div>
-                    )}
+                          {isAdmin && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link to="/produtos" className="block [&:hover]:no-underline" data-tour="dashboard-insights-product-loss">
+                                  <StatCard
+                                    title="Perdas (danificados)"
+                                    value={formatCurrency(productLossTotal)}
+                                    icon={Package}
+                                    variant={productLossTotal > 0 ? "warning" : "default"}
+                                    description="Total no mês"
+                                  />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">Total de baixas danificadas registradas no mês.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {isAdmin && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link to="/clientes" className="block [&:hover]:no-underline" data-tour="dashboard-insights-clients">
+                                  <StatCard
+                                    title="Clientes cadastrados"
+                                    value={clientsCount}
+                                    icon={Users}
+                                    description="Total da clínica"
+                                  />
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">Quantidade total de clientes cadastrados.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {!isAdmin && (
+                            <div data-tour="dashboard-insights-my-performance">
+                              <StatCard
+                                title="Meu desempenho"
+                                value={staffCompletedThisMonth}
+                                icon={Calendar}
+                                description={`${formatCurrency(staffValueGeneratedThisMonth)} gerados no mês`}
+                              />
+                            </div>
+                          )}
+                          {!isAdmin && (
+                            <div data-tour="dashboard-insights-my-clients">
+                              <StatCard
+                                title="Clientes que atendi"
+                                value={staffMyClientsCount ?? 0}
+                                icon={Users}
+                                description="Clientes únicos no mês"
+                              />
+                            </div>
+                          )}
                         </div>
 
                         {isAdmin && (

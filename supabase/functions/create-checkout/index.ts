@@ -30,51 +30,47 @@ async function auditLog(params: {
   }
 }
 
-type TierKey = "basic" | "pro" | "premium";
-type IntervalKey = "monthly" | "quarterly" | "annual";
+type TierKey = "solo" | "clinica" | "premium";
+type IntervalKey = "monthly" | "annual";
 
 const tierNames: Record<TierKey, string> = {
-  basic: "Básico",
-  pro: "Pro",
+  solo: "Solo",
+  clinica: "Clínica",
   premium: "Premium",
 };
 
 const intervalNames: Record<IntervalKey, string> = {
   monthly: "Mensal",
-  quarterly: "Trimestral",
   annual: "Anual",
 };
 
-const intervalToCycle: Record<IntervalKey, "MONTHLY" | "QUARTERLY" | "YEARLY"> = {
+const intervalToCycle: Record<IntervalKey, "MONTHLY" | "YEARLY"> = {
   monthly: "MONTHLY",
-  quarterly: "QUARTERLY",
   annual: "YEARLY",
 };
 
 // Pricing matrix (amount in cents)
 const PRICING: Record<TierKey, Record<IntervalKey, number>> = {
-  basic: {
-    monthly: 7990,
-    quarterly: 21990,
-    annual: 71900,
+  solo: {
+    monthly: 14990,
+    annual: 134900,
   },
-  pro: {
-    monthly: 11990,
-    quarterly: 32990,
-    annual: 107900,
+  clinica: {
+    monthly: 24990,
+    annual: 224900,
   },
   premium: {
-    monthly: 16990,
-    quarterly: 46990,
-    annual: 149900,
+    monthly: 39990,
+    annual: 359900,
   },
 };
 
+/** Legado: mapeia chaves antigas (basic/pro) para novas (solo/clinica) */
 function parseLegacyPlanKey(planKey: unknown): { tier: TierKey; interval: IntervalKey } | null {
   if (typeof planKey !== "string") return null;
   const s = planKey.trim();
-  if (s === "monthly" || s === "quarterly" || s === "annual") {
-    return { tier: "basic", interval: s };
+  if (s === "monthly" || s === "annual") {
+    return { tier: "solo", interval: s };
   }
   return null;
 }
@@ -85,9 +81,26 @@ function parseTierInterval(body: unknown): { tier: TierKey; interval: IntervalKe
     | null;
   const tier = b?.tier;
   const interval = b?.interval;
-  if ((tier === "basic" || tier === "pro" || tier === "premium") && (interval === "monthly" || interval === "quarterly" || interval === "annual")) {
+
+  // Novos nomes
+  if ((tier === "solo" || tier === "clinica" || tier === "premium") && (interval === "monthly" || interval === "annual")) {
     return { tier, interval };
   }
+
+  // Legado: basic → solo, pro → clinica (com mapeamento de interval)
+  const mappedTier: TierKey | null =
+    tier === "basic" ? "solo" :
+    tier === "pro"   ? "clinica" :
+    tier === "premium" ? "premium" : null;
+  const mappedInterval: IntervalKey | null =
+    interval === "monthly" ? "monthly" :
+    interval === "quarterly" ? "monthly" :   // trimestral não existe mais → mensal
+    interval === "annual" ? "annual" : null;
+
+  if (mappedTier && mappedInterval) {
+    return { tier: mappedTier, interval: mappedInterval };
+  }
+
   return null;
 }
 
@@ -271,7 +284,7 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          error: "CPF/CNPJ obrigatório para assinatura. Preencha em Configurações > Dados do Salão.",
+          error: "CPF/CNPJ obrigatório para assinatura. Preencha em Configurações > Dados da Clínica.",
         }),
         { headers: { ...cors, "Content-Type": "application/json" }, status: 400 }
       );

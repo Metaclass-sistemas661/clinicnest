@@ -242,7 +242,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Status card */}
       <Card>
         <CardContent className="pt-6 pb-5">
@@ -1002,7 +1002,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   const isConfigured = Boolean(apiKey);
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Status card */}
       <Card>
         <CardContent className="pt-6 pb-5">
