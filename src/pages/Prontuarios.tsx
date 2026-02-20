@@ -78,7 +78,7 @@ export default function Prontuarios() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState("all");
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -192,7 +192,7 @@ export default function Prontuarios() {
     r.cid_code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const clientRecords = selectedClientId
+  const clientRecords = selectedClientId && selectedClientId !== "all"
     ? filteredRecords.filter((r) => r.client_id === selectedClientId)
     : filteredRecords;
 
@@ -226,7 +226,7 @@ export default function Prontuarios() {
             <SelectValue placeholder="Filtrar por paciente" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os pacientes</SelectItem>
+            <SelectItem value="all">Todos os pacientes</SelectItem>
             {clients.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
