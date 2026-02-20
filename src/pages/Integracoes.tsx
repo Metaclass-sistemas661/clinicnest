@@ -46,6 +46,9 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
+  CreditCard,
+  Smartphone,
+  Wifi,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -927,6 +930,211 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
   );
 }
 
+// ─── Tab: Maquininha Stone ────────────────────────────────────────────────────
+
+function TabMaquininha({ tenantId }: { tenantId: string }) {
+  const [apiKey, setApiKey] = useState("");
+  const [terminalSerial, setTerminalSerial] = useState("");
+  const [active, setActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("tenants")
+          .select("stone_api_key, stone_terminal_serial, stone_active")
+          .eq("id", tenantId)
+          .maybeSingle();
+        if (data) {
+          setApiKey(data.stone_api_key ?? "");
+          setTerminalSerial(data.stone_terminal_serial ?? "");
+          setActive(data.stone_active ?? false);
+        }
+      } catch { /* column may not exist yet */ } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [tenantId]);
+
+  const handleSave = async () => {
+    if (!apiKey.trim()) { toast.error("Informe a chave de API Stone."); return; }
+    setIsSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("tenants")
+        .update({
+          stone_api_key: apiKey.trim(),
+          stone_terminal_serial: terminalSerial.trim() || null,
+          stone_active: active,
+        })
+        .eq("id", tenantId);
+      if (error) throw error;
+      toast.success("Configurações da maquininha salvas!");
+    } catch (e) {
+      logger.error("[Stone] save error", e);
+      toast.error("Erro ao salvar. Execute a migration stone_terminal_settings primeiro.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setIsSaving(true);
+    try {
+      await (supabase as any)
+        .from("tenants")
+        .update({ stone_api_key: null, stone_terminal_serial: null, stone_active: false })
+        .eq("id", tenantId);
+      setApiKey(""); setTerminalSerial(""); setActive(false);
+      toast.success("Integração Stone removida.");
+    } catch { toast.error("Erro ao remover."); }
+    finally { setIsSaving(false); }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const isConfigured = Boolean(apiKey);
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      {/* Status card */}
+      <Card>
+        <CardContent className="pt-6 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40">
+              <CreditCard className="h-7 w-7 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Maquininha Stone</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isConfigured ? "Credenciais configuradas" : "Não configurado"}
+              </p>
+            </div>
+            <StatusBadge status={isConfigured && active ? "connected" : isConfigured ? "disconnected" : "not_configured"} />
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="stone-api-key">Chave de API Stone <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="stone-api-key"
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="stone_api_key_..."
+                  className="font-mono text-xs"
+                />
+                <Button variant="outline" size="icon" onClick={() => setShowKey(!showKey)}>
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Encontre no <span className="font-medium">Portal Stone → Configurações → Credenciais</span>.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="stone-serial">Serial do terminal (opcional)</Label>
+              <Input
+                id="stone-serial"
+                value={terminalSerial}
+                onChange={(e) => setTerminalSerial(e.target.value)}
+                placeholder="Ex: STN1234567"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Número de série impresso na etiqueta traseira da maquininha.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Habilitar integração</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ativa o botão "Cobrar na maquininha" no fluxo financeiro</p>
+              </div>
+              <Switch checked={active} onCheckedChange={setActive} />
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              {isConfigured && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
+                  onClick={handleDisconnect}
+                  disabled={isSaving}
+                >
+                  <XCircle className="h-4 w-4" /> Remover integração
+                </Button>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="ml-auto gap-2"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Salvar configurações
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* How it works */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BookOpen className="h-4 w-4" /> Como funciona
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: Smartphone, title: "Cobrar na maquininha", desc: "No módulo Financeiro, clique em 'Cobrar na maquininha' ao registrar um pagamento" },
+              { icon: Wifi, title: "Disparo remoto", desc: "A API Stone envia o comando diretamente para o terminal configurado via rede" },
+              { icon: CheckCircle2, title: "Confirmação automática", desc: "Após aprovação, o pagamento é registrado automaticamente como confirmado" },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-xs font-semibold">{title}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 flex gap-3">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+              <p className="font-semibold">Requisitos Stone</p>
+              <p>A maquininha deve estar ligada, conectada à internet e associada à conta Stone configurada. A conta Stone precisa ter habilitado o acesso à API de pagamentos (disponível para lojistas com contrato POS/TEF ativo).</p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs"
+            onClick={() => window.open("https://docs.stone.com.br", "_blank")}
+          >
+            <ExternalLink className="h-3 w-3" /> Documentação Stone API
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Integracoes() {
@@ -979,13 +1187,21 @@ export default function Integracoes() {
       tab: "api",
       color: "bg-orange-50 dark:bg-orange-950/40 text-orange-600",
     },
+    {
+      icon: CreditCard,
+      title: "Maquininha Stone",
+      description: "Dispare cobranças diretamente na maquininha via API Stone",
+      status: "not_configured" as const,
+      tab: "maquininha",
+      color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600",
+    },
   ];
 
   return (
     <MainLayout title="Integrações" subtitle="Conecte o ClinicNest a ferramentas externas">
       <div className="space-y-6 pb-10">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
             <TabsTrigger value="google" className="text-xs sm:text-sm">Google</TabsTrigger>
             <TabsTrigger value="webhooks" className="gap-1.5 text-xs sm:text-sm">
@@ -995,6 +1211,7 @@ export default function Integracoes() {
               )}
             </TabsTrigger>
             <TabsTrigger value="api" className="text-xs sm:text-sm">API & Zapier</TabsTrigger>
+            <TabsTrigger value="maquininha" className="text-xs sm:text-sm">Maquininha</TabsTrigger>
           </TabsList>
 
           {/* ── Overview ── */}
@@ -1050,6 +1267,11 @@ export default function Integracoes() {
           {/* ── API & Zapier ── */}
           <TabsContent value="api" className="mt-6">
             {tenantId && <TabApiZapier tenantId={tenantId} />}
+          </TabsContent>
+
+          {/* ── Maquininha Stone ── */}
+          <TabsContent value="maquininha" className="mt-6">
+            {tenantId && <TabMaquininha tenantId={tenantId} />}
           </TabsContent>
         </Tabs>
       </div>

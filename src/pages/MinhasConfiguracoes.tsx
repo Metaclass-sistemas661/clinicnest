@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Lock, Bell, ShieldCheck } from "lucide-react";
+import { Loader2, User, Lock, Bell, ShieldCheck, Camera, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -89,6 +89,9 @@ export default function MinhasConfiguracoes() {
   const [lgpdRequestType, setLgpdRequestType] = useState<LgpdRequestType>("access");
   const [lgpdRequestDetails, setLgpdRequestDetails] = useState("");
   const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setPhone(profile?.phone ?? "");
@@ -161,6 +164,79 @@ export default function MinhasConfiguracoes() {
       logger.error(e);
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Formato inválido. Use JPEG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 2 MB.");
+      return;
+    }
+
+    // Local preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Foto de perfil atualizada!");
+      await refreshProfile();
+    } catch (e) {
+      toast.error("Erro ao enviar foto");
+      logger.error(e);
+      setAvatarPreview(null);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!user?.id) return;
+    setIsUploadingAvatar(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      setAvatarPreview(null);
+      toast.success("Foto removida.");
+      await refreshProfile();
+    } catch (e) {
+      toast.error("Erro ao remover foto");
+      logger.error(e);
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -280,6 +356,68 @@ export default function MinhasConfiguracoes() {
                 <User className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold">Dados pessoais</h3>
               </div>
+              {/* Foto de perfil */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="relative">
+                  {avatarPreview || profile?.avatar_url ? (
+                    <img
+                      src={avatarPreview ?? profile?.avatar_url ?? ""}
+                      alt="Foto de perfil"
+                      className="h-24 w-24 rounded-2xl object-cover border border-border shadow-sm"
+                    />
+                  ) : (
+                    <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/60 flex items-center justify-center text-3xl font-bold text-primary-foreground shadow-sm border border-border">
+                      {profile?.full_name?.charAt(0)?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  {isUploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/40">
+                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Foto de perfil</p>
+                  <p className="text-xs text-muted-foreground">
+                    Recomendado: quadrada, 400 × 400 px, máx. 2 MB.<br />
+                    Formatos: JPEG, PNG ou WebP.
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploadingAvatar}
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      <Camera className="h-3.5 w-3.5 mr-1.5" />
+                      {profile?.avatar_url || avatarPreview ? "Trocar foto" : "Adicionar foto"}
+                    </Button>
+                    {(profile?.avatar_url || avatarPreview) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={isUploadingAvatar}
+                        onClick={handleRemoveAvatar}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
+              </div>
+
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
                   <Label>E-mail</Label>
