@@ -26,18 +26,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -102,6 +96,7 @@ export interface EditAppointmentData {
   professional_id: string | null;
   scheduled_at: string;
   notes: string | null;
+  telemedicine: boolean;
 }
 
 const statusConfig = {
@@ -154,6 +149,7 @@ export function AppointmentsTable({
     scheduled_at: "",
     scheduled_time: "",
     notes: "",
+    telemedicine: false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -226,6 +222,7 @@ export function AppointmentsTable({
       scheduled_at: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: format(scheduledDate, "HH:mm"),
       notes: appointment.notes || "",
+      telemedicine: Boolean((appointment as any).telemedicine),
     });
     setEditDialogOpen(true);
   };
@@ -245,6 +242,7 @@ export function AppointmentsTable({
         professional_id: professionalId,
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
+        telemedicine: Boolean(editFormData.telemedicine),
       });
       setEditDialogOpen(false);
       setAppointmentToEdit(null);
@@ -746,7 +744,10 @@ export function AppointmentsTable({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Produto</Label>
-                  <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                  <Select
+                    value={selectedProductId}
+                    onValueChange={setSelectedProductId}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o produto" />
                     </SelectTrigger>
@@ -833,7 +834,7 @@ export function AppointmentsTable({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEdit}>
-            <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
                 <Label>Cliente</Label>
                 <Select
@@ -937,6 +938,18 @@ export function AppointmentsTable({
                   placeholder="Observações opcionais..."
                 />
               </div>
+              <div className="space-y-2 sm:col-span-2">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                  <div className="flex flex-col">
+                    <Label>Teleconsulta</Label>
+                    <span className="text-xs text-muted-foreground">Atendimento remoto via vídeo</span>
+                  </div>
+                  <Switch
+                    checked={editFormData.telemedicine}
+                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, telemedicine: checked })}
+                  />
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
@@ -949,7 +962,7 @@ export function AppointmentsTable({
                     Salvando...
                   </>
                 ) : (
-                  "Salvar Alterações"
+                  "Salvar alterações"
                 )}
               </Button>
             </DialogFooter>

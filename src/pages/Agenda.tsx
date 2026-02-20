@@ -39,6 +39,7 @@ import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
+import { Switch } from "@/components/ui/switch";
 
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
@@ -86,6 +87,7 @@ export default function Agenda() {
     scheduled_time: "",
     notes: "",
     status: "pending" as AppointmentStatus,
+    telemedicine: false,
   });
 
   useEffect(() => {
@@ -240,6 +242,20 @@ export default function Agenda() {
       const createdId = String((rpcData as any)?.appointment_id ?? "");
       const createdProfessionalId = professionalId;
 
+      if (createdId) {
+        const { error: teleError } = await supabase
+          .from("appointments")
+          .update({
+            telemedicine: Boolean(formData.telemedicine),
+            telemedicine_url: formData.telemedicine ? undefined : null,
+          })
+          .eq("id", createdId)
+          .eq("tenant_id", profile.tenant_id);
+        if (teleError) {
+          logger.error("Error updating telemedicine flag after create:", teleError);
+        }
+      }
+
       // Notificar profissional: quando admin cria para ele OU quando cria o próprio
       if (createdProfessionalId && profile?.user_id) {
         const prof = professionals.find((p) => p.id === professionalId);
@@ -271,6 +287,7 @@ export default function Agenda() {
         scheduled_time: "",
         notes: "",
         status: "pending",
+        telemedicine: false,
       });
       fetchData();
     } catch (error) {
@@ -382,6 +399,20 @@ export default function Agenda() {
       if (error) {
         toastRpcError(toast, error, "Erro ao atualizar agendamento");
         return;
+      }
+
+      if (profile?.tenant_id) {
+        const { error: teleError } = await supabase
+          .from("appointments")
+          .update({
+            telemedicine: Boolean(data.telemedicine),
+            telemedicine_url: data.telemedicine ? undefined : null,
+          })
+          .eq("id", id)
+          .eq("tenant_id", profile.tenant_id);
+        if (teleError) {
+          logger.error("Error updating telemedicine flag after update:", teleError);
+        }
       }
 
       toast.success("Agendamento atualizado com sucesso!");
@@ -718,6 +749,18 @@ export default function Agenda() {
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       placeholder="Observações opcionais..."
                     />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                      <div className="flex flex-col">
+                        <Label>Teleconsulta</Label>
+                        <span className="text-xs text-muted-foreground">Atendimento remoto via vídeo</span>
+                      </div>
+                      <Switch
+                        checked={formData.telemedicine}
+                        onCheckedChange={(checked) => setFormData({ ...formData, telemedicine: checked })}
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>

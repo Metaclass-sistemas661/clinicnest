@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  Video,
+  Video as VideoIcon,
   ExternalLink,
   Copy,
   Clock,
@@ -22,6 +22,7 @@ import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, startOfDay, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import TwilioVideo from "twilio-video";
 
 interface TelemedicineAppointment {
   id: string;
@@ -55,10 +56,29 @@ export default function Teleconsulta() {
   const [isLoading, setIsLoading] = useState(true);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState<"today" | "tomorrow">("today");
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
+  const [isInCall, setIsInCall] = useState(false);
+
+  const roomRef = useRef<any>(null);
+  const localMediaRef = useRef<HTMLDivElement | null>(null);
+  const remoteMediaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (profile?.tenant_id) void fetchAppointments();
   }, [profile?.tenant_id, viewDay]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (roomRef.current) {
+          roomRef.current.disconnect();
+          roomRef.current = null;
+        }
+      } catch {
+      }
+    };
+  }, []);
 
   const fetchAppointments = async () => {
     if (!profile?.tenant_id) return;
@@ -135,6 +155,123 @@ export default function Teleconsulta() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const clearMedia = () => {
+    if (localMediaRef.current) localMediaRef.current.innerHTML = "";
+    if (remoteMediaRef.current) remoteMediaRef.current.innerHTML = "";
+  };
+
+  const attachTrack = (track: any, container: HTMLDivElement | null) => {
+    if (!container || !track?.attach) return;
+    const el = track.attach();
+    (el as any).style.width = "100%";
+    (el as any).style.borderRadius = "12px";
+    container.appendChild(el);
+  };
+
+  const attachLocalParticipant = (room: any) => {
+    const localParticipant = room?.localParticipant;
+    if (!localParticipant) return;
+
+    localParticipant.tracks?.forEach((publication: any) => {
+      if (publication?.track) {
+        attachTrack(publication.track, localMediaRef.current);
+      }
+    });
+  };
+
+  const attachParticipant = (participant: any) => {
+    participant.tracks?.forEach((publication: any) => {
+      if (publication?.track) {
+        attachTrack(publication.track, remoteMediaRef.current);
+      }
+    });
+
+    participant.on("trackSubscribed", (track: any) => {
+      attachTrack(track, remoteMediaRef.current);
+    });
+
+    participant.on("trackUnsubscribed", (track: any) => {
+      try {
+        track?.detach?.().forEach((el: any) => el.remove());
+      } catch {
+      }
+    });
+  };
+
+  const leaveCall = () => {
+    try {
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+        roomRef.current = null;
+      }
+    } catch {
+    }
+    clearMedia();
+    setIsInCall(false);
+    setActiveAppointmentId(null);
+  };
+
+  const joinTwilio = async (appt: TelemedicineAppointment) => {
+    setJoiningId(appt.id);
+    try {
+      if (roomRef.current) {
+        try {
+          roomRef.current.disconnect();
+        } catch {
+        }
+        roomRef.current = null;
+      }
+
+      clearMedia();
+
+      const { data, error } = await supabase.functions.invoke("twilio-video-token", {
+        body: { appointment_id: appt.id, role: "staff" },
+      });
+
+      if (error) throw error;
+      if (!data?.token || !data?.room_name) {
+        throw new Error("Resposta inválida da função");
+      }
+
+      const room = await (TwilioVideo as any).connect(data.token, {
+        name: data.room_name,
+        audio: true,
+        video: { width: 640 },
+      });
+
+      roomRef.current = room;
+      setActiveAppointmentId(appt.id);
+      setIsInCall(true);
+
+      attachLocalParticipant(room);
+
+      room.participants?.forEach((p: any) => attachParticipant(p));
+
+      room.on("participantConnected", (p: any) => {
+        attachParticipant(p);
+      });
+
+      room.on("participantDisconnected", (p: any) => {
+        try {
+          p.tracks?.forEach((pub: any) => {
+            if (pub?.track?.detach) pub.track.detach().forEach((el: any) => el.remove());
+          });
+        } catch {
+        }
+      });
+
+      room.on("disconnected", () => {
+        leaveCall();
+      });
+    } catch (err) {
+      logger.error("Join Twilio:", err);
+      toast.error("Erro ao entrar na teleconsulta");
+      leaveCall();
+    } finally {
+      setJoiningId(null);
+    }
+  };
+
   const todayCount = appointments.filter((a) => isToday(new Date(a.scheduled_at))).length;
   const tomorrowCount = appointments.filter((a) => isTomorrow(new Date(a.scheduled_at))).length;
 
@@ -193,7 +330,7 @@ export default function Teleconsulta() {
         </div>
       ) : appointments.length === 0 ? (
         <EmptyState
-          icon={Video}
+          icon={VideoIcon}
           title="Nenhuma teleconsulta agendada"
           description={`Não há teleconsultas marcadas para ${viewDay === "today" ? "hoje" : "amanhã"}.`}
         />
@@ -239,6 +376,16 @@ export default function Teleconsulta() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => void joinTwilio(appt)}
+                        className="gap-1.5"
+                        disabled={joiningId === appt.id || appt.status === "completed"}
+                      >
+                        <VideoIcon className="h-3.5 w-3.5" />
+                        {joiningId === appt.id ? "Entrando..." : "Entrar (Twilio)"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => copyLink(appt.telemedicine_url!)}
                         className="gap-1.5"
                       >
@@ -263,7 +410,7 @@ export default function Teleconsulta() {
                       disabled={generatingId === appt.id || appt.status === "completed"}
                       className="gap-1.5"
                     >
-                      <Video className="h-3.5 w-3.5" />
+                      <VideoIcon className="h-3.5 w-3.5" />
                       {generatingId === appt.id ? "Gerando..." : "Gerar Link Jitsi"}
                     </Button>
                   )}
@@ -271,6 +418,31 @@ export default function Teleconsulta() {
               </Card>
             );
           })}
+
+          {isInCall && activeAppointmentId ? (
+            <Card className="border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base">Teleconsulta em andamento</CardTitle>
+                  <Button size="sm" variant="destructive" onClick={leaveCall}>
+                    Sair
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Você</div>
+                    <div ref={localMediaRef} className="w-full min-h-[180px] bg-muted rounded-xl overflow-hidden" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Paciente</div>
+                    <div ref={remoteMediaRef} className="w-full min-h-[180px] bg-muted rounded-xl overflow-hidden" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       )}
     </MainLayout>
