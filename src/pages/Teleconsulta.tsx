@@ -23,6 +23,18 @@ import { toast } from "sonner";
 import { format, isToday, isTomorrow, startOfDay, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TwilioVideo from "twilio-video";
+import type { Room, RemoteParticipant, TrackPublication } from "twilio-video";
+
+type AttachableTrack = {
+  attach: () => HTMLElement;
+  detach: () => HTMLElement[];
+};
+
+function isAttachableTrack(track: unknown): track is AttachableTrack {
+  if (!track || typeof track !== "object") return false;
+  const t = track as Record<string, unknown>;
+  return typeof t.attach === "function" && typeof t.detach === "function";
+}
 
 interface TelemedicineAppointment {
   id: string;
@@ -60,7 +72,7 @@ export default function Teleconsulta() {
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
   const [isInCall, setIsInCall] = useState(false);
 
-  const roomRef = useRef<any>(null);
+  const roomRef = useRef<Room | null>(null);
   const localMediaRef = useRef<HTMLDivElement | null>(null);
   const remoteMediaRef = useRef<HTMLDivElement | null>(null);
 
@@ -75,7 +87,8 @@ export default function Teleconsulta() {
           roomRef.current.disconnect();
           roomRef.current = null;
         }
-      } catch {
+      } catch (e) {
+        void e;
       }
     };
   }, []);
@@ -160,40 +173,39 @@ export default function Teleconsulta() {
     if (remoteMediaRef.current) remoteMediaRef.current.innerHTML = "";
   };
 
-  const attachTrack = (track: any, container: HTMLDivElement | null) => {
-    if (!container || !track?.attach) return;
-    const el = track.attach();
-    (el as any).style.width = "100%";
-    (el as any).style.borderRadius = "12px";
+  const attachTrack = (track: AttachableTrack, container: HTMLDivElement | null) => {
+    if (!container) return;
+    const el = track.attach() as HTMLElement;
+    el.style.width = "100%";
+    el.style.borderRadius = "12px";
     container.appendChild(el);
   };
 
-  const attachLocalParticipant = (room: any) => {
-    const localParticipant = room?.localParticipant;
+  const attachLocalParticipant = (room: Room) => {
+    const localParticipant = room.localParticipant;
     if (!localParticipant) return;
 
-    localParticipant.tracks?.forEach((publication: any) => {
-      if (publication?.track) {
-        attachTrack(publication.track, localMediaRef.current);
-      }
+    localParticipant.tracks.forEach((publication: TrackPublication) => {
+      const track = publication.track;
+      if (isAttachableTrack(track)) attachTrack(track, localMediaRef.current);
     });
   };
 
-  const attachParticipant = (participant: any) => {
-    participant.tracks?.forEach((publication: any) => {
-      if (publication?.track) {
-        attachTrack(publication.track, remoteMediaRef.current);
-      }
+  const attachParticipant = (participant: RemoteParticipant) => {
+    participant.tracks.forEach((publication: TrackPublication) => {
+      const track = publication.track;
+      if (isAttachableTrack(track)) attachTrack(track, remoteMediaRef.current);
     });
 
-    participant.on("trackSubscribed", (track: any) => {
-      attachTrack(track, remoteMediaRef.current);
+    participant.on("trackSubscribed", (track: unknown) => {
+      if (isAttachableTrack(track)) attachTrack(track, remoteMediaRef.current);
     });
 
-    participant.on("trackUnsubscribed", (track: any) => {
+    participant.on("trackUnsubscribed", (track: unknown) => {
       try {
-        track?.detach?.().forEach((el: any) => el.remove());
-      } catch {
+        if (isAttachableTrack(track)) track.detach().forEach((el) => el.remove());
+      } catch (e) {
+        void e;
       }
     });
   };
@@ -204,7 +216,8 @@ export default function Teleconsulta() {
         roomRef.current.disconnect();
         roomRef.current = null;
       }
-    } catch {
+    } catch (e) {
+      void e;
     }
     clearMedia();
     setIsInCall(false);
@@ -217,7 +230,8 @@ export default function Teleconsulta() {
       if (roomRef.current) {
         try {
           roomRef.current.disconnect();
-        } catch {
+        } catch (e) {
+          void e;
         }
         roomRef.current = null;
       }
@@ -233,7 +247,7 @@ export default function Teleconsulta() {
         throw new Error("Resposta inválida da função");
       }
 
-      const room = await (TwilioVideo as any).connect(data.token, {
+      const room = await TwilioVideo.connect(data.token as string, {
         name: data.room_name,
         audio: true,
         video: { width: 640 },
@@ -245,18 +259,26 @@ export default function Teleconsulta() {
 
       attachLocalParticipant(room);
 
-      room.participants?.forEach((p: any) => attachParticipant(p));
+      room.participants.forEach((p) => attachParticipant(p));
 
-      room.on("participantConnected", (p: any) => {
-        attachParticipant(p);
+      room.on("participantConnected", (p) => {
+        attachParticipant(p as RemoteParticipant);
       });
 
-      room.on("participantDisconnected", (p: any) => {
+      room.on("participantDisconnected", (p) => {
         try {
-          p.tracks?.forEach((pub: any) => {
-            if (pub?.track?.detach) pub.track.detach().forEach((el: any) => el.remove());
+          (p as RemoteParticipant).tracks.forEach((pub: TrackPublication) => {
+            const track = pub.track;
+            if (isAttachableTrack(track)) {
+              try {
+                track.detach().forEach((el) => el.remove());
+              } catch (e) {
+                void e;
+              }
+            }
           });
-        } catch {
+        } catch (e) {
+          void e;
         }
       });
 
