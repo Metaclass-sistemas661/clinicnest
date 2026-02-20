@@ -41,7 +41,7 @@ const features = [
     icon: Package,
     title: "Insumos e Estoque",
     description: "Controle materiais médicos, medicamentos, estoque mínimo e alertas de reposição.",
-    color: "orange"
+    color: "cyan"
   },
   {
     icon: Wallet,

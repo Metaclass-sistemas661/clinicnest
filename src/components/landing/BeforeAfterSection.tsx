@@ -73,9 +73,9 @@ export function BeforeAfterSection() {
               })}
             </div>
 
-            {/* Sad emoji decoration */}
-            <div className="absolute -bottom-3 -right-3 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center text-2xl border-2 border-white shadow-md">
-              😔
+            {/* Decoration */}
+            <div className="absolute -bottom-3 -right-3 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center border-2 border-white shadow-md">
+              <X className="h-6 w-6 text-red-500" />
             </div>
           </div>
 
@@ -102,9 +102,9 @@ export function BeforeAfterSection() {
               })}
             </div>
 
-            {/* Happy emoji decoration */}
-            <div className="absolute -bottom-3 -right-3 h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center text-2xl border-2 border-white shadow-md">
-              🤩
+            {/* Decoration */}
+            <div className="absolute -bottom-3 -right-3 h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center border-2 border-white shadow-md">
+              <Check className="h-6 w-6 text-teal-600" />
             </div>
           </div>
         </div>

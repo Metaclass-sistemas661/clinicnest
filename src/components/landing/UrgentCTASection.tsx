@@ -42,8 +42,8 @@ export function UrgentCTASection() {
                 background: "linear-gradient(135deg, #0f4c4c 0%, #0d6e6e 30%, #0891b2 60%, #0c4a6e 100%)"
               }}
             />
-            {/* Animated pulse overlay */}
-            <div className="absolute inset-0 bg-white/5 animate-pulse" />
+            {/* Subtle overlay */}
+            <div className="absolute inset-0 bg-white/3" />
 
             {/* Pattern */}
             <div className="absolute inset-0 opacity-10">
@@ -55,18 +55,18 @@ export function UrgentCTASection() {
           </div>
 
           <div className="relative z-10 py-16 sm:py-24 px-6 sm:px-12">
-            {/* Urgency Badge */}
+            {/* Badge */}
             <div className="flex justify-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-400 text-yellow-900 font-semibold text-sm animate-bounce">
-                <Zap className="h-4 w-4" />
-                <span>Oferta por Tempo Limitado!</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/30 text-white font-semibold text-sm">
+                <Zap className="h-4 w-4 text-cyan-300" />
+                <span>5 dias grátis para começar</span>
               </div>
             </div>
 
             <div className="text-center max-w-3xl mx-auto">
               <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-6 drop-shadow-lg">
                 Comece agora e{" "}
-                <span className="text-yellow-300">ganhe benefícios exclusivos!</span>
+                <span className="text-cyan-300">tudo organizado desde o primeiro dia.</span>
               </h2>
 
               <p className="text-lg sm:text-xl text-white/90 mb-8">
@@ -95,7 +95,7 @@ export function UrgentCTASection() {
               {/* Bonuses */}
               <div className="flex flex-wrap justify-center gap-4 mb-10">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                  <Gift className="h-5 w-5 text-yellow-300" aria-hidden="true" />
+                  <Gift className="h-5 w-5 text-cyan-300" aria-hidden="true" />
                   <span className="text-sm font-medium text-white">5 dias grátis</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
@@ -112,9 +112,9 @@ export function UrgentCTASection() {
               <Link to="/cadastro">
                 <Button
                   size="lg"
-                  className="bg-white text-teal-700 hover:bg-white/90 text-lg px-10 py-7 h-auto shadow-2xl group font-bold animate-pulse hover:animate-none"
+                  className="bg-white text-teal-700 hover:bg-white/90 text-lg px-10 py-7 h-auto shadow-2xl group font-bold"
                 >
-                  Quero Aproveitar a Oferta!
+                  Começar gratuitamente
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
