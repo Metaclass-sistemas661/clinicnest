@@ -193,7 +193,7 @@ export default function Teleconsulta() {
         </div>
       ) : appointments.length === 0 ? (
         <EmptyState
-          icon={<Video className="h-10 w-10 text-muted-foreground/40" />}
+          icon={Video}
           title="Nenhuma teleconsulta agendada"
           description={`Não há teleconsultas marcadas para ${viewDay === "today" ? "hoje" : "amanhã"}.`}
         />
