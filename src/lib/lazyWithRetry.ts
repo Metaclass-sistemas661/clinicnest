@@ -24,5 +24,16 @@ export function lazyWithRetry<T extends ComponentType<unknown>>(
   retries = 3,
   interval = 1500
 ): React.LazyExoticComponent<T> {
-  return lazy(() => retryImport(importFn, retries - 1, interval)) as React.LazyExoticComponent<T>;
+  return lazy(() =>
+    retryImport(importFn, retries - 1, interval).then((mod) => {
+      if (!mod || typeof mod !== "object" || !("default" in mod) || !mod.default) {
+        const keys = mod && typeof mod === "object" ? Object.keys(mod as object).join(",") : "<invalid>";
+        throw new Error(
+          `lazyWithRetry: o módulo importado não possui export default (keys: ${keys}). ` +
+            "Verifique se a página/componente exporta 'export default ...'."
+        );
+      }
+      return mod;
+    })
+  ) as React.LazyExoticComponent<T>;
 }
