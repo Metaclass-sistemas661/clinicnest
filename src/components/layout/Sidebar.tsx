@@ -44,7 +44,7 @@ import {
   Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -193,6 +193,9 @@ function prefetchRoute(href: string) {
   }
 }
 
+// Persist nav scroll position across re-renders / route changes
+let savedNavScroll = 0;
+
 function SidebarContent({
   isCollapsed,
   onNavigate
@@ -206,6 +209,21 @@ function SidebarContent({
   const { profile, tenant, signOut } = auth;
   const isAdmin = auth?.isAdmin ?? false;
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Restore scroll position after render
+  useEffect(() => {
+    if (navRef.current) {
+      navRef.current.scrollTop = savedNavScroll;
+    }
+  });
+
+  // Save scroll position on scroll
+  const handleNavScroll = useCallback(() => {
+    if (navRef.current) {
+      savedNavScroll = navRef.current.scrollTop;
+    }
+  }, []);
 
   const handleSignOut = async () => {
     onNavigate?.();
@@ -238,7 +256,7 @@ function SidebarContent({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
         {navCategories.map((category) => {
           const filteredItems = category.items.filter((item) => {
             if (item.adminOnly && !isAdmin) return false;
