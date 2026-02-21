@@ -39,7 +39,7 @@ export const teleconsultaBanners: BannerSlide[] = [
   {
     title: "Consulta por vídeo ficou mais fácil!",
     description:
-      "Agora é mais simples do que nunca. Basta clicar em "Entrar na Teleconsulta" quando chegar a hora e falar com seu médico em tempo real.",
+      "Agora é mais simples do que nunca. Basta clicar em 'Entrar na Teleconsulta' quando chegar a hora e falar com seu médico em tempo real.",
     imageUrl:
       "https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&w=600&q=80",
     gradient: "bg-gradient-to-r from-teal-600 to-emerald-500",
