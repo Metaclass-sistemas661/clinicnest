@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
-import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 // ---------- Twilio Access Token via native crypto (no SDK) ----------
@@ -106,10 +106,10 @@ serve(async (req) => {
     });
   }
 
-  const auth = await getAuthenticatedUserWithTenant(req, cors);
-  if (auth.error) return auth.error;
-
-  const { user, tenantId } = auth;
+  // Authenticate user (supports both staff via profiles and patients via patient_profiles)
+  const authResult = await getAuthenticatedUser(req, cors);
+  if (authResult.error) return authResult.error;
+  const user = authResult.user;
 
   const rl = await checkRateLimit(`twilio-video-token:${user.id}`, 20, 60);
   if (!rl.allowed) {
@@ -161,9 +161,10 @@ serve(async (req) => {
 
   const supabaseAdmin = createSupabaseAdmin();
 
+  // Fetch appointment with client_id for patient validation
   const { data: apt, error: aptError } = await supabaseAdmin
     .from("appointments")
-    .select("id, tenant_id, telemedicine")
+    .select("id, tenant_id, client_id, telemedicine")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -182,11 +183,40 @@ serve(async (req) => {
     });
   }
 
-  if (String((apt as any).tenant_id) !== String(tenantId)) {
-    return new Response(JSON.stringify({ error: "Não autorizado" }), {
-      status: 403,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+  const aptTenantId = String((apt as any).tenant_id);
+
+  // Validate access: staff must belong to tenant, patient must be linked to the appointment's client
+  if (role === "staff") {
+    const { data: staffProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!staffProfile || String(staffProfile.tenant_id) !== aptTenantId) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+  } else {
+    // Patient: validate via patient_profiles link
+    const aptClientId = (apt as any).client_id;
+    const { data: patientLink } = await supabaseAdmin
+      .from("patient_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("tenant_id", aptTenantId)
+      .eq("client_id", aptClientId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!patientLink) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
   }
 
   if ((apt as any).telemedicine !== true) {
@@ -196,7 +226,7 @@ serve(async (req) => {
     });
   }
 
-  const baseRoomName = `tenant-${tenantId}-appointment-${appointmentId}`;
+  const baseRoomName = `tenant-${aptTenantId}-appointment-${appointmentId}`;
   const roomName = sanitizeRoomName(baseRoomName);
   const identity = sanitizeRoomName(`${role}-${user.id}`);
 

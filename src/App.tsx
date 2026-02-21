@@ -76,6 +76,11 @@ const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
 const PatientLogin = lazyWithRetry(() => import("@/pages/paciente/PatientLogin"));
 const PatientRegister = lazyWithRetry(() => import("@/pages/paciente/PatientRegister"));
 const PatientDashboard = lazyWithRetry(() => import("@/pages/paciente/PatientDashboard"));
+const PatientConsultas = lazyWithRetry(() => import("@/pages/paciente/PatientConsultas"));
+const PatientTeleconsulta = lazyWithRetry(() => import("@/pages/paciente/PatientTeleconsulta"));
+const PatientExames = lazyWithRetry(() => import("@/pages/paciente/PatientExames"));
+const PatientReceitas = lazyWithRetry(() => import("@/pages/paciente/PatientReceitas"));
+const PatientAtestados = lazyWithRetry(() => import("@/pages/paciente/PatientAtestados"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -516,7 +521,7 @@ const App = () => (
                   path="/paciente/consultas"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <PatientConsultas />
                     </PatientProtectedRoute>
                   }
                 />
@@ -524,7 +529,7 @@ const App = () => (
                   path="/paciente/teleconsulta"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <PatientTeleconsulta />
                     </PatientProtectedRoute>
                   }
                 />
@@ -532,7 +537,7 @@ const App = () => (
                   path="/paciente/exames"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <PatientExames />
                     </PatientProtectedRoute>
                   }
                 />
@@ -540,7 +545,7 @@ const App = () => (
                   path="/paciente/receitas"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <PatientReceitas />
                     </PatientProtectedRoute>
                   }
                 />
@@ -548,7 +553,7 @@ const App = () => (
                   path="/paciente/atestados"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <PatientAtestados />
                     </PatientProtectedRoute>
                   }
                 />
