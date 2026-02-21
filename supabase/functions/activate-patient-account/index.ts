@@ -54,35 +54,36 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 1. Verify client exists and has no account yet
-    const { data: validation, error: valError } = await adminClient.rpc(
-      "validate_patient_access",
-      { p_identifier: client_id }
-    );
+    // 1. Verify client exists and has no account yet (direct query by UUID)
+    const { data: clientRow, error: clientError } = await adminClient
+      .from("clients")
+      .select("id, user_id, name")
+      .eq("id", client_id)
+      .maybeSingle();
 
-    if (valError) {
-      console.error("validate_patient_access error:", valError);
+    if (clientError) {
+      console.error("client lookup error:", clientError);
       return new Response(
         JSON.stringify({ error: "Erro ao validar paciente" }),
         { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    if (!validation?.found) {
+    if (!clientRow) {
       return new Response(
         JSON.stringify({ error: "Paciente não encontrado" }),
         { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    if (validation.status === "has_account") {
+    if (clientRow.user_id) {
       return new Response(
         JSON.stringify({ error: "Este paciente já possui uma conta. Faça login com sua senha." }),
         { status: 409, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    const actualClientId = validation.client_id;
+    const actualClientId = clientRow.id;
 
     // 2. Create auth user
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
