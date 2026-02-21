@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,6 @@ import {
   RefreshCw,
   CheckCircle2,
   Calendar,
-  PhoneOff,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,19 +20,7 @@ import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, startOfDay, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import TwilioVideo from "twilio-video";
-import type { Room, RemoteParticipant, TrackPublication } from "twilio-video";
-
-type AttachableTrack = {
-  attach: () => HTMLElement;
-  detach: () => HTMLElement[];
-};
-
-function isAttachableTrack(track: unknown): track is AttachableTrack {
-  if (!track || typeof track !== "object") return false;
-  const t = track as Record<string, unknown>;
-  return typeof t.attach === "function" && typeof t.detach === "function";
-}
+import { VideoRoom } from "@/components/teleconsulta/VideoRoom";
 
 interface TelemedicineAppointment {
   id: string;
@@ -56,35 +43,26 @@ function statusLabel(status: string): { label: string; variant: "default" | "sec
   }
 }
 
+interface ActiveCall {
+  token: string;
+  roomName: string;
+  identity: string;
+  appointmentId: string;
+  appointmentLabel: string;
+  patientName: string;
+}
+
 export default function Teleconsulta() {
   const { profile } = useAuth();
   const [appointments, setAppointments] = useState<TelemedicineAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewDay, setViewDay] = useState<"today" | "tomorrow">("today");
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
-  const [isInCall, setIsInCall] = useState(false);
-
-  const roomRef = useRef<Room | null>(null);
-  const localMediaRef = useRef<HTMLDivElement | null>(null);
-  const remoteMediaRef = useRef<HTMLDivElement | null>(null);
+  const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
 
   useEffect(() => {
     if (profile?.tenant_id) void fetchAppointments();
   }, [profile?.tenant_id, viewDay]);
-
-  useEffect(() => {
-    return () => {
-      try {
-        if (roomRef.current) {
-          roomRef.current.disconnect();
-          roomRef.current = null;
-        }
-      } catch (e) {
-        void e;
-      }
-    };
-  }, []);
 
   const fetchAppointments = async () => {
     if (!profile?.tenant_id) return;
@@ -130,76 +108,9 @@ export default function Teleconsulta() {
     }
   };
 
-  const clearMedia = () => {
-    if (localMediaRef.current) localMediaRef.current.innerHTML = "";
-    if (remoteMediaRef.current) remoteMediaRef.current.innerHTML = "";
-  };
-
-  const attachTrack = (track: AttachableTrack, container: HTMLDivElement | null) => {
-    if (!container) return;
-    const el = track.attach() as HTMLElement;
-    el.style.width = "100%";
-    el.style.borderRadius = "12px";
-    container.appendChild(el);
-  };
-
-  const attachLocalParticipant = (room: Room) => {
-    const localParticipant = room.localParticipant;
-    if (!localParticipant) return;
-
-    localParticipant.tracks.forEach((publication: TrackPublication) => {
-      const track = publication.track;
-      if (isAttachableTrack(track)) attachTrack(track, localMediaRef.current);
-    });
-  };
-
-  const attachParticipant = (participant: RemoteParticipant) => {
-    participant.tracks.forEach((publication: TrackPublication) => {
-      const track = publication.track;
-      if (isAttachableTrack(track)) attachTrack(track, remoteMediaRef.current);
-    });
-
-    participant.on("trackSubscribed", (track: unknown) => {
-      if (isAttachableTrack(track)) attachTrack(track, remoteMediaRef.current);
-    });
-
-    participant.on("trackUnsubscribed", (track: unknown) => {
-      try {
-        if (isAttachableTrack(track)) track.detach().forEach((el) => el.remove());
-      } catch (e) {
-        void e;
-      }
-    });
-  };
-
-  const leaveCall = () => {
-    try {
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-        roomRef.current = null;
-      }
-    } catch (e) {
-      void e;
-    }
-    clearMedia();
-    setIsInCall(false);
-    setActiveAppointmentId(null);
-  };
-
   const joinTwilio = async (appt: TelemedicineAppointment) => {
     setJoiningId(appt.id);
     try {
-      if (roomRef.current) {
-        try {
-          roomRef.current.disconnect();
-        } catch (e) {
-          void e;
-        }
-        roomRef.current = null;
-      }
-
-      clearMedia();
-
       const { data, error } = await supabase.functions.invoke("twilio-video-token", {
         body: { appointment_id: appt.id, role: "staff" },
       });
@@ -209,55 +120,47 @@ export default function Teleconsulta() {
         throw new Error("Resposta inválida da função");
       }
 
-      const room = await TwilioVideo.connect(data.token as string, {
-        name: data.room_name,
-        audio: true,
-        video: { width: 640 },
-      });
+      const time = format(new Date(appt.scheduled_at), "HH:mm", { locale: ptBR });
 
-      roomRef.current = room;
-      setActiveAppointmentId(appt.id);
-      setIsInCall(true);
-
-      attachLocalParticipant(room);
-
-      room.participants.forEach((p) => attachParticipant(p));
-
-      room.on("participantConnected", (p) => {
-        attachParticipant(p as RemoteParticipant);
-      });
-
-      room.on("participantDisconnected", (p) => {
-        try {
-          (p as RemoteParticipant).tracks.forEach((pub: TrackPublication) => {
-            const track = pub.track;
-            if (isAttachableTrack(track)) {
-              try {
-                track.detach().forEach((el) => el.remove());
-              } catch (e) {
-                void e;
-              }
-            }
-          });
-        } catch (e) {
-          void e;
-        }
-      });
-
-      room.on("disconnected", () => {
-        leaveCall();
+      setActiveCall({
+        token: data.token,
+        roomName: data.room_name,
+        identity: data.identity,
+        appointmentId: appt.id,
+        appointmentLabel: `${time} · ${appt.client_name} · ${appt.service_name}`,
+        patientName: appt.client_name,
       });
     } catch (err) {
       logger.error("Join Twilio:", err);
       toast.error("Erro ao entrar na teleconsulta");
-      leaveCall();
     } finally {
       setJoiningId(null);
     }
   };
 
+  const handleDisconnect = useCallback(() => {
+    setActiveCall(null);
+    toast.info("Teleconsulta encerrada");
+  }, []);
+
   const todayCount = appointments.filter((a) => isToday(new Date(a.scheduled_at))).length;
   const tomorrowCount = appointments.filter((a) => isTomorrow(new Date(a.scheduled_at))).length;
+
+  // If there's an active call, show the VideoRoom fullscreen-ish
+  if (activeCall) {
+    return (
+      <MainLayout title="Teleconsulta" subtitle="Em chamada">
+        <VideoRoom
+          token={activeCall.token}
+          roomName={activeCall.roomName}
+          identity={activeCall.identity}
+          appointmentLabel={activeCall.appointmentLabel}
+          patientName={activeCall.patientName}
+          onDisconnect={handleDisconnect}
+        />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout
@@ -321,6 +224,7 @@ export default function Teleconsulta() {
           {appointments.map((appt) => {
             const { label, variant } = statusLabel(appt.status);
             const time = format(new Date(appt.scheduled_at), "HH:mm", { locale: ptBR });
+            const isActive = activeCall?.appointmentId === appt.id;
 
             return (
               <Card key={appt.id} className="hover:shadow-md transition-shadow">
@@ -353,7 +257,7 @@ export default function Teleconsulta() {
                     size="sm"
                     onClick={() => void joinTwilio(appt)}
                     className="gap-1.5"
-                    disabled={joiningId === appt.id || appt.status === "completed"}
+                    disabled={joiningId === appt.id || appt.status === "completed" || isActive}
                   >
                     <VideoIcon className="h-3.5 w-3.5" />
                     {joiningId === appt.id ? "Entrando..." : "Iniciar Teleconsulta"}
@@ -362,32 +266,6 @@ export default function Teleconsulta() {
               </Card>
             );
           })}
-
-          {isInCall && activeAppointmentId ? (
-            <Card className="border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="text-base">Teleconsulta em andamento</CardTitle>
-                  <Button size="sm" variant="destructive" onClick={leaveCall} className="gap-1.5">
-                    <PhoneOff className="h-3.5 w-3.5" />
-                    Encerrar
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Você</div>
-                    <div ref={localMediaRef} className="w-full min-h-[180px] bg-muted rounded-xl overflow-hidden" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Paciente</div>
-                    <div ref={remoteMediaRef} className="w-full min-h-[180px] bg-muted rounded-xl overflow-hidden" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
       )}
     </MainLayout>
