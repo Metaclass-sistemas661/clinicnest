@@ -47,11 +47,6 @@ interface TelemedicineAppointment {
   service_name: string;
 }
 
-function generateJitsiUrl(appointmentId: string): string {
-  const roomId = appointmentId.replace(/-/g, "").substring(0, 20);
-  return `https://meet.jit.si/clinicnest-${roomId}`;
-}
-
 function statusLabel(status: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
   switch (status) {
     case "confirmed": return { label: "Confirmado", variant: "default" };
@@ -66,7 +61,6 @@ export default function Teleconsulta() {
   const { profile } = useAuth();
   const [appointments, setAppointments] = useState<TelemedicineAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [viewDay, setViewDay] = useState<"today" | "tomorrow">("today");
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
