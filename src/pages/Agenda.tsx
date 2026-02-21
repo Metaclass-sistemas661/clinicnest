@@ -943,8 +943,8 @@ export default function Agenda() {
           </div>
 
           {/* Appointments Table */}
-          <Card className="border-border text-foreground rounded-xl shadow-sm">
-            <CardHeader className="pb-3">
+          <Card className="border-border text-foreground rounded-xl shadow-sm flex flex-col max-h-[600px]">
+            <CardHeader className="pb-3 shrink-0">
               <CardTitle className="text-base font-semibold">
                 Agendamentos
                 {viewMode === "day" && (
@@ -954,7 +954,7 @@ export default function Agenda() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 max-h-[520px] overflow-y-auto">
+            <CardContent className="p-0 overflow-y-auto min-h-0">
               {!isLoading && filteredAppointments.length === 0 ? (
                 <div className="p-6">
                   <EmptyState
