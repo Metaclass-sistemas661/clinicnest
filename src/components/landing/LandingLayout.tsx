@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Stethoscope } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Menu, X, Stethoscope, ChevronDown, Building2, UserRound } from "lucide-react";
 import { useState } from "react";
 import { PromoBanner } from "./PromoBanner";
 import { openCookieConsentPreferences } from "@/lib/cookieConsent";
@@ -47,11 +53,28 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/login">
-              <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10">
-                Entrar
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10 gap-1.5">
+                  Entrar
+                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem asChild>
+                  <Link to="/login" className="flex items-center gap-2 cursor-pointer">
+                    <Building2 className="h-4 w-4" />
+                    Sou Clínica
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/paciente/login" className="flex items-center gap-2 cursor-pointer">
+                    <UserRound className="h-4 w-4" />
+                    Sou Paciente
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link to="/cadastro">
               <Button className="bg-gradient-to-r from-teal-500 to-cyan-400 hover:from-teal-600 hover:to-cyan-500 shadow-lg shadow-teal-500/30 text-white font-semibold">
                 Começar Grátis
@@ -101,10 +124,19 @@ export function Navbar() {
                 Preços
               </a>
               <div className="flex flex-col gap-2 pt-4 border-t border-white/10">
-                <Link to="/login">
-                  <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10">Entrar</Button>
+                <Link to="/login" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10 justify-start gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Entrar como Clínica
+                  </Button>
                 </Link>
-                <Link to="/cadastro">
+                <Link to="/paciente/login" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" className="w-full text-white hover:text-white hover:bg-white/10 justify-start gap-2">
+                    <UserRound className="h-4 w-4" />
+                    Entrar como Paciente
+                  </Button>
+                </Link>
+                <Link to="/cadastro" onClick={() => setIsOpen(false)}>
                   <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white font-semibold">Começar Grátis</Button>
                 </Link>
               </div>

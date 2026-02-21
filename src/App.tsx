@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PatientProtectedRoute } from "@/components/auth/PatientProtectedRoute";
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { NewOnlineBookingListener } from "@/components/admin/NewOnlineBookingListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
@@ -70,6 +71,11 @@ const Integracoes = lazyWithRetry(() => import("@/pages/Integracoes"));
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
+
+// Portal do Paciente
+const PatientLogin = lazyWithRetry(() => import("@/pages/paciente/PatientLogin"));
+const PatientRegister = lazyWithRetry(() => import("@/pages/paciente/PatientRegister"));
+const PatientDashboard = lazyWithRetry(() => import("@/pages/paciente/PatientDashboard"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -492,6 +498,76 @@ const App = () => (
                 <Route path="/contas-pagar" element={<Navigate to="/financeiro?tab=bills_payable" replace />} />
                 <Route path="/contas-receber" element={<Navigate to="/financeiro?tab=bills_receivable" replace />} />
                 <Route path="/fluxo-de-caixa" element={<Navigate to="/financeiro?tab=projection" replace />} />
+
+                {/* Portal do Paciente — rotas públicas */}
+                <Route path="/paciente/login" element={<PatientLogin />} />
+                <Route path="/paciente/cadastro" element={<PatientRegister />} />
+
+                {/* Portal do Paciente — rotas protegidas */}
+                <Route
+                  path="/paciente/dashboard"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/consultas"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/teleconsulta"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/exames"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/receitas"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/atestados"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/perfil"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/configuracoes"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientDashboard />
+                    </PatientProtectedRoute>
+                  }
+                />
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />

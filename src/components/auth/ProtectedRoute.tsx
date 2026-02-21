@@ -28,6 +28,12 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/" replace />;
   }
 
+  // Pacientes não podem acessar o painel da clínica
+  const accountType = user.user_metadata?.account_type;
+  if (accountType === "patient") {
+    return <Navigate to="/paciente/dashboard" replace />;
+  }
+
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
