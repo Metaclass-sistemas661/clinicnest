@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
-import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 const log = createLogger("TWILIO-VIDEO-TOKEN");
@@ -12,6 +12,7 @@ type Role = "staff" | "patient";
 type Body = {
   appointment_id: string;
   role?: Role;
+  public_token?: string; // UUID token for unauthenticated patient access
 };
 
 function toTrimmedString(value: unknown, maxLength: number): string {
@@ -90,6 +91,10 @@ async function generateTwilioAccessToken(params: TwilioTokenParams): Promise<str
 }
 
 // --- Main handler ---
+// Supports 3 auth paths:
+// 1. Authenticated staff (JWT + role=staff) — validated via profiles table
+// 2. Authenticated patient (JWT + role=patient) — validated via patient_profiles table
+// 3. Public token (no JWT, public_token in body) — validated via telemedicine_token column
 
 serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -101,19 +106,6 @@ serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Método não permitido" }), {
       status: 405,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
-  }
-
-  const auth = await getAuthenticatedUserWithTenant(req, cors);
-  if (auth.error) return auth.error;
-
-  const { user, tenantId } = auth;
-
-  const rl = await checkRateLimit(`twilio-video-token:${user.id}`, 20, 60);
-  if (!rl.allowed) {
-    return new Response(JSON.stringify({ error: "Muitas tentativas. Tente novamente em instantes." }), {
-      status: 429,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
@@ -130,14 +122,43 @@ serve(async (req) => {
 
   const appointmentId = toTrimmedString(body.appointment_id, 80);
   const role: Role = body.role === "patient" ? "patient" : "staff";
+  const publicToken = toTrimmedString(body.public_token, 80);
+  const isPublicAccess = !!publicToken && role === "patient";
 
-  if (!appointmentId) {
+  if (!appointmentId && !isPublicAccess) {
     return new Response(JSON.stringify({ error: "appointment_id é obrigatório" }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
+  // --- Rate limit by IP for public, by user for authenticated ---
+  const rateLimitKey = isPublicAccess
+    ? `twilio-pub:${publicToken}`
+    : `twilio-auth:unknown`;
+
+  let userId = "anonymous";
+
+  if (!isPublicAccess) {
+    // Authenticated path: validate JWT
+    const authResult = await getAuthenticatedUser(req, cors);
+    if (authResult.error) return authResult.error;
+    userId = authResult.user.id;
+  }
+
+  const rl = await checkRateLimit(
+    isPublicAccess ? rateLimitKey : `twilio-auth:${userId}`,
+    20,
+    60,
+  );
+  if (!rl.allowed) {
+    return new Response(JSON.stringify({ error: "Muitas tentativas. Tente novamente em instantes." }), {
+      status: 429,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  // --- Twilio credentials ---
   const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID") ?? "";
   const apiKeySid = Deno.env.get("TWILIO_API_KEY_SID") ?? "";
   const apiKeySecret = Deno.env.get("TWILIO_API_KEY_SECRET") ?? "";
@@ -157,44 +178,111 @@ serve(async (req) => {
 
   const supabaseAdmin = createSupabaseAdmin();
 
-  const { data: apt, error: aptError } = await supabaseAdmin
-    .from("appointments")
-    .select("id, tenant_id, telemedicine")
-    .eq("id", appointmentId)
-    .maybeSingle();
+  // --- Fetch and validate appointment ---
+  let apt: any = null;
 
-  if (aptError) {
-    log("DB: erro ao buscar appointment", { message: aptError.message });
-    return new Response(JSON.stringify({ error: "Erro ao validar agendamento" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
+  if (isPublicAccess) {
+    // Public token path: find appointment by telemedicine_token
+    const { data, error: aptError } = await supabaseAdmin
+      .from("appointments")
+      .select("id, tenant_id, client_id, telemedicine, telemedicine_token, status")
+      .eq("telemedicine_token", publicToken)
+      .eq("telemedicine", true)
+      .maybeSingle();
+
+    if (aptError) {
+      log("DB: erro ao buscar appointment por token", { message: aptError.message });
+      return new Response(JSON.stringify({ error: "Erro ao validar agendamento" }), {
+        status: 500, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!data) {
+      return new Response(JSON.stringify({ error: "Link inválido ou expirado" }), {
+        status: 404, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!["pending", "confirmed"].includes(data.status)) {
+      return new Response(JSON.stringify({ error: "Esta teleconsulta já foi encerrada" }), {
+        status: 400, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    apt = data;
+  } else {
+    // Authenticated path: find appointment by ID
+    const { data, error: aptError } = await supabaseAdmin
+      .from("appointments")
+      .select("id, tenant_id, client_id, telemedicine")
+      .eq("id", appointmentId)
+      .maybeSingle();
+
+    if (aptError) {
+      log("DB: erro ao buscar appointment", { message: aptError.message });
+      return new Response(JSON.stringify({ error: "Erro ao validar agendamento" }), {
+        status: 500, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!data) {
+      return new Response(JSON.stringify({ error: "Agendamento não encontrado" }), {
+        status: 404, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    apt = data;
   }
 
-  if (!apt) {
-    return new Response(JSON.stringify({ error: "Agendamento não encontrado" }), {
-      status: 404,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
-  }
+  const aptTenantId = String(apt.tenant_id);
 
-  if (String((apt as any).tenant_id) !== String(tenantId)) {
-    return new Response(JSON.stringify({ error: "Não autorizado" }), {
-      status: 403,
-      headers: { ...cors, "Content-Type": "application/json" },
-    });
-  }
+  // --- Authorization ---
+  if (!isPublicAccess) {
+    if (role === "staff") {
+      const { data: staffProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-  if ((apt as any).telemedicine !== true) {
+      if (!staffProfile || String(staffProfile.tenant_id) !== aptTenantId) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 403, headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      // Authenticated patient: validate via patient_profiles
+      const { data: patientLink } = await supabaseAdmin
+        .from("patient_profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("tenant_id", aptTenantId)
+        .eq("client_id", apt.client_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!patientLink) {
+        return new Response(JSON.stringify({ error: "Não autorizado" }), {
+          status: 403, headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+    }
+  }
+  // Public token access is already validated by finding the appointment via telemedicine_token
+
+  if (apt.telemedicine !== true) {
     return new Response(JSON.stringify({ error: "Este agendamento não é teleconsulta" }), {
-      status: 400,
-      headers: { ...cors, "Content-Type": "application/json" },
+      status: 400, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
-  const baseRoomName = `tenant-${tenantId}-appointment-${appointmentId}`;
+  // --- Generate Twilio token ---
+  const resolvedAppointmentId = apt.id;
+  const baseRoomName = `tenant-${aptTenantId}-appointment-${resolvedAppointmentId}`;
   const roomName = sanitizeRoomName(baseRoomName);
-  const identity = sanitizeRoomName(`${role}-${user.id}`);
+  const identity = isPublicAccess
+    ? sanitizeRoomName(`patient-public-${publicToken.slice(0, 8)}`)
+    : sanitizeRoomName(`${role}-${userId}`);
 
   try {
     const token = await generateTwilioAccessToken({
@@ -219,8 +307,7 @@ serve(async (req) => {
     });
 
     return new Response(JSON.stringify({ error: "Erro ao gerar token" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+      status: 500, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

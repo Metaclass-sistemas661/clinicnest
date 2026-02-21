@@ -35,6 +35,7 @@ const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 
 const AgendarOnline = lazyWithRetry(() => import("@/pages/AgendarOnline"));
 const ConfirmarAgendamento = lazyWithRetry(() => import("@/pages/ConfirmarAgendamento"));
+const TeleconsultaPublica = lazyWithRetry(() => import("@/pages/TeleconsultaPublica"));
 
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
@@ -145,6 +146,7 @@ const App = () => (
                 <Route path="/agendar/:slug" element={<AgendarOnline />} />
                 <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
                 <Route path="/nps/:token" element={<NpsPublico />} />
+                <Route path="/teleconsulta-publica/:token" element={<TeleconsultaPublica />} />
 
                 {/* Protected routes */}
                 <Route

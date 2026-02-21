@@ -13,6 +13,10 @@ import {
   RefreshCw,
   CheckCircle2,
   Calendar,
+  Share2,
+  Copy,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,6 +63,8 @@ export default function Teleconsulta() {
   const [viewDay, setViewDay] = useState<"today" | "tomorrow">("today");
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
+  const [generatingLinkId, setGeneratingLinkId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.tenant_id) void fetchAppointments();
@@ -142,6 +148,33 @@ export default function Teleconsulta() {
     setActiveCall(null);
     toast.info("Teleconsulta encerrada");
   }, []);
+
+  const generateLink = async (apptId: string) => {
+    setGeneratingLinkId(apptId);
+    try {
+      const { data, error } = await (supabase as any).rpc("generate_telemedicine_token", {
+        p_appointment_id: apptId,
+      });
+
+      if (error) throw error;
+      if (!data?.token) throw new Error("Token não gerado");
+
+      const link = `${window.location.origin}/teleconsulta-publica/${data.token}`;
+
+      await navigator.clipboard.writeText(link);
+      setCopiedId(apptId);
+      setTimeout(() => setCopiedId(null), 3000);
+
+      toast.success("Link copiado!", {
+        description: "Envie este link ao paciente por WhatsApp ou e-mail.",
+      });
+    } catch (err) {
+      logger.error("Generate link:", err);
+      toast.error("Erro ao gerar link da teleconsulta");
+    } finally {
+      setGeneratingLinkId(null);
+    }
+  };
 
   const todayCount = appointments.filter((a) => isToday(new Date(a.scheduled_at))).length;
   const tomorrowCount = appointments.filter((a) => isTomorrow(new Date(a.scheduled_at))).length;
@@ -253,15 +286,33 @@ export default function Teleconsulta() {
                     </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    onClick={() => void joinTwilio(appt)}
-                    className="gap-1.5"
-                    disabled={joiningId === appt.id || appt.status === "completed" || isActive}
-                  >
-                    <VideoIcon className="h-3.5 w-3.5" />
-                    {joiningId === appt.id ? "Entrando..." : "Iniciar Teleconsulta"}
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      onClick={() => void joinTwilio(appt)}
+                      className="gap-1.5"
+                      disabled={joiningId === appt.id || appt.status === "completed" || isActive}
+                    >
+                      <VideoIcon className="h-3.5 w-3.5" />
+                      {joiningId === appt.id ? "Entrando..." : "Iniciar Teleconsulta"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void generateLink(appt.id)}
+                      className="gap-1.5"
+                      disabled={generatingLinkId === appt.id || appt.status === "completed"}
+                    >
+                      {generatingLinkId === appt.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : copiedId === appt.id ? (
+                        <Check className="h-3.5 w-3.5 text-green-600" />
+                      ) : (
+                        <Share2 className="h-3.5 w-3.5" />
+                      )}
+                      {copiedId === appt.id ? "Link copiado!" : "Enviar Link ao Paciente"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );
