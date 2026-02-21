@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ClipboardList, RefreshCw, Building2, Stethoscope, Calendar, Clock } from "lucide-react";
+import { ClipboardList, RefreshCw, Building2, Stethoscope, Calendar, Clock, Download } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
 import { atestadosBanners } from "@/components/patient/patientBannerData";
+import { generateCertificatePdf } from "@/utils/patientDocumentPdf";
 
 interface Certificate {
   id: string;
@@ -149,6 +150,16 @@ export default function PatientAtestados() {
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-sm text-foreground whitespace-pre-line">{cert.content}</p>
                 </div>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => generateCertificatePdf(cert)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Baixar PDF
+                </Button>
               </CardContent>
             </Card>
           ))}

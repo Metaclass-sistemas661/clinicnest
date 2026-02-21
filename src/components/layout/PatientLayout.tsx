@@ -22,6 +22,7 @@ import { useState, useEffect } from "react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { PatientNotificationsBell } from "@/components/patient/PatientNotificationsBell";
 
 interface NavItem {
   label: string;
@@ -228,6 +229,7 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
               {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              <PatientNotificationsBell />
               <ThemeToggle />
               {actions}
             </div>
