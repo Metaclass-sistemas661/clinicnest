@@ -827,7 +827,7 @@ export default function Agenda() {
       </Dialog>
 
       {/* ═══ Main two-column layout: Content + Banner (right) ═══ */}
-      <div className="flex gap-6">
+      <div className="flex gap-6 items-stretch">
 
         {/* ── Left: Main agenda content ── */}
         <div className="flex-1 min-w-0">
@@ -954,7 +954,7 @@ export default function Agenda() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 max-h-[520px] overflow-y-auto">
               {!isLoading && filteredAppointments.length === 0 ? (
                 <div className="p-6">
                   <EmptyState
@@ -1014,9 +1014,9 @@ export default function Agenda() {
         </div>
 
         {/* ── Right: Promotional Banner with auto-carousel (desktop only, stories-width) ── */}
-        <aside className="hidden xl:block w-[280px] shrink-0 -mt-2">
-          <div className="sticky top-4">
-            <div className="relative h-[70vh] min-h-[520px] rounded-2xl overflow-hidden shadow-lg">
+        <aside className="hidden xl:flex w-[280px] shrink-0">
+          <div className="w-full">
+            <div className="relative h-full min-h-[520px] rounded-2xl overflow-hidden shadow-lg">
               {bannerSlides.map((slide, idx) => {
                 const SlideIcon = slide.icon;
                 return (
