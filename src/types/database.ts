@@ -54,6 +54,7 @@ export interface Client {
   phone: string | null;
   email: string | null;
   notes: string | null;
+  access_code: string | null;
   created_at: string;
   updated_at: string;
 }

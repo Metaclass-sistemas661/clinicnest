@@ -33,7 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -99,6 +99,12 @@ export default function Clientes() {
   // Marketing opt-out
   const [marketingOptOut, setMarketingOptOut] = useState(false);
   const [isUpdatingMarketing, setIsUpdatingMarketing] = useState(false);
+
+  // Access code dialog
+  const [accessCodeDialog, setAccessCodeDialog] = useState(false);
+  const [newAccessCode, setNewAccessCode] = useState("");
+  const [newClientName, setNewClientName] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -377,7 +383,8 @@ export default function Clientes() {
       (client) =>
         client.name.toLowerCase().includes(q) ||
         client.phone?.includes(debouncedSearchQuery) ||
-        client.email?.toLowerCase().includes(q)
+        client.email?.toLowerCase().includes(q) ||
+        client.access_code?.toLowerCase().includes(q)
     );
   }, [clients, debouncedSearchQuery, isAdmin, clientFilter, myClientIds]);
 
@@ -410,7 +417,7 @@ export default function Clientes() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("id,tenant_id,name,phone,email,notes,created_at,updated_at")
+        .select("id,tenant_id,name,phone,email,notes,access_code,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
@@ -464,7 +471,7 @@ export default function Clientes() {
     setIsSaving(true);
 
     try {
-      const { error } = await upsertClientV2({
+      const { data: rpcResult, error } = await upsertClientV2({
         p_client_id: editingClient?.id ?? null,
         p_name: parsed.data.name,
         p_phone: parsed.data.phone || null,
@@ -477,11 +484,20 @@ export default function Clientes() {
         return;
       }
 
-      toast.success(editingClient ? "Paciente atualizado com sucesso!" : "Paciente cadastrado com sucesso!");
+      const isNew = !editingClient;
       setIsDialogOpen(false);
       setFormData({ name: "", phone: "", email: "", notes: "" });
       setEditingClient(null);
       fetchClients();
+
+      if (isNew && rpcResult?.access_code) {
+        setNewAccessCode(rpcResult.access_code);
+        setNewClientName(parsed.data.name);
+        setCodeCopied(false);
+        setAccessCodeDialog(true);
+      } else {
+        toast.success(isNew ? "Paciente cadastrado com sucesso!" : "Paciente atualizado com sucesso!");
+      }
     } catch (error) {
       toast.error(editingClient ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
       logger.error(error);
@@ -644,6 +660,12 @@ export default function Clientes() {
                           </Button>
                         </div>
                       </div>
+                      {client.access_code && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Badge variant="outline" className="font-mono text-xs tracking-wider">{client.access_code}</Badge>
+                        </div>
+                      )}
                       {client.phone && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Phone className="h-4 w-4" />{client.phone}
@@ -681,6 +703,7 @@ export default function Clientes() {
                     <TableRow>
                       {isAdmin && clientSpending.length > 0 && <TableHead className="w-10">#</TableHead>}
                       <TableHead>Nome</TableHead>
+                      <TableHead>Código</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead>Email</TableHead>
                       {isAdmin && clientSpending.length > 0 && <TableHead>Consumo</TableHead>}
@@ -695,6 +718,11 @@ export default function Clientes() {
                         <TableRow key={client.id}>
                           {isAdmin && clientSpending.length > 0 && <TableCell className="font-bold text-primary">{index + 1}</TableCell>}
                           <TableCell className="font-medium">{client.name}</TableCell>
+                          <TableCell>
+                            {client.access_code ? (
+                              <Badge variant="outline" className="font-mono text-xs tracking-wider">{client.access_code}</Badge>
+                            ) : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
                           <TableCell>{client.phone ? <div className="flex items-center gap-1 text-muted-foreground"><Phone className="h-4 w-4" />{client.phone}</div> : <span className="text-muted-foreground">—</span>}</TableCell>
                           <TableCell>{client.email ? <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-4 w-4" />{client.email}</div> : <span className="text-muted-foreground">—</span>}</TableCell>
                           {isAdmin && clientSpending.length > 0 && (
@@ -952,6 +980,49 @@ export default function Clientes() {
             <Button variant="outline" onClick={() => setPackageDialog(false)}>Cancelar</Button>
             <Button className="gradient-primary text-primary-foreground" onClick={handleCreatePackage} disabled={isSavingPackage}>
               {isSavingPackage ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : "Criar Pacote"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog: Código de acesso do paciente */}
+      <Dialog open={accessCodeDialog} onOpenChange={setAccessCodeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Paciente cadastrado!
+            </DialogTitle>
+            <DialogDescription>
+              Envie o código abaixo ao paciente <strong>{newClientName}</strong> para que ele possa acessar o Portal do Paciente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
+              <div className="flex-1 text-center">
+                <div className="text-xs text-muted-foreground mb-1">Código de acesso</div>
+                <div className="text-2xl font-mono font-bold tracking-widest text-primary">{newAccessCode}</div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(newAccessCode);
+                  setCodeCopied(true);
+                  setTimeout(() => setCodeCopied(false), 2500);
+                  toast.success("Código copiado!");
+                }}
+              >
+                {codeCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+              O paciente deve informar este código (ou CPF) na tela de login do portal para criar sua senha e acessar consultas, exames, receitas e teleconsultas.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setAccessCodeDialog(false)} className="gradient-primary text-primary-foreground">
+              Entendi
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -231,7 +231,7 @@ export async function setServiceActiveV2(params: {
   return rpc<SetServiceActiveV2Result>("set_service_active_v2", params as Record<string, unknown>);
 }
 
-export type UpsertClientV2Result = { success: boolean; client_id: string };
+export type UpsertClientV2Result = { success: boolean; client_id: string; access_code?: string };
 export async function upsertClientV2(params: {
   p_client_id?: string | null;
   p_name: string;

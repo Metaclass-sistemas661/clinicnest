@@ -75,7 +75,7 @@ const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
 
 // Portal do Paciente
 const PatientLogin = lazyWithRetry(() => import("@/pages/paciente/PatientLogin"));
-const PatientRegister = lazyWithRetry(() => import("@/pages/paciente/PatientRegister"));
+// PatientRegister removed — registration is now part of PatientLogin flow via access code
 const PatientDashboard = lazyWithRetry(() => import("@/pages/paciente/PatientDashboard"));
 const PatientConsultas = lazyWithRetry(() => import("@/pages/paciente/PatientConsultas"));
 const PatientTeleconsulta = lazyWithRetry(() => import("@/pages/paciente/PatientTeleconsulta"));
@@ -508,7 +508,7 @@ const App = () => (
 
                 {/* Portal do Paciente — rotas públicas */}
                 <Route path="/paciente/login" element={<PatientLogin />} />
-                <Route path="/paciente/cadastro" element={<PatientRegister />} />
+                <Route path="/paciente/cadastro" element={<Navigate to="/paciente/login" replace />} />
 
                 {/* Portal do Paciente — rotas protegidas */}
                 <Route

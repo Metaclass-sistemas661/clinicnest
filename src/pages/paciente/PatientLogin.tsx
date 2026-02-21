@@ -8,52 +8,129 @@ import {
   EyeOff,
   Loader2,
   ArrowRight,
+  ArrowLeft,
   ShieldCheck,
   Stethoscope,
   Heart,
   Calendar,
   FileText,
   Video,
+  CheckCircle2,
+  KeyRound,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
+
+type Step = "identify" | "login" | "create_password" | "success";
+
+interface PatientInfo {
+  client_id: string;
+  client_name: string;
+  client_email: string | null;
+  masked_email: string | null;
+  clinic_name: string | null;
+  status: "new" | "has_account";
+}
 
 export default function PatientLogin() {
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("identify");
+  const [identifier, setIdentifier] = useState("");
+  const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
+
+  // Login fields
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Create password fields
+  const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const navigate = useNavigate();
 
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
-    if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
+    if (m.includes("invalid login credentials")) return "Senha incorreta.";
     if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
     if (m.includes("too many requests")) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
     return message;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ── Step 1: Identify patient by code or CPF ──
+  const handleIdentify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!identifier.trim()) return;
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.rpc("validate_patient_access", {
+        p_identifier: identifier.trim(),
+      });
 
       if (error) {
-        toast.error("Erro ao fazer login", { description: normalizeAuthError(error.message) });
-        setIsLoading(false);
+        logger.error("validate_patient_access error:", error);
+        toast.error("Erro ao verificar código");
         return;
       }
 
-      // Verificar se é conta de paciente
+      if (!data?.found) {
+        toast.error("Paciente não encontrado", {
+          description: "Verifique o código de acesso ou CPF informado.",
+        });
+        return;
+      }
+
+      const info: PatientInfo = {
+        client_id: data.client_id,
+        client_name: data.client_name,
+        client_email: data.client_email,
+        masked_email: data.masked_email,
+        clinic_name: data.clinic_name,
+        status: data.status,
+      };
+      setPatientInfo(info);
+
+      if (data.status === "has_account") {
+        setStep("login");
+      } else {
+        setEmail(info.client_email || "");
+        setStep("create_password");
+      }
+    } catch (err) {
+      logger.error("Identify error:", err);
+      toast.error("Erro inesperado");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Step 2a: Login with existing account ──
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientInfo?.client_email || !password) return;
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: patientInfo.client_email,
+        password,
+      });
+
+      if (error) {
+        toast.error("Erro ao fazer login", { description: normalizeAuthError(error.message) });
+        return;
+      }
+
       const accountType = data.user?.user_metadata?.account_type;
       if (accountType !== "patient") {
         await supabase.auth.signOut();
         toast.error("Esta conta não é de paciente.", {
-          description: "Use o login de clínica ou crie uma conta de paciente.",
+          description: "Use o login de clínica se for profissional.",
         });
-        setIsLoading(false);
         return;
       }
 
@@ -64,6 +141,373 @@ export default function PatientLogin() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ── Step 2b: Create password (first access) ──
+  const handleCreatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientInfo) return;
+
+    if (newPassword !== confirmPassword) {
+      toast.error("As senhas não coincidem.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (!email.trim()) {
+      toast.error("Informe um e-mail para sua conta.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("activate-patient-account", {
+        body: {
+          client_id: patientInfo.client_id,
+          email: email.trim(),
+          password: newPassword,
+          full_name: patientInfo.client_name,
+        },
+      });
+
+      if (error) {
+        logger.error("activate-patient-account invoke error:", error);
+        toast.error("Erro ao criar conta");
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setStep("success");
+    } catch (err) {
+      logger.error("Create password error:", err);
+      toast.error("Erro inesperado ao criar conta");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Auto-login after account creation ──
+  const handleAutoLogin = async () => {
+    if (!email || !newPassword) {
+      navigate("/paciente/login", { replace: true });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: newPassword,
+      });
+      if (error) {
+        toast.error("Conta criada! Faça login manualmente.");
+        goToStart();
+        return;
+      }
+      toast.success("Bem-vindo ao portal!");
+      navigate("/paciente/dashboard", { replace: true });
+    } catch {
+      goToStart();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const goToStart = () => {
+    setStep("identify");
+    setIdentifier("");
+    setPatientInfo(null);
+    setPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setEmail("");
+  };
+
+  // ── Render right panel content based on step ──
+  const renderFormContent = () => {
+    // ── SUCCESS ──
+    if (step === "success") {
+      return (
+        <div className="text-center space-y-6">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-8 w-8 text-green-600" />
+          </div>
+          <div>
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">Conta criada!</h2>
+            <p className="text-muted-foreground text-sm">
+              Olá, <strong>{patientInfo?.client_name}</strong>! Sua conta foi ativada com sucesso.
+            </p>
+          </div>
+          <Button
+            onClick={handleAutoLogin}
+            disabled={isLoading}
+            className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 transition-all duration-300 text-base"
+          >
+            {isLoading ? (
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Entrando...</>
+            ) : (
+              <>Acessar meu portal<ArrowRight className="ml-2 h-5 w-5" /></>
+            )}
+          </Button>
+        </div>
+      );
+    }
+
+    // ── IDENTIFY ──
+    if (step === "identify") {
+      return (
+        <>
+          <div className="mb-8">
+            <h2 className="font-display text-3xl font-bold text-gray-900 mb-2">Olá, paciente!</h2>
+            <p className="text-muted-foreground text-sm">
+              Informe seu <strong>código de acesso</strong> ou <strong>CPF</strong> para continuar.
+            </p>
+          </div>
+
+          <form onSubmit={handleIdentify} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="patient-identifier" className="text-sm font-medium text-gray-700">
+                Código de acesso ou CPF
+              </Label>
+              <Input
+                id="patient-identifier"
+                type="text"
+                placeholder="PAC-XXXXXX ou 000.000.000-00"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                autoComplete="off"
+                autoFocus
+                required
+                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors uppercase"
+              />
+              <p className="text-xs text-muted-foreground">
+                O código foi fornecido pela sua clínica ao realizar seu cadastro.
+              </p>
+            </div>
+
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              disabled={isLoading || !identifier.trim()}
+            >
+              {isLoading ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Verificando...</>
+              ) : (
+                <>Continuar<ArrowRight className="ml-2 h-5 w-5" /></>
+              )}
+            </Button>
+          </form>
+        </>
+      );
+    }
+
+    // ── LOGIN (existing account) ──
+    if (step === "login") {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={goToStart}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </button>
+
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100">
+                <UserCheck className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">{patientInfo?.client_name}</h3>
+                {patientInfo?.clinic_name && (
+                  <p className="text-xs text-muted-foreground">{patientInfo.clinic_name}</p>
+                )}
+              </div>
+            </div>
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-1">Bem-vindo de volta!</h2>
+            <p className="text-muted-foreground text-sm">
+              Informe sua senha para acessar o portal.
+              {patientInfo?.masked_email && (
+                <span className="block mt-1 text-xs">E-mail: {patientInfo.masked_email}</span>
+              )}
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="patient-password" className="text-sm font-medium text-gray-700">
+                  Senha
+                </Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  id="patient-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  autoFocus
+                  required
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              disabled={isLoading || !password}
+            >
+              {isLoading ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Entrando...</>
+              ) : (
+                <>Acessar meu portal<ArrowRight className="ml-2 h-5 w-5" /></>
+              )}
+            </Button>
+          </form>
+        </>
+      );
+    }
+
+    // ── CREATE PASSWORD (first access) ──
+    if (step === "create_password") {
+      return (
+        <>
+          <button
+            type="button"
+            onClick={goToStart}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </button>
+
+          <div className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100">
+                <KeyRound className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">{patientInfo?.client_name}</h3>
+                {patientInfo?.clinic_name && (
+                  <p className="text-xs text-muted-foreground">{patientInfo.clinic_name}</p>
+                )}
+              </div>
+            </div>
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-1">Primeiro acesso</h2>
+            <p className="text-muted-foreground text-sm">
+              Crie uma senha para acessar seu portal do paciente.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreatePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="patient-email" className="text-sm font-medium text-gray-700">
+                E-mail
+              </Label>
+              <Input
+                id="patient-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
+              />
+              {patientInfo?.client_email && (
+                <p className="text-xs text-muted-foreground">
+                  E-mail pré-preenchido com o cadastro da clínica. Você pode alterar se preferir.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="patient-new-password" className="text-sm font-medium text-gray-700">
+                Criar senha
+              </Label>
+              <div className="relative">
+                <Input
+                  id="patient-new-password"
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  autoFocus
+                  required
+                  minLength={6}
+                  className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  aria-label={showNewPassword ? "Ocultar senha" : "Mostrar senha"}
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="patient-confirm-password" className="text-sm font-medium text-gray-700">
+                Confirmar senha
+              </Label>
+              <Input
+                id="patient-confirm-password"
+                type="password"
+                placeholder="Repita a senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                minLength={6}
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              disabled={isLoading || !email.trim() || !newPassword || !confirmPassword}
+            >
+              {isLoading ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Criando conta...</>
+              ) : (
+                <>Criar minha conta<ArrowRight className="ml-2 h-5 w-5" /></>
+              )}
+            </Button>
+          </form>
+        </>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -162,114 +606,29 @@ export default function PatientLogin() {
             Portal do Paciente
           </div>
 
-          <div className="mb-8">
-            <h2 className="font-display text-3xl font-bold text-gray-900 mb-2">Olá, paciente!</h2>
-            <p className="text-muted-foreground text-sm">Entre com suas credenciais para acessar seu portal.</p>
-          </div>
+          {renderFormContent()}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="patient-email" className="text-sm font-medium text-gray-700">
-                E-mail
-              </Label>
-              <Input
-                id="patient-email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="patient-password" className="text-sm font-medium text-gray-700">
-                  Senha
-                </Label>
+          {step !== "success" && (
+            <>
+              <div className="mt-6 text-center">
                 <Link
-                  to="/forgot-password"
-                  className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
+                  to="/login"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Esqueceu a senha?
+                  É profissional de saúde? Acesse o painel da clínica →
                 </Link>
               </div>
-              <div className="relative">
-                <Input
-                  id="patient-password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                  className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
-                />
-                <button
-                  type="button"
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+
+              <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
+                  <span>Conexão segura</span>
+                </div>
+                <span className="opacity-30">·</span>
+                <span>LGPD</span>
               </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
-              disabled={isLoading || !email.trim() || !password}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Entrando...
-                </>
-              ) : (
-                <>
-                  Acessar meu portal
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-100" />
-            <span className="text-xs text-muted-foreground">ou</span>
-            <div className="flex-1 h-px bg-gray-100" />
-          </div>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Ainda não tem conta?{" "}
-            <Link
-              to="/paciente/cadastro"
-              className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
-            >
-              Cadastre-se aqui
-            </Link>
-          </p>
-
-          <div className="mt-6 text-center">
-            <Link
-              to="/login"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              É profissional de saúde? Acesse o painel da clínica →
-            </Link>
-          </div>
-
-          <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
-              <span>Conexão segura</span>
-            </div>
-            <span className="opacity-30">·</span>
-            <span>LGPD</span>
-          </div>
+            </>
+          )}
 
           <div className="mt-8 text-center text-xs text-muted-foreground/60 space-y-1">
             <div className="flex items-center justify-center gap-3">
