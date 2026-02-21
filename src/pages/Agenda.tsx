@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
-import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, Stethoscope, TrendingUp } from "lucide-react";
 import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -59,6 +59,37 @@ export default function Agenda() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [pendingCancelAppointmentId, setPendingCancelAppointmentId] = useState<string | null>(null);
+
+  // Banner carousel
+  const bannerSlides = useMemo(() => [
+    {
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=600&q=80&auto=format&fit=crop",
+      icon: CalendarDays,
+      title: "Agora ficou mais fácil gerenciar seus agendamentos",
+      desc: "ClinicNest veio para inovar a gestão da sua clínica. Organize, confirme e acompanhe tudo em um só lugar.",
+    },
+    {
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
+      icon: Stethoscope,
+      title: "Atendimento de excelência começa com organização",
+      desc: "Gerencie sua equipe, procedimentos e horários com a praticidade que sua clínica merece.",
+    },
+    {
+      img: "https://images.unsplash.com/photo-1551190822-a9ce113ac100?w=600&q=80&auto=format&fit=crop",
+      icon: TrendingUp,
+      title: "Acompanhe o crescimento da sua clínica em tempo real",
+      desc: "Relatórios inteligentes, metas e comissões — tudo integrado para você focar no que importa.",
+    },
+  ], []);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    bannerTimerRef.current = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
+    }, 5000);
+    return () => { if (bannerTimerRef.current) clearInterval(bannerTimerRef.current); };
+  }, [bannerSlides.length]);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
@@ -758,6 +789,7 @@ export default function Agenda() {
         </div>
       }
     >
+      {/* Cancel dialog */}
       <Dialog
         open={isCancelDialogOpen}
         onOpenChange={(open) => {
@@ -794,161 +826,244 @@ export default function Agenda() {
         </DialogContent>
       </Dialog>
 
-      {/* Navigation */}
-      <div className="mb-4 md:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
-        <div className="flex items-center gap-2 md:gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 md:h-10 md:w-10"
-            onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}
-            aria-label={viewMode === "day" ? "Dia anterior" : "Semana anterior"}
-            data-tour="agenda-prev-period"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-sm md:text-lg font-semibold text-center min-w-0 text-foreground">
-            {viewMode === "day"
-              ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
-              : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
-          </h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 md:h-10 md:w-10"
-            onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}
-            aria-label={viewMode === "day" ? "Próximo dia" : "Próxima semana"}
-            data-tour="agenda-next-period"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date())} data-tour="agenda-today">
-          Hoje
-        </Button>
-      </div>
+      {/* ═══ Main two-column layout: Content + Banner (right) ═══ */}
+      <div className="flex gap-6">
 
-      {/* Week Overview - Mini Calendar */}
-      {viewMode === "week" && (
-        <div className="mb-4 md:mb-6 grid grid-cols-7 gap-1 md:gap-2">
-          {getWeekDays().map((day) => {
-            const count = getAppointmentsCountForDay(day);
-            const isToday = isSameDay(day, new Date());
-            const isSelected = isSameDay(day, currentDate);
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => {
-                  setCurrentDate(day);
-                  setViewMode("day");
-                }}
-                className={`
-                  flex flex-col items-center rounded-lg border p-1.5 md:p-3 transition-all hover:border-primary/50 hover:bg-accent
-                  ${isToday ? "ring-2 ring-primary" : ""}
-                  ${isSelected ? "bg-primary/10 border-primary" : "bg-card"}
-                `}
+        {/* ── Left: Main agenda content ── */}
+        <div className="flex-1 min-w-0">
+
+          {/* Stats overview card — above content, full width */}
+          <div className="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-border bg-card p-4 flex flex-col">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Total</span>
+              <span className="text-3xl font-bold text-foreground mt-1">{appointmentCounts.total}</span>
+              <span className="text-xs text-muted-foreground mt-1">agendamentos</span>
+            </div>
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 p-4 flex flex-col">
+              <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Pendentes</span>
+              <span className="text-3xl font-bold text-amber-700 dark:text-amber-300 mt-1">{appointmentCounts.pending}</span>
+              <span className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">aguardando confirmação</span>
+            </div>
+            <div className="rounded-xl border border-blue-200 dark:border-blue-500/20 bg-blue-50 dark:bg-blue-500/5 p-4 flex flex-col">
+              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Confirmados</span>
+              <span className="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-1">{appointmentCounts.confirmed}</span>
+              <span className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">prontos para atender</span>
+            </div>
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5 p-4 flex flex-col">
+              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Concluídos</span>
+              <span className="text-3xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{appointmentCounts.completed}</span>
+              <span className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">atendimentos realizados</span>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="mb-4 md:mb-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl"
+                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}
+                aria-label={viewMode === "day" ? "Dia anterior" : "Semana anterior"}
+                data-tour="agenda-prev-period"
               >
-                <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
-                  {formatInAppTz(day, "EEE").slice(0, 3)}
-                </span>
-                <span className={`text-sm md:text-xl font-bold text-foreground ${isToday ? "text-primary" : ""}`}>
-                  {formatInAppTz(day, "d")}
-                </span>
-                {count > 0 && (
-                  <span className="mt-0.5 md:mt-1 rounded-full bg-primary/20 px-1 md:px-2 py-0.5 text-[10px] md:text-xs font-medium text-primary">
-                    {count}
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="text-sm md:text-base font-semibold text-center min-w-0 text-foreground">
+                {viewMode === "day"
+                  ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
+                  : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
+              </h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl"
+                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}
+                aria-label={viewMode === "day" ? "Próximo dia" : "Próxima semana"}
+                data-tour="agenda-next-period"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentDate(new Date())} data-tour="agenda-today">
+              Hoje
+            </Button>
+          </div>
+
+          {/* Week Overview - Mini Calendar */}
+          {viewMode === "week" && (
+            <div className="mb-4 md:mb-5 grid grid-cols-7 gap-1.5 md:gap-2">
+              {getWeekDays().map((day) => {
+                const count = getAppointmentsCountForDay(day);
+                const isToday = isSameDay(day, new Date());
+                const isSelected = isSameDay(day, currentDate);
+                return (
+                  <button
+                    key={day.toISOString()}
+                    onClick={() => {
+                      setCurrentDate(day);
+                      setViewMode("day");
+                    }}
+                    className={`
+                      flex flex-col items-center rounded-xl border p-1.5 md:p-3 transition-all hover:border-primary/50 hover:bg-accent
+                      ${isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}
+                      ${isSelected ? "bg-primary/10 border-primary" : "bg-card"}
+                    `}
+                  >
+                    <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
+                      {formatInAppTz(day, "EEE").slice(0, 3)}
+                    </span>
+                    <span className={`text-sm md:text-xl font-bold text-foreground ${isToday ? "text-primary" : ""}`}>
+                      {formatInAppTz(day, "d")}
+                    </span>
+                    {count > 0 && (
+                      <span className="mt-0.5 md:mt-1 rounded-full bg-primary/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-semibold text-primary">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="mb-5">
+            <AgendaFilters
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              professionalFilter={professionalFilter}
+              onProfessionalFilterChange={setProfessionalFilter}
+              professionals={professionals}
+              isAdmin={isAdmin}
+              appointmentCounts={appointmentCounts}
+            />
+          </div>
+
+          {/* Appointments Table */}
+          <Card className="border-border text-foreground rounded-xl shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">
+                Agendamentos
+                {viewMode === "day" && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    {formatInAppTz(currentDate, "dd 'de' MMMM")}
                   </span>
                 )}
-              </button>
-            );
-          })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!isLoading && filteredAppointments.length === 0 ? (
+                <div className="p-6">
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="Nenhum agendamento encontrado"
+                    description={
+                      hasActiveFilters
+                        ? "Ajuste os filtros ou crie um novo agendamento."
+                        : "Crie seu primeiro agendamento para começar a organizar sua rotina."
+                    }
+                    action={
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button
+                          className="gradient-primary text-primary-foreground"
+                          onClick={() => setIsDialogOpen(true)}
+                          data-tour="agenda-empty-new-appointment"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Novo agendamento
+                        </Button>
+                        {hasActiveFilters ? (
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setStatusFilter("all");
+                              if (isAdmin) setProfessionalFilter("all");
+                            }}
+                            data-tour="agenda-empty-clear-filters"
+                          >
+                            <FilterX className="mr-2 h-4 w-4" />
+                            Limpar filtros
+                          </Button>
+                        ) : null}
+                      </div>
+                    }
+                  />
+                </div>
+              ) : (
+                <AppointmentsTable
+                  appointments={filteredAppointments}
+                  clients={clients}
+                  services={services}
+                  professionals={professionals}
+                  allAppointments={allAppointments}
+                  onStatusChange={updateAppointmentStatus}
+                  currentProfileId={profile?.id}
+                  onComplete={handleCompleteAppointment}
+                  onEdit={editAppointment}
+                  onDelete={deleteAppointment}
+                  isLoading={isLoading}
+                  isAdmin={isAdmin}
+                  products={products}
+                />
+              )}
+            </CardContent>
+          </Card>
         </div>
-      )}
 
-      {/* Filters */}
-      <div className="mb-6">
-        <AgendaFilters
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          professionalFilter={professionalFilter}
-          onProfessionalFilterChange={setProfessionalFilter}
-          professionals={professionals}
-          isAdmin={isAdmin}
-          appointmentCounts={appointmentCounts}
-        />
-      </div>
-
-      {/* Appointments Table */}
-      <Card className="border-border text-foreground">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">
-            Agendamentos
-            {viewMode === "day" && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                {formatInAppTz(currentDate, "dd 'de' MMMM")}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {!isLoading && filteredAppointments.length === 0 ? (
-            <div className="p-4">
-              <EmptyState
-                icon={CalendarDays}
-                title="Nenhum agendamento encontrado"
-                description={
-                  hasActiveFilters
-                    ? "Ajuste os filtros ou crie um novo agendamento."
-                    : "Crie seu primeiro agendamento para começar a organizar sua rotina."
-                }
-                action={
-                  <div className="flex flex-wrap items-center justify-center gap-2">
-                    <Button
-                      className="gradient-primary text-primary-foreground"
-                      onClick={() => setIsDialogOpen(true)}
-                      data-tour="agenda-empty-new-appointment"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Novo agendamento
-                    </Button>
-                    {hasActiveFilters ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setStatusFilter("all");
-                          if (isAdmin) setProfessionalFilter("all");
-                        }}
-                        data-tour="agenda-empty-clear-filters"
-                      >
-                        <FilterX className="mr-2 h-4 w-4" />
-                        Limpar filtros
-                      </Button>
-                    ) : null}
+        {/* ── Right: Promotional Banner with auto-carousel (desktop only, stories-width) ── */}
+        <aside className="hidden xl:block w-[280px] shrink-0 -mt-2">
+          <div className="sticky top-4">
+            <div className="relative h-[70vh] min-h-[520px] rounded-2xl overflow-hidden shadow-lg">
+              {bannerSlides.map((slide, idx) => {
+                const SlideIcon = slide.icon;
+                return (
+                  <div
+                    key={idx}
+                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                    style={{ opacity: bannerIndex === idx ? 1 : 0, pointerEvents: bannerIndex === idx ? "auto" : "none" }}
+                  >
+                    <img
+                      src={slide.img}
+                      alt={slide.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-9 w-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <SlideIcon className="h-4 w-4 text-white" />
+                        </div>
+                        <span className="text-white/80 text-xs font-semibold tracking-wider uppercase">ClinicNest</span>
+                      </div>
+                      <h3 className="text-white text-lg font-bold leading-snug">
+                        {slide.title}
+                      </h3>
+                      <p className="text-white/70 text-sm leading-relaxed">
+                        {slide.desc}
+                      </p>
+                    </div>
                   </div>
-                }
-              />
+                );
+              })}
+              {/* Slide indicators (top, like Instagram stories) */}
+              <div className="absolute top-3 left-3 right-3 flex gap-1.5 z-10">
+                {bannerSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setBannerIndex(idx)}
+                    className="flex-1 h-[3px] rounded-full transition-all duration-300"
+                    style={{ background: bannerIndex === idx ? "white" : "rgba(255,255,255,0.35)" }}
+                    aria-label={`Slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </div>
-          ) : (
-            <AppointmentsTable
-              appointments={filteredAppointments}
-              clients={clients}
-              services={services}
-              professionals={professionals}
-              allAppointments={allAppointments}
-              onStatusChange={updateAppointmentStatus}
-              currentProfileId={profile?.id}
-              onComplete={handleCompleteAppointment}
-              onEdit={editAppointment}
-              onDelete={deleteAppointment}
-              isLoading={isLoading}
-              isAdmin={isAdmin}
-              products={products}
-            />
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </aside>
+      </div>
     </MainLayout>
   );
 }
