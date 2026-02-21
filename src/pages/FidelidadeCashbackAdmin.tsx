@@ -286,7 +286,7 @@ export default function FidelidadeCashbackAdmin() {
                 <div>
                   <Label htmlFor="cashback-enabled" className="cursor-pointer">Cashback habilitado</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Ao finalizar uma comanda, o sistema credita automaticamente um percentual para o cliente.
+                    Ao finalizar uma comanda, o sistema credita automaticamente um percentual para o paciente.
                   </p>
                 </div>
                 <Switch id="cashback-enabled" checked={cashbackEnabled} onCheckedChange={setCashbackEnabled} />
@@ -303,7 +303,7 @@ export default function FidelidadeCashbackAdmin() {
                     disabled={!cashbackEnabled}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Exemplo: 5 significa 5% do valor do atendimento em crédito para o cliente.
+                    Exemplo: 5 significa 5% do valor do atendimento em crédito para o paciente.
                   </p>
                 </div>
                 <div className="rounded-lg border border-border/70 p-4">
@@ -346,7 +346,7 @@ export default function FidelidadeCashbackAdmin() {
                   </div>
                   <div>
                     <CardTitle>Programa de Pontos</CardTitle>
-                    <CardDescription>Clientes acumulam pontos a cada real gasto</CardDescription>
+                    <CardDescription>Pacientes acumulam pontos a cada real gasto</CardDescription>
                   </div>
                 </div>
                 <Badge variant={pointsEnabled ? "default" : "secondary"}>
@@ -385,7 +385,7 @@ export default function FidelidadeCashbackAdmin() {
                     <p className="text-sm font-medium text-foreground">Dica de uso</p>
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Configure tiers na aba "Tiers" para que clientes com mais pontos recebam descontos automáticos.
+                    Configure tiers na aba "Tiers" para que pacientes com mais pontos recebam descontos automáticos.
                   </p>
                 </div>
               </div>

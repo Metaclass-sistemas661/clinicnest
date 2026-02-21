@@ -77,8 +77,8 @@ const navCategories: NavCategory[] = [
   {
     label: "Clínico",
     items: [
-      { title: "Prontuários", href: "/prontuarios", icon: ClipboardList },
       { title: "Triagem & Anamnese", href: "/triagem", icon: Activity },
+      { title: "Prontuários", href: "/prontuarios", icon: ClipboardList },
       { title: "Receituários", href: "/receituarios", icon: FilePlus2 },
       { title: "Laudos & Exames", href: "/laudos", icon: FlaskConical },
       { title: "Procedimentos", href: "/servicos", icon: Stethoscope, adminOnly: true },

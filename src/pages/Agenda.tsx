@@ -289,7 +289,7 @@ export default function Agenda() {
             profUserId,
             "appointment_created",
             msg,
-            `${client?.name || "Cliente"} • ${service?.name || "Procedimento"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
+            `${client?.name || "Paciente"} • ${service?.name || "Procedimento"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
             {}
           ).catch(() => {});
         }
@@ -383,7 +383,7 @@ export default function Agenda() {
             prof.user_id,
             "appointment_cancelled",
             "Agendamento cancelado",
-            `O agendamento com ${client?.name || "cliente"} foi cancelado.`,
+            `O agendamento com ${client?.name || "paciente"} foi cancelado.`,
             {}
           ).catch(() => {});
         }
@@ -647,13 +647,13 @@ export default function Agenda() {
               <form onSubmit={handleCreateAppointment}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
-                    <Label>Cliente</Label>
+                    <Label>Paciente</Label>
                     <Select
                       value={formData.client_id}
                       onValueChange={(v) => setFormData({ ...formData, client_id: v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o cliente" />
+                        <SelectValue placeholder="Selecione o paciente" />
                       </SelectTrigger>
                       <SelectContent>
                         {clients.map((client) => (

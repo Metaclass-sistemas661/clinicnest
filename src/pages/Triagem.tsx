@@ -49,7 +49,16 @@ interface Client {
   phone?: string;
 }
 
+interface Appointment {
+  id: string;
+  client_id: string;
+  client_name: string;
+  scheduled_at: string;
+  service_name: string;
+}
+
 type Priority = "emergencia" | "urgente" | "pouco_urgente" | "nao_urgente";
+type TriageStatus = "pendente" | "em_atendimento" | "concluida";
 
 interface Triagem {
   id: string;
@@ -58,7 +67,8 @@ interface Triagem {
   performed_by: string;
   triaged_at: string;
   priority: Priority;
-  // Sinais vitais
+  status: TriageStatus;
+  appointment_id: string | null;
   blood_pressure_systolic: string;
   blood_pressure_diastolic: string;
   heart_rate: string;
@@ -67,7 +77,6 @@ interface Triagem {
   oxygen_saturation: string;
   weight: string;
   height: string;
-  // Anamnese inicial
   chief_complaint: string;
   pain_scale: string;
   allergies: string;
@@ -84,8 +93,15 @@ const priorityConfig: Record<Priority, { label: string; color: string; icon: Rea
   nao_urgente: { label: "Não Urgente", color: "bg-success/20 text-success border-success/30", icon: CheckCircle2 },
 };
 
+const statusConfig: Record<TriageStatus, { label: string; color: string }> = {
+  pendente: { label: "Aguardando", color: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30" },
+  em_atendimento: { label: "Em atendimento", color: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+  concluida: { label: "Concluída", color: "bg-success/20 text-success border-success/30" },
+};
+
 const emptyForm = {
   client_id: "",
+  appointment_id: "",
   priority: "nao_urgente" as Priority,
   blood_pressure_systolic: "",
   blood_pressure_diastolic: "",
@@ -107,7 +123,9 @@ export default function Triagem() {
   const { profile } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [triagens, setTriagens] = useState<Triagem[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -117,6 +135,7 @@ export default function Triagem() {
     if (profile?.tenant_id) {
       fetchClients();
       fetchTriagens();
+      fetchTodayAppointments();
     }
   }, [profile?.tenant_id]);
 
@@ -152,6 +171,8 @@ export default function Triagem() {
         performed_by: r.profiles?.full_name ?? "—",
         triaged_at: r.triaged_at,
         priority: r.priority as Priority,
+        status: (r.status as TriageStatus) ?? "pendente",
+        appointment_id: r.appointment_id ?? null,
         blood_pressure_systolic: r.blood_pressure_systolic?.toString() ?? "",
         blood_pressure_diastolic: r.blood_pressure_diastolic?.toString() ?? "",
         heart_rate: r.heart_rate?.toString() ?? "",
@@ -175,6 +196,32 @@ export default function Triagem() {
     }
   };
 
+  const fetchTodayAppointments = async () => {
+    if (!profile?.tenant_id) return;
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, client_id, start_time, clients(name), services(name)")
+        .eq("tenant_id", profile.tenant_id)
+        .gte("start_time", `${today}T00:00:00`)
+        .lte("start_time", `${today}T23:59:59`)
+        .order("start_time");
+      if (error) throw error;
+      setAppointments(
+        (data || []).map((a: any) => ({
+          id: a.id,
+          client_id: a.client_id,
+          client_name: a.clients?.name ?? "—",
+          scheduled_at: a.start_time,
+          service_name: a.services?.name ?? "Consulta",
+        }))
+      );
+    } catch (err) {
+      logger.error("Error fetching appointments:", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
@@ -185,8 +232,10 @@ export default function Triagem() {
       const { error } = await supabase.from("triage_records").insert({
         tenant_id: profile!.tenant_id,
         client_id: formData.client_id,
+        appointment_id: formData.appointment_id || null,
         performed_by: profile!.id,
         priority: formData.priority,
+        status: "pendente",
         chief_complaint: formData.chief_complaint,
         blood_pressure_systolic: formData.blood_pressure_systolic ? parseInt(formData.blood_pressure_systolic) : null,
         blood_pressure_diastolic: formData.blood_pressure_diastolic ? parseInt(formData.blood_pressure_diastolic) : null,
@@ -216,9 +265,12 @@ export default function Triagem() {
   };
 
   const filtered = triagens.filter(
-    (t) =>
-      t.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.chief_complaint.toLowerCase().includes(searchQuery.toLowerCase())
+    (t) => {
+      const matchSearch = t.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.chief_complaint.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchStatus = statusFilter === "all" || t.status === statusFilter;
+      return matchSearch && matchStatus;
+    }
   );
 
   const imc = (t: Triagem) => {
@@ -239,15 +291,28 @@ export default function Triagem() {
         </Button>
       }
     >
-      {/* Busca */}
-      <div className="mb-4 relative w-full md:max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar por paciente ou queixa..."
-          className="pl-10"
-        />
+      {/* Busca + Filtro de status */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 md:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por paciente ou queixa..."
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="pendente">Aguardando</SelectItem>
+            <SelectItem value="em_atendimento">Em atendimento</SelectItem>
+            <SelectItem value="concluida">Concluídas</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
@@ -288,10 +353,15 @@ export default function Triagem() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className={`${config.color} flex items-center gap-1`}>
-                      <PriorityIcon className="h-3 w-3" />
-                      {config.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`${statusConfig[t.status].color} flex items-center gap-1 text-xs`}>
+                        {statusConfig[t.status].label}
+                      </Badge>
+                      <Badge variant="outline" className={`${config.color} flex items-center gap-1`}>
+                        <PriorityIcon className="h-3 w-3" />
+                        {config.label}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
@@ -398,7 +468,7 @@ export default function Triagem() {
               <TabsContent value="identificacao" className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label>Paciente *</Label>
-                  <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v })}>
+                  <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v, appointment_id: "" })}>
                     <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                     <SelectContent>
                       {clients.map((c) => (
@@ -407,6 +477,22 @@ export default function Triagem() {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.client_id && appointments.filter((a) => a.client_id === formData.client_id).length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Agendamento do Dia (opcional)</Label>
+                    <Select value={formData.appointment_id} onValueChange={(v) => setFormData({ ...formData, appointment_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Vincular a um agendamento" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem vínculo</SelectItem>
+                        {appointments.filter((a) => a.client_id === formData.client_id).map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {new Date(a.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {a.service_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Prioridade / Classificação de Risco</Label>
                   <Select

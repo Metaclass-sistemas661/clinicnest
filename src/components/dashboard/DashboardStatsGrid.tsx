@@ -177,10 +177,10 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
             <TooltipTrigger asChild>
               <div data-tour="dashboard-stat-clients-count">
                 <StatCard
-                  title="Total de Clientes"
+                  title="Total de Pacientes"
                   value={clientsCount}
                   icon={Users}
-                  description="Clientes cadastrados"
+                  description="Pacientes cadastrados"
                 />
               </div>
             </TooltipTrigger>
@@ -317,14 +317,14 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
             <TooltipTrigger asChild>
               <div data-tour="dashboard-stat-my-clients-served">
                 <StatCard
-                  title="Clientes que atendi"
+                  title="Pacientes que atendi"
                   value={staffMyClientsCount ?? 0}
                   icon={Users}
-                  description="Clientes únicos nos seus atendimentos"
+                  description="Pacientes únicos nos seus atendimentos"
                 />
               </div>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Clientes únicos atendidos por você no mês.</TooltipContent>
+            <TooltipContent side="bottom">Pacientes únicos atendidos por você no mês.</TooltipContent>
           </Tooltip>
         </>
       )}

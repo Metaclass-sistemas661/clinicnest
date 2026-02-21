@@ -252,7 +252,7 @@ function TabVisaoGeral({ appts, period, isLoading }: { appts: ApptRow[]; period:
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard icon={DollarSign} label="Receita Total" value={fmtBRL(totalRevenue)} sub={`em ${PERIOD_LABELS[period]}`} />
         <KpiCard icon={Calendar} label="Atendimentos" value={String(totalAppts)} sub="concluídos" color="bg-blue-50 dark:bg-blue-950" />
-        <KpiCard icon={Users} label="Clientes Únicos" value={String(uniqueClients)} sub="no período" color="bg-green-50 dark:bg-green-950" />
+        <KpiCard icon={Users} label="Pacientes Únicos" value={String(uniqueClients)} sub="no período" color="bg-green-50 dark:bg-green-950" />
         <KpiCard icon={TrendingUp} label="Ticket Médio" value={fmtBRL(avgTicket)} sub="por atendimento" color="bg-amber-50 dark:bg-amber-950" />
       </div>
 
@@ -434,7 +434,7 @@ function TabClientesInativos({ tenantId, period }: { tenantId: string; period: P
         <Card>
           <CardContent className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
-            <span>Identificando clientes inativos…</span>
+            <span>Identificando pacientes inativos…</span>
           </CardContent>
         </Card>
       )}
@@ -443,7 +443,7 @@ function TabClientesInativos({ tenantId, period }: { tenantId: string; period: P
         <>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-sm">
-              {inactiveClients.length} cliente{inactiveClients.length !== 1 ? "s" : ""} inativo{inactiveClients.length !== 1 ? "s" : ""}
+              {inactiveClients.length} paciente{inactiveClients.length !== 1 ? "s" : ""} inativo{inactiveClients.length !== 1 ? "s" : ""}
             </Badge>
             {inactiveClients.length > 0 && (
               <span className="text-xs text-muted-foreground">sem visita há mais de {cutoff} dias</span>
@@ -453,7 +453,7 @@ function TabClientesInativos({ tenantId, period }: { tenantId: string; period: P
           {inactiveClients.length === 0 ? (
             <Card>
               <CardContent className="flex h-48 items-center justify-center text-muted-foreground text-sm">
-                Nenhum cliente inativo no período selecionado.
+                Nenhum paciente inativo no período selecionado.
               </CardContent>
             </Card>
           ) : (
@@ -596,7 +596,7 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
         Posição: i + 1,
         Profissional: p.name,
         Atendimentos: p.count,
-        "Clientes Únicos": p.clients,
+        "Pacientes Únicos": p.clients,
         Receita: p.revenue.toFixed(2).replace(".", ","),
         "Ticket Médio": p.count > 0 ? (p.revenue / p.count).toFixed(2).replace(".", ",") : "0,00",
       })),
@@ -656,7 +656,7 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
                   <p className="text-sm font-bold text-foreground">{p.count}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2">
-                  <p className="text-xs text-muted-foreground">Clientes</p>
+                  <p className="text-xs text-muted-foreground">Pacientes</p>
                   <p className="text-sm font-bold text-foreground">{p.clients}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2">

@@ -56,6 +56,15 @@ export interface Client {
   notes: string | null;
   cpf: string | null;
   access_code: string | null;
+  date_of_birth: string | null;
+  marital_status: string | null;
+  zip_code: string | null;
+  street: string | null;
+  street_number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -139,6 +148,99 @@ export interface StockMovement {
   reason: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+// ─── Orders / Checkout ──────────────────────────────────────
+
+// ─── Triagem ────────────────────────────────────────────────
+
+export type TriageStatus = 'pendente' | 'em_atendimento' | 'concluida';
+export type TriagePriority = 'emergencia' | 'urgente' | 'pouco_urgente' | 'nao_urgente';
+
+export interface TriageRecord {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  appointment_id: string | null;
+  performed_by: string | null;
+  triaged_at: string;
+  priority: TriagePriority;
+  status: TriageStatus;
+  blood_pressure_systolic: number | null;
+  blood_pressure_diastolic: number | null;
+  heart_rate: number | null;
+  respiratory_rate: number | null;
+  temperature: number | null;
+  oxygen_saturation: number | null;
+  weight_kg: number | null;
+  height_cm: number | null;
+  chief_complaint: string;
+  pain_scale: number | null;
+  allergies: string | null;
+  current_medications: string | null;
+  medical_history: string | null;
+  notes: string | null;
+  created_at: string;
+  // Joined
+  clients?: { name: string };
+  profiles?: { full_name: string };
+}
+
+// ─── Prontuário Eletrônico ──────────────────────────────────
+
+export interface MedicalRecord {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  appointment_id: string | null;
+  professional_id: string | null;
+  specialty_id: string | null;
+  triage_id: string | null;
+  template_id: string | null;
+  chief_complaint: string | null;
+  anamnesis: string | null;
+  physical_exam: string | null;
+  diagnosis: string | null;
+  cid_code: string | null;
+  treatment_plan: string | null;
+  prescriptions: string | null;
+  notes: string | null;
+  custom_fields: Record<string, unknown>;
+  record_date: string;
+  is_confidential: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  clients?: { name: string };
+  profiles?: { full_name: string };
+  triage_records?: TriageRecord;
+}
+
+// ─── Modelos de Prontuário ──────────────────────────────────
+
+export type TemplateFieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'boolean';
+
+export interface TemplateField {
+  id: string;
+  name: string;
+  label: string;
+  type: TemplateFieldType;
+  required: boolean;
+  placeholder?: string;
+  options?: string;
+}
+
+export interface RecordFieldTemplate {
+  id: string;
+  tenant_id: string;
+  specialty_id: string | null;
+  name: string;
+  fields: TemplateField[];
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  specialties?: { name: string };
 }
 
 // ─── Orders / Checkout ──────────────────────────────────────

@@ -48,20 +48,20 @@ const tiers: Array<{ key: TierKey; name: string; description: string; popular?: 
     key: "basic",
     name: "Básico",
     description: "Essencial para começar",
-    features: ["Equipe: 2 usuários (inclui 1 admin)", "Clientes: até 300", "Histórico: 6 meses"],
+    features: ["Equipe: 2 usuários (inclui 1 admin)", "Pacientes: até 300", "Histórico: 6 meses"],
   },
   {
     key: "pro",
     name: "Pro",
     description: "Para crescer com controle",
     popular: true,
-    features: ["Equipe: 5 usuários (inclui 1 admin)", "Clientes: até 2.000", "Histórico: 24 meses"],
+    features: ["Equipe: 5 usuários (inclui 1 admin)", "Pacientes: até 2.000", "Histórico: 24 meses"],
   },
   {
     key: "premium",
     name: "Premium",
     description: "Tudo liberado",
-    features: ["Equipe ilimitada (inclui 1 admin)", "Clientes ilimitados", "Histórico ilimitado"],
+    features: ["Equipe ilimitada (inclui 1 admin)", "Pacientes ilimitados", "Histórico ilimitado"],
   },
 ];
 

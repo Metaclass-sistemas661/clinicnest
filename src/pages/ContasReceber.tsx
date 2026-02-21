@@ -313,7 +313,7 @@ export default function ContasReceber() {
 
   const handleCreatePixCharge = async () => {
     if (!pixBill || !pixCustomerName.trim()) {
-      toast.error("Informe o nome do cliente para gerar a cobrança PIX");
+      toast.error("Informe o nome do paciente para gerar a cobrança PIX");
       return;
     }
     setIsPixLoading(true);
@@ -546,7 +546,7 @@ export default function ContasReceber() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingBill ? "Editar Conta" : "Nova Conta a Receber"}</DialogTitle>
-            <DialogDescription>Registre um valor a receber de cliente ou avulso.</DialogDescription>
+            <DialogDescription>Registre um valor a receber de paciente ou avulso.</DialogDescription>
           </DialogHeader>
           <form onSubmit={billForm.handleSubmit(handleSaveBill)} className="space-y-4">
             <div className="space-y-1.5">
@@ -582,7 +582,7 @@ export default function ContasReceber() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Cliente</Label>
+                <Label>Paciente</Label>
                 <Select
                   value={billForm.watch("client_id") ?? "none"}
                   onValueChange={(v) => billForm.setValue("client_id", v === "none" ? null : v)}
@@ -688,7 +688,7 @@ export default function ContasReceber() {
             {!pixData ? (
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label>Nome do Cliente *</Label>
+                  <Label>Nome do Paciente *</Label>
                   <Input
                     placeholder="Nome completo"
                     value={pixCustomerName}

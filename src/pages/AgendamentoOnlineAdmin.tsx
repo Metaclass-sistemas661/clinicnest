@@ -322,7 +322,7 @@ export default function AgendamentoOnlineAdmin() {
                     Habilitar agendamento online
                   </Label>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Recomendado para captar clientes e reduzir trabalho no WhatsApp.
+                    Recomendado para captar pacientes e reduzir trabalho no WhatsApp.
                   </p>
                 </div>
                 <Switch
@@ -430,7 +430,7 @@ export default function AgendamentoOnlineAdmin() {
                   <div>
                     <CardTitle>Personalização da Página de Agendamento</CardTitle>
                     <CardDescription>
-                      As alterações são salvas e aparecem automaticamente para todos os clientes que acessarem o link de agendamento.
+                      As alterações são salvas e aparecem automaticamente para todos os pacientes que acessarem o link de agendamento.
                     </CardDescription>
                   </div>
                 </div>
@@ -703,7 +703,7 @@ export default function AgendamentoOnlineAdmin() {
             <div className="space-y-1">
               <p className="text-sm font-semibold text-foreground">O que é o Widget Embed?</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                É um trecho de código HTML que você cola no <strong>seu próprio site</strong> (Wix, WordPress, Webflow, link na bio, etc.) para que seus clientes agendem diretamente lá — sem precisar sair da sua página. O widget é o mesmo formulário de agendamento, incorporado como uma janela no seu site, com suas cores e logo personalizados.
+                É um trecho de código HTML que você cola no <strong>seu próprio site</strong> (Wix, WordPress, Webflow, link na bio, etc.) para que seus pacientes agendem diretamente lá — sem precisar sair da sua página. O widget é o mesmo formulário de agendamento, incorporado como uma janela no seu site, com suas cores e logo personalizados.
               </p>
             </div>
           </div>

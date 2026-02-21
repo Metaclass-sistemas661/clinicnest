@@ -259,7 +259,7 @@ export default function Configuracoes() {
       return [
         { label: "Limpeza automática", value: autoCleanup },
         {
-          label: "Retenção de clientes",
+          label: "Retenção de pacientes",
           value: formatDaysAsYearsAndDays(clientDays),
         },
         {
@@ -922,7 +922,7 @@ export default function Configuracoes() {
           <CardContent>
             <form onSubmit={handleSaveRetentionPolicy} className="space-y-4">
               <div className="space-y-2">
-                <Label>Dias para retenção de dados de clientes</Label>
+                <Label>Dias para retenção de dados de pacientes</Label>
                 <Input
                   type="number"
                   min={30}

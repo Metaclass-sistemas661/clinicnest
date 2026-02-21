@@ -92,13 +92,13 @@ const WEBHOOK_EVENTS = [
   { id: "appointment.confirmed", label: "Agendamento confirmado",   desc: "Quando o cliente confirma pelo link" },
   { id: "appointment.completed", label: "Atendimento concluído",    desc: "Quando uma comanda é finalizada" },
   { id: "appointment.cancelled", label: "Agendamento cancelado",    desc: "Quando um agendamento é cancelado" },
-  { id: "nps.submitted",         label: "NPS respondido",           desc: "Quando um cliente envia avaliação NPS" },
-  { id: "client.created",        label: "Novo cliente",             desc: "Quando um cliente é cadastrado" },
+  { id: "nps.submitted",         label: "NPS respondido",           desc: "Quando um paciente envia avaliação NPS" },
+  { id: "client.created",        label: "Novo paciente",            desc: "Quando um paciente é cadastrado" },
 ];
 
 const API_SCOPES = [
   { id: "read:appointments",  label: "Agendamentos (leitura)" },
-  { id: "read:clients",       label: "Clientes (leitura)" },
+  { id: "read:clients",       label: "Pacientes (leitura)" },
   { id: "read:financeiro",    label: "Financeiro (leitura)" },
   { id: "write:appointments", label: "Agendamentos (escrita)" },
 ];

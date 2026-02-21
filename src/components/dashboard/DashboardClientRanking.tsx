@@ -43,7 +43,7 @@ export const DashboardClientRanking = memo(function DashboardClientRanking({ cli
     <Card>
       <CardHeader className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div>
-          <CardTitle className="text-lg">Ranking – Clientes que mais consomem</CardTitle>
+          <CardTitle className="text-lg">Ranking – Pacientes que mais consomem</CardTitle>
           <CardDescription>
             Gastos de hoje e do mês (atualiza automaticamente)
           </CardDescription>

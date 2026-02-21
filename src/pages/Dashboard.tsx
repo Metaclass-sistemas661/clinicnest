@@ -1175,7 +1175,7 @@ export default function Dashboard() {
                       <Button asChild variant="outline" className="justify-start">
                         <Link to="/clientes" data-tour="dashboard-quick-new-client">
                           <Users className="mr-2 h-4 w-4" />
-                          Novo cliente
+                          Novo paciente
                         </Link>
                       </Button>
                       <Button asChild variant="outline" className="justify-start">

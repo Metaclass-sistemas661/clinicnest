@@ -76,7 +76,7 @@ export function makeDefaultState(templateId: TemplateId, salonName: string): Bui
       ctaColor: "#db2777",
       headline: "Promoção Especial Para Você! 🎉",
       subheadline: "Aproveite nossos descontos exclusivos por tempo limitado",
-      bodyText: "Não perca essa oportunidade única de cuidar de você com os melhores tratamentos da clínica.\n\nAgende agora e garanta sua vaga com desconto especial para clientes fiéis!",
+      bodyText: "Não perca essa oportunidade única de cuidar de você com os melhores tratamentos da clínica.\n\nAgende agora e garanta sua vaga com desconto especial para pacientes fiéis!",
       ctaText: "Aproveitar Desconto",
     };
   }

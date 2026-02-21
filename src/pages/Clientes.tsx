@@ -33,7 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -50,11 +50,38 @@ const formatCpf = (value: string) => {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 };
 
+const formatCep = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+};
+
+const BRAZILIAN_STATES = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
+];
+
+const MARITAL_STATUS_OPTIONS = [
+  { value: "solteiro", label: "Solteiro(a)" },
+  { value: "casado", label: "Casado(a)" },
+  { value: "divorciado", label: "Divorciado(a)" },
+  { value: "viuvo", label: "Viúvo(a)" },
+  { value: "uniao_estavel", label: "União Estável" },
+];
+
 const clientFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
   phone: z.string().optional(),
   email: z.union([z.string().email("E-mail inválido"), z.literal("")]),
   cpf: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  marital_status: z.string().optional(),
+  zip_code: z.string().optional(),
+  street: z.string().optional(),
+  street_number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -120,8 +147,18 @@ export default function Clientes() {
     phone: "",
     email: "",
     cpf: "",
+    date_of_birth: "",
+    marital_status: "",
+    zip_code: "",
+    street: "",
+    street_number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
     notes: "",
   });
+  const [isFetchingCep, setIsFetchingCep] = useState(false);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -405,7 +442,7 @@ export default function Clientes() {
       setClientSpending(data);
     } catch (err) {
       logger.error("Error fetching client spending:", err);
-      toast.error("Erro ao carregar consumo dos clientes.");
+      toast.error("Erro ao carregar consumo dos pacientes.");
     }
   };
 
@@ -427,7 +464,7 @@ export default function Clientes() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("id,tenant_id,name,phone,email,notes,cpf,access_code,created_at,updated_at")
+        .select("id,tenant_id,name,phone,email,notes,cpf,access_code,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
@@ -441,6 +478,8 @@ export default function Clientes() {
     }
   };
 
+  const emptyFormData = { name: "", phone: "", email: "", cpf: "", date_of_birth: "", marital_status: "", zip_code: "", street: "", street_number: "", complement: "", neighborhood: "", city: "", state: "", notes: "" };
+
   const handleOpenDialog = (client?: Client) => {
     if (client) {
       setEditingClient(client);
@@ -449,13 +488,45 @@ export default function Clientes() {
         phone: client.phone || "",
         email: client.email || "",
         cpf: client.cpf || "",
+        date_of_birth: client.date_of_birth || "",
+        marital_status: client.marital_status || "",
+        zip_code: client.zip_code || "",
+        street: client.street || "",
+        street_number: client.street_number || "",
+        complement: client.complement || "",
+        neighborhood: client.neighborhood || "",
+        city: client.city || "",
+        state: client.state || "",
         notes: client.notes || "",
       });
     } else {
       setEditingClient(null);
-      setFormData({ name: "", phone: "", email: "", cpf: "", notes: "" });
+      setFormData(emptyFormData);
     }
     setIsDialogOpen(true);
+  };
+
+  const handleCepBlur = async () => {
+    const digits = formData.zip_code.replace(/\D/g, "");
+    if (digits.length !== 8) return;
+    setIsFetchingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setFormData((prev) => ({
+          ...prev,
+          street: data.logradouro || prev.street,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.localidade || prev.city,
+          state: data.uf || prev.state,
+        }));
+      }
+    } catch {
+      // silently ignore CEP lookup errors
+    } finally {
+      setIsFetchingCep(false);
+    }
   };
 
   const openPackageDialog = (clientId: string) => {
@@ -473,6 +544,15 @@ export default function Clientes() {
       phone: formData.phone,
       email: formData.email || "",
       cpf: formData.cpf,
+      date_of_birth: formData.date_of_birth,
+      marital_status: formData.marital_status,
+      zip_code: formData.zip_code,
+      street: formData.street,
+      street_number: formData.street_number,
+      complement: formData.complement,
+      neighborhood: formData.neighborhood,
+      city: formData.city,
+      state: formData.state,
       notes: formData.notes,
     });
     if (!parsed.success) {
@@ -490,6 +570,15 @@ export default function Clientes() {
         p_email: parsed.data.email || null,
         p_notes: parsed.data.notes || null,
         p_cpf: parsed.data.cpf || null,
+        p_date_of_birth: parsed.data.date_of_birth || null,
+        p_marital_status: parsed.data.marital_status || null,
+        p_zip_code: parsed.data.zip_code || null,
+        p_street: parsed.data.street || null,
+        p_street_number: parsed.data.street_number || null,
+        p_complement: parsed.data.complement || null,
+        p_neighborhood: parsed.data.neighborhood || null,
+        p_city: parsed.data.city || null,
+        p_state: parsed.data.state || null,
       });
 
       if (error) {
@@ -499,7 +588,7 @@ export default function Clientes() {
 
       const isNew = !editingClient;
       setIsDialogOpen(false);
-      setFormData({ name: "", phone: "", email: "", cpf: "", notes: "" });
+      setFormData(emptyFormData);
       setEditingClient(null);
       fetchClients();
 
@@ -541,39 +630,117 @@ export default function Clientes() {
               Novo Paciente
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingClient ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
+              <DialogTitle className="text-xl">{editingClient ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
               <DialogDescription>
-                {editingClient ? "Atualize os dados do paciente" : "Cadastre um novo paciente na clínica"}
+                {editingClient ? "Atualize os dados do paciente" : "Preencha os dados para cadastrar um novo paciente na clínica"}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Nome</Label>
-                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>CPF</Label>
-                    <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })} placeholder="000.000.000-00" maxLength={14} />
+              <div className="grid gap-6 py-4">
+                {/* Dados Pessoais */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">Dados Pessoais</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                      <Label>Nome <span className="text-destructive">*</span></Label>
+                      <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>CPF</Label>
+                      <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })} placeholder="000.000.000-00" maxLength={14} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Telefone</Label>
+                      <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Data de Nascimento</Label>
+                      <Input type="date" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado Civil</Label>
+                      <Select value={formData.marital_status} onValueChange={(v) => setFormData({ ...formData, marital_status: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MARITAL_STATUS_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                </div>
+
+                {/* Endereço */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> Endereço
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>CEP</Label>
+                      <div className="relative">
+                        <Input
+                          value={formData.zip_code}
+                          onChange={(e) => setFormData({ ...formData, zip_code: formatCep(e.target.value) })}
+                          onBlur={handleCepBlur}
+                          placeholder="00000-000"
+                          maxLength={9}
+                        />
+                        {isFetchingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                      </div>
+                    </div>
+                    <div className="space-y-2 sm:col-span-1 lg:col-span-2">
+                      <Label>Logradouro</Label>
+                      <Input value={formData.street} onChange={(e) => setFormData({ ...formData, street: e.target.value })} placeholder="Rua, Avenida, Travessa..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Número</Label>
+                      <Input value={formData.street_number} onChange={(e) => setFormData({ ...formData, street_number: e.target.value })} placeholder="Nº" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Complemento</Label>
+                      <Input value={formData.complement} onChange={(e) => setFormData({ ...formData, complement: e.target.value })} placeholder="Apto, Bloco, Sala..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Bairro</Label>
+                      <Input value={formData.neighborhood} onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })} placeholder="Bairro" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cidade</Label>
+                      <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="Cidade" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado</Label>
+                      <Select value={formData.state} onValueChange={(v) => setFormData({ ...formData, state: v })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BRAZILIAN_STATES.map((uf) => (
+                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Observações</Label>
+
+                {/* Observações */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">Observações</h3>
                   <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Observações clínicas, alergias conhecidas, convênio..." rows={3} />
                 </div>
               </div>
-              <DialogFooter>
+              <DialogFooter className="gap-2 sm:gap-0">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                 <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="clients-save">
                   {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingClient ? "Atualizar Paciente" : "Cadastrar Paciente"}
@@ -593,7 +760,7 @@ export default function Clientes() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nome, telefone ou email..."
             className="pl-10"
-            aria-label="Buscar clientes"
+            aria-label="Buscar pacientes"
           />
         </div>
         {!isAdmin && (
@@ -781,7 +948,7 @@ export default function Clientes() {
         </CardContent>
       </Card>
 
-      {/* Modal de detalhes do cliente com tabs */}
+      {/* Modal de detalhes do paciente com tabs */}
       {detailClient && (
         <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -854,7 +1021,7 @@ export default function Clientes() {
                           <div className="flex items-center justify-between rounded-lg border p-3">
                             <div>
                               <div className="text-sm font-medium">Opt-out de marketing</div>
-                              <div className="text-xs text-muted-foreground">Cliente não deseja receber comunicações</div>
+                              <div className="text-xs text-muted-foreground">Paciente não deseja receber comunicações</div>
                             </div>
                             <Switch checked={marketingOptOut} onCheckedChange={handleToggleMarketingOptOut} disabled={isUpdatingMarketing} />
                           </div>
@@ -896,7 +1063,7 @@ export default function Clientes() {
                 {/* Tab: Timeline */}
                 <TabsContent value="timeline" className="mt-4 space-y-4">
                   {detailTimeline.length === 0 ? (
-                    <EmptyState icon={Clock} title="Nenhum evento" description="O histórico do cliente aparecerá aqui." />
+                    <EmptyState icon={Clock} title="Nenhum evento" description="O histórico do paciente aparecerá aqui." />
                   ) : (
                     <div className="rounded-lg border divide-y text-sm">
                       {detailTimeline.map((ev, i) => (
@@ -939,7 +1106,7 @@ export default function Clientes() {
                     </div>
                   </div>
                   {cashbackLedger.length === 0 ? (
-                    <EmptyState icon={Gift} title="Sem movimentações" description="Nenhum cashback gerado para este cliente." />
+                    <EmptyState icon={Gift} title="Sem movimentações" description="Nenhum cashback gerado para este paciente." />
                   ) : (
                     <div className="rounded-lg border divide-y text-sm">
                       {cashbackLedger.map((entry) => (

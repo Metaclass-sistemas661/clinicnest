@@ -323,7 +323,7 @@ export default function Campanhas() {
         <EmptyState
           icon={Send}
           title="Nenhuma campanha criada"
-          description="Crie sua primeira campanha de email para engajar seus clientes."
+          description="Crie sua primeira campanha de email para engajar seus pacientes."
           action={
             <Button
               className="gradient-primary text-primary-foreground"
@@ -480,7 +480,7 @@ export default function Campanhas() {
                 </div>
                 {hasMore !== null && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    {hasMore ? "Ainda há mais clientes para enviar. Clique em 'Continuar' para o próximo lote." : "✓ Todos os clientes processados."}
+                    {hasMore ? "Ainda há mais pacientes para enviar. Clique em 'Continuar' para o próximo lote." : "✓ Todos os pacientes processados."}
                   </div>
                 )}
               </div>
@@ -512,7 +512,7 @@ export default function Campanhas() {
                   >
                     <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div>
-                      <div className="text-sm font-medium">Todos os clientes</div>
+                      <div className="text-sm font-medium">Todos os pacientes</div>
                       <div className="text-xs text-muted-foreground">{clients.length} com email</div>
                     </div>
                   </button>
@@ -527,7 +527,7 @@ export default function Campanhas() {
                   >
                     <UserCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div>
-                      <div className="text-sm font-medium">Selecionar clientes</div>
+                      <div className="text-sm font-medium">Selecionar pacientes</div>
                       <div className="text-xs text-muted-foreground">
                         {selectedIds.size > 0 ? `${selectedIds.size} selecionado(s)` : "Escolha individualmente"}
                       </div>
@@ -558,11 +558,11 @@ export default function Campanhas() {
                     <div className="max-h-48 overflow-y-auto divide-y">
                       {isLoadingClients ? (
                         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando clientes...
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando pacientes...
                         </div>
                       ) : filteredClients.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                          Nenhum cliente encontrado
+                          Nenhum paciente encontrado
                         </div>
                       ) : (
                         filteredClients.map((c) => (
@@ -584,7 +584,7 @@ export default function Campanhas() {
                     </div>
                     {selectedIds.size > 0 && (
                       <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
-                        {selectedIds.size} cliente(s) selecionado(s)
+                        {selectedIds.size} paciente(s) selecionado(s)
                       </div>
                     )}
                   </div>
@@ -600,7 +600,7 @@ export default function Campanhas() {
                 {isSending ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enviando...</>
                 ) : sendMode === "selected" ? (
-                  `Enviar para ${selectedIds.size} cliente(s)`
+                  `Enviar para ${selectedIds.size} paciente(s)`
                 ) : hasMore === false ? (
                   "Reenviar"
                 ) : afterClientId ? (
@@ -611,7 +611,7 @@ export default function Campanhas() {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                A campanha é marcada como enviada após todos os clientes serem processados. Clientes que fizeram opt-out são ignorados automaticamente.
+                A campanha é marcada como enviada após todos os pacientes serem processados. Pacientes que fizeram opt-out são ignorados automaticamente.
               </p>
             </div>
 

@@ -47,7 +47,7 @@ const SECTIONS: DocSection[] = [
     steps: [
       "Acesse Configurações e confira os dados do clínica.",
       "Cadastre seus serviços com preço e duração.",
-      "Cadastre clientes (ou comece pela agenda e crie ao agendar).",
+      "Cadastre pacientes (ou comece pela agenda e crie ao agendar).",
       "Comece a agendar e finalize atendimentos para alimentar o financeiro.",
     ],
     actions: [
@@ -63,7 +63,7 @@ const SECTIONS: DocSection[] = [
     tags: ["agendamentos", "horários", "rotina"],
     summary: "Agende, confirme e finalize atendimentos para manter tudo organizado.",
     steps: [
-      "Crie um agendamento informando cliente, serviço, profissional e horário.",
+      "Crie um agendamento informando paciente, serviço, profissional e horário.",
       "Use status (confirmado/finalizado) para refletir a operação real.",
       "Finalize atendimentos para gerar dados confiáveis para metas e financeiro.",
     ],
@@ -71,16 +71,16 @@ const SECTIONS: DocSection[] = [
   },
   {
     id: "clientes",
-    title: "Clientes",
+    title: "Pacientes",
     icon: Users,
     tags: ["cadastro", "histórico", "fidelização"],
-    summary: "Centralize dados, histórico e observações importantes de cada cliente.",
+    summary: "Centralize dados, histórico e observações importantes de cada paciente.",
     steps: [
       "Cadastre nome, telefone e e-mail (opcional).",
       "Use observações para preferências e alergias.",
       "Acompanhe o histórico de gastos e atendimentos.",
     ],
-    actions: [{ label: "Abrir Clientes", href: "/clientes" }],
+    actions: [{ label: "Abrir Pacientes", href: "/clientes" }],
   },
   {
     id: "servicos",
@@ -257,7 +257,7 @@ export default function Ajuda() {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar por: agenda, financeiro, clientes..."
+                  placeholder="Buscar por: agenda, financeiro, pacientes..."
                   className="pl-9"
                   data-tour="help-search"
                 />

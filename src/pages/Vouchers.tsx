@@ -213,7 +213,7 @@ export default function Vouchers() {
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <MainLayout title="Vouchers & Gift Cards" subtitle="Crie e gerencie vouchers de desconto para seus clientes">
+    <MainLayout title="Vouchers & Gift Cards" subtitle="Crie e gerencie vouchers de desconto para seus pacientes">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export default function Vouchers() {
           <DialogHeader>
             <DialogTitle>Novo Voucher</DialogTitle>
             <DialogDescription>
-              Crie um voucher de valor fixo ou serviço para presentear clientes.
+              Crie um voucher de valor fixo ou serviço para presentear pacientes.
             </DialogDescription>
           </DialogHeader>
 

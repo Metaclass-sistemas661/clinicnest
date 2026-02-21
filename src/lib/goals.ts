@@ -15,7 +15,7 @@ export const goalTypeLabels: Record<GoalType, string> = {
   services_count: "Serviços concluídos",
   product_quantity: "Quantidade vendida (produtos)",
   product_revenue: "Receita de produtos",
-  clientes_novos: "Novos clientes",
+  clientes_novos: "Novos pacientes",
   ticket_medio: "Ticket médio",
 };
 

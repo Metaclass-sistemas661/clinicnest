@@ -107,7 +107,7 @@ export function AppointmentCard({
 
         {/* Client name */}
         <p className="font-medium text-sm truncate mb-1">
-          {appointment.client?.name || "Cliente não informado"}
+          {appointment.client?.name || "Paciente não informado"}
         </p>
 
         {/* Service */}
@@ -164,7 +164,7 @@ export function AppointmentCard({
                   <div className="flex items-center gap-2 mb-1">
                     <User className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-semibold truncate">
-                      {appointment.client?.name || "Cliente não informado"}
+                      {appointment.client?.name || "Paciente não informado"}
                     </span>
                     {appointment.client?.phone && (
                       <a

@@ -64,7 +64,7 @@ const triggerLabel: Record<TriggerType, string> = {
   appointment_reminder_2h: "Lembrete 2h antes",
   appointment_completed: "Pós-atendimento",
   birthday: "Aniversário",
-  client_inactive_days: "Cliente inativo",
+  client_inactive_days: "Paciente inativo",
 };
 
 const channelLabel: Record<Channel, string> = {

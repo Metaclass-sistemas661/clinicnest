@@ -364,7 +364,7 @@ export function AppointmentsTable({
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {appointment.client?.name || "Cliente não informado"}
+                      {appointment.client?.name || "Paciente não informado"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {appointment.service?.name || "Procedimento não informado"}
@@ -475,7 +475,7 @@ export function AppointmentsTable({
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-[180px]">Data/Hora</TableHead>
-              <TableHead>Cliente</TableHead>
+              <TableHead>Paciente</TableHead>
               <TableHead>Procedimento</TableHead>
               <TableHead>Profissional</TableHead>
               <TableHead className="text-right">Valor</TableHead>
@@ -504,7 +504,7 @@ export function AppointmentsTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span>{appointment.client?.name || "Cliente não informado"}</span>
+                      <span>{appointment.client?.name || "Paciente não informado"}</span>
                       {appointment.client?.phone && (
                         <a
                           href={`tel:${appointment.client.phone}`}
@@ -674,7 +674,7 @@ export function AppointmentsTable({
             {appointmentToComplete && (
               <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground space-y-1">
                 <p>
-                  <span className="font-medium text-foreground">Cliente:</span>{" "}
+                  <span className="font-medium text-foreground">Paciente:</span>{" "}
                   {appointmentToComplete?.client?.name ?? "Não informado"}
                 </p>
                 <p>
@@ -689,7 +689,7 @@ export function AppointmentsTable({
             )}
 
             <div className="space-y-3">
-              <Label>O cliente comprou algum produto?</Label>
+              <Label>O paciente comprou algum produto?</Label>
               <RadioGroup
                 value={saleOption}
                 onValueChange={(value) => {
@@ -795,7 +795,7 @@ export function AppointmentsTable({
             <AlertDialogTitle>Excluir agendamento?</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir o agendamento de{" "}
-              <strong>{appointmentToDelete?.client?.name || "Cliente"}</strong> para{" "}
+              <strong>{appointmentToDelete?.client?.name || "Paciente"}</strong> para{" "}
               <strong>
                 {appointmentToDelete &&
                   formatInAppTz(appointmentToDelete.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}
@@ -828,13 +828,13 @@ export function AppointmentsTable({
           <form onSubmit={handleEdit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
               <div className="space-y-2">
-                <Label>Cliente</Label>
+                <Label>Paciente</Label>
                 <Select
                   value={editFormData.client_id}
                   onValueChange={(v) => setEditFormData({ ...editFormData, client_id: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cliente" />
+                    <SelectValue placeholder="Selecione o paciente" />
                   </SelectTrigger>
                   <SelectContent>
                     {clients.map((client) => (
