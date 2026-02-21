@@ -7,14 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Video as VideoIcon,
-  ExternalLink,
-  Copy,
   Clock,
   User,
   Stethoscope,
   RefreshCw,
   CheckCircle2,
   Calendar,
+  PhoneOff,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -129,37 +128,6 @@ export default function Teleconsulta() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const generateLink = async (appt: TelemedicineAppointment) => {
-    setGeneratingId(appt.id);
-    try {
-      const url = generateJitsiUrl(appt.id);
-      const { error } = await supabase
-        .from("appointments")
-        .update({ telemedicine_url: url })
-        .eq("id", appt.id)
-        .eq("tenant_id", profile!.tenant_id);
-      if (error) throw error;
-      toast.success("Link gerado com sucesso");
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === appt.id ? { ...a, telemedicine_url: url } : a))
-      );
-    } catch (err) {
-      logger.error("Generate link:", err);
-      toast.error("Erro ao gerar link");
-    } finally {
-      setGeneratingId(null);
-    }
-  };
-
-  const copyLink = (url: string) => {
-    void navigator.clipboard.writeText(url);
-    toast.success("Link copiado!");
-  };
-
-  const openLink = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const clearMedia = () => {
@@ -302,7 +270,6 @@ export default function Teleconsulta() {
         </Button>
       }
     >
-      {/* Filtro de dia */}
       <div className="flex gap-2 mb-6">
         <Button
           variant={viewDay === "today" ? "default" : "outline"}
@@ -324,11 +291,10 @@ export default function Teleconsulta() {
         </Button>
       </div>
 
-      {/* Aviso de como configurar */}
       <Card className="mb-6 border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30">
         <CardContent className="py-3 px-4">
           <p className="text-sm text-blue-700 dark:text-blue-300">
-            <strong>Como usar:</strong> Para marcar um agendamento como teleconsulta, ative a opção "Teleconsulta" ao criar o agendamento na Agenda. Um link do Jitsi Meet será gerado automaticamente.
+            <strong>Como usar:</strong> Para marcar um agendamento como teleconsulta, ative a opção "Teleconsulta" ao criar o agendamento na Agenda. Clique em "Iniciar Teleconsulta" para entrar na videochamada via Twilio.
           </p>
         </CardContent>
       </Card>
@@ -355,7 +321,6 @@ export default function Teleconsulta() {
           {appointments.map((appt) => {
             const { label, variant } = statusLabel(appt.status);
             const time = format(new Date(appt.scheduled_at), "HH:mm", { locale: ptBR });
-            const hasLink = !!appt.telemedicine_url;
 
             return (
               <Card key={appt.id} className="hover:shadow-md transition-shadow">
@@ -384,52 +349,15 @@ export default function Teleconsulta() {
                     </div>
                   </div>
 
-                  {hasLink ? (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
-                        {appt.telemedicine_url}
-                      </code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void joinTwilio(appt)}
-                        className="gap-1.5"
-                        disabled={joiningId === appt.id || appt.status === "completed"}
-                      >
-                        <VideoIcon className="h-3.5 w-3.5" />
-                        {joiningId === appt.id ? "Entrando..." : "Entrar (Twilio)"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyLink(appt.telemedicine_url!)}
-                        className="gap-1.5"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        Copiar
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => openLink(appt.telemedicine_url!)}
-                        className="gap-1.5"
-                        disabled={appt.status === "completed"}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Iniciar
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void generateLink(appt)}
-                      disabled={generatingId === appt.id || appt.status === "completed"}
-                      className="gap-1.5"
-                    >
-                      <VideoIcon className="h-3.5 w-3.5" />
-                      {generatingId === appt.id ? "Gerando..." : "Gerar Link Jitsi"}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => void joinTwilio(appt)}
+                    className="gap-1.5"
+                    disabled={joiningId === appt.id || appt.status === "completed"}
+                  >
+                    <VideoIcon className="h-3.5 w-3.5" />
+                    {joiningId === appt.id ? "Entrando..." : "Iniciar Teleconsulta"}
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -440,8 +368,9 @@ export default function Teleconsulta() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <CardTitle className="text-base">Teleconsulta em andamento</CardTitle>
-                  <Button size="sm" variant="destructive" onClick={leaveCall}>
-                    Sair
+                  <Button size="sm" variant="destructive" onClick={leaveCall} className="gap-1.5">
+                    <PhoneOff className="h-3.5 w-3.5" />
+                    Encerrar
                   </Button>
                 </div>
               </CardHeader>
