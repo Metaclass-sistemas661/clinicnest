@@ -19,7 +19,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
@@ -57,13 +57,13 @@ function SidebarContent({
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabasePatient.auth.getUser().then(({ data }) => {
       setUserName(data.user?.user_metadata?.full_name ?? "Paciente");
     });
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await supabasePatient.auth.signOut();
     navigate("/paciente/login");
   };
 

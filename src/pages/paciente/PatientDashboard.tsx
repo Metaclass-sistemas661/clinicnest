@@ -16,7 +16,7 @@ import {
   Heart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,7 +26,7 @@ export default function PatientDashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabasePatient.auth.getUser();
       setUserName(data.user?.user_metadata?.full_name ?? "Paciente");
       setIsLoading(false);
     };

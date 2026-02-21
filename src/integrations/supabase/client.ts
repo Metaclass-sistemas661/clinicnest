@@ -15,3 +15,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Client isolado para o Portal do Paciente.
+// Usa storageKey diferente para que login de paciente em outra aba
+// NÃO sobrescreva a sessão da clínica (e vice-versa).
+export const supabasePatient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storageKey: 'sb-patient-auth-token',
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});

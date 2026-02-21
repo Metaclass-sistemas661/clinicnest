@@ -14,7 +14,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 
 export default function PatientRegister() {
@@ -59,7 +59,7 @@ export default function PatientRegister() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabasePatient.auth.signUp({
         email,
         password,
         options: {
@@ -92,7 +92,7 @@ export default function PatientRegister() {
 
       // Enviar email de confirmação customizado via Resend (template ClinicNest)
       try {
-        await supabase.functions.invoke("send-custom-auth-email", {
+        await supabasePatient.functions.invoke("send-custom-auth-email", {
           body: {
             email,
             type: "confirmation",

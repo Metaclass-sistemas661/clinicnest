@@ -112,6 +112,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * entre state updates e re-render do Dashboard.
    */
   const applySession = async (session: Session | null) => {
+    // Ignorar sessões de paciente — o portal do paciente usa seu próprio client isolado.
+    // Isso evita que login de paciente em outra aba derrube a sessão da clínica.
+    if (session?.user?.user_metadata?.account_type === 'patient') {
+      // Não alterar estado — manter sessão atual da clínica intacta
+      setIsLoading(false);
+      return;
+    }
+
     setSession(session);
     setUser(session?.user ?? null);
 

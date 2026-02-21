@@ -20,7 +20,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 
 type Step = "identify" | "login" | "create_password" | "success";
@@ -67,7 +67,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc("validate_patient_access", {
+      const { data, error } = await supabasePatient.rpc("validate_patient_access", {
         p_identifier: identifier.trim(),
       });
 
@@ -115,7 +115,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabasePatient.auth.signInWithPassword({
         email: patientInfo.client_email,
         password,
       });
@@ -127,7 +127,7 @@ export default function PatientLogin() {
 
       const accountType = data.user?.user_metadata?.account_type;
       if (accountType !== "patient") {
-        await supabase.auth.signOut();
+        await supabasePatient.auth.signOut();
         toast.error("Esta conta não é de paciente.", {
           description: "Use o login de clínica se for profissional.",
         });
@@ -164,7 +164,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("activate-patient-account", {
+      const { data, error } = await supabasePatient.functions.invoke("activate-patient-account", {
         body: {
           client_id: patientInfo.client_id,
           email: email.trim(),
@@ -201,7 +201,7 @@ export default function PatientLogin() {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabasePatient.auth.signInWithPassword({
         email: email.trim(),
         password: newPassword,
       });

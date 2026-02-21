@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Video,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,7 +61,7 @@ export default function PatientConsultas() {
         p_status: null,
       };
 
-      const { data, error } = await (supabase as any).rpc("get_patient_appointments", params);
+      const { data, error } = await (supabasePatient as any).rpc("get_patient_appointments", params);
 
       if (error) throw error;
 

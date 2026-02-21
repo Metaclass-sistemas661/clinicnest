@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -16,7 +16,7 @@ export function PatientProtectedRoute({ children }: PatientProtectedRouteProps) 
     let cancelled = false;
 
     const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabasePatient.auth.getSession();
       if (cancelled) return;
 
       if (!session?.user) {
@@ -38,7 +38,7 @@ export function PatientProtectedRoute({ children }: PatientProtectedRouteProps) 
 
     void check();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabasePatient.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       if (!session?.user || session.user.user_metadata?.account_type !== "patient") {
         setPatientUser(null);

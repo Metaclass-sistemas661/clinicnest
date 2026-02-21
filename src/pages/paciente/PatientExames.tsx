@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileText, RefreshCw, Building2, Stethoscope, Calendar, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,7 +43,7 @@ export default function PatientExames() {
   const fetchExams = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabase as any).rpc("get_patient_exam_results");
+      const { data, error } = await (supabasePatient as any).rpc("get_patient_exam_results");
       if (error) throw error;
       setExams((data ?? []) as ExamResult[]);
     } catch (err) {

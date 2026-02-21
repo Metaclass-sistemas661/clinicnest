@@ -13,7 +13,7 @@ import {
   Calendar,
   Building2,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -53,7 +53,7 @@ export default function PatientTeleconsulta() {
     setIsLoading(true);
     try {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data, error } = await (supabase as any).rpc("get_patient_telemedicine_appointments", {
+      const { data, error } = await (supabasePatient as any).rpc("get_patient_telemedicine_appointments", {
         p_date: today,
       });
 
@@ -70,7 +70,7 @@ export default function PatientTeleconsulta() {
   const joinCall = async (appt: TelemedicineAppt) => {
     setJoiningId(appt.id);
     try {
-      const { data, error } = await supabase.functions.invoke("twilio-video-token", {
+      const { data, error } = await supabasePatient.functions.invoke("twilio-video-token", {
         body: { appointment_id: appt.id, role: "patient" },
       });
 
