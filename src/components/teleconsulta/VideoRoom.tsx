@@ -401,8 +401,16 @@ export function VideoRoom({
         // Create local audio+video tracks explicitly because passing `tracks`
         // to connect() overrides the `audio`/`video` options.
         const localTracks = await TwilioVideo.createLocalTracks({
-          audio: true,
-          video: { width: 1280, height: 720, frameRate: 24 },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: {
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            frameRate: { ideal: 30, min: 24 },
+          },
         });
 
         const r = await TwilioVideo.connect(token, {
@@ -410,6 +418,15 @@ export function VideoRoom({
           dominantSpeaker: true,
           networkQuality: { local: 1, remote: 1 },
           tracks: [...localTracks, dataTrack],
+          preferredVideoCodecs: [{ codec: 'VP8', simulcast: true }],
+          maxAudioBitrate: 16000,
+          bandwidthProfile: {
+            video: {
+              mode: 'collaboration',
+              dominantSpeakerPriority: 'high',
+              maxSubscriptionBitrate: 6000000,
+            },
+          },
         });
 
         if (!mounted) {
