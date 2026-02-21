@@ -295,6 +295,7 @@ export function VideoRoom({
       el.style.height = "100%";
       el.style.objectFit = "cover";
       el.style.borderRadius = "12px";
+      el.style.display = "block";
       container.appendChild(el);
     } catch (e) {
       logger.error("attachTrack error:", e);
@@ -397,13 +398,18 @@ export function VideoRoom({
         const dataTrack = new TwilioVideo.LocalDataTrack();
         dataTrackRef.current = dataTrack as unknown as LocalDataTrack;
 
-        const r = await TwilioVideo.connect(token, {
-          name: roomName,
+        // Create local audio+video tracks explicitly because passing `tracks`
+        // to connect() overrides the `audio`/`video` options.
+        const localTracks = await TwilioVideo.createLocalTracks({
           audio: true,
           video: { width: 1280, height: 720, frameRate: 24 },
+        });
+
+        const r = await TwilioVideo.connect(token, {
+          name: roomName,
           dominantSpeaker: true,
           networkQuality: { local: 1, remote: 1 },
-          tracks: [dataTrack],
+          tracks: [...localTracks, dataTrack],
         });
 
         if (!mounted) {
@@ -415,10 +421,19 @@ export function VideoRoom({
         setRoom(r);
         setIsConnecting(false);
 
-        // Attach local tracks
-        attachLocalTracks(r.localParticipant);
+        // Attach local tracks directly from the createLocalTracks result.
+        // We cannot rely solely on participant.tracks because the publications
+        // may not have .track populated yet right after connect() (race condition).
+        if (localVideoRef.current) {
+          localVideoRef.current.innerHTML = "";
+          localTracks.forEach((t) => {
+            if (isAttachableTrack(t)) {
+              attachTrack(t, localVideoRef.current!);
+            }
+          });
+        }
 
-        // Handle local track published (for tracks that arrive after connect)
+        // Fallback: also listen for trackPublished in case tracks arrive later
         r.localParticipant.on("trackPublished", () => {
           attachLocalTracks(r.localParticipant);
         });
