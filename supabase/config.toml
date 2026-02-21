@@ -31,4 +31,4 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.twilio-video-token]
-verify_jwt = true
+verify_jwt = false
