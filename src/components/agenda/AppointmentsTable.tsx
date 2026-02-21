@@ -48,7 +48,7 @@ import {
   Clock,
   Loader2,
   User,
-  Scissors,
+  Stethoscope,
   Phone,
   CalendarDays,
 } from "lucide-react";
@@ -518,7 +518,7 @@ export function AppointmentsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Scissors className="h-4 w-4 text-muted-foreground" />
+                      <Stethoscope className="h-4 w-4 text-muted-foreground" />
                       <span className="text-foreground">{appointment.service?.name || "Não informado"}</span>
                     </div>
                   </TableCell>

@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import {
   Copy, ExternalLink, Globe, Loader2, Save, Palette, Code2, Monitor,
-  Image, MessageSquare, Upload, Scissors, ShieldCheck, Sparkles, X,
+  Image, MessageSquare, Upload, HeartPulse, ShieldCheck, Sparkles, X,
   Info,
 } from "lucide-react";
 
@@ -643,7 +643,7 @@ export default function AgendamentoOnlineAdmin() {
                         }}
                       />
                     ) : (
-                      <Scissors className="h-8 w-8" style={{ color: primaryHsl }} />
+                      <HeartPulse className="h-8 w-8" style={{ color: primaryHsl }} />
                     )}
                   </div>
 

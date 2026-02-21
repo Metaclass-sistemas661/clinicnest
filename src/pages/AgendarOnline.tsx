@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 import { toastRpcError } from "@/lib/rpc-error";
 import {
-  Scissors,
+  HeartPulse,
   CheckCircle2,
   ArrowLeft,
   Loader2,
@@ -38,6 +38,8 @@ import {
   ChevronsUpDown,
   Calendar,
   ChevronRight,
+  AlertCircle,
+  CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -640,7 +642,7 @@ export default function AgendarOnline() {
         <Card className="max-w-md w-full">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <Scissors className="h-8 w-8" />
+              <AlertCircle className="h-8 w-8" />
             </div>
             <h2 className="text-xl font-semibold">Agendamento indisponível</h2>
             <p className="text-muted-foreground text-sm max-w-xs">
@@ -705,7 +707,7 @@ export default function AgendarOnline() {
             {effectiveLogo ? (
               <img src={effectiveLogo} alt={ctx.tenant.name} className="h-full w-full object-contain p-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
             ) : (
-              <Scissors className="h-8 w-8" />
+              <HeartPulse className="h-8 w-8" />
             )}
           </div>
           <div>
@@ -1230,7 +1232,7 @@ export default function AgendarOnline() {
                     onClick={resetForm}
                     className="mt-2 gap-2"
                   >
-                    <Scissors className="h-4 w-4" />
+                    <CalendarPlus className="h-4 w-4" />
                     Fazer outro agendamento
                   </Button>
                 </div>

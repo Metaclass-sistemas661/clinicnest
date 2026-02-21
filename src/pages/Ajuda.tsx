@@ -15,7 +15,7 @@ import {
   Search,
   Calendar,
   Users,
-  Scissors,
+  Stethoscope,
   Package,
   DollarSign,
   UserCog,
@@ -85,7 +85,7 @@ const SECTIONS: DocSection[] = [
   {
     id: "servicos",
     title: "Serviços",
-    icon: Scissors,
+    icon: Stethoscope,
     tags: ["catálogo", "preço", "duração"],
     summary: "Mantenha um catálogo enxuto e claro para acelerar o agendamento.",
     steps: [

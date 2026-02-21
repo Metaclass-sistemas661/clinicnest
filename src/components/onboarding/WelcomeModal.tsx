@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Scissors, Package, DollarSign, ArrowRight, Sparkles } from "lucide-react";
+import { Calendar, Users, Stethoscope, Package, DollarSign, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "beautygest_onboarding_seen";
@@ -37,7 +37,7 @@ export function WelcomeModal() {
   const features = [
     { icon: Calendar, label: "Agenda", href: "/agenda", desc: "Agende e gerencie horários" },
     { icon: Users, label: "Clientes", href: "/clientes", desc: "Cadastre e acompanhe clientes" },
-    { icon: Scissors, label: "Serviços", href: "/servicos", desc: "Catálogo de serviços e preços" },
+    { icon: Stethoscope, label: "Serviços", href: "/servicos", desc: "Catálogo de serviços e preços" },
     { icon: Package, label: "Produtos", href: "/produtos", desc: "Controle de estoque" },
     { icon: DollarSign, label: "Financeiro", href: "/financeiro", desc: "Receitas, despesas e relatórios" },
   ];

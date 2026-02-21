@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, Loader2, CalendarCheck, Scissors } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, CalendarCheck, CalendarX2 } from "lucide-react";
 
 type State = "loading" | "confirmed" | "already_confirmed" | "cancelled" | "not_found" | "error";
 
@@ -111,7 +111,7 @@ export default function ConfirmarAgendamento() {
           {state === "not_found" && (
             <>
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Scissors className="h-10 w-10" />
+                <CalendarX2 className="h-10 w-10" />
               </div>
               <div>
                 <h1 className="text-xl font-bold">Link inválido</h1>

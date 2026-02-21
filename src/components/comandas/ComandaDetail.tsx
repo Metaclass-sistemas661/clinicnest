@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, CreditCard, Package, Scissors, Gift, Tag, Star } from "lucide-react";
+import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope, Gift, Tag, Star } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -433,7 +433,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                       <div key={item.id} className="flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-2 min-w-0">
                           {item.kind === "service" ? (
-                            <Scissors className="h-4 w-4 text-primary shrink-0" />
+                            <Stethoscope className="h-4 w-4 text-primary shrink-0" />
                           ) : (
                             <Package className="h-4 w-4 text-orange-500 shrink-0" />
                           )}

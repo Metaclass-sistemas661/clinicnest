@@ -22,7 +22,7 @@ import {
 import {
   Clock,
   User,
-  Scissors,
+  Stethoscope,
   Phone,
   MoreVertical,
   CheckCircle2,
@@ -179,7 +179,7 @@ export function AppointmentCard({
 
                 {/* Service info */}
                 <div className="flex items-center gap-2 mb-1">
-                  <Scissors className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground truncate">
                     {appointment.service?.name || "Procedimento não informado"}
                   </span>

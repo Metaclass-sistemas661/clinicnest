@@ -27,7 +27,7 @@ import {
 import {
   BarChart3,
   Users,
-  Scissors,
+  Stethoscope,
   UserCog,
   Download,
   TrendingUp,
@@ -563,7 +563,7 @@ function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolea
                   <span className="shrink-0 w-6 text-center font-bold text-muted-foreground text-xs">
                     {i + 1}º
                   </span>
-                  <Scissors className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <Stethoscope className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="font-medium text-foreground truncate">{s.name}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0 text-right">
@@ -759,7 +759,7 @@ export default function Relatorios() {
               Inativos
             </TabsTrigger>
             <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm">
-              <Scissors className="h-3.5 w-3.5 hidden sm:block" />
+              <Stethoscope className="h-3.5 w-3.5 hidden sm:block" />
               Serviços
             </TabsTrigger>
             <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm">
