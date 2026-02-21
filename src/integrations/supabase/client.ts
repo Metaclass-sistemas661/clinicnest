@@ -26,12 +26,34 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Client isolado para o Portal do Paciente.
 // Usa storageKey diferente para que login de paciente em outra aba
 // NÃO sobrescreva a sessão da clínica (e vice-versa).
-export const supabasePatient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storageKey: 'sb-patient-auth-token',
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-    lockAcquireTimeout: AUTH_LOCK_TIMEOUT,
+// LAZY: criado sob demanda para evitar que dois clients disputem navigator.locks
+// simultaneamente no carregamento da página, causando AbortError.
+let _supabasePatient: ReturnType<typeof createClient<Database>> | null = null;
+
+export function getSupabasePatient() {
+  if (!_supabasePatient) {
+    _supabasePatient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: {
+        storageKey: 'sb-patient-auth-token',
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+        lockAcquireTimeout: AUTH_LOCK_TIMEOUT,
+      }
+    });
   }
+  return _supabasePatient;
+}
+
+// Compat: mantém export com mesmo nome para imports existentes.
+// É um getter que inicializa o client apenas no primeiro acesso.
+export const supabasePatient = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(_target, prop, receiver) {
+    const real = getSupabasePatient();
+    const value = Reflect.get(real, prop, receiver);
+    if (typeof value === 'function') {
+      return value.bind(real);
+    }
+    return value;
+  },
 });
