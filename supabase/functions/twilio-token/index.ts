@@ -5,68 +5,7 @@ import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
-// ---------- Twilio Access Token via native crypto (no SDK) ----------
-// Ref: https://www.twilio.com/docs/iam/access-tokens
-
-const encoder = new TextEncoder();
-
-function base64url(input: Uint8Array): string {
-  let binary = "";
-  for (const byte of input) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64urlFromString(str: string): string {
-  return base64url(encoder.encode(str));
-}
-
-async function signHS256(secret: string, data: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return base64url(new Uint8Array(sig));
-}
-
-async function createTwilioAccessToken(opts: {
-  accountSid: string;
-  apiKeySid: string;
-  apiKeySecret: string;
-  identity: string;
-  roomName: string;
-  ttlSeconds: number;
-}): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { cty: "twilio-fpa;v=1", typ: "JWT", alg: "HS256" };
-
-  const grants: Record<string, unknown> = {
-    identity: opts.identity,
-    video: { room: opts.roomName },
-  };
-
-  const payload = {
-    jti: `${opts.apiKeySid}-${now}`,
-    iss: opts.apiKeySid,
-    sub: opts.accountSid,
-    iat: now,
-    nbf: now,
-    exp: now + opts.ttlSeconds,
-    grants,
-  };
-
-  const headerB64 = base64urlFromString(JSON.stringify(header));
-  const payloadB64 = base64urlFromString(JSON.stringify(payload));
-  const signature = await signHS256(opts.apiKeySecret, `${headerB64}.${payloadB64}`);
-
-  return `${headerB64}.${payloadB64}.${signature}`;
-}
-
-// ---------- Helpers ----------
+import { jwt as twilioJwt } from "https://esm.sh/twilio@4.23.0";
 
 const log = createLogger("TWILIO-VIDEO-TOKEN");
 
@@ -83,14 +22,14 @@ function toTrimmedString(value: unknown, maxLength: number): string {
 }
 
 function sanitizeRoomName(input: string): string {
+  // Twilio room names must be <= 128 chars and can include: a-zA-Z0-9_-/
+  // We'll normalize to a conservative subset.
   return input
     .replace(/[^a-zA-Z0-9\-_]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 128);
 }
-
-// ---------- Handler ----------
 
 serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -161,6 +100,7 @@ serve(async (req) => {
 
   const supabaseAdmin = createSupabaseAdmin();
 
+  // Validar que o appointment existe, pertence ao tenant e está marcado como teleconsulta.
   const { data: apt, error: aptError } = await supabaseAdmin
     .from("appointments")
     .select("id, tenant_id, telemedicine")
@@ -198,23 +138,27 @@ serve(async (req) => {
 
   const baseRoomName = `tenant-${tenantId}-appointment-${appointmentId}`;
   const roomName = sanitizeRoomName(baseRoomName);
+
+  // Twilio identity should be stable and <= 128 chars.
   const identity = sanitizeRoomName(`${role}-${user.id}`);
 
   try {
-    const token = await createTwilioAccessToken({
-      accountSid,
-      apiKeySid,
-      apiKeySecret,
+    const AccessToken = (twilioJwt as any).AccessToken;
+    const VideoGrant = (twilioJwt as any).AccessToken.VideoGrant;
+
+    const token = new AccessToken(accountSid, apiKeySid, apiKeySecret, {
       identity,
-      roomName,
-      ttlSeconds,
+      ttl: ttlSeconds,
     });
 
+    token.addGrant(new VideoGrant({ room: roomName }));
+
+    const jwt = token.toJwt();
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
 
     return new Response(
       JSON.stringify({
-        token,
+        token: jwt,
         room_name: roomName,
         identity,
         expires_at: expiresAt,
