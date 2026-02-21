@@ -17,6 +17,8 @@ import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
+import { consultasBanners } from "@/components/patient/patientBannerData";
 
 interface PatientAppointment {
   id: string;
@@ -92,6 +94,8 @@ export default function PatientConsultas() {
         </Button>
       }
     >
+      <PatientBannerCarousel slides={consultasBanners} />
+
       <div className="flex gap-2 mb-6">
         {(["upcoming", "past", "all"] as const).map((f) => (
           <Button

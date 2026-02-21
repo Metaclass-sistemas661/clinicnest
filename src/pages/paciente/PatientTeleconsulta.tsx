@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VideoRoom } from "@/components/teleconsulta/VideoRoom";
+import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
+import { teleconsultaBanners } from "@/components/patient/patientBannerData";
 
 interface TelemedicineAppt {
   id: string;
@@ -127,13 +129,7 @@ export default function PatientTeleconsulta() {
         </Button>
       }
     >
-      <Card className="mb-6 border-teal-200 bg-teal-50/50 dark:border-teal-800 dark:bg-teal-950/30">
-        <CardContent className="py-3 px-4">
-          <p className="text-sm text-teal-700 dark:text-teal-300">
-            <strong>Como funciona:</strong> Quando sua clínica agendar uma teleconsulta, ela aparecerá aqui no dia marcado. Clique em "Entrar na Teleconsulta" para iniciar a videochamada com seu profissional de saúde.
-          </p>
-        </CardContent>
-      </Card>
+      <PatientBannerCarousel slides={teleconsultaBanners} />
 
       {isLoading ? (
         <div className="space-y-4">

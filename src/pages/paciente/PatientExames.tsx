@@ -10,6 +10,8 @@ import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
+import { examesBanners } from "@/components/patient/patientBannerData";
 
 interface ExamResult {
   id: string;
@@ -64,6 +66,8 @@ export default function PatientExames() {
         </Button>
       }
     >
+      <PatientBannerCarousel slides={examesBanners} />
+
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (

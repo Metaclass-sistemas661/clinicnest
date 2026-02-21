@@ -16,6 +16,8 @@ import {
   Heart,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
+import { dashboardBanners } from "@/components/patient/patientBannerData";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +79,8 @@ export default function PatientDashboard() {
 
   return (
     <PatientLayout title={`${greeting()}, ${userName.split(" ")[0]}!`} subtitle="Bem-vindo ao seu portal de saúde">
+      <PatientBannerCarousel slides={dashboardBanners} />
+
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {quickActions.map((action) => {
