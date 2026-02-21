@@ -228,7 +228,7 @@ export default function PatientRegister() {
                 onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
               />
             </div>
 
@@ -244,7 +244,7 @@ export default function PatientRegister() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
               />
             </div>
 
@@ -260,7 +260,7 @@ export default function PatientRegister() {
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 autoComplete="tel"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
               />
             </div>
 
@@ -278,7 +278,7 @@ export default function PatientRegister() {
                   autoComplete="new-password"
                   required
                   minLength={6}
-                  className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                 />
                 <button
                   type="button"
@@ -304,7 +304,7 @@ export default function PatientRegister() {
                 autoComplete="new-password"
                 required
                 minLength={6}
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
               />
             </div>
 

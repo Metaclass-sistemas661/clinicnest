@@ -180,7 +180,7 @@ export default function PatientLogin() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
               />
             </div>
 
@@ -205,7 +205,7 @@ export default function PatientLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   required
-                  className="h-12 rounded-xl border-gray-200 bg-gray-50 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                 />
                 <button
                   type="button"
