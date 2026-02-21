@@ -194,7 +194,7 @@ export default function Unidades() {
         </div>
       ) : units.length === 0 ? (
         <EmptyState
-          icon={<Building className="h-10 w-10 text-muted-foreground/40" />}
+          icon={Building}
           title="Nenhuma unidade cadastrada"
           description="Cadastre a primeira unidade/filial da clínica."
           action={

@@ -2,71 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
-import { getAuthenticatedUser } from "../_shared/auth.ts";
+import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
-
-// ---------- Twilio Access Token via native crypto (no SDK) ----------
-// Ref: https://www.twilio.com/docs/iam/access-tokens
-
-const encoder = new TextEncoder();
-
-function base64url(input: Uint8Array): string {
-  let binary = "";
-  for (const byte of input) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64urlFromString(str: string): string {
-  return base64url(encoder.encode(str));
-}
-
-async function signHS256(secret: string, data: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return base64url(new Uint8Array(sig));
-}
-
-async function createTwilioAccessToken(opts: {
-  accountSid: string;
-  apiKeySid: string;
-  apiKeySecret: string;
-  identity: string;
-  roomName: string;
-  ttlSeconds: number;
-}): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { cty: "twilio-fpa;v=1", typ: "JWT", alg: "HS256" };
-
-  const grants: Record<string, unknown> = {
-    identity: opts.identity,
-    video: { room: opts.roomName },
-  };
-
-  const payload = {
-    jti: `${opts.apiKeySid}-${now}`,
-    iss: opts.apiKeySid,
-    sub: opts.accountSid,
-    iat: now,
-    nbf: now,
-    exp: now + opts.ttlSeconds,
-    grants,
-  };
-
-  const headerB64 = base64urlFromString(JSON.stringify(header));
-  const payloadB64 = base64urlFromString(JSON.stringify(payload));
-  const signature = await signHS256(opts.apiKeySecret, `${headerB64}.${payloadB64}`);
-
-  return `${headerB64}.${payloadB64}.${signature}`;
-}
-
-// ---------- Helpers ----------
 
 const log = createLogger("TWILIO-VIDEO-TOKEN");
 
@@ -90,7 +27,69 @@ function sanitizeRoomName(input: string): string {
     .slice(0, 128);
 }
 
-// ---------- Handler ----------
+// --- Lightweight Twilio Access Token via Web Crypto (zero external deps) ---
+
+function toBase64Url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function strToBase64Url(str: string): string {
+  return toBase64Url(new TextEncoder().encode(str));
+}
+
+async function hmacSha256Sign(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+  return toBase64Url(sig);
+}
+
+interface TwilioTokenParams {
+  accountSid: string;
+  apiKeySid: string;
+  apiKeySecret: string;
+  identity: string;
+  roomName: string;
+  ttlSeconds: number;
+}
+
+async function generateTwilioAccessToken(params: TwilioTokenParams): Promise<string> {
+  const { accountSid, apiKeySid, apiKeySecret, identity, roomName, ttlSeconds } = params;
+  const now = Math.floor(Date.now() / 1000);
+
+  const header = { typ: "JWT", alg: "HS256", cty: "twilio-fpa;v=1" };
+  const payload = {
+    jti: `${apiKeySid}-${now}`,
+    iss: apiKeySid,
+    sub: accountSid,
+    iat: now,
+    exp: now + ttlSeconds,
+    grants: {
+      identity,
+      video: { room: roomName },
+    },
+  };
+
+  const encodedHeader = strToBase64Url(JSON.stringify(header));
+  const encodedPayload = strToBase64Url(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  const signature = await hmacSha256Sign(apiKeySecret, signingInput);
+
+  return `${signingInput}.${signature}`;
+}
+
+// --- Main handler ---
 
 serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -106,10 +105,10 @@ serve(async (req) => {
     });
   }
 
-  // Authenticate user (supports both staff via profiles and patients via patient_profiles)
-  const authResult = await getAuthenticatedUser(req, cors);
-  if (authResult.error) return authResult.error;
-  const user = authResult.user;
+  const auth = await getAuthenticatedUserWithTenant(req, cors);
+  if (auth.error) return auth.error;
+
+  const { user, tenantId } = auth;
 
   const rl = await checkRateLimit(`twilio-video-token:${user.id}`, 20, 60);
   if (!rl.allowed) {
@@ -149,10 +148,7 @@ serve(async (req) => {
         error: "Configuração do servidor incompleta",
         details: "Missing TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID or TWILIO_API_KEY_SECRET",
       }),
-      {
-        status: 500,
-        headers: { ...cors, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
     );
   }
 
@@ -161,10 +157,9 @@ serve(async (req) => {
 
   const supabaseAdmin = createSupabaseAdmin();
 
-  // Fetch appointment with client_id for patient validation
   const { data: apt, error: aptError } = await supabaseAdmin
     .from("appointments")
-    .select("id, tenant_id, client_id, telemedicine")
+    .select("id, tenant_id, telemedicine")
     .eq("id", appointmentId)
     .maybeSingle();
 
@@ -183,40 +178,11 @@ serve(async (req) => {
     });
   }
 
-  const aptTenantId = String((apt as any).tenant_id);
-
-  // Validate access: staff must belong to tenant, patient must be linked to the appointment's client
-  if (role === "staff") {
-    const { data: staffProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!staffProfile || String(staffProfile.tenant_id) !== aptTenantId) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 403,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-  } else {
-    // Patient: validate via patient_profiles link
-    const aptClientId = (apt as any).client_id;
-    const { data: patientLink } = await supabaseAdmin
-      .from("patient_profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("tenant_id", aptTenantId)
-      .eq("client_id", aptClientId)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (!patientLink) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 403,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
+  if (String((apt as any).tenant_id) !== String(tenantId)) {
+    return new Response(JSON.stringify({ error: "Não autorizado" }), {
+      status: 403,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 
   if ((apt as any).telemedicine !== true) {
@@ -226,12 +192,12 @@ serve(async (req) => {
     });
   }
 
-  const baseRoomName = `tenant-${aptTenantId}-appointment-${appointmentId}`;
+  const baseRoomName = `tenant-${tenantId}-appointment-${appointmentId}`;
   const roomName = sanitizeRoomName(baseRoomName);
   const identity = sanitizeRoomName(`${role}-${user.id}`);
 
   try {
-    const token = await createTwilioAccessToken({
+    const token = await generateTwilioAccessToken({
       accountSid,
       apiKeySid,
       apiKeySecret,
@@ -243,12 +209,7 @@ serve(async (req) => {
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
 
     return new Response(
-      JSON.stringify({
-        token,
-        room_name: roomName,
-        identity,
-        expires_at: expiresAt,
-      }),
+      JSON.stringify({ token, room_name: roomName, identity, expires_at: expiresAt }),
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
     );
   } catch (error) {

@@ -533,7 +533,7 @@ export default function FaturamentoTISS() {
 
           {eligible.length === 0 && !isLoadingEligible && (
             <EmptyState
-              icon={<Calculator className="h-10 w-10 text-muted-foreground/40" />}
+              icon={Calculator}
               title="Nenhum atendimento encontrado"
               description="Ajuste o período e o convênio e clique em Buscar."
             />

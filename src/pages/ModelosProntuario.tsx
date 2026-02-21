@@ -377,7 +377,7 @@ export default function ModelosProntuario() {
         </div>
       ) : templates.length === 0 ? (
         <EmptyState
-          icon={<FileCode2 className="h-10 w-10 text-muted-foreground/40" />}
+          icon={FileCode2}
           title="Nenhum modelo criado"
           description="Crie modelos de campos extras para personalizar o prontuário por especialidade."
           action={
