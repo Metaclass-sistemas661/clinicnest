@@ -343,7 +343,7 @@ export function AppointmentsTable({
   return (
     <>
       {/* Mobile: Card Layout */}
-      <div className="block md:hidden space-y-3">
+      <div className="block md:hidden space-y-3 max-h-[520px] overflow-y-auto pr-1">
         {appointments.map((appointment) => {
           const status = statusConfig[appointment.status];
           const StatusIcon = status.icon;

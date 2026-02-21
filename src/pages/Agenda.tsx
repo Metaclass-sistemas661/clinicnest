@@ -943,7 +943,7 @@ export default function Agenda() {
           </div>
 
           {/* Appointments Table */}
-          <Card className="border-border text-foreground rounded-xl shadow-sm flex flex-col max-h-[600px]">
+          <Card className="border-border text-foreground rounded-xl shadow-sm flex flex-col">
             <CardHeader className="pb-3 shrink-0">
               <CardTitle className="text-base font-semibold">
                 Agendamentos
@@ -954,7 +954,7 @@ export default function Agenda() {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 overflow-y-auto min-h-0">
+            <CardContent className="p-0 overflow-y-auto max-h-[340px]">
               {!isLoading && filteredAppointments.length === 0 ? (
                 <div className="p-6">
                   <EmptyState
