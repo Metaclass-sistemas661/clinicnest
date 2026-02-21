@@ -435,7 +435,7 @@ serve(async (req) => {
       );
     }
 
-    if ((type === "password_changed" || type === "confirmation") && !user) {
+    if (type === "password_changed" && !user) {
       log("ERROR: tipo de email requer autenticação", { type });
       return new Response(
         JSON.stringify({ error: "Autenticação necessária para este tipo de email" }),
@@ -448,12 +448,19 @@ serve(async (req) => {
       try {
         const { data: authUser } = await supabaseAdmin.auth.admin.getUserByEmail(emailTrim);
         if (authUser?.user?.id) {
+          // Try profiles first (clinic staff)
           const { data: profileData } = await supabaseAdmin
             .from("profiles")
             .select("full_name")
             .eq("user_id", authUser.user.id)
             .maybeSingle();
           nameTrim = profileData?.full_name || "";
+
+          // Fallback to user_metadata (patients)
+          if (!nameTrim) {
+            const meta = authUser.user.user_metadata as Record<string, unknown> | undefined;
+            nameTrim = typeof meta?.full_name === "string" ? meta.full_name : "";
+          }
         }
       } catch (err) {
         log("WARNING: Não foi possível buscar nome do usuário", { error: err });

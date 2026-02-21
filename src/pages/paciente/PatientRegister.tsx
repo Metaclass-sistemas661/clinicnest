@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 export default function PatientRegister() {
   const [fullName, setFullName] = useState("");
@@ -87,6 +88,21 @@ export default function PatientRegister() {
         }
         setIsLoading(false);
         return;
+      }
+
+      // Enviar email de confirmação customizado via Resend (template ClinicNest)
+      try {
+        await supabase.functions.invoke("send-custom-auth-email", {
+          body: {
+            email,
+            type: "confirmation",
+            name: fullName,
+            redirectTo: siteOrigin ? `${siteOrigin}/paciente/login` : undefined,
+          },
+        });
+      } catch {
+        // Não bloquear o fluxo se o email customizado falhar — o Supabase já envia o padrão
+        logger.warn("Falha ao enviar email customizado de confirmação");
       }
 
       setSuccess(true);
