@@ -30,6 +30,8 @@ import type {
   RemoteTrackPublication,
   LocalVideoTrack,
   LocalAudioTrack,
+  LocalDataTrack,
+  RemoteDataTrack,
 } from "twilio-video";
 import { logger } from "@/lib/logger";
 
@@ -258,6 +260,11 @@ export function VideoRoom({
   const containerRef = useRef<HTMLDivElement>(null);
   const callStartRef = useRef<Date | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dataTrackRef = useRef<LocalDataTrack | null>(null);
+  const isChatOpenRef = useRef(isChatOpen);
+
+  // Keep ref in sync so the DataTrack listener can read current state
+  useEffect(() => { isChatOpenRef.current = isChatOpen; }, [isChatOpen]);
 
   // Duration timer
   useEffect(() => {
@@ -340,6 +347,45 @@ export function VideoRoom({
     [attachTrack, detachTrack]
   );
 
+  // Subscribe to remote DataTrack messages
+  const subscribeToDataTrack = useCallback((track: RemoteDataTrack) => {
+    track.on("message", (data: string) => {
+      try {
+        const parsed = JSON.parse(data) as { text: string; sender: string };
+        const msg: ChatMessage = {
+          id: `${Date.now()}-${Math.random()}`,
+          sender: "remote",
+          text: parsed.text,
+          timestamp: new Date(),
+        };
+        setChatMessages((prev) => [...prev, msg]);
+        if (!isChatOpenRef.current) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      } catch {
+        // ignore non-JSON messages
+      }
+    });
+  }, []);
+
+  // Listen for DataTracks on a remote participant
+  const listenForDataTracks = useCallback(
+    (participant: RemoteParticipant) => {
+      participant.on("trackSubscribed", (track: unknown) => {
+        if (track && typeof track === "object" && "kind" in (track as any) && (track as any).kind === "data") {
+          subscribeToDataTrack(track as RemoteDataTrack);
+        }
+      });
+      // Also check already-subscribed tracks
+      participant.tracks.forEach((pub: RemoteTrackPublication) => {
+        if (pub.isSubscribed && pub.track && (pub.track as any).kind === "data") {
+          subscribeToDataTrack(pub.track as unknown as RemoteDataTrack);
+        }
+      });
+    },
+    [subscribeToDataTrack]
+  );
+
   // Connect to Twilio room
   useEffect(() => {
     let mounted = true;
@@ -347,12 +393,17 @@ export function VideoRoom({
 
     const connect = async () => {
       try {
+        // Create a LocalDataTrack for chat
+        const dataTrack = new TwilioVideo.LocalDataTrack();
+        dataTrackRef.current = dataTrack as unknown as LocalDataTrack;
+
         const r = await TwilioVideo.connect(token, {
           name: roomName,
           audio: true,
           video: { width: 1280, height: 720, frameRate: 24 },
           dominantSpeaker: true,
           networkQuality: { local: 1, remote: 1 },
+          tracks: [dataTrack],
         });
 
         if (!mounted) {
@@ -376,12 +427,14 @@ export function VideoRoom({
         r.participants.forEach((p) => {
           setRemoteConnected(true);
           attachRemoteTracks(p);
+          listenForDataTracks(p);
         });
 
         // New remote participant
         r.on("participantConnected", (p: RemoteParticipant) => {
           setRemoteConnected(true);
           attachRemoteTracks(p);
+          listenForDataTracks(p);
         });
 
         // Remote participant left
@@ -412,11 +465,12 @@ export function VideoRoom({
 
     return () => {
       mounted = false;
+      dataTrackRef.current = null;
       if (connectedRoom) {
         connectedRoom.disconnect();
       }
     };
-  }, [token, roomName, attachLocalTracks, attachRemoteTracks, detachTrack, onDisconnect]);
+  }, [token, roomName, attachLocalTracks, attachRemoteTracks, detachTrack, onDisconnect, listenForDataTracks]);
 
   // Toggle audio
   const toggleAudio = () => {
@@ -474,7 +528,7 @@ export function VideoRoom({
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Chat (local-only for now — Twilio DataTrack can be added later)
+  // Chat via Twilio DataTrack
   const sendChatMessage = (text: string) => {
     const msg: ChatMessage = {
       id: `${Date.now()}-${Math.random()}`,
@@ -483,6 +537,15 @@ export function VideoRoom({
       timestamp: new Date(),
     };
     setChatMessages((prev) => [...prev, msg]);
+
+    // Publish via DataTrack so the remote participant receives it
+    if (dataTrackRef.current) {
+      try {
+        (dataTrackRef.current as any).send(JSON.stringify({ text, sender: identity }));
+      } catch (e) {
+        logger.error("DataTrack send error:", e);
+      }
+    }
   };
 
   // Toggle chat
