@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Stethoscope, Package, DollarSign, ArrowRight, Sparkles } from "lucide-react";
+import { Calendar, Users, Stethoscope, ClipboardList, DollarSign, ArrowRight, Heart, Video } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const STORAGE_KEY = "beautygest_onboarding_seen";
@@ -35,11 +35,12 @@ export function WelcomeModal() {
   };
 
   const features = [
-    { icon: Calendar, label: "Agenda", href: "/agenda", desc: "Agende e gerencie horários" },
-    { icon: Users, label: "Clientes", href: "/clientes", desc: "Cadastre e acompanhe clientes" },
-    { icon: Stethoscope, label: "Serviços", href: "/servicos", desc: "Catálogo de serviços e preços" },
-    { icon: Package, label: "Produtos", href: "/produtos", desc: "Controle de estoque" },
-    { icon: DollarSign, label: "Financeiro", href: "/financeiro", desc: "Receitas, despesas e relatórios" },
+    { icon: Calendar, label: "Agenda", href: "/agenda", desc: "Gerencie consultas e horários dos profissionais" },
+    { icon: Users, label: "Pacientes", href: "/clientes", desc: "Cadastro e histórico dos seus pacientes" },
+    { icon: Stethoscope, label: "Prontuários", href: "/prontuarios", desc: "Registros clínicos e evolução dos atendimentos" },
+    { icon: Video, label: "Teleconsulta", href: "/teleconsulta", desc: "Atendimento por vídeo com seus pacientes" },
+    { icon: ClipboardList, label: "Receituários", href: "/receituarios", desc: "Prescrições, atestados e laudos médicos" },
+    { icon: DollarSign, label: "Financeiro", href: "/financeiro", desc: "Faturamento, contas a receber e fluxo de caixa" },
   ];
 
   return (
@@ -48,18 +49,18 @@ export function WelcomeModal() {
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
-              <Sparkles className="h-6 w-6 text-white" />
+              <Heart className="h-6 w-6 text-white" />
             </div>
             <div>
               <DialogTitle className="text-xl">Bem-vindo ao ClinicNest!</DialogTitle>
               <DialogDescription>
-                Seu painel de gestão para clínicas e consultórios
+                Sua plataforma completa de gestão clínica
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
         <p className="text-sm text-muted-foreground mb-4">
-          Acesse os módulos pelo menu lateral. Comece cadastrando clientes, serviços e depois use a agenda.
+          Comece cadastrando seus pacientes e profissionais, configure os serviços da clínica e utilize a agenda para organizar seus atendimentos.
         </p>
         <div className="grid gap-2">
           {features.map(({ icon: Icon, label, href, desc }) => (
@@ -82,7 +83,7 @@ export function WelcomeModal() {
         </div>
         <DialogFooter>
           <Button onClick={handleClose} className="gradient-primary text-primary-foreground">
-            Entendi, começar
+            Começar a usar
           </Button>
         </DialogFooter>
       </DialogContent>
