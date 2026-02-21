@@ -127,9 +127,9 @@ export default function PatientTeleconsulta() {
         </Button>
       }
     >
-      <Card className="mb-6 border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30">
+      <Card className="mb-6 border-teal-200 bg-teal-50/50 dark:border-teal-800 dark:bg-teal-950/30">
         <CardContent className="py-3 px-4">
-          <p className="text-sm text-purple-700 dark:text-purple-300">
+          <p className="text-sm text-teal-700 dark:text-teal-300">
             <strong>Como funciona:</strong> Quando sua clínica agendar uma teleconsulta, ela aparecerá aqui no dia marcado. Clique em "Entrar na Teleconsulta" para iniciar a videochamada com seu profissional de saúde.
           </p>
         </CardContent>
@@ -189,7 +189,7 @@ export default function PatientTeleconsulta() {
                   <Button
                     size="sm"
                     onClick={() => void joinCall(appt)}
-                    className="gap-1.5 bg-purple-600 hover:bg-purple-700"
+                    className="gap-1.5 bg-teal-600 hover:bg-teal-700"
                     disabled={joiningId === appt.id}
                   >
                     <VideoIcon className="h-3.5 w-3.5" />

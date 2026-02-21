@@ -146,7 +146,7 @@ export default function PatientConsultas() {
                         <span className="text-muted-foreground">às</span>
                         <span>{time}</span>
                         {appt.telemedicine && (
-                          <Badge variant="outline" className="text-purple-600 border-purple-200 text-[10px] px-1.5 py-0">
+                          <Badge variant="outline" className="text-teal-600 border-teal-200 text-[10px] px-1.5 py-0">
                             <Video className="h-3 w-3 mr-1" />
                             Teleconsulta
                           </Badge>

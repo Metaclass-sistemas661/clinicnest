@@ -82,7 +82,7 @@ export default function PatientLogin() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(135deg, rgba(88,28,135,0.90) 0%, rgba(124,58,237,0.78) 40%, rgba(139,92,246,0.68) 100%)",
+              "linear-gradient(135deg, rgba(13,148,136,0.90) 0%, rgba(20,184,166,0.78) 40%, rgba(45,212,191,0.68) 100%)",
           }}
         />
 
@@ -103,7 +103,7 @@ export default function PatientLogin() {
             <h1 className="font-display text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
               Sua saúde,
               <br />
-              <span className="text-purple-200">na palma da mão.</span>
+              <span className="text-teal-200">na palma da mão.</span>
             </h1>
             <p className="text-white/75 text-lg max-w-md leading-relaxed">
               Acesse suas consultas, exames, receitas e teleconsultas de qualquer lugar.
@@ -122,8 +122,8 @@ export default function PatientLogin() {
                   key={item.label}
                   className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm px-5 py-3.5"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-300/20 flex-shrink-0">
-                    <Icon className="h-5 w-5 text-purple-200" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-300/20 flex-shrink-0">
+                    <Icon className="h-5 w-5 text-teal-200" />
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-white leading-tight">{item.label}</div>
@@ -135,7 +135,7 @@ export default function PatientLogin() {
           </div>
 
           <div className="flex items-center gap-1.5 text-white/50 text-xs">
-            <ShieldCheck className="h-3.5 w-3.5 text-purple-300" />
+            <ShieldCheck className="h-3.5 w-3.5 text-teal-300" />
             <span>Dados protegidos · LGPD · Conexão criptografada</span>
           </div>
         </div>
@@ -146,18 +146,18 @@ export default function PatientLogin() {
 
         {/* Logo mobile */}
         <div className="flex lg:hidden items-center gap-3 mb-10">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600">
             <Heart className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="font-display text-xl font-bold text-purple-700 leading-none">ClinicNest</div>
+            <div className="font-display text-xl font-bold text-teal-700 leading-none">ClinicNest</div>
             <div className="text-[9px] text-muted-foreground tracking-widest uppercase">Portal do Paciente</div>
           </div>
         </div>
 
         <div className="w-full max-w-sm">
           {/* Badge */}
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 border border-purple-100 px-3 py-1 text-xs font-medium text-purple-700 mb-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-100 px-3 py-1 text-xs font-medium text-teal-700 mb-6">
             <Heart className="h-3 w-3" />
             Portal do Paciente
           </div>
@@ -180,7 +180,7 @@ export default function PatientLogin() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
 
@@ -191,7 +191,7 @@ export default function PatientLogin() {
                 </Label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors"
+                  className="text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
                 >
                   Esqueceu a senha?
                 </Link>
@@ -205,7 +205,7 @@ export default function PatientLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
                   required
-                  className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
                 />
                 <button
                   type="button"
@@ -220,7 +220,7 @@ export default function PatientLogin() {
 
             <Button
               type="submit"
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 hover:from-purple-700 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
               disabled={isLoading || !email.trim() || !password}
             >
               {isLoading ? (
@@ -247,7 +247,7 @@ export default function PatientLogin() {
             Ainda não tem conta?{" "}
             <Link
               to="/paciente/cadastro"
-              className="font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+              className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
             >
               Cadastre-se aqui
             </Link>
@@ -264,7 +264,7 @@ export default function PatientLogin() {
 
           <div className="mt-8 flex items-center justify-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-purple-500" />
+              <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
               <span>Conexão segura</span>
             </div>
             <span className="opacity-30">·</span>

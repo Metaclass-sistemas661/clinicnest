@@ -94,7 +94,7 @@ export default function PatientReceitas() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-purple-500" />
+                      <Pill className="h-4 w-4 text-teal-500" />
                       Receita {typeLabel(rx.prescription_type)}
                     </CardTitle>
                     <Badge variant={variant}>{label}</Badge>

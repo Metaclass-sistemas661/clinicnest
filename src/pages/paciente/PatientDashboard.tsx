@@ -54,8 +54,8 @@ export default function PatientDashboard() {
       description: "Atendimento por vídeo",
       icon: Video,
       href: "/paciente/teleconsulta",
-      color: "bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400",
-      iconBg: "bg-purple-100 dark:bg-purple-900",
+      color: "bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400",
+      iconBg: "bg-teal-100 dark:bg-teal-900",
     },
     {
       label: "Exames e Laudos",
@@ -98,17 +98,17 @@ export default function PatientDashboard() {
       </div>
 
       {/* Info card */}
-      <Card className="border-purple-200 bg-purple-50/50 dark:border-purple-800 dark:bg-purple-950/30 mb-8">
+      <Card className="border-teal-200 bg-teal-50/50 dark:border-teal-800 dark:bg-teal-950/30 mb-8">
         <CardContent className="py-4 px-5">
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900 flex-shrink-0 mt-0.5">
-              <Heart className="h-4.5 w-4.5 text-purple-600 dark:text-purple-400" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 dark:bg-teal-900 flex-shrink-0 mt-0.5">
+              <Heart className="h-4.5 w-4.5 text-teal-600 dark:text-teal-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-purple-800 dark:text-purple-200 mb-1">
+              <h3 className="font-semibold text-sm text-teal-800 dark:text-teal-200 mb-1">
                 Bem-vindo ao Portal do Paciente
               </h3>
-              <p className="text-xs text-purple-700/80 dark:text-purple-300/80 leading-relaxed">
+              <p className="text-xs text-teal-700/80 dark:text-teal-300/80 leading-relaxed">
                 Aqui você pode acessar suas consultas, teleconsultas, exames, receitas e atestados.
                 Em breve, sua clínica poderá vincular seu cadastro para que você tenha acesso completo ao seu histórico.
               </p>

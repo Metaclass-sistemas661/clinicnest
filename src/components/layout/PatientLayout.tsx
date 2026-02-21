@@ -71,13 +71,13 @@ function SidebarContent({
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 py-5 border-b border-border/50">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 flex-shrink-0">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 flex-shrink-0">
           <Heart className="h-4.5 w-4.5 text-white" />
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-none overflow-hidden">
             <div className="flex items-baseline gap-0">
-              <span className="font-display text-lg font-bold text-purple-600 dark:text-purple-400 tracking-tight leading-none">
+              <span className="font-display text-lg font-bold text-teal-600 dark:text-teal-400 tracking-tight leading-none">
                 Clinic
               </span>
               <span className="font-display text-lg font-bold text-foreground tracking-tight leading-none">
@@ -114,11 +114,11 @@ function SidebarContent({
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300"
+                  ? "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <Icon className={cn("h-4.5 w-4.5 flex-shrink-0", isActive && "text-purple-600 dark:text-purple-400")} />
+              <Icon className={cn("h-4.5 w-4.5 flex-shrink-0", isActive && "text-teal-600 dark:text-teal-400")} />
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
@@ -138,7 +138,7 @@ function SidebarContent({
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300"
+                  ? "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
@@ -147,10 +147,6 @@ function SidebarContent({
             </Link>
           );
         })}
-
-        <div className="flex items-center gap-2 px-3 py-1">
-          {!collapsed && <ThemeToggle />}
-        </div>
 
         <button
           onClick={handleSignOut}
@@ -165,8 +161,8 @@ function SidebarContent({
       {!collapsed && (
         <div className="border-t border-border/50 px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900 flex-shrink-0">
-              <User className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900 flex-shrink-0">
+              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
             </div>
             <div className="overflow-hidden">
               <div className="text-sm font-medium truncate">{userName}</div>
@@ -231,7 +227,10 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">{title}</h1>
               {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
             </div>
-            {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <ThemeToggle />
+              {actions}
+            </div>
           </div>
         </header>
 

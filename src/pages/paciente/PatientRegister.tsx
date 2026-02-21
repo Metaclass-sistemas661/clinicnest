@@ -115,7 +115,7 @@ export default function PatientRegister() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-teal-50 px-4">
         <div className="w-full max-w-md text-center space-y-6">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -129,7 +129,7 @@ export default function PatientRegister() {
           <div className="flex flex-col gap-3">
             <Button
               onClick={() => navigate("/paciente/login")}
-              className="bg-gradient-to-r from-purple-600 to-violet-500 text-white"
+              className="bg-gradient-to-r from-teal-600 to-teal-500 text-white"
             >
               Ir para o login
             </Button>
@@ -158,7 +158,7 @@ export default function PatientRegister() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(135deg, rgba(88,28,135,0.92) 0%, rgba(124,58,237,0.80) 40%, rgba(139,92,246,0.70) 100%)",
+              "linear-gradient(135deg, rgba(13,148,136,0.92) 0%, rgba(20,184,166,0.80) 40%, rgba(45,212,191,0.70) 100%)",
           }}
         />
 
@@ -179,7 +179,7 @@ export default function PatientRegister() {
             <h1 className="font-display text-4xl xl:text-5xl font-bold text-white leading-tight mb-4">
               Crie sua conta
               <br />
-              <span className="text-purple-200">em segundos.</span>
+              <span className="text-teal-200">em segundos.</span>
             </h1>
             <p className="text-white/75 text-lg max-w-md leading-relaxed">
               Cadastre-se gratuitamente para acessar suas consultas, exames e teleconsultas.
@@ -194,14 +194,14 @@ export default function PatientRegister() {
               "Histórico de consultas",
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 text-white/80 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-purple-300 flex-shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-teal-300 flex-shrink-0" />
                 <span>{item}</span>
               </div>
             ))}
           </div>
 
           <div className="flex items-center gap-1.5 text-white/50 text-xs">
-            <ShieldCheck className="h-3.5 w-3.5 text-purple-300" />
+            <ShieldCheck className="h-3.5 w-3.5 text-teal-300" />
             <span>100% gratuito · Dados protegidos · LGPD</span>
           </div>
         </div>
@@ -211,17 +211,17 @@ export default function PatientRegister() {
       <div className="flex w-full lg:w-[45%] xl:w-[40%] flex-col items-center justify-center bg-white px-6 py-12 sm:px-10 xl:px-16">
 
         <div className="flex lg:hidden items-center gap-3 mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600">
             <Heart className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="font-display text-xl font-bold text-purple-700 leading-none">ClinicNest</div>
+            <div className="font-display text-xl font-bold text-teal-700 leading-none">ClinicNest</div>
             <div className="text-[9px] text-muted-foreground tracking-widest uppercase">Portal do Paciente</div>
           </div>
         </div>
 
         <div className="w-full max-w-sm">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 border border-purple-100 px-3 py-1 text-xs font-medium text-purple-700 mb-6">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 border border-teal-100 px-3 py-1 text-xs font-medium text-teal-700 mb-6">
             <Heart className="h-3 w-3" />
             Cadastro de Paciente
           </div>
@@ -244,7 +244,7 @@ export default function PatientRegister() {
                 onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
 
@@ -260,7 +260,7 @@ export default function PatientRegister() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
 
@@ -276,7 +276,7 @@ export default function PatientRegister() {
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 autoComplete="tel"
                 required
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
 
@@ -294,7 +294,7 @@ export default function PatientRegister() {
                   autoComplete="new-password"
                   required
                   minLength={6}
-                  className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
                 />
                 <button
                   type="button"
@@ -320,7 +320,7 @@ export default function PatientRegister() {
                 autoComplete="new-password"
                 required
                 minLength={6}
-                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
 
@@ -330,15 +330,15 @@ export default function PatientRegister() {
                 id="patient-terms"
                 checked={acceptedTerms}
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
               />
               <label htmlFor="patient-terms" className="text-xs text-muted-foreground leading-relaxed">
                 Li e aceito os{" "}
-                <Link to="/termos-de-uso" className="text-purple-600 hover:underline" target="_blank">
+                <Link to="/termos-de-uso" className="text-teal-600 hover:underline" target="_blank">
                   Termos de Uso
                 </Link>{" "}
                 e a{" "}
-                <Link to="/politica-de-privacidade" className="text-purple-600 hover:underline" target="_blank">
+                <Link to="/politica-de-privacidade" className="text-teal-600 hover:underline" target="_blank">
                   Política de Privacidade
                 </Link>
                 .
@@ -347,7 +347,7 @@ export default function PatientRegister() {
 
             <Button
               type="submit"
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 hover:from-purple-700 hover:to-violet-600 text-white font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
+              className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
               disabled={isLoading || !fullName.trim() || !email.trim() || !password || !acceptedTerms}
             >
               {isLoading ? (
@@ -374,7 +374,7 @@ export default function PatientRegister() {
             Já tem uma conta?{" "}
             <Link
               to="/paciente/login"
-              className="font-semibold text-purple-600 hover:text-purple-700 transition-colors"
+              className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
             >
               Faça login
             </Link>
