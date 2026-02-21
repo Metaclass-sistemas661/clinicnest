@@ -238,6 +238,7 @@ export async function upsertClientV2(params: {
   p_phone?: string | null;
   p_email?: string | null;
   p_notes?: string | null;
+  p_cpf?: string | null;
 }): Promise<{ data: UpsertClientV2Result | null; error: unknown }> {
   return rpc<UpsertClientV2Result>("upsert_client_v2", params as Record<string, unknown>);
 }

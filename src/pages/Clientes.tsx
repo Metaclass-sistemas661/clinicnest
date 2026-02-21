@@ -42,10 +42,19 @@ import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
 import type { ClientTimelineEventRow, CashbackLedgerRow } from "@/types/supabase-extensions";
 
+const formatCpf = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+};
+
 const clientFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(200, "Nome muito longo"),
   phone: z.string().optional(),
   email: z.union([z.string().email("E-mail inválido"), z.literal("")]),
+  cpf: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -110,6 +119,7 @@ export default function Clientes() {
     name: "",
     phone: "",
     email: "",
+    cpf: "",
     notes: "",
   });
 
@@ -417,7 +427,7 @@ export default function Clientes() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("id,tenant_id,name,phone,email,notes,access_code,created_at,updated_at")
+        .select("id,tenant_id,name,phone,email,notes,cpf,access_code,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
@@ -438,11 +448,12 @@ export default function Clientes() {
         name: client.name,
         phone: client.phone || "",
         email: client.email || "",
+        cpf: client.cpf || "",
         notes: client.notes || "",
       });
     } else {
       setEditingClient(null);
-      setFormData({ name: "", phone: "", email: "", notes: "" });
+      setFormData({ name: "", phone: "", email: "", cpf: "", notes: "" });
     }
     setIsDialogOpen(true);
   };
@@ -461,6 +472,7 @@ export default function Clientes() {
       name: formData.name.trim(),
       phone: formData.phone,
       email: formData.email || "",
+      cpf: formData.cpf,
       notes: formData.notes,
     });
     if (!parsed.success) {
@@ -477,6 +489,7 @@ export default function Clientes() {
         p_phone: parsed.data.phone || null,
         p_email: parsed.data.email || null,
         p_notes: parsed.data.notes || null,
+        p_cpf: parsed.data.cpf || null,
       });
 
       if (error) {
@@ -486,7 +499,7 @@ export default function Clientes() {
 
       const isNew = !editingClient;
       setIsDialogOpen(false);
-      setFormData({ name: "", phone: "", email: "", notes: "" });
+      setFormData({ name: "", phone: "", email: "", cpf: "", notes: "" });
       setEditingClient(null);
       fetchClients();
 
@@ -541,9 +554,15 @@ export default function Clientes() {
                   <Label>Nome</Label>
                   <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required />
                 </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>CPF</Label>
+                    <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })} placeholder="000.000.000-00" maxLength={14} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Email</Label>
