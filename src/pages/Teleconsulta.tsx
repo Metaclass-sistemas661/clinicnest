@@ -106,7 +106,7 @@ export default function Teleconsulta() {
         .select(`
           id, scheduled_at, duration_minutes, status, telemedicine_url,
           clients(name),
-          profiles(full_name),
+          profiles!appointments_professional_id_fkey(full_name),
           services(name)
         `)
         .eq("tenant_id", profile.tenant_id)

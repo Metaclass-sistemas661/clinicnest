@@ -233,6 +233,7 @@ export default function Agenda() {
         p_price: selectedService?.price || 0,
         p_status: formData.status,
         p_notes: formData.notes || null,
+        p_telemedicine: Boolean(formData.telemedicine),
       });
       if (error) {
         toastRpcError(toast, error, "Erro ao criar agendamento");
@@ -241,20 +242,6 @@ export default function Agenda() {
 
       const createdId = String((rpcData as any)?.appointment_id ?? "");
       const createdProfessionalId = professionalId;
-
-      if (createdId) {
-        const { error: teleError } = await supabase
-          .from("appointments")
-          .update({
-            telemedicine: Boolean(formData.telemedicine),
-            telemedicine_url: formData.telemedicine ? undefined : null,
-          })
-          .eq("id", createdId)
-          .eq("tenant_id", profile.tenant_id);
-        if (teleError) {
-          logger.error("Error updating telemedicine flag after create:", teleError);
-        }
-      }
 
       // Notificar profissional: quando admin cria para ele OU quando cria o próprio
       if (createdProfessionalId && profile?.user_id) {
@@ -395,24 +382,11 @@ export default function Agenda() {
         p_duration_minutes: selectedService?.duration_minutes || 45,
         p_price: selectedService?.price || 0,
         p_notes: data.notes,
+        p_telemedicine: Boolean(data.telemedicine),
       });
       if (error) {
         toastRpcError(toast, error, "Erro ao atualizar agendamento");
         return;
-      }
-
-      if (profile?.tenant_id) {
-        const { error: teleError } = await supabase
-          .from("appointments")
-          .update({
-            telemedicine: Boolean(data.telemedicine),
-            telemedicine_url: data.telemedicine ? undefined : null,
-          })
-          .eq("id", id)
-          .eq("tenant_id", profile.tenant_id);
-        if (teleError) {
-          logger.error("Error updating telemedicine flag after update:", teleError);
-        }
       }
 
       toast.success("Agendamento atualizado com sucesso!");
