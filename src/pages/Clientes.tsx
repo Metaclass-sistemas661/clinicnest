@@ -33,7 +33,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck } from "lucide-react";
+import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -965,11 +966,12 @@ export default function Clientes() {
               </div>
             ) : (
               <Tabs defaultValue="consumo" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 h-auto gap-1 p-1">
+                <TabsList className="grid w-full grid-cols-5 h-auto gap-1 p-1">
                   <TabsTrigger value="consumo" className="text-xs py-2"><DollarSign className="h-3 w-3 mr-1" />Consumo</TabsTrigger>
                   <TabsTrigger value="pacotes" className="text-xs py-2"><Package className="h-3 w-3 mr-1" />Pacotes</TabsTrigger>
                   <TabsTrigger value="timeline" className="text-xs py-2"><Clock className="h-3 w-3 mr-1" />Timeline</TabsTrigger>
                   <TabsTrigger value="cashback" className="text-xs py-2"><Gift className="h-3 w-3 mr-1" />Cashback</TabsTrigger>
+                  <TabsTrigger value="termos" className="text-xs py-2"><ShieldCheck className="h-3 w-3 mr-1" />Termos</TabsTrigger>
                 </TabsList>
 
                 {/* Tab: Consumo */}
@@ -1123,6 +1125,15 @@ export default function Clientes() {
                       ))}
                     </div>
                   )}
+                </TabsContent>
+
+                {/* Tab: Termos e Consentimentos */}
+                <TabsContent value="termos" className="mt-4">
+                  <PatientConsentsViewer
+                    clientId={detailClient.id}
+                    clientName={detailClient.name}
+                    tenantId={profile?.tenant_id ?? ""}
+                  />
                 </TabsContent>
               </Tabs>
             )}

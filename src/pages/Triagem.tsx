@@ -232,7 +232,7 @@ export default function Triagem() {
       const { error } = await supabase.from("triage_records").insert({
         tenant_id: profile!.tenant_id,
         client_id: formData.client_id,
-        appointment_id: formData.appointment_id || null,
+        appointment_id: formData.appointment_id && formData.appointment_id !== "none" ? formData.appointment_id : null,
         performed_by: profile!.id,
         priority: formData.priority,
         status: "pendente",
@@ -483,7 +483,7 @@ export default function Triagem() {
                     <Select value={formData.appointment_id} onValueChange={(v) => setFormData({ ...formData, appointment_id: v })}>
                       <SelectTrigger><SelectValue placeholder="Vincular a um agendamento" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem vínculo</SelectItem>
+                        <SelectItem value="none">Sem vínculo</SelectItem>
                         {appointments.filter((a) => a.client_id === formData.client_id).map((a) => (
                           <SelectItem key={a.id} value={a.id}>
                             {new Date(a.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {a.service_name}

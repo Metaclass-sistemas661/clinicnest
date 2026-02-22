@@ -570,3 +570,29 @@ export async function seedDefaultLoyaltyTiersV1(params: {
 }): Promise<{ data: null; error: unknown }> {
   return rpc<null>("seed_default_loyalty_tiers_v1", params as Record<string, unknown>);
 }
+
+// ─── Consent System ──────────────────────────────────────────────────────────
+
+export type UpsertConsentTemplateResult = { success: boolean; template_id: string };
+export async function upsertConsentTemplate(params: {
+  p_title: string;
+  p_slug: string;
+  p_body_html: string;
+  p_is_required?: boolean;
+  p_is_active?: boolean;
+  p_sort_order?: number;
+  p_template_id?: string | null;
+}): Promise<{ data: UpsertConsentTemplateResult | null; error: unknown }> {
+  return rpc<UpsertConsentTemplateResult>("upsert_consent_template", params as Record<string, unknown>);
+}
+
+export type SignConsentResult = { success: boolean; consent_id?: string; message?: string; template_title?: string };
+export async function signConsent(params: {
+  p_client_id: string;
+  p_template_id: string;
+  p_facial_photo_path?: string | null;
+  p_ip_address?: string | null;
+  p_user_agent?: string | null;
+}): Promise<{ data: SignConsentResult | null; error: unknown }> {
+  return rpc<SignConsentResult>("sign_consent", params as Record<string, unknown>);
+}

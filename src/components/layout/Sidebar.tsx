@@ -42,6 +42,7 @@ import {
   FileCode2,
   Building,
   Calculator,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -85,6 +86,7 @@ const navCategories: NavCategory[] = [
       { title: "Especialidades", href: "/especialidades", icon: HeartPulse, adminOnly: true },
       { title: "Convênios", href: "/convenios", icon: Building2, adminOnly: true },
       { title: "Modelos de Prontuário", href: "/modelos-prontuario", icon: FileCode2, adminOnly: true },
+      { title: "Termos e Consentimentos", href: "/termos-consentimento", icon: ShieldCheck, adminOnly: true },
     ],
   },
   {
@@ -166,6 +168,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
+  "/termos-consentimento": () => void import("@/pages/TermosConsentimento"),
   "/agendamento-online": () => void import("@/pages/AgendamentoOnlineAdmin"),
   "/fidelidade-cashback": () => void import("@/pages/FidelidadeCashbackAdmin"),
   "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),

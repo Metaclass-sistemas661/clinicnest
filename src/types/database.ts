@@ -69,6 +69,32 @@ export interface Client {
   updated_at: string;
 }
 
+export interface ConsentTemplate {
+  id: string;
+  tenant_id: string;
+  title: string;
+  slug: string;
+  body_html: string;
+  is_required: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PatientConsent {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  template_id: string;
+  patient_user_id: string;
+  signed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  facial_photo_path: string | null;
+  template_snapshot_html: string | null;
+}
+
 export interface Service {
   id: string;
   tenant_id: string;

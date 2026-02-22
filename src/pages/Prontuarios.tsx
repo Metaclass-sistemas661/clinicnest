@@ -191,6 +191,22 @@ export default function Prontuarios() {
         </Button>
       }
     >
+      {/* Busca + Filtro */}
+      <div className="mb-4 md:mb-6 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por paciente, diagnóstico ou CID..." className="pl-10" />
+        </div>
+        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+          <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Filtrar por paciente" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os pacientes</SelectItem>
+            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Fila de Atendimento */}
       {pendingTriages.length > 0 && (
         <div className="mb-6">
@@ -230,22 +246,6 @@ export default function Prontuarios() {
           </div>
         </div>
       )}
-
-      {/* Busca + Filtro */}
-      <div className="mb-4 md:mb-6 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por paciente, diagnóstico ou CID..." className="pl-10" />
-        </div>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-          <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Filtrar por paciente" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os pacientes</SelectItem>
-            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Lista de Prontuários */}
       {isLoading ? (

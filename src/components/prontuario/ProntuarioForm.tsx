@@ -50,7 +50,7 @@ export function ProntuarioForm({
   onSaved, onCancel,
 }: Props) {
   const [clientId, setClientId] = useState(initialClientId || "");
-  const [templateId, setTemplateId] = useState("");
+  const [templateId, setTemplateId] = useState("none");
   const [base, setBase] = useState(emptyBase);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [triage, setTriage] = useState<TriageData | null>(initialTriage || null);
@@ -72,7 +72,7 @@ export function ProntuarioForm({
   }, [initialClientId]);
 
   useEffect(() => {
-    if (templates.length > 0 && !templateId) {
+    if (templates.length > 0 && templateId === "none") {
       const def = templates.find((t) => t.is_default);
       if (def) setTemplateId(def.id);
     }
@@ -132,7 +132,7 @@ export function ProntuarioForm({
         client_id: clientId,
         appointment_id: initialAppointmentId || null,
         triage_id: triage?.id || null,
-        template_id: templateId || null,
+        template_id: templateId && templateId !== "none" ? templateId : null,
         chief_complaint: base.chief_complaint,
         anamnesis: base.anamnesis || null,
         physical_exam: base.physical_exam || null,
@@ -185,7 +185,7 @@ export function ProntuarioForm({
           <Select value={templateId} onValueChange={(v) => { setTemplateId(v); setCustomFields({}); }}>
             <SelectTrigger><SelectValue placeholder="Modelo padrão" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sem modelo (campos base)</SelectItem>
+              <SelectItem value="none">Sem modelo (campos base)</SelectItem>
               {templates.map((t) => (
                 <SelectItem key={t.id} value={t.id}>
                   {t.name}{t.is_default ? " (Padrão)" : ""}

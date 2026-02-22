@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PatientProtectedRoute } from "@/components/auth/PatientProtectedRoute";
+import { ConsentGate } from "@/components/consent/ConsentGate";
 import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { NewOnlineBookingListener } from "@/components/admin/NewOnlineBookingListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
@@ -82,6 +83,9 @@ const PatientTeleconsulta = lazyWithRetry(() => import("@/pages/paciente/Patient
 const PatientExames = lazyWithRetry(() => import("@/pages/paciente/PatientExames"));
 const PatientReceitas = lazyWithRetry(() => import("@/pages/paciente/PatientReceitas"));
 const PatientAtestados = lazyWithRetry(() => import("@/pages/paciente/PatientAtestados"));
+const PatientConsentSigning = lazyWithRetry(() => import("@/pages/paciente/PatientConsentSigning"));
+
+const TermosConsentimento = lazyWithRetry(() => import("@/pages/TermosConsentimento"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -506,16 +510,35 @@ const App = () => (
                 <Route path="/contas-receber" element={<Navigate to="/financeiro?tab=bills_receivable" replace />} />
                 <Route path="/fluxo-de-caixa" element={<Navigate to="/financeiro?tab=projection" replace />} />
 
+                <Route
+                  path="/termos-consentimento"
+                  element={
+                    <ProtectedRoute>
+                      <TermosConsentimento />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Portal do Paciente — rotas públicas */}
                 <Route path="/paciente/login" element={<PatientLogin />} />
                 <Route path="/paciente/cadastro" element={<Navigate to="/paciente/login" replace />} />
 
                 {/* Portal do Paciente — rotas protegidas */}
                 <Route
+                  path="/paciente/termos"
+                  element={
+                    <PatientProtectedRoute>
+                      <PatientConsentSigning />
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
                   path="/paciente/dashboard"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <ConsentGate>
+                        <PatientDashboard />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -523,7 +546,9 @@ const App = () => (
                   path="/paciente/consultas"
                   element={
                     <PatientProtectedRoute>
-                      <PatientConsultas />
+                      <ConsentGate>
+                        <PatientConsultas />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -531,7 +556,9 @@ const App = () => (
                   path="/paciente/teleconsulta"
                   element={
                     <PatientProtectedRoute>
-                      <PatientTeleconsulta />
+                      <ConsentGate>
+                        <PatientTeleconsulta />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -539,7 +566,9 @@ const App = () => (
                   path="/paciente/exames"
                   element={
                     <PatientProtectedRoute>
-                      <PatientExames />
+                      <ConsentGate>
+                        <PatientExames />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -547,7 +576,9 @@ const App = () => (
                   path="/paciente/receitas"
                   element={
                     <PatientProtectedRoute>
-                      <PatientReceitas />
+                      <ConsentGate>
+                        <PatientReceitas />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -555,7 +586,9 @@ const App = () => (
                   path="/paciente/atestados"
                   element={
                     <PatientProtectedRoute>
-                      <PatientAtestados />
+                      <ConsentGate>
+                        <PatientAtestados />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -563,7 +596,9 @@ const App = () => (
                   path="/paciente/perfil"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <ConsentGate>
+                        <PatientDashboard />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
@@ -571,7 +606,9 @@ const App = () => (
                   path="/paciente/configuracoes"
                   element={
                     <PatientProtectedRoute>
-                      <PatientDashboard />
+                      <ConsentGate>
+                        <PatientDashboard />
+                      </ConsentGate>
                     </PatientProtectedRoute>
                   }
                 />
