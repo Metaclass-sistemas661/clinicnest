@@ -173,7 +173,7 @@ export function ProntuarioForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Paciente *</Label>
-          <Select value={clientId} onValueChange={handleClientChange}>
+          <Select value={clientId || undefined} onValueChange={handleClientChange}>
             <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
             <SelectContent>
               {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}

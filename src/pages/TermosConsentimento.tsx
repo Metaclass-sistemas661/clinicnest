@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { upsertConsentTemplate } from "@/lib/supabase-typed-rpc";
-import { toastRpcError } from "@/lib/rpc-errors";
+import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import type { ConsentTemplate } from "@/types/database";
 import {

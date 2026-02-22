@@ -79,7 +79,7 @@ export function DynamicFieldsRenderer({ fields, values, onChange }: Props) {
               )}
               {f.type === "select" && (
                 <Select
-                  value={(values[f.name] as string) ?? ""}
+                  value={(values[f.name] as string) || undefined}
                   onValueChange={(v) => set(f.name, v)}
                 >
                   <SelectTrigger>
