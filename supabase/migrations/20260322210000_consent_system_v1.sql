@@ -25,23 +25,17 @@ CREATE POLICY "Tenant members can read consent templates"
   ON public.consent_templates FOR SELECT
   TO authenticated
   USING (
-    tenant_id IN (SELECT p.tenant_id FROM public.profiles p WHERE p.user_id = auth.uid())
+    tenant_id = public.get_user_tenant_id(auth.uid())
   );
 
 CREATE POLICY "Admins can manage consent templates"
   ON public.consent_templates FOR ALL
   TO authenticated
   USING (
-    tenant_id IN (
-      SELECT p.tenant_id FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_tenant_admin(auth.uid(), tenant_id)
   )
   WITH CHECK (
-    tenant_id IN (
-      SELECT p.tenant_id FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_tenant_admin(auth.uid(), tenant_id)
   );
 
 -- 2) Tabela de aceites do paciente (assinaturas digitais)
@@ -78,7 +72,7 @@ CREATE POLICY "Tenant staff can read patient consents"
   ON public.patient_consents FOR SELECT
   TO authenticated
   USING (
-    tenant_id IN (SELECT p.tenant_id FROM public.profiles p WHERE p.user_id = auth.uid())
+    tenant_id = public.get_user_tenant_id(auth.uid())
   );
 
 -- 3) Storage bucket para fotos faciais das assinaturas
@@ -228,7 +222,7 @@ BEGIN
   END IF;
 
   SELECT * INTO v_profile FROM public.profiles p WHERE p.user_id = v_user_id LIMIT 1;
-  IF NOT FOUND OR v_profile.role != 'admin' THEN
+  IF NOT FOUND OR NOT public.is_tenant_admin(v_user_id, v_profile.tenant_id) THEN
     PERFORM public.raise_app_error('FORBIDDEN', 'Apenas administradores podem gerenciar termos');
   END IF;
 
