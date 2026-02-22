@@ -202,18 +202,18 @@ export default function Triagem() {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, client_id, start_time, clients(name), services(name)")
+        .select("id, client_id, scheduled_at, clients(name), services(name)")
         .eq("tenant_id", profile.tenant_id)
-        .gte("start_time", `${today}T00:00:00`)
-        .lte("start_time", `${today}T23:59:59`)
-        .order("start_time");
+        .gte("scheduled_at", `${today}T00:00:00`)
+        .lte("scheduled_at", `${today}T23:59:59`)
+        .order("scheduled_at");
       if (error) throw error;
       setAppointments(
         (data || []).map((a: any) => ({
           id: a.id,
           client_id: a.client_id,
           client_name: a.clients?.name ?? "—",
-          scheduled_at: a.start_time,
+          scheduled_at: a.scheduled_at,
           service_name: a.services?.name ?? "Consulta",
         }))
       );
