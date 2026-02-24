@@ -240,11 +240,18 @@ export function useReports() {
 
       // Atualizar contador do relatório salvo
       if (savedReportId) {
+        // Primeiro buscar o run_count atual
+        const { data: currentReport } = await supabase
+          .from('user_saved_reports')
+          .select('run_count')
+          .eq('id', savedReportId)
+          .single();
+        
         await supabase
           .from('user_saved_reports')
           .update({ 
             last_run_at: new Date().toISOString(),
-            run_count: supabase.rpc('increment_run_count', { report_id: savedReportId })
+            run_count: (currentReport?.run_count || 0) + 1
           })
           .eq('id', savedReportId);
       }
