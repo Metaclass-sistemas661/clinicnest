@@ -547,10 +547,10 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Serviço (opcional)</Label>
-              <Select value={simServiceId} onValueChange={setSimServiceId}>
+              <Select value={simServiceId || "__any__"} onValueChange={(v) => setSimServiceId(v === "__any__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Qualquer serviço" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Qualquer serviço</SelectItem>
+                  <SelectItem value="__any__">Qualquer serviço</SelectItem>
                   {services.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
@@ -560,10 +560,10 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
 
             <div className="space-y-2">
               <Label>Convênio (opcional)</Label>
-              <Select value={simInsuranceId} onValueChange={setSimInsuranceId}>
+              <Select value={simInsuranceId || "__particular__"} onValueChange={(v) => setSimInsuranceId(v === "__particular__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Particular" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Particular</SelectItem>
+                  <SelectItem value="__particular__">Particular</SelectItem>
                   {insurances.map(i => (
                     <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
                   ))}

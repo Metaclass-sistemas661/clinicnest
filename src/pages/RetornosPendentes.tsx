@@ -188,12 +188,12 @@ export default function RetornosPendentes() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter || "__all__"} onValueChange={(v) => setStatusFilter(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all__">Todos</SelectItem>
                   <SelectItem value="pending">Pendentes</SelectItem>
                   <SelectItem value="notified">Notificados</SelectItem>
                   <SelectItem value="scheduled">Agendados</SelectItem>
@@ -202,12 +202,12 @@ export default function RetornosPendentes() {
                 </SelectContent>
               </Select>
 
-              <Select value={professionalFilter} onValueChange={setProfessionalFilter}>
+              <Select value={professionalFilter || "__all__"} onValueChange={(v) => setProfessionalFilter(v === "__all__" ? "" : v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Profissional" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all__">Todos</SelectItem>
                   {professionals?.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}

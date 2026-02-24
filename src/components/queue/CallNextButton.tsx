@@ -150,12 +150,12 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
           {/* Seleção de sala */}
           <div className="space-y-2">
             <Label>Sala/Consultório</Label>
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+            <Select value={selectedRoom || "__any__"} onValueChange={(v) => setSelectedRoom(v === "__any__" ? "" : v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a sala (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Qualquer sala</SelectItem>
+                <SelectItem value="__any__">Qualquer sala</SelectItem>
                 {rooms?.filter(r => r.is_active).map((room) => (
                   <SelectItem key={room.id} value={room.id}>
                     {room.name}

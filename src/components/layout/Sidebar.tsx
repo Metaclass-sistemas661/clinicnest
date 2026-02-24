@@ -235,6 +235,7 @@ const navCategories: NavCategory[] = [
       { title: "Procedimentos", href: "/servicos", icon: Stethoscope, resource: "especialidades" },
       { title: "Especialidades", href: "/especialidades", icon: HeartPulse, resource: "especialidades", requiredFeature: "specialties" },
       { title: "Modelos Prontuário", href: "/modelos-prontuario", icon: FileCode2, resource: "modelos_prontuario", requiredFeature: "recordTemplates" },
+      { title: "Templates de Termos", href: "/termos-consentimento", icon: FileSignature, resource: "contratos_termos", requiredFeature: "contracts" },
       { title: "Integrações", href: "/integracoes", icon: Plug, resource: "integracoes", requiredFeature: "integrations" },
       { title: "API Pública", href: "/api-docs", icon: Code2, resource: "api_docs", requiredFeature: "apiAccess" },
       { title: "Compliance & LGPD", href: "/compliance", icon: ShieldCheck, resource: "auditoria", requiredFeature: "compliance" },

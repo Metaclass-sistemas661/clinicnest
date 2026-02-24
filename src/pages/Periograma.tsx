@@ -321,7 +321,7 @@ export default function Periograma() {
 }
 
 // Sub-componentes serão adicionados abaixo
-function PeriogramHeader({ clientSearch, setClientSearch, clients, selectedClient, onSelectClient, onSave, isSaving, isViewingOld, hasData }: any) {
+function PeriogramHeader({ clientSearch, setClientSearch, clients, selectedClient, onSelectClient, onSave, isSaving, isViewingOld, hasData, onExportPdf }: any) {
   return (
     <Card className="mb-6">
       <CardContent className="pt-5">
