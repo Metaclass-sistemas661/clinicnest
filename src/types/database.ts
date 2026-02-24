@@ -135,6 +135,10 @@ export interface ConsentTemplate {
   is_required: boolean;
   is_active: boolean;
   sort_order: number;
+  template_type: "html" | "pdf";
+  pdf_storage_path: string | null;
+  pdf_original_filename: string | null;
+  pdf_file_size: number | null;
   created_at: string;
   updated_at: string;
 }

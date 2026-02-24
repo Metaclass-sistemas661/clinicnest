@@ -585,6 +585,10 @@ export async function upsertConsentTemplate(params: {
   p_is_active?: boolean;
   p_sort_order?: number;
   p_template_id?: string | null;
+  p_template_type?: "html" | "pdf";
+  p_pdf_storage_path?: string | null;
+  p_pdf_original_filename?: string | null;
+  p_pdf_file_size?: number | null;
 }): Promise<{ data: UpsertConsentTemplateResult | null; error: unknown }> {
   return rpc<UpsertConsentTemplateResult>("upsert_consent_template", params as Record<string, unknown>);
 }
