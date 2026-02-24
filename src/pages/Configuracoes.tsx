@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -15,109 +14,20 @@ import {
   Loader2,
   Building,
   Save,
-  ShieldCheck,
-  History,
-  Archive,
-  Download,
-  ShieldAlert,
-  MessageCircle,
+  Trophy,
+  Sliders,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
-import { GamificationSettings } from "@/components/settings/GamificationSettings";
-
-type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
-type LgpdRequestType =
-  | "access"
-  | "correction"
-  | "deletion"
-  | "portability"
-  | "consent_revocation"
-  | "opposition";
-
-interface LgpdDataRequest {
-  id: string;
-  requester_user_id: string;
-  requester_email: string | null;
-  request_type: LgpdRequestType;
-  request_details: string | null;
-  status: LgpdRequestStatus;
-  assigned_admin_user_id: string | null;
-  resolution_notes: string | null;
-  requested_at: string;
-  due_at: string;
-  sla_days: number;
-  resolved_at: string | null;
-}
-
-interface LgpdRetentionPolicy {
-  tenant_id: string;
-  client_data_retention_days: number;
-  financial_data_retention_days: number;
-  audit_log_retention_days: number;
-  auto_cleanup_enabled: boolean;
-  last_reviewed_at: string | null;
-}
-
-interface AdminAuditLog {
-  id: string;
-  actor_user_id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-}
-
-interface LgpdAnonymizationPreview {
-  target_user_id: string;
-  target_profile_id: string;
-  confirmation_token: string;
-  warnings: string[];
-  summary: Record<string, number>;
-}
-
-const lgpdRequestTypeLabel: Record<LgpdRequestType, string> = {
-  access: "Acesso aos dados",
-  correction: "Correção de dados",
-  deletion: "Eliminação de dados",
-  portability: "Portabilidade",
-  consent_revocation: "Revogação de consentimento",
-  opposition: "Oposição ao tratamento",
-};
-
-const lgpdStatusLabel: Record<LgpdRequestStatus, string> = {
-  pending: "Pendente",
-  in_progress: "Em andamento",
-  completed: "Concluída",
-  rejected: "Rejeitada",
-};
-
-const auditActionLabel: Record<string, string> = {
-  tenant_settings_updated: "Dados da clínica atualizados",
-  lgpd_retention_policy_updated: "Política de retenção LGPD atualizada",
-  lgpd_request_status_updated: "Status da solicitação LGPD atualizado",
-  lgpd_data_exported: "Exportação de dados do titular",
-  lgpd_anonymization_executed: "Anonimização de dados executada",
-};
-
-const auditEntityLabel: Record<string, string> = {
-  tenants: "Clínica",
-  lgpd_retention_policies: "Política de retenção",
-  lgpd_data_requests: "Solicitação LGPD",
-  profiles: "Titular",
-};
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
   const location = useLocation();
   const { enabled: simpleModeEnabled, set: setSimpleModeEnabled } = useSimpleMode(tenant?.id);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSavingRetention, setIsSavingRetention] = useState(false);
-  const [isUpdatingRequests, setIsUpdatingRequests] = useState(false);
-  const [isLoadingGovernance, setIsLoadingGovernance] = useState(false);
+  const [isSavingGamification, setIsSavingGamification] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -125,34 +35,9 @@ export default function Configuracoes() {
     email: "",
     address: "",
     billingCpfCnpj: "",
-    whatsappApiUrl: "",
-    whatsappApiKey: "",
-    whatsappInstance: "",
   });
-  const [lgpdRequests, setLgpdRequests] = useState<LgpdDataRequest[]>([]);
-  const [requestDrafts, setRequestDrafts] = useState<
-    Record<string, { status: LgpdRequestStatus; resolution_notes: string }>
-  >({});
-  const [retentionPolicy, setRetentionPolicy] = useState<LgpdRetentionPolicy>({
-    tenant_id: "",
-    client_data_retention_days: 1825,
-    financial_data_retention_days: 3650,
-    audit_log_retention_days: 730,
-    auto_cleanup_enabled: false,
-    last_reviewed_at: null,
-  });
-  const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([]);
-  const [actorNameByUserId, setActorNameByUserId] = useState<Record<string, string>>({});
 
-  const [exportingRequestKey, setExportingRequestKey] = useState<string | null>(null);
-  const [previewingRequestId, setPreviewingRequestId] = useState<string | null>(null);
-  const [executingAnonymizationRequestId, setExecutingAnonymizationRequestId] = useState<string | null>(null);
-  const [anonymizationPreviewByRequestId, setAnonymizationPreviewByRequestId] = useState<
-    Record<string, LgpdAnonymizationPreview>
-  >({});
-  const [anonymizationConfirmationByRequestId, setAnonymizationConfirmationByRequestId] = useState<
-    Record<string, string>
-  >({});
+  const [tenantGamificationEnabled, setTenantGamificationEnabled] = useState(true);
 
   useEffect(() => {
     if (tenant) {
@@ -162,15 +47,10 @@ export default function Configuracoes() {
         email: tenant.email || "",
         address: tenant.address || "",
         billingCpfCnpj: tenant.billing_cpf_cnpj || "",
-        whatsappApiUrl: (tenant as any).whatsapp_api_url || "",
-        whatsappApiKey: (tenant as any).whatsapp_api_key || "",
-        whatsappInstance: (tenant as any).whatsapp_instance || "",
       });
+      setTenantGamificationEnabled(tenant.gamification_enabled ?? true);
     }
   }, [tenant]);
-
-  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
-  const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
 
   useEffect(() => {
     const state = location.state as any;
@@ -178,205 +58,6 @@ export default function Configuracoes() {
       toast.error("Para continuar, informe o CPF/CNPJ em Configurações.");
     }
   }, [location.state]);
-
-  const getStatusBadgeVariant = (status: LgpdRequestStatus): "secondary" | "default" | "destructive" => {
-    if (status === "completed") return "default";
-    if (status === "rejected") return "destructive";
-    return "secondary";
-  };
-
-  const getAuthHeaders = async () => {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    const token = data.session?.access_token;
-    if (!token) {
-      throw new Error("Sessão ausente. Faça login novamente.");
-    }
-    return { Authorization: `Bearer ${token}` };
-  };
-
-  const handleTestWhatsapp = async () => {
-    if (!tenant?.id) return;
-    if (!whatsappTestPhone.trim()) {
-      toast.error("Informe um telefone para teste");
-      return;
-    }
-
-    setIsTestingWhatsapp(true);
-    try {
-      const headers = await getAuthHeaders();
-      const { data, error } = await supabase.functions.invoke("whatsapp-sender", {
-        headers,
-        body: {
-          phone: whatsappTestPhone.trim(),
-          message: "Teste de conexão WhatsApp - ClinicNest",
-          tenant_id: tenant.id,
-        },
-      });
-
-      if (error) {
-        toast.error(error.message || "Falha ao testar conexão");
-        return;
-      }
-
-      if (!data?.success) {
-        toast.error(data?.error || "Falha ao testar conexão");
-        return;
-      }
-
-      toast.success("Mensagem de teste enviada!");
-    } catch (err) {
-      logger.error("[Configuracoes] test whatsapp error", err);
-      toast.error("Erro ao testar WhatsApp");
-    } finally {
-      setIsTestingWhatsapp(false);
-    }
-  };
-
-  const getActionLabel = (action: string) => auditActionLabel[action] || action;
-
-  const getEntityLabel = (entityType: string) => auditEntityLabel[entityType] || entityType;
-
-  const formatDaysAsYearsAndDays = (days: unknown): string => {
-    if (typeof days !== "number" || Number.isNaN(days) || days <= 0) return "—";
-    if (days < 365) return `${days} dias`;
-    const years = Math.floor(days / 365);
-    const remainingDays = days % 365;
-    const yearsLabel = years === 1 ? "ano" : "anos";
-    if (remainingDays === 0) return `${years} ${yearsLabel} (${days} dias)`;
-    return `${years} ${yearsLabel} e ${remainingDays} dias (${days} dias)`;
-  };
-
-  const getAuditMetadataItems = (log: AdminAuditLog): Array<{ label: string; value: string }> => {
-    const metadata = log.metadata;
-    if (!metadata || typeof metadata !== "object") return [];
-
-    if (log.action === "lgpd_retention_policy_updated") {
-      const autoCleanup = metadata.auto_cleanup_enabled === true ? "Ativado" : "Desativado";
-      const clientDays = metadata.client_data_retention_days;
-      const financialDays = metadata.financial_data_retention_days;
-      const auditDays = metadata.audit_log_retention_days;
-
-      return [
-        { label: "Limpeza automática", value: autoCleanup },
-        {
-          label: "Retenção de pacientes",
-          value: formatDaysAsYearsAndDays(clientDays),
-        },
-        {
-          label: "Retenção financeira",
-          value: formatDaysAsYearsAndDays(financialDays),
-        },
-        {
-          label: "Retenção da trilha",
-          value: formatDaysAsYearsAndDays(auditDays),
-        },
-      ];
-    }
-
-    if (log.action === "tenant_settings_updated") {
-      return [
-        { label: "Nome", value: String(metadata.name || "—") },
-        { label: "E-mail", value: String(metadata.email || "—") },
-        { label: "Telefone", value: String(metadata.phone || "—") },
-      ];
-    }
-
-    if (log.action === "lgpd_request_status_updated") {
-      const status = String(metadata.status || "");
-      return [{ label: "Novo status", value: lgpdStatusLabel[status as LgpdRequestStatus] || status || "—" }];
-    }
-
-    if (log.action === "lgpd_data_exported") {
-      return [
-        { label: "Formato", value: String(metadata.requested_format || "—").toUpperCase() },
-        { label: "Titular", value: String(metadata.target_user_id || "—") },
-      ];
-    }
-
-    if (log.action === "lgpd_anonymization_executed") {
-      const rows = Object.entries(metadata)
-        .filter(([, value]) => typeof value === "number")
-        .map(([key, value]) => ({ label: key, value: String(value) }));
-      return rows.length > 0 ? rows : [{ label: "Execução", value: "Concluída" }];
-    }
-
-    return Object.entries(metadata).slice(0, 6).map(([key, value]) => ({
-      label: key,
-      value:
-        typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-          ? String(value)
-          : JSON.stringify(value),
-    }));
-  };
-
-  const getSlaInfo = (request: LgpdDataRequest): {
-    label: string;
-    variant: "default" | "secondary" | "destructive";
-  } => {
-    if (request.status === "completed" || request.status === "rejected") {
-      return { label: "Encerrada", variant: "default" };
-    }
-
-    const dueAtMs = new Date(request.due_at).getTime();
-    const nowMs = Date.now();
-    const daysRemaining = Math.ceil((dueAtMs - nowMs) / (1000 * 60 * 60 * 24));
-
-    if (daysRemaining < 0) {
-      return { label: `Atrasada (${Math.abs(daysRemaining)} dia(s))`, variant: "destructive" };
-    }
-    if (daysRemaining <= 3) {
-      return { label: `Prazo crítico (${daysRemaining} dia(s))`, variant: "secondary" };
-    }
-    return { label: `No prazo (${daysRemaining} dia(s))`, variant: "default" };
-  };
-
-  const sanitizeFilePart = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_");
-
-  const downloadTextFile = (filename: string, content: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const csvEscape = (value: unknown): string => {
-    if (value === null || value === undefined) return "";
-    const raw =
-      typeof value === "string"
-        ? value
-        : typeof value === "number" || typeof value === "boolean"
-          ? String(value)
-          : JSON.stringify(value);
-    return `"${raw.replace(/"/g, '""')}"`;
-  };
-
-  const toCsv = (rows: Record<string, unknown>[]): string => {
-    if (!rows.length) return "";
-    const headers = Array.from(
-      rows.reduce((set, row) => {
-        Object.keys(row).forEach((key) => set.add(key));
-        return set;
-      }, new Set<string>())
-    );
-    if (!headers.length) return "";
-    const headerLine = headers.map(csvEscape).join(",");
-    const lines = rows.map((row) => headers.map((h) => csvEscape(row[h])).join(","));
-    return [headerLine, ...lines].join("\n");
-  };
-
-  const normalizeDatasetRows = (dataset: unknown): Record<string, unknown>[] => {
-    if (Array.isArray(dataset)) {
-      return dataset.filter((item) => item && typeof item === "object") as Record<string, unknown>[];
-    }
-    if (dataset && typeof dataset === "object" && !Array.isArray(dataset)) {
-      return [dataset as Record<string, unknown>];
-    }
-    return [];
-  };
 
   const writeAuditLog = async (
     action: string,
@@ -397,89 +78,6 @@ export default function Configuracoes() {
     }
   };
 
-  const fetchGovernanceData = async () => {
-    if (!tenant?.id || !isAdmin) return;
-    setIsLoadingGovernance(true);
-
-    try {
-      const [requestsRes, retentionRes, logsRes] = await Promise.all([
-        supabase
-          .from("lgpd_data_requests")
-          .select(
-            "id, requester_user_id, requester_email, request_type, request_details, status, assigned_admin_user_id, resolution_notes, requested_at, due_at, sla_days, resolved_at"
-          )
-          .eq("tenant_id", tenant.id)
-          .order("requested_at", { ascending: false })
-          .limit(50),
-        supabase
-          .from("lgpd_retention_policies")
-          .select(
-            "tenant_id, client_data_retention_days, financial_data_retention_days, audit_log_retention_days, auto_cleanup_enabled, last_reviewed_at"
-          )
-          .eq("tenant_id", tenant.id)
-          .maybeSingle(),
-        supabase
-          .from("admin_audit_logs")
-          .select("id, actor_user_id, action, entity_type, entity_id, metadata, created_at")
-          .eq("tenant_id", tenant.id)
-          .order("created_at", { ascending: false })
-          .limit(40),
-      ]);
-
-      if (requestsRes.error) throw requestsRes.error;
-      if (retentionRes.error) throw retentionRes.error;
-      if (logsRes.error) throw logsRes.error;
-
-      const requestData = (requestsRes.data || []) as LgpdDataRequest[];
-      setLgpdRequests(requestData);
-      setRequestDrafts(
-        Object.fromEntries(
-          requestData.map((request) => [
-            request.id,
-            {
-              status: request.status,
-              resolution_notes: request.resolution_notes || "",
-            },
-          ])
-        )
-      );
-
-      if (retentionRes.data) {
-        setRetentionPolicy(retentionRes.data as LgpdRetentionPolicy);
-      } else {
-        setRetentionPolicy((prev) => ({ ...prev, tenant_id: tenant.id }));
-      }
-
-      const logData = (logsRes.data || []) as AdminAuditLog[];
-      setAuditLogs(logData);
-
-      const actorIds = [...new Set(logData.map((log) => log.actor_user_id).filter(Boolean))];
-      if (actorIds.length > 0) {
-        const { data: profilesRes, error: profilesError } = await supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", actorIds);
-        if (profilesError) throw profilesError;
-        setActorNameByUserId(
-          Object.fromEntries((profilesRes || []).map((p) => [p.user_id, p.full_name || "Administrador"]))
-        );
-      } else {
-        setActorNameByUserId({});
-      }
-    } catch (e) {
-      logger.error(e);
-      toast.error("Erro ao carregar dados de governança LGPD");
-    } finally {
-      setIsLoadingGovernance(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tenant?.id && isAdmin) {
-      fetchGovernanceData();
-    }
-  }, [tenant?.id, isAdmin]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id) return;
@@ -495,9 +93,6 @@ export default function Configuracoes() {
           email: formData.email || null,
           address: formData.address || null,
           billing_cpf_cnpj: formData.billingCpfCnpj || null,
-          whatsapp_api_url: formData.whatsappApiUrl.trim() || null,
-          whatsapp_api_key: formData.whatsappApiKey.trim() || null,
-          whatsapp_instance: formData.whatsappInstance.trim() || null,
         })
         .eq("id", tenant.id);
 
@@ -508,8 +103,6 @@ export default function Configuracoes() {
         email: formData.email || null,
         phone: formData.phone || null,
         billing_cpf_cnpj: formData.billingCpfCnpj || null,
-        whatsapp_api_url: formData.whatsappApiUrl.trim() || null,
-        whatsapp_instance: formData.whatsappInstance.trim() || null,
       });
 
       toast.success("Configurações salvas com sucesso!");
@@ -522,192 +115,25 @@ export default function Configuracoes() {
     }
   };
 
-  const handleSaveRetentionPolicy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tenant?.id || !user?.id) return;
+  const handleSaveGamification = async () => {
+    if (!tenant?.id) return;
 
-    setIsSavingRetention(true);
+    setIsSavingGamification(true);
     try {
-      const payload = {
-        tenant_id: tenant.id,
-        client_data_retention_days: retentionPolicy.client_data_retention_days,
-        financial_data_retention_days: retentionPolicy.financial_data_retention_days,
-        audit_log_retention_days: retentionPolicy.audit_log_retention_days,
-        auto_cleanup_enabled: retentionPolicy.auto_cleanup_enabled,
-        last_reviewed_at: new Date().toISOString(),
-        created_by: user.id,
-      };
-
       const { error } = await supabase
-        .from("lgpd_retention_policies")
-        .upsert(payload, { onConflict: "tenant_id" });
+        .from("tenants")
+        .update({ gamification_enabled: tenantGamificationEnabled })
+        .eq("id", tenant.id);
 
       if (error) throw error;
 
-      await writeAuditLog("lgpd_retention_policy_updated", "lgpd_retention_policies", tenant.id, {
-        client_data_retention_days: payload.client_data_retention_days,
-        financial_data_retention_days: payload.financial_data_retention_days,
-        audit_log_retention_days: payload.audit_log_retention_days,
-        auto_cleanup_enabled: payload.auto_cleanup_enabled,
-      });
-
-      toast.success("Política de retenção LGPD salva");
-      await fetchGovernanceData();
-    } catch (e) {
-      logger.error(e);
-      toast.error("Erro ao salvar política de retenção");
+      toast.success("Configuração de gamificação salva");
+      refreshProfile();
+    } catch (err) {
+      logger.error("Error saving tenant gamification setting:", err);
+      toast.error("Erro ao salvar configuração");
     } finally {
-      setIsSavingRetention(false);
-    }
-  };
-
-  const handleUpdateRequest = async (requestId: string) => {
-    if (!tenant?.id || !user?.id) return;
-
-    const draft = requestDrafts[requestId];
-    if (!draft) return;
-
-    setIsUpdatingRequests(true);
-    try {
-      const willBeResolved = draft.status === "completed" || draft.status === "rejected";
-
-      const { error } = await supabase
-        .from("lgpd_data_requests")
-        .update({
-          status: draft.status,
-          resolution_notes: draft.resolution_notes.trim() || null,
-          assigned_admin_user_id: user.id,
-          resolved_at: willBeResolved ? new Date().toISOString() : null,
-        })
-        .eq("id", requestId)
-        .eq("tenant_id", tenant.id);
-
-      if (error) throw error;
-
-      await writeAuditLog("lgpd_request_status_updated", "lgpd_data_requests", requestId, {
-        status: draft.status,
-      });
-
-      toast.success("Solicitação LGPD atualizada");
-      await fetchGovernanceData();
-    } catch (e) {
-      logger.error(e);
-      toast.error("Erro ao atualizar solicitação LGPD");
-    } finally {
-      setIsUpdatingRequests(false);
-    }
-  };
-
-  const handleExportSubjectData = async (
-    request: LgpdDataRequest,
-    format: "json" | "csv"
-  ) => {
-    if (!tenant?.id) return;
-
-    const loadingKey = `${request.id}:${format}`;
-    setExportingRequestKey(loadingKey);
-    try {
-      const { data, error } = await supabase.rpc("export_lgpd_data_subject", {
-        p_tenant_id: tenant.id,
-        p_target_user_id: request.requester_user_id,
-        p_format: format,
-      });
-
-      if (error) throw error;
-
-      const safeBase = sanitizeFilePart(
-        `lgpd-${request.requester_email || request.requester_user_id}-${new Date().toISOString().slice(0, 10)}`
-      );
-
-      if (format === "json") {
-        downloadTextFile(
-          `${safeBase}.json`,
-          JSON.stringify(data, null, 2),
-          "application/json;charset=utf-8"
-        );
-      } else {
-        const payload = (data || {}) as Record<string, unknown>;
-        const datasets = ((payload.datasets || {}) as Record<string, unknown>) ?? {};
-        const sections: string[] = [];
-
-        for (const [datasetName, rawDataset] of Object.entries(datasets)) {
-          const rows = normalizeDatasetRows(rawDataset);
-          const csv = toCsv(rows);
-          if (csv) {
-            sections.push(`# ${datasetName}\n${csv}`);
-          }
-        }
-
-        if (!sections.length) {
-          throw new Error("Nenhum dado disponível para CSV.");
-        }
-
-        downloadTextFile(`${safeBase}.csv`, sections.join("\n\n"), "text/csv;charset=utf-8");
-      }
-
-      toast.success(`Exportação ${format.toUpperCase()} concluída`);
-    } catch (e) {
-      logger.error(e);
-      toast.error(`Erro ao exportar dados em ${format.toUpperCase()}`);
-    } finally {
-      setExportingRequestKey(null);
-    }
-  };
-
-  const handlePreviewAnonymization = async (request: LgpdDataRequest) => {
-    if (!tenant?.id) return;
-
-    setPreviewingRequestId(request.id);
-    try {
-      const { data, error } = await supabase.rpc("preview_lgpd_anonymization", {
-        p_tenant_id: tenant.id,
-        p_target_user_id: request.requester_user_id,
-      });
-      if (error) throw error;
-
-      setAnonymizationPreviewByRequestId((prev) => ({
-        ...prev,
-        [request.id]: data as unknown as LgpdAnonymizationPreview,
-      }));
-      setAnonymizationConfirmationByRequestId((prev) => ({
-        ...prev,
-        [request.id]: "",
-      }));
-      toast.success("Prévia de anonimização gerada");
-    } catch (e) {
-      logger.error(e);
-      toast.error("Erro ao gerar prévia de anonimização");
-    } finally {
-      setPreviewingRequestId(null);
-    }
-  };
-
-  const handleExecuteAnonymization = async (request: LgpdDataRequest) => {
-    if (!tenant?.id) return;
-
-    const confirmation = anonymizationConfirmationByRequestId[request.id]?.trim() || "";
-    if (!confirmation) {
-      toast.error("Digite o token de confirmação da anonimização");
-      return;
-    }
-
-    setExecutingAnonymizationRequestId(request.id);
-    try {
-      const { error } = await supabase.rpc("execute_lgpd_anonymization", {
-        p_tenant_id: tenant.id,
-        p_target_user_id: request.requester_user_id,
-        p_confirmation_token: confirmation,
-        p_request_id: request.id,
-      });
-      if (error) throw error;
-
-      toast.success("Anonimização executada com sucesso");
-      await fetchGovernanceData();
-    } catch (e) {
-      logger.error(e);
-      toast.error("Erro ao executar anonimização");
-    } finally {
-      setExecutingAnonymizationRequestId(null);
+      setIsSavingGamification(false);
     }
   };
 
@@ -729,170 +155,202 @@ export default function Configuracoes() {
   return (
     <MainLayout
       title="Configurações"
-      subtitle="Dados da clínica e governança LGPD"
+      subtitle="Dados da clínica e preferências do sistema"
     >
-      <div className="grid w-full gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Building className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>Dados da Clínica</CardTitle>
-                <CardDescription>Informações básicas do estabelecimento</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label>Nome da Clínica</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome da sua clínica"
-                  required
-                  data-tour="settings-salon-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CPF/CNPJ (faturamento)</Label>
-                <Input
-                  value={formData.billingCpfCnpj}
-                  onChange={(e) => setFormData({ ...formData, billingCpfCnpj: e.target.value })}
-                  placeholder="Somente números"
-                  inputMode="numeric"
-                  required
-                  data-tour="settings-billing-cpf-cnpj"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="(11) 99999-9999"
-                    data-tour="settings-salon-phone"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email ?? ""}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="contato@salao.com"
-                  />
-                </div>
-              </div>
+      <Tabs defaultValue="clinica" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="clinica" className="gap-2">
+            <Building className="h-4 w-4" />
+            Clínica
+          </TabsTrigger>
+          <TabsTrigger value="preferencias" className="gap-2">
+            <Sliders className="h-4 w-4" />
+            Preferências
+          </TabsTrigger>
+        </TabsList>
 
-              <div className="rounded-lg border border-border/70 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Interface</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Ajuste a experiência para um modo mais simples e direto.
-                    </p>
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 1 — Dados da Clínica
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="clinica">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Building className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Dados da Clínica</CardTitle>
+                  <CardDescription>Informações básicas do estabelecimento</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Nome da Clínica</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Nome da sua clínica"
+                      required
+                      data-tour="settings-salon-name"
+                    />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor="simple-mode" className="cursor-pointer text-sm">
-                      Interface simplificada
-                    </Label>
-                    <Switch
-                      id="simple-mode"
-                      checked={simpleModeEnabled}
-                      onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
+
+                  <div className="space-y-2">
+                    <Label>CPF/CNPJ (faturamento)</Label>
+                    <Input
+                      value={formData.billingCpfCnpj}
+                      onChange={(e) => setFormData({ ...formData, billingCpfCnpj: e.target.value })}
+                      placeholder="Somente números"
+                      inputMode="numeric"
+                      required
+                      data-tour="settings-billing-cpf-cnpj"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="(11) 99999-9999"
+                      data-tour="settings-salon-phone"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={formData.email ?? ""}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="contato@clinica.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Endereço</Label>
+                    <Input
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Rua, número, bairro, cidade"
+                      data-tour="settings-salon-address"
                     />
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Oculta seções avançadas e reduz opções para uso mais rápido.
+
+                <p className="text-xs text-muted-foreground">
+                  A comissão de cada profissional é definida na aba Equipe (percentual ou valor fixo por atendimento).
+                </p>
+
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="gradient-primary text-primary-foreground"
+                  data-tour="settings-save"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Salvar Alterações
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 2 — Preferências
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="preferencias" className="space-y-6">
+          {/* Interface */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+                  <Sliders className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Interface</CardTitle>
+                  <CardDescription>Ajuste a experiência de uso do sistema</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between rounded-lg border border-border/70 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="simple-mode" className="cursor-pointer font-medium">
+                    Interface simplificada
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Oculta seções avançadas e reduz opções para uso mais rápido
+                  </p>
+                </div>
+                <Switch
+                  id="simple-mode"
+                  checked={simpleModeEnabled}
+                  onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Gamificação */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Gamificação</CardTitle>
+                  <CardDescription>
+                    Controle os pop-ups de comissão e metas para toda a clínica
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-border/70 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="tenant-gamification" className="cursor-pointer font-medium">
+                    Habilitar pop-ups de gamificação
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Exibe pop-ups de comissão, metas e lucro após cada atendimento concluído
+                  </p>
+                </div>
+                <Switch
+                  id="tenant-gamification"
+                  checked={tenantGamificationEnabled}
+                  onCheckedChange={setTenantGamificationEnabled}
+                />
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Nota:</strong> Quando desativado, nenhum profissional da clínica verá os pop-ups 
+                  de gamificação, independente das preferências individuais.
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Rua, número, bairro, cidade"
-                  data-tour="settings-salon-address"
-                />
-              </div>
 
-              <div className="rounded-lg border border-border/70 p-4 space-y-4">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">WhatsApp (Evolution API)</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Configure a integração para disparar mensagens automáticas.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Evolution API URL</Label>
-                    <Input
-                      value={formData.whatsappApiUrl}
-                      onChange={(e) => setFormData({ ...formData, whatsappApiUrl: e.target.value })}
-                      placeholder="https://sua-evolution-api.exemplo"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>API Key</Label>
-                    <Input
-                      value={formData.whatsappApiKey}
-                      onChange={(e) => setFormData({ ...formData, whatsappApiKey: e.target.value })}
-                      placeholder="Chave da API"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Instância</Label>
-                    <Input
-                      value={formData.whatsappInstance}
-                      onChange={(e) => setFormData({ ...formData, whatsappInstance: e.target.value })}
-                      placeholder="Nome/ID da instância"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Telefone para teste</Label>
-                    <Input
-                      value={whatsappTestPhone}
-                      onChange={(e) => setWhatsappTestPhone(e.target.value)}
-                      placeholder="Ex.: 5511999999999"
-                      inputMode="numeric"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => void handleTestWhatsapp()}
-                      disabled={isTestingWhatsapp}
-                    >
-                      {isTestingWhatsapp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Testar conexão
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                A comissão de cada profissional é definida na aba Equipe (percentual ou valor fixo por atendimento).
-              </p>
               <Button
-                type="submit"
-                disabled={isSaving}
-                className="gradient-primary text-primary-foreground"
-                data-tour="settings-save"
+                onClick={handleSaveGamification}
+                disabled={isSavingGamification}
+                variant="outline"
+                className="w-full"
               >
-                {isSaving ? (
+                {isSavingGamification ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Salvando...
@@ -900,373 +358,14 @@ export default function Configuracoes() {
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Salvar Alterações
+                    Salvar configuração
                   </>
                 )}
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Gamification Settings */}
-        <div className="xl:col-span-1">
-          <GamificationSettings isAdmin={true} />
-        </div>
-
-        <Card className="xl:col-span-1">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Archive className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Retenção operacional (LGPD)</CardTitle>
-            </div>
-            <CardDescription>
-              Defina janelas de retenção e revisão periódica dos dados.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSaveRetentionPolicy} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Dias para retenção de dados de pacientes</Label>
-                <Input
-                  type="number"
-                  min={30}
-                  max={7300}
-                  value={retentionPolicy.client_data_retention_days}
-                  onChange={(e) =>
-                    setRetentionPolicy((prev) => ({
-                      ...prev,
-                      client_data_retention_days: Number(e.target.value || 0),
-                    }))
-                  }
-                  data-tour="settings-lgpd-retention-client-days"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Dias para retenção de dados financeiros</Label>
-                <Input
-                  type="number"
-                  min={365}
-                  max={7300}
-                  value={retentionPolicy.financial_data_retention_days}
-                  onChange={(e) =>
-                    setRetentionPolicy((prev) => ({
-                      ...prev,
-                      financial_data_retention_days: Number(e.target.value || 0),
-                    }))
-                  }
-                  data-tour="settings-lgpd-retention-financial-days"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Dias para retenção da trilha de auditoria</Label>
-                <Input
-                  type="number"
-                  min={30}
-                  max={3650}
-                  value={retentionPolicy.audit_log_retention_days}
-                  onChange={(e) =>
-                    setRetentionPolicy((prev) => ({
-                      ...prev,
-                      audit_log_retention_days: Number(e.target.value || 0),
-                    }))
-                  }
-                  data-tour="settings-lgpd-retention-audit-days"
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2">
-                <Label htmlFor="auto-cleanup" className="cursor-pointer">
-                  Habilitar limpeza automática
-                </Label>
-                <Switch
-                  id="auto-cleanup"
-                  checked={retentionPolicy.auto_cleanup_enabled}
-                  onCheckedChange={(checked) =>
-                    setRetentionPolicy((prev) => ({ ...prev, auto_cleanup_enabled: checked }))
-                  }
-                  data-tour="settings-lgpd-auto-cleanup"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Última revisão:{" "}
-                {retentionPolicy.last_reviewed_at
-                  ? new Date(retentionPolicy.last_reviewed_at).toLocaleString("pt-BR")
-                  : "não registrada"}
-              </p>
-              <Button type="submit" disabled={isSavingRetention} className="w-full" variant="outline" data-tour="settings-lgpd-save-policy">
-                {isSavingRetention ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Salvar política
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <CardTitle>Solicitações de titulares (LGPD)</CardTitle>
-            </div>
-            <CardDescription>
-              Controle de solicitações de acesso, correção, eliminação, portabilidade e direitos correlatos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {isLoadingGovernance ? (
-              <div className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando solicitações...
-              </div>
-            ) : lgpdRequests.length === 0 ? (
-              <div className="rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
-                Nenhuma solicitação LGPD aberta para esta clínica.
-              </div>
-            ) : (
-              lgpdRequests.map((request) => {
-                const slaInfo = getSlaInfo(request);
-                return (
-                  <div key={request.id} className="rounded-lg border border-border/70 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">{lgpdRequestTypeLabel[request.request_type]}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusBadgeVariant(request.status)}>
-                        {lgpdStatusLabel[request.status]}
-                      </Badge>
-                      <Badge variant={slaInfo.variant}>{slaInfo.label}</Badge>
-                    </div>
-                  </div>
-                  
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Solicitante: {request.requester_email || request.requester_user_id}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Abertura: {new Date(request.requested_at).toLocaleString("pt-BR")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Prazo LGPD: {new Date(request.due_at).toLocaleString("pt-BR")} ({request.sla_days} dia(s))
-                  </p>
-                  {request.request_details ? (
-                    <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
-                      {request.request_details}
-                    </p>
-                  ) : null}
-
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={exportingRequestKey === `${request.id}:json`}
-                      onClick={() => handleExportSubjectData(request, "json")}
-                      data-tour="settings-lgpd-export-json"
-                    >
-                      {exportingRequestKey === `${request.id}:json` ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      Exportar JSON
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={exportingRequestKey === `${request.id}:csv`}
-                      onClick={() => handleExportSubjectData(request, "csv")}
-                      data-tour="settings-lgpd-export-csv"
-                    >
-                      {exportingRequestKey === `${request.id}:csv` ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="mr-2 h-4 w-4" />
-                      )}
-                      Exportar CSV
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={previewingRequestId === request.id}
-                      onClick={() => handlePreviewAnonymization(request)}
-                      data-tour="settings-lgpd-preview-anonymization"
-                    >
-                      {previewingRequestId === request.id ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <ShieldAlert className="mr-2 h-4 w-4" />
-                      )}
-                      Prévia anonimização
-                    </Button>
-                  </div>
-
-                  {anonymizationPreviewByRequestId[request.id] ? (
-                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-                      <p className="text-sm font-medium text-amber-900">
-                        Dry-run de anonimização
-                      </p>
-                      <div className="mt-2 grid gap-1">
-                        {Object.entries(anonymizationPreviewByRequestId[request.id].summary).map(
-                          ([key, value]) => (
-                            <p key={key} className="text-xs text-amber-900/80">
-                              {key}: {value}
-                            </p>
-                          )
-                        )}
-                      </div>
-                      {(anonymizationPreviewByRequestId[request.id].warnings || []).length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {anonymizationPreviewByRequestId[request.id].warnings.map((warning) => (
-                            <p key={warning} className="text-xs text-amber-800">
-                              ⚠ {warning}
-                            </p>
-                          ))}
-                        </div>
-                      ) : null}
-                      <p className="mt-2 text-xs text-amber-900">
-                        Confirme digitando o token:
-                        {" "}
-                        <span className="font-mono font-semibold">
-                          {anonymizationPreviewByRequestId[request.id].confirmation_token}
-                        </span>
-                      </p>
-                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                        <Input
-                          value={anonymizationConfirmationByRequestId[request.id] || ""}
-                          onChange={(e) =>
-                            setAnonymizationConfirmationByRequestId((prev) => ({
-                              ...prev,
-                              [request.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="Digite o token de confirmação"
-                          data-tour="settings-lgpd-confirm-token"
-                        />
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={executingAnonymizationRequestId === request.id}
-                          onClick={() => handleExecuteAnonymization(request)}
-                          data-tour="settings-lgpd-execute-anonymization"
-                        >
-                          {executingAnonymizationRequestId === request.id ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : null}
-                          Executar anonimização
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <Label>Status</Label>
-                      <select
-                        value={requestDrafts[request.id]?.status ?? request.status}
-                        onChange={(e) =>
-                          setRequestDrafts((prev) => ({
-                            ...prev,
-                            [request.id]: {
-                              status: e.target.value as LgpdRequestStatus,
-                              resolution_notes: prev[request.id]?.resolution_notes ?? "",
-                            },
-                          }))
-                        }
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        data-tour="settings-lgpd-request-status"
-                      >
-                        <option value="pending">Pendente</option>
-                        <option value="in_progress">Em andamento</option>
-                        <option value="completed">Concluída</option>
-                        <option value="rejected">Rejeitada</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1 sm:col-span-2">
-                      <Label>Resposta / Observações</Label>
-                      <Textarea
-                        value={requestDrafts[request.id]?.resolution_notes ?? ""}
-                        onChange={(e) =>
-                          setRequestDrafts((prev) => ({
-                            ...prev,
-                            [request.id]: {
-                              status: prev[request.id]?.status ?? request.status,
-                              resolution_notes: e.target.value,
-                            },
-                          }))
-                        }
-                        rows={3}
-                        placeholder="Descreva a resposta da solicitação para o titular."
-                        data-tour="settings-lgpd-request-resolution-notes"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={isUpdatingRequests}
-                      onClick={() => handleUpdateRequest(request.id)}
-                      data-tour="settings-lgpd-save-request-status"
-                    >
-                      {isUpdatingRequests ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Salvar status
-                    </Button>
-                  </div>
-                </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <History className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Trilha de auditoria</CardTitle>
-            </div>
-            <CardDescription>
-              Últimas ações administrativas registradas para fins de conformidade.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingGovernance ? (
-              <div className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando trilha...
-              </div>
-            ) : auditLogs.length === 0 ? (
-              <div className="rounded-lg border border-border/70 p-3 text-sm text-muted-foreground">
-                Nenhum log administrativo recente.
-              </div>
-            ) : (
-              <div className="max-h-[520px] overflow-y-auto pr-1 space-y-2">
-                {auditLogs.map((log) => {
-                  const metadataItems = getAuditMetadataItems(log);
-                  return (
-                    <div key={log.id} className="rounded-lg border border-border/70 p-3">
-                      <p className="text-sm font-medium">{getActionLabel(log.action)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {actorNameByUserId[log.actor_user_id] || "Administrador"} ·{" "}
-                        {new Date(log.created_at).toLocaleString("pt-BR")}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {getEntityLabel(log.entity_type)}
-                        {log.entity_id ? ` (${log.entity_id.slice(0, 8)}...)` : ""}
-                      </p>
-                      {metadataItems.length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {metadataItems.map((item) => (
-                            <p key={`${log.id}-${item.label}`} className="text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground/80">{item.label}:</span> {item.value}
-                            </p>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
 }

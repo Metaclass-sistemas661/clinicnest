@@ -1356,6 +1356,274 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   );
 }
 
+// ─── Tab: WhatsApp Evolution API ──────────────────────────────────────────────
+
+function TabWhatsApp({ tenantId }: { tenantId: string }) {
+  const [apiUrl, setApiUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [instance, setInstance] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("tenants")
+          .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+          .eq("id", tenantId)
+          .maybeSingle();
+        if (data) {
+          setApiUrl(data.whatsapp_api_url ?? "");
+          setApiKey(data.whatsapp_api_key ?? "");
+          setInstance(data.whatsapp_instance ?? "");
+        }
+      } catch { /* column may not exist yet */ } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [tenantId]);
+
+  const getAuthHeaders = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Sessão ausente. Faça login novamente.");
+    return { Authorization: `Bearer ${token}` };
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("tenants")
+        .update({
+          whatsapp_api_url: apiUrl.trim() || null,
+          whatsapp_api_key: apiKey.trim() || null,
+          whatsapp_instance: instance.trim() || null,
+        })
+        .eq("id", tenantId);
+      if (error) throw error;
+      toast.success("Configurações do WhatsApp salvas!");
+    } catch (e) {
+      logger.error("[WhatsApp] save error", e);
+      toast.error("Erro ao salvar configurações.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    if (!testPhone.trim()) {
+      toast.error("Informe um telefone para teste");
+      return;
+    }
+    setIsTesting(true);
+    try {
+      const headers = await getAuthHeaders();
+      const { data, error } = await supabase.functions.invoke("whatsapp-sender", {
+        headers,
+        body: {
+          phone: testPhone.trim(),
+          message: "Teste de conexão WhatsApp - ClinicNest",
+          tenant_id: tenantId,
+        },
+      });
+      if (error) {
+        toast.error(error.message || "Falha ao testar conexão");
+        return;
+      }
+      if (!data?.success) {
+        toast.error(data?.error || "Falha ao testar conexão");
+        return;
+      }
+      toast.success("Mensagem de teste enviada!");
+    } catch (err) {
+      logger.error("[WhatsApp] test error", err);
+      toast.error("Erro ao testar WhatsApp");
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setIsSaving(true);
+    try {
+      await (supabase as any)
+        .from("tenants")
+        .update({ whatsapp_api_url: null, whatsapp_api_key: null, whatsapp_instance: null })
+        .eq("id", tenantId);
+      setApiUrl(""); setApiKey(""); setInstance("");
+      toast.success("Integração WhatsApp removida.");
+    } catch { toast.error("Erro ao remover."); }
+    finally { setIsSaving(false); }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const isConfigured = Boolean(apiUrl && apiKey);
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="pt-6 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 dark:bg-green-950/40">
+              <Send className="h-7 w-7 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">WhatsApp (Evolution API)</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isConfigured ? "Credenciais configuradas" : "Não configurado"}
+              </p>
+            </div>
+            <StatusBadge status={isConfigured ? "connected" : "not_configured"} />
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="whatsapp-api-url">Evolution API URL <span className="text-destructive">*</span></Label>
+              <Input
+                id="whatsapp-api-url"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                placeholder="https://sua-evolution-api.exemplo"
+              />
+              <p className="text-xs text-muted-foreground">
+                URL base da sua instância Evolution API.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="whatsapp-api-key">API Key <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="whatsapp-api-key"
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Chave da API"
+                  className="font-mono text-xs"
+                />
+                <Button variant="outline" size="icon" onClick={() => setShowKey(!showKey)}>
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="whatsapp-instance">Nome da Instância</Label>
+              <Input
+                id="whatsapp-instance"
+                value={instance}
+                onChange={(e) => setInstance(e.target.value)}
+                placeholder="Nome/ID da instância"
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-1.5">
+              <Label>Testar conexão</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="Ex.: 5511999999999"
+                  inputMode="numeric"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={isTesting || !isConfigured}
+                >
+                  {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Testar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Envia uma mensagem de teste para o número informado.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-2">
+              {isConfigured && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
+                  onClick={handleDisconnect}
+                  disabled={isSaving}
+                >
+                  <XCircle className="h-4 w-4" /> Remover integração
+                </Button>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="ml-auto gap-2"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Salvar configurações
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BookOpen className="h-4 w-4" /> Como funciona
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: Send, title: "Mensagens automáticas", desc: "Lembretes de agendamento, confirmações e notificações enviadas automaticamente" },
+              { icon: CheckCircle2, title: "Confirmação de consulta", desc: "Pacientes podem confirmar presença respondendo a mensagem" },
+              { icon: Clock, title: "Lembretes programados", desc: "Envio automático 24h e 1h antes do horário agendado" },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
+                  <Icon className="h-4 w-4 text-green-600" />
+                </div>
+                <p className="text-xs font-semibold">{title}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 flex gap-3">
+            <AlertCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
+              <p className="font-semibold">Evolution API</p>
+              <p>Esta integração utiliza a Evolution API, uma solução open-source para automação de WhatsApp. Você precisa ter sua própria instância da Evolution API configurada e funcionando.</p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 text-xs"
+            onClick={() => window.open("https://doc.evolution-api.com", "_blank")}
+          >
+            <ExternalLink className="h-3 w-3" /> Documentação Evolution API
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Integracoes() {
@@ -1432,14 +1700,23 @@ export default function Integracoes() {
       tab: "nfse",
       color: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600",
     },
+    {
+      icon: Send,
+      title: "WhatsApp",
+      description: "Envie mensagens automáticas via Evolution API",
+      status: "not_configured" as const,
+      tab: "whatsapp",
+      color: "bg-green-50 dark:bg-green-950/40 text-green-600",
+    },
   ];
 
   return (
     <MainLayout title="Integrações" subtitle="Conecte o ClinicNest a ferramentas externas">
       <div className="space-y-6 pb-10">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-7 sm:inline-flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex flex-wrap">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+            <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>
             <TabsTrigger value="pagamentos" className="text-xs sm:text-sm">Pagamentos</TabsTrigger>
             <TabsTrigger value="nfse" className="text-xs sm:text-sm">NFS-e</TabsTrigger>
             <TabsTrigger value="google" className="text-xs sm:text-sm">Google</TabsTrigger>
@@ -1521,6 +1798,11 @@ export default function Integracoes() {
           {/* ── Maquininha Stone ── */}
           <TabsContent value="maquininha" className="mt-6">
             {tenantId && <TabMaquininha tenantId={tenantId} />}
+          </TabsContent>
+
+          {/* ── WhatsApp ── */}
+          <TabsContent value="whatsapp" className="mt-6">
+            {tenantId && <TabWhatsApp tenantId={tenantId} />}
           </TabsContent>
         </Tabs>
       </div>
