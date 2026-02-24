@@ -96,6 +96,10 @@ interface InviteBody {
   full_name: string;
   phone?: string;
   role?: "staff" | "admin";
+  professional_type?: string;
+  council_type?: string;
+  council_number?: string;
+  council_state?: string;
 }
 
 type TierKey = "basic" | "pro" | "premium";
@@ -295,10 +299,14 @@ serve(async (req) => {
       );
     }
 
-    const { email, password, full_name, phone, role = "staff" } = body;
+    const { email, password, full_name, phone, role = "staff", professional_type, council_type, council_number, council_state } = body;
     const emailTrim = typeof email === "string" ? email.trim() : "";
     const fullNameTrim = typeof full_name === "string" ? full_name.trim() : "";
     const passwordStr = typeof password === "string" ? password : "";
+    const profType = typeof professional_type === "string" ? professional_type.trim() : "";
+    const councilTypeTrim = typeof council_type === "string" ? council_type.trim() || null : null;
+    const councilNumberTrim = typeof council_number === "string" ? council_number.trim() || null : null;
+    const councilStateTrim = typeof council_state === "string" ? council_state.trim() || null : null;
 
     if (!emailTrim) {
       return new Response(
@@ -424,6 +432,10 @@ serve(async (req) => {
         full_name: fullNameTrim,
         phone: typeof phone === "string" ? phone.trim() || null : null,
         role,
+        professional_type: profType || null,
+        council_type: councilTypeTrim,
+        council_number: councilNumberTrim,
+        council_state: councilStateTrim,
       },
     });
 

@@ -16,16 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -51,20 +42,20 @@ import {
   Stethoscope,
   Phone,
   CalendarDays,
+  ClipboardList,
+  UserCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { Appointment, AppointmentStatus, Client, Service, Profile, Product } from "@/types/database";
+import { supabase } from "@/integrations/supabase/client";
 import { TimeSlotPicker } from "./TimeSlotPicker";
-import {
-  CongratulationsCommissionDialog,
-  type CongratulationsCommissionData,
-} from "./CongratulationsCommissionDialog";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useGamificationEnabled } from "@/hooks/useGamificationEnabled";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
@@ -77,7 +68,6 @@ interface AppointmentsTableProps {
     appointment: Appointment,
     sale?: { productId: string; quantity: number }
   ) => Promise<
-    | { type: "congrats" } & CongratulationsCommissionData
     | { type: "no_commission" }
     | { type: "goal_motivation" }
     | undefined
@@ -88,6 +78,7 @@ interface AppointmentsTableProps {
   isAdmin?: boolean;
   products: Product[];
   currentProfileId?: string;
+  onStartConsultation?: (appointment: Appointment) => void;
 }
 
 export interface EditAppointmentData {
@@ -109,6 +100,11 @@ const statusConfig = {
     label: "Confirmado",
     className: "bg-info/20 text-info border-info/30",
     icon: CheckCircle2,
+  },
+  arrived: {
+    label: "Chegou",
+    className: "bg-violet-500/20 text-violet-600 border-violet-500/30",
+    icon: UserCheck,
   },
   completed: {
     label: "Concluído",
@@ -136,7 +132,9 @@ export function AppointmentsTable({
   isAdmin = false,
   products,
   currentProfileId,
+  onStartConsultation,
 }: AppointmentsTableProps) {
+  const gamificationEnabled = useGamificationEnabled();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<Appointment | null>(null);
@@ -158,9 +156,8 @@ export function AppointmentsTable({
   const [selectedProductId, setSelectedProductId] = useState("");
   const [saleQuantity, setSaleQuantity] = useState("1");
   const [isCompleting, setIsCompleting] = useState(false);
-  const [congratsDialogOpen, setCongratsDialogOpen] = useState(false);
-  const [congratsData, setCongratsData] = useState<CongratulationsCommissionData | null>(null);
   const [noCommissionDialogOpen, setNoCommissionDialogOpen] = useState(false);
+  const [missingRecordWarning, setMissingRecordWarning] = useState(false);
 
   const availableProducts = products.filter((product) => product.quantity > 0);
 
@@ -172,12 +169,28 @@ export function AppointmentsTable({
     setSaleQuantity("1");
   };
 
-  const openCompleteDialog = (appointment: Appointment) => {
+  const openCompleteDialog = async (appointment: Appointment) => {
     const defaultProductId = availableProducts[0]?.id ?? "";
     setAppointmentToComplete(appointment);
     setSaleOption("no");
     setSelectedProductId(defaultProductId);
     setSaleQuantity("1");
+    setMissingRecordWarning(false);
+
+    if (appointment.id) {
+      try {
+        const { count } = await supabase
+          .from("medical_records")
+          .select("id", { count: "exact", head: true })
+          .eq("appointment_id", appointment.id);
+        if ((count ?? 0) === 0) {
+          setMissingRecordWarning(true);
+        }
+      } catch {
+        // silently ignore — don't block the flow
+      }
+    }
+
     setCompleteDialogOpen(true);
   };
 
@@ -293,14 +306,11 @@ export function AppointmentsTable({
     try {
       const result = await onComplete(appointmentToComplete, salePayload);
       resetCompleteDialog();
-      if (result) {
+      if (result && gamificationEnabled) {
         if (result.type === "goal_motivation") {
           // Popup de meta já foi mostrado via GoalMotivationContext
         } else if (result.type === "no_commission") {
           setNoCommissionDialogOpen(true);
-        } else if (result.type === "congrats") {
-          setCongratsData(result);
-          setCongratsDialogOpen(true);
         }
       }
     } catch (error) {
@@ -404,6 +414,17 @@ export function AppointmentsTable({
                       </Button>
                     )}
                     {appointment.status === "confirmed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-violet-600 border-violet-500/30 hover:bg-violet-500/10"
+                        onClick={() => handleStatusChange(appointment, "arrived")}
+                      >
+                        <UserCheck className="mr-1 h-4 w-4" />
+                        Chegou
+                      </Button>
+                    )}
+                    {(appointment.status === "confirmed" || appointment.status === "arrived") && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -564,6 +585,19 @@ export function AppointmentsTable({
                               type="button"
                               size="icon"
                               variant="ghost"
+                              className="h-8 w-8 text-violet-600 hover:bg-violet-500/10 hover:text-violet-600"
+                              onClick={() => handleStatusChange(appointment, "arrived")}
+                              title="Marcar chegada"
+                              aria-label="Marcar chegada do paciente"
+                            >
+                              <UserCheck className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {appointment.status === "arrived" && (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
                               className="h-8 w-8 text-primary hover:bg-primary/10 hover:text-primary"
                               onClick={() => handleStatusChange(appointment, "completed")}
                               title="Concluir"
@@ -596,6 +630,17 @@ export function AppointmentsTable({
                                 </DropdownMenuItem>
                               )}
                               {canEdit && <DropdownMenuSeparator />}
+                              {onStartConsultation && (appointment.status === "confirmed" || appointment.status === "pending" || appointment.status === "arrived") && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => onStartConsultation(appointment)}
+                                  >
+                                    <ClipboardList className="mr-2 h-4 w-4 text-primary" />
+                                    Iniciar Atendimento
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "pending")}
                                 disabled={appointment.status === "pending"}
@@ -613,8 +658,15 @@ export function AppointmentsTable({
                                 Confirmar
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => handleStatusChange(appointment, "arrived")}
+                                disabled={appointment.status === "arrived" || appointment.status === "completed"}
+                              >
+                                <UserCheck className="mr-2 h-4 w-4 text-violet-600" />
+                                Chegou (Check-in)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "completed")}
-                                disabled={appointment.status !== "confirmed"}
+                                disabled={appointment.status !== "confirmed" && appointment.status !== "arrived"}
                                 data-tour="agenda-action-complete"
                               >
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
@@ -671,6 +723,15 @@ export function AppointmentsTable({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCompleteConfirm} className="space-y-4">
+            {missingRecordWarning && (
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-500/40 dark:bg-amber-500/10">
+                <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div>
+                  <p className="font-medium text-amber-800 dark:text-amber-300">Prontuário não preenchido</p>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-400/80">Nenhum prontuário foi registrado para esta consulta. Deseja concluir mesmo assim?</p>
+                </div>
+              </div>
+            )}
             {appointmentToComplete && (
               <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground space-y-1">
                 <p>
@@ -789,32 +850,15 @@ export function AppointmentsTable({
       </Dialog>
 
       {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir agendamento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o agendamento de{" "}
-              <strong>{appointmentToDelete?.client?.name || "Paciente"}</strong> para{" "}
-              <strong>
-                {appointmentToDelete &&
-                  formatInAppTz(appointmentToDelete.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}
-              </strong>
-              ? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-tour="agenda-delete-confirm"
-            >
-              {updatingId ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        itemName={appointmentToDelete?.client?.name || "Paciente"}
+        itemType="agendamento"
+        warningText={appointmentToDelete ? `Agendamento para ${formatInAppTz(appointmentToDelete.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}` : undefined}
+        isDeleting={!!updatingId}
+      />
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -962,12 +1006,6 @@ export function AppointmentsTable({
         </DialogContent>
       </Dialog>
 
-      {/* Congratulations popup (staff only - após concluir atendimento) */}
-      <CongratulationsCommissionDialog
-        open={congratsDialogOpen}
-        onOpenChange={setCongratsDialogOpen}
-        data={congratsData}
-      />
       <NoCommissionWarningDialog
         open={noCommissionDialogOpen}
         onOpenChange={setNoCommissionDialogOpen}

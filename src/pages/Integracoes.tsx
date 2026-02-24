@@ -8,16 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,7 +40,9 @@ import {
   CreditCard,
   Smartphone,
   Wifi,
+  FileText,
 } from "lucide-react";
+import { NFSeConfig } from "@/components/settings/NFSeConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -658,18 +651,15 @@ X-Webhook-Secret: whsec_...
       </Card>
 
       {/* Delete dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover webhook?</AlertDialogTitle>
-            <AlertDialogDescription>Essa ação é irreversível. O endpoint não receberá mais notificações.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleDelete}>Remover</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteId(null)}
+        itemName="este webhook"
+        itemType="webhook"
+        warningText="O endpoint não receberá mais notificações."
+        confirmButtonText="Remover"
+      />
     </div>
   );
 }
@@ -914,18 +904,249 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
       </div>
 
       {/* Revoke dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Revogar chave de API?</AlertDialogTitle>
-            <AlertDialogDescription>Integrações que usam essa chave deixarão de funcionar imediatamente.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={handleRevoke}>Revogar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteId}
+        onConfirm={handleRevoke}
+        onCancel={() => setDeleteId(null)}
+        itemName="esta chave de API"
+        itemType="chave de API"
+        warningText="Integrações que usam essa chave deixarão de funcionar imediatamente."
+        confirmButtonText="Revogar"
+      />
+    </div>
+  );
+}
+
+// ─── Tab: Gateway de Pagamento ────────────────────────────────────────────────
+
+function TabPaymentGateway({ tenantId }: { tenantId: string }) {
+  const [gateway, setGateway] = useState<"" | "stripe" | "pagseguro" | "asaas">("");
+  const [apiKey, setApiKey] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("tenants")
+          .select("payment_gateway_type, payment_gateway_config")
+          .eq("id", tenantId)
+          .maybeSingle();
+        if (data) {
+          setGateway(data.payment_gateway_type ?? "");
+          setApiKey(data.payment_gateway_config?.api_key ?? "");
+        }
+      } catch { /* column may not exist yet */ } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [tenantId]);
+
+  const handleSave = async () => {
+    if (gateway && !apiKey.trim()) { 
+      toast.error("Informe a chave de API do gateway."); 
+      return; 
+    }
+    setIsSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("tenants")
+        .update({
+          payment_gateway_type: gateway || null,
+          payment_gateway_config: apiKey.trim() ? { api_key: apiKey.trim() } : {},
+        })
+        .eq("id", tenantId);
+      if (error) throw error;
+      toast.success("Gateway de pagamento configurado!");
+    } catch (e) {
+      logger.error("[PaymentGateway] save error", e);
+      toast.error("Erro ao salvar configurações.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setIsSaving(true);
+    try {
+      await (supabase as any)
+        .from("tenants")
+        .update({ payment_gateway_type: null, payment_gateway_config: {} })
+        .eq("id", tenantId);
+      setGateway(""); setApiKey("");
+      toast.success("Gateway de pagamento removido.");
+    } catch { toast.error("Erro ao remover."); }
+    finally { setIsSaving(false); }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const isConfigured = Boolean(gateway && apiKey);
+
+  const gatewayInfo: Record<string, { name: string; color: string; instructions: React.ReactNode }> = {
+    asaas: {
+      name: "Asaas",
+      color: "bg-teal-500",
+      instructions: (
+        <>
+          <li>Acesse <a href="https://www.asaas.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">asaas.com</a> e crie uma conta</li>
+          <li>Vá em <span className="font-medium">Configurações → Integrações → API</span></li>
+          <li>Copie a chave de API (access_token)</li>
+        </>
+      ),
+    },
+    pagseguro: {
+      name: "PagSeguro / PagBank",
+      color: "bg-green-500",
+      instructions: (
+        <>
+          <li>Acesse <a href="https://pagseguro.uol.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">pagseguro.uol.com.br</a></li>
+          <li>Vá em <span className="font-medium">Vendas → Integrações → Gerar Token</span></li>
+          <li>Copie o token gerado</li>
+        </>
+      ),
+    },
+    stripe: {
+      name: "Stripe",
+      color: "bg-indigo-500",
+      instructions: (
+        <>
+          <li>Acesse <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">dashboard.stripe.com</a></li>
+          <li>Vá em <span className="font-medium">Developers → API Keys</span></li>
+          <li>Copie a Secret Key (sk_live_...)</li>
+        </>
+      ),
+    },
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Status card */}
+      <Card>
+        <CardContent className="pt-6 pb-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 dark:bg-teal-950/40">
+              <CreditCard className="h-7 w-7 text-teal-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Gateway de Pagamento</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isConfigured ? `${gatewayInfo[gateway]?.name} configurado` : "Não configurado"}
+              </p>
+            </div>
+            <StatusBadge status={isConfigured ? "connected" : "not_configured"} />
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Gateway de pagamento</Label>
+              <select
+                value={gateway}
+                onChange={(e) => setGateway(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Selecione um gateway...</option>
+                <option value="asaas">Asaas (PIX, Boleto, Cartão) - Recomendado</option>
+                <option value="pagseguro">PagSeguro / PagBank</option>
+                <option value="stripe">Stripe (Internacional)</option>
+              </select>
+            </div>
+
+            {gateway && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Chave de API / Token <span className="text-destructive">*</span></Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type={showKey ? "text" : "password"}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Chave secreta do gateway"
+                      className="font-mono text-xs"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowKey(!showKey)}>
+                      {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-2">
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Como obter as credenciais do {gatewayInfo[gateway]?.name}:
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    {gatewayInfo[gateway]?.instructions}
+                  </ol>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              {isConfigured && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
+                  onClick={handleDisconnect}
+                  disabled={isSaving}
+                >
+                  <XCircle className="h-4 w-4" /> Remover gateway
+                </Button>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || (!gateway && !isConfigured)}
+                className="ml-auto gap-2"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Salvar configurações
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Features */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <BookOpen className="h-4 w-4" /> O que seus pacientes poderão fazer
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: CreditCard, title: "Pagar com PIX", desc: "QR Code e código copia-e-cola gerados instantaneamente" },
+              { icon: CreditCard, title: "Cartão de Crédito", desc: "Parcelamento em até 12x (conforme gateway)" },
+              { icon: CreditCard, title: "Boleto Bancário", desc: "Geração automática com vencimento configurável" },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10">
+                  <Icon className="h-4 w-4 text-teal-600" />
+                </div>
+                <p className="text-xs font-semibold">{title}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 p-4 flex gap-3">
+            <CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-teal-700 dark:text-teal-300 space-y-1">
+              <p className="font-semibold">Portal do Paciente</p>
+              <p>Após configurar o gateway, seus pacientes poderão pagar faturas diretamente pelo Portal do Paciente. Eles verão as opções de PIX, cartão e boleto conforme disponibilidade do gateway escolhido.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -1164,6 +1385,14 @@ export default function Integracoes() {
       color: "bg-blue-50 dark:bg-blue-950/40 text-blue-600",
     },
     {
+      icon: CreditCard,
+      title: "Gateway de Pagamento",
+      description: "Receba pagamentos online dos pacientes via PIX, cartão ou boleto",
+      status: "not_configured" as const,
+      tab: "pagamentos",
+      color: "bg-teal-50 dark:bg-teal-950/40 text-teal-600",
+    },
+    {
       icon: Webhook,
       title: "Webhooks",
       description: "Notifique sistemas externos em tempo real quando eventos ocorrem",
@@ -1195,14 +1424,24 @@ export default function Integracoes() {
       tab: "maquininha",
       color: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600",
     },
+    {
+      icon: FileText,
+      title: "NFS-e (Nota Fiscal)",
+      description: "Emita notas fiscais de serviço automaticamente via NFE.io",
+      status: "not_configured" as const,
+      tab: "nfse",
+      color: "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600",
+    },
   ];
 
   return (
     <MainLayout title="Integrações" subtitle="Conecte o ClinicNest a ferramentas externas">
       <div className="space-y-6 pb-10">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-5 sm:inline-flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-7 sm:inline-flex">
             <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+            <TabsTrigger value="pagamentos" className="text-xs sm:text-sm">Pagamentos</TabsTrigger>
+            <TabsTrigger value="nfse" className="text-xs sm:text-sm">NFS-e</TabsTrigger>
             <TabsTrigger value="google" className="text-xs sm:text-sm">Google</TabsTrigger>
             <TabsTrigger value="webhooks" className="gap-1.5 text-xs sm:text-sm">
               Webhooks
@@ -1257,6 +1496,16 @@ export default function Integracoes() {
           {/* ── Google Calendar ── */}
           <TabsContent value="google" className="mt-6">
             {tenantId && <TabGoogleCalendar tenantId={tenantId} />}
+          </TabsContent>
+
+          {/* ── Pagamentos ── */}
+          <TabsContent value="pagamentos" className="mt-6">
+            {tenantId && <TabPaymentGateway tenantId={tenantId} />}
+          </TabsContent>
+
+          {/* ── NFS-e ── */}
+          <TabsContent value="nfse" className="mt-6">
+            {tenantId && <NFSeConfig tenantId={tenantId} />}
           </TabsContent>
 
           {/* ── Webhooks ── */}

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,13 @@ interface Client {
   name: string;
 }
 
+interface RecentAppointment {
+  id: string;
+  scheduled_at: string;
+  service_name: string;
+  medical_record_id: string | null;
+}
+
 interface Laudo {
   id: string;
   client_id: string;
@@ -79,6 +87,7 @@ const StatusIcon = ({ status }: { status: Laudo["status"] }) => {
 
 const emptyForm = {
   client_id: "",
+  appointment_id: "",
   exam_type: "laboratorial",
   exam_name: "",
   performed_at: "",
@@ -101,6 +110,7 @@ export default function Laudos() {
   const [isSaving, setIsSaving] = useState(false);
   const [viewLaudo, setViewLaudo] = useState<Laudo | null>(null);
   const [formData, setFormData] = useState(emptyForm);
+  const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -122,6 +132,30 @@ export default function Laudos() {
     } catch (err) {
       logger.error("Error fetching clients:", err);
     }
+  };
+
+  const fetchRecentAppointments = async (clientId: string) => {
+    if (!profile?.tenant_id || !clientId) { setRecentAppointments([]); return; }
+    try {
+      const { data } = await supabase
+        .from("appointments")
+        .select("id, scheduled_at, services(name), medical_records(id)")
+        .eq("tenant_id", profile.tenant_id)
+        .eq("client_id", clientId)
+        .order("scheduled_at", { ascending: false })
+        .limit(10);
+      setRecentAppointments((data ?? []).map((a: any) => ({
+        id: a.id,
+        scheduled_at: a.scheduled_at,
+        service_name: a.services?.name ?? "Consulta",
+        medical_record_id: Array.isArray(a.medical_records) ? a.medical_records[0]?.id ?? null : a.medical_records?.id ?? null,
+      })));
+    } catch { setRecentAppointments([]); }
+  };
+
+  const handleClientChange = (clientId: string) => {
+    setFormData(f => ({ ...f, client_id: clientId, appointment_id: "" }));
+    void fetchRecentAppointments(clientId);
   };
 
   const fetchLaudos = async () => {
@@ -158,17 +192,19 @@ export default function Laudos() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.exam_name.trim()) { toast.error("Nome do exame é obrigatório"); return; }
 
     setIsSaving(true);
     try {
+      const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
       const { error } = await supabase.from("exam_results").insert({
         tenant_id: profile!.tenant_id,
         client_id: formData.client_id,
         requested_by: profile!.id,
+        appointment_id: formData.appointment_id || null,
+        medical_record_id: selectedAppt?.medical_record_id || null,
         exam_type: formData.exam_type,
         exam_name: formData.exam_name,
         performed_at: formData.performed_at || null,
@@ -367,109 +403,128 @@ export default function Laudos() {
         </Dialog>
       )}
 
-      {/* Dialog Registrar */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Registrar Laudo</DialogTitle>
-            <DialogDescription>Adicione resultado de exame ao prontuário do paciente</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-2">
+      {/* Drawer Registrar */}
+      <FormDrawer
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title="Registrar Laudo"
+        description="Adicione resultado de exame ao prontuário do paciente"
+        width="lg"
+        onSubmit={handleSubmit}
+        isSubmitting={isSaving}
+        submitLabel="Salvar Laudo"
+      >
+        <div className="space-y-4">
+          <FormDrawerSection title="Paciente">
+            <div className="space-y-2">
+              <Label>Paciente *</Label>
+              <Select value={formData.client_id} onValueChange={handleClientChange}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {recentAppointments.length > 0 && (
               <div className="space-y-2">
-                <Label>Paciente *</Label>
-                <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <Label className="text-xs">Vincular a consulta (opcional)</Label>
+                <Select value={formData.appointment_id || "none"} onValueChange={(v) => setFormData(f => ({ ...f, appointment_id: v === "none" ? "" : v }))}>
+                  <SelectTrigger><SelectValue placeholder="Sem vínculo" /></SelectTrigger>
                   <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    <SelectItem value="none">Sem vínculo</SelectItem>
+                    {recentAppointments.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {new Date(a.scheduled_at).toLocaleDateString("pt-BR")} — {a.service_name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Tipo de Exame</Label>
-                  <Select value={formData.exam_type} onValueChange={(v) => setFormData({ ...formData, exam_type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="laboratorial">Laboratorial</SelectItem>
-                      <SelectItem value="imagem">Imagem</SelectItem>
-                      <SelectItem value="eletrocardiograma">ECG</SelectItem>
-                      <SelectItem value="biopsia">Biópsia</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Data de Realização</Label>
-                  <Input
-                    type="date"
-                    value={formData.performed_at}
-                    onChange={(e) => setFormData({ ...formData, performed_at: e.target.value })}
-                  />
-                </div>
-              </div>
+            )}
+          </FormDrawerSection>
+
+          <FormDrawerSection title="Dados do Exame">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome do Exame *</Label>
-                <Input
-                  value={formData.exam_name}
-                  onChange={(e) => setFormData({ ...formData, exam_name: e.target.value })}
-                  placeholder="Ex: Hemograma Completo, Ultrassom Abdominal..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Laboratório / Clínica</Label>
-                <Input
-                  value={formData.lab_name}
-                  onChange={(e) => setFormData({ ...formData, lab_name: e.target.value })}
-                  placeholder="Nome do laboratório"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Resultado</Label>
-                <Textarea
-                  value={formData.result}
-                  onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-                  placeholder="Valores encontrados, descrição do exame..."
-                  rows={4}
-                  className="font-mono text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Interpretação Clínica</Label>
-                <Textarea
-                  value={formData.interpretation}
-                  onChange={(e) => setFormData({ ...formData, interpretation: e.target.value })}
-                  placeholder="Análise dos resultados, correlação clínica..."
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Status do Resultado</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(v: any) => setFormData({ ...formData, status: v })}
-                >
+                <Label>Tipo de Exame</Label>
+                <Select value={formData.exam_type} onValueChange={(v) => setFormData({ ...formData, exam_type: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="alterado">Alterado</SelectItem>
-                    <SelectItem value="critico">Crítico</SelectItem>
-                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="laboratorial">Laboratorial</SelectItem>
+                    <SelectItem value="imagem">Imagem</SelectItem>
+                    <SelectItem value="eletrocardiograma">ECG</SelectItem>
+                    <SelectItem value="biopsia">Biópsia</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Data de Realização</Label>
+                <Input
+                  type="date"
+                  value={formData.performed_at}
+                  onChange={(e) => setFormData({ ...formData, performed_at: e.target.value })}
+                />
+              </div>
             </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : "Salvar Laudo"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2">
+              <Label>Nome do Exame *</Label>
+              <Input
+                value={formData.exam_name}
+                onChange={(e) => setFormData({ ...formData, exam_name: e.target.value })}
+                placeholder="Ex: Hemograma Completo, Ultrassom Abdominal..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Laboratório / Clínica</Label>
+              <Input
+                value={formData.lab_name}
+                onChange={(e) => setFormData({ ...formData, lab_name: e.target.value })}
+                placeholder="Nome do laboratório"
+              />
+            </div>
+          </FormDrawerSection>
+
+          <FormDrawerSection title="Resultado">
+            <div className="space-y-2">
+              <Label>Resultado</Label>
+              <Textarea
+                value={formData.result}
+                onChange={(e) => setFormData({ ...formData, result: e.target.value })}
+                placeholder="Valores encontrados, descrição do exame..."
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Interpretação Clínica</Label>
+              <Textarea
+                value={formData.interpretation}
+                onChange={(e) => setFormData({ ...formData, interpretation: e.target.value })}
+                placeholder="Análise dos resultados, correlação clínica..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status do Resultado</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(v: any) => setFormData({ ...formData, status: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="alterado">Alterado</SelectItem>
+                  <SelectItem value="critico">Crítico</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </FormDrawerSection>
+        </div>
+      </FormDrawer>
     </MainLayout>
   );
 }

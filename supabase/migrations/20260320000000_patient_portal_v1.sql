@@ -19,10 +19,12 @@ CREATE INDEX IF NOT EXISTS idx_patient_profiles_tenant_client ON public.patient_
 ALTER TABLE public.patient_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Patients can read their own links
+DROP POLICY IF EXISTS patient_profiles_select_own ON public.patient_profiles;
 CREATE POLICY patient_profiles_select_own ON public.patient_profiles
   FOR SELECT USING (user_id = auth.uid());
 
 -- Clinic staff (admin/staff with profile in same tenant) can manage patient links
+DROP POLICY IF EXISTS patient_profiles_manage_staff ON public.patient_profiles;
 CREATE POLICY patient_profiles_manage_staff ON public.patient_profiles
   FOR ALL USING (
     EXISTS (

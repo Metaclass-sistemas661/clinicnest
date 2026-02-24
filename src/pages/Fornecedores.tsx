@@ -5,32 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { MODAL_SIZES } from "@/lib/modal-constants";
 import { z } from "zod";
 import {
   Plus,
@@ -158,8 +142,7 @@ export default function Fornecedores() {
     setDialogOpen(true);
   };
 
-  const submitSupplier = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitSupplier = async () => {
     if (!profile?.tenant_id || !isAdmin) return;
 
     const parsed = supplierSchema.safeParse(form);
@@ -432,124 +415,89 @@ export default function Fornecedores() {
         </Card>
       )}
 
-      {/* Dialog: Create / Edit */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Editar Fornecedor" : "Novo Fornecedor"}</DialogTitle>
-            <DialogDescription>
-              {editing
-                ? "Atualize as informações do fornecedor."
-                : "Preencha os dados para cadastrar um novo fornecedor."}
-            </DialogDescription>
-          </DialogHeader>
+      {/* FormDrawer: Create / Edit */}
+      <FormDrawer
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={editing ? "Editar Fornecedor" : "Novo Fornecedor"}
+        description={editing
+          ? "Atualize as informações do fornecedor."
+          : "Preencha os dados para cadastrar um novo fornecedor."}
+        width="md"
+        onSubmit={submitSupplier}
+        isSubmitting={isSaving}
+        submitLabel={editing ? "Salvar Alterações" : "Cadastrar Fornecedor"}
+      >
+        <FormDrawerSection title="Identificação">
+          <div className="space-y-2">
+            <Label>
+              Nome <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Ex: Distribuidora ABC"
+            />
+          </div>
+        </FormDrawerSection>
 
-          <form className="space-y-4 py-2" onSubmit={submitSupplier}>
+        <FormDrawerSection title="Contato">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>
-                Nome <span className="text-destructive">*</span>
-              </Label>
+              <Label>Telefone</Label>
               <Input
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Ex: Distribuidora ABC"
+                value={form.phone}
+                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                placeholder="(11) 99999-9999"
               />
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input
-                  value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                  placeholder="(11) 99999-9999"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="contato@fornecedor.com"
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>CPF/CNPJ</Label>
+              <Label>Email</Label>
               <Input
-                value={form.document}
-                onChange={(e) => setForm((p) => ({ ...p, document: e.target.value }))}
-                placeholder="Somente números"
-                inputMode="numeric"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="contato@fornecedor.com"
               />
             </div>
+          </div>
+        </FormDrawerSection>
 
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                rows={3}
-                placeholder="Informações adicionais sobre o fornecedor..."
-              />
-            </div>
+        <FormDrawerSection title="Documentação">
+          <div className="space-y-2">
+            <Label>CPF/CNPJ</Label>
+            <Input
+              value={form.document}
+              onChange={(e) => setForm((p) => ({ ...p, document: e.target.value }))}
+              placeholder="Somente números"
+              inputMode="numeric"
+            />
+          </div>
+        </FormDrawerSection>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSaving}
-                className="gradient-primary text-primary-foreground"
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : editing ? (
-                  "Salvar Alterações"
-                ) : (
-                  "Cadastrar Fornecedor"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        <FormDrawerSection title="Observações">
+          <div className="space-y-2">
+            <Label>Observações</Label>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+              rows={3}
+              placeholder="Informações adicionais sobre o fornecedor..."
+            />
+          </div>
+        </FormDrawerSection>
+      </FormDrawer>
 
       {/* AlertDialog: Confirm Delete */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir fornecedor</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir <strong>{deleteTarget?.name}</strong>? Esta ação não pode
-              ser desfeita. Fornecedores com compras vinculadas não podem ser excluídos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDelete}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Excluindo...
-                </>
-              ) : (
-                "Excluir"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        itemName={deleteTarget?.name || ""}
+        itemType="fornecedor"
+        warningText="Fornecedores com compras vinculadas não podem ser excluídos."
+        isDeleting={isSaving}
+      />
     </MainLayout>
   );
 }

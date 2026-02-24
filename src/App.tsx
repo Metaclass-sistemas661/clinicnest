@@ -12,8 +12,8 @@ import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PatientProtectedRoute } from "@/components/auth/PatientProtectedRoute";
 import { ConsentGate } from "@/components/consent/ConsentGate";
-import { AdminProfitRealtimeListener } from "@/components/admin/AdminProfitRealtimeListener";
 import { NewOnlineBookingListener } from "@/components/admin/NewOnlineBookingListener";
+import { TriageRealtimeListener } from "@/components/admin/TriageRealtimeListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteFallback } from "@/components/RouteFallback";
@@ -24,11 +24,15 @@ import { AppStatusProvider } from "@/contexts/AppStatusContext";
 
 // Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
+const SolucoesPage = lazyWithRetry(() => import("@/pages/landing/SolucoesPage"));
+const SobreNosPage = lazyWithRetry(() => import("@/pages/landing/SobreNosPage"));
+const AgendarDemonstracaoPage = lazyWithRetry(() => import("@/pages/landing/AgendarDemonstracaoPage"));
 const Login = lazyWithRetry(() => import("@/pages/auth/Login"));
 const Register = lazyWithRetry(() => import("@/pages/auth/Register"));
 const ForgotPassword = lazyWithRetry(() => import("@/pages/auth/ForgotPassword"));
 const ResetPassword = lazyWithRetry(() => import("@/pages/auth/ResetPassword"));
 const NotFound = lazyWithRetry(() => import("@/pages/NotFound"));
+const Forbidden = lazyWithRetry(() => import("@/pages/Forbidden"));
 const TermosDeUso = lazyWithRetry(() => import("@/pages/TermosDeUso"));
 const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacidade"));
 const Contato = lazyWithRetry(() => import("@/pages/Contato"));
@@ -41,6 +45,12 @@ const TeleconsultaPublica = lazyWithRetry(() => import("@/pages/TeleconsultaPubl
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
 const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
+const Repasses = lazyWithRetry(() => import("@/pages/Repasses"));
+const RepassesComissoes = lazyWithRetry(() => import("@/pages/RepassesComissoes"));
+const RepassesSalarios = lazyWithRetry(() => import("@/pages/RepassesSalarios"));
+const RepassesRelatorios = lazyWithRetry(() => import("@/pages/RepassesRelatorios"));
+const RelatorioCaptacao = lazyWithRetry(() => import("@/pages/RelatorioCaptacao"));
+const ConfigurarRegras = lazyWithRetry(() => import("@/pages/repasses/ConfigurarRegras"));
 const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
 const Compras = lazyWithRetry(() => import("@/pages/Compras"));
 const Fornecedores = lazyWithRetry(() => import("@/pages/Fornecedores"));
@@ -53,11 +63,13 @@ const Chat = lazyWithRetry(() => import("@/pages/Chat"));
 const Unidades = lazyWithRetry(() => import("@/pages/Unidades"));
 const Disponibilidade = lazyWithRetry(() => import("@/pages/Disponibilidade"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
+const GerenciarPermissoes = lazyWithRetry(() => import("@/pages/GerenciarPermissoes"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
 const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
 const GerenciarAssinatura = lazyWithRetry(() => import("@/pages/GerenciarAssinatura"));
 const MinhasComissoes = lazyWithRetry(() => import("@/pages/MinhasComissoes"));
 const MeusSalarios = lazyWithRetry(() => import("@/pages/MeusSalarios"));
+const MeuFinanceiro = lazyWithRetry(() => import("@/pages/MeuFinanceiro"));
 const Metas = lazyWithRetry(() => import("@/pages/Metas"));
 const MinhasMetas = lazyWithRetry(() => import("@/pages/MinhasMetas"));
 const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
@@ -65,6 +77,7 @@ const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfigurac
 const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
 const Ajuda = lazyWithRetry(() => import("@/pages/Ajuda"));
 const Auditoria = lazyWithRetry(() => import("@/pages/Auditoria"));
+const AdminOverrides = lazyWithRetry(() => import("@/pages/AdminOverrides"));
 const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSeguranca"));
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
 const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
@@ -78,14 +91,24 @@ const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
 const PatientLogin = lazyWithRetry(() => import("@/pages/paciente/PatientLogin"));
 // PatientRegister removed — registration is now part of PatientLogin flow via access code
 const PatientDashboard = lazyWithRetry(() => import("@/pages/paciente/PatientDashboard"));
+const PatientAgendar = lazyWithRetry(() => import("@/pages/paciente/PatientAgendar"));
 const PatientConsultas = lazyWithRetry(() => import("@/pages/paciente/PatientConsultas"));
+const PatientFinanceiro = lazyWithRetry(() => import("@/pages/paciente/PatientFinanceiro"));
+const PatientMensagens = lazyWithRetry(() => import("@/pages/paciente/PatientMensagens"));
+const PatientSaude = lazyWithRetry(() => import("@/pages/paciente/PatientSaude"));
 const PatientTeleconsulta = lazyWithRetry(() => import("@/pages/paciente/PatientTeleconsulta"));
 const PatientExames = lazyWithRetry(() => import("@/pages/paciente/PatientExames"));
 const PatientReceitas = lazyWithRetry(() => import("@/pages/paciente/PatientReceitas"));
 const PatientAtestados = lazyWithRetry(() => import("@/pages/paciente/PatientAtestados"));
 const PatientConsentSigning = lazyWithRetry(() => import("@/pages/paciente/PatientConsentSigning"));
+const PatientProfile = lazyWithRetry(() => import("@/pages/paciente/PatientProfile"));
+const PatientSettings = lazyWithRetry(() => import("@/pages/paciente/PatientSettings"));
+const PatientDependentes = lazyWithRetry(() => import("@/pages/paciente/PatientDependentes"));
+
+const MensagensPacientes = lazyWithRetry(() => import("@/pages/MensagensPacientes"));
 
 const TermosConsentimento = lazyWithRetry(() => import("@/pages/TermosConsentimento"));
+const ContratosTermos = lazyWithRetry(() => import("@/pages/ContratosTermos"));
 
 const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
 const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
@@ -94,17 +117,43 @@ const Cupons = lazyWithRetry(() => import("@/pages/Cupons"));
 
 // Páginas médicas (novas)
 const Prontuarios = lazyWithRetry(() => import("@/pages/Prontuarios"));
+const ProntuarioDetalhe = lazyWithRetry(() => import("@/pages/ProntuarioDetalhe"));
 const Convenios = lazyWithRetry(() => import("@/pages/Convenios"));
 const Receituarios = lazyWithRetry(() => import("@/pages/Receituarios"));
 const Laudos = lazyWithRetry(() => import("@/pages/Laudos"));
 const Triagem = lazyWithRetry(() => import("@/pages/Triagem"));
+const Atestados = lazyWithRetry(() => import("@/pages/Atestados"));
 const Especialidades = lazyWithRetry(() => import("@/pages/Especialidades"));
+const Encaminhamentos = lazyWithRetry(() => import("@/pages/Encaminhamentos"));
+const ListaEspera = lazyWithRetry(() => import("@/pages/ListaEspera"));
+const Odontograma = lazyWithRetry(() => import("@/pages/Odontograma"));
+const PlanosTratamento = lazyWithRetry(() => import("@/pages/PlanosTratamento"));
+const Periograma = lazyWithRetry(() => import("@/pages/Periograma"));
+const GestaoSalas = lazyWithRetry(() => import("@/pages/GestaoSalas"));
+const Evolucoes = lazyWithRetry(() => import("@/pages/Evolucoes"));
+const ApiDocumentation = lazyWithRetry(() => import("@/pages/ApiDocumentation"));
+
+// Páginas FASE 13D — Dialog → Página
+const ClienteDetalhe = lazyWithRetry(() => import("@/pages/ClienteDetalhe"));
+const NovaCompra = lazyWithRetry(() => import("@/pages/NovaCompra"));
+const NovaCampanha = lazyWithRetry(() => import("@/pages/NovaCampanha"));
+const ModeloProntuarioEditor = lazyWithRetry(() => import("@/pages/ModeloProntuarioEditor"));
+const TermoConsentimentoEditor = lazyWithRetry(() => import("@/pages/TermoConsentimentoEditor"));
+const NovaGuiaTISS = lazyWithRetry(() => import("@/pages/NovaGuiaTISS"));
+const ContratoTermoEditor = lazyWithRetry(() => import("@/pages/ContratoTermoEditor"));
+const TransmissaoSNGPC = lazyWithRetry(() => import("@/pages/TransmissaoSNGPC"));
+const RelatoriosCustomizaveis = lazyWithRetry(() => import("@/pages/RelatoriosCustomizaveis"));
+const Compliance = lazyWithRetry(() => import("@/pages/Compliance"));
+const DashboardONA = lazyWithRetry(() => import("@/pages/DashboardONA"));
+const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
+const RetornosPendentes = lazyWithRetry(() => import("@/pages/RetornosPendentes"));
+const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000, // 1 minuto - dados estáticos (categorias, profissionais) ficam em cache
-      gcTime: 5 * 60 * 1000, // 5 minutos (antes cacheTime)
+      staleTime: 60 * 1000,
+      gcTime: 5 * 60 * 1000,
     },
   },
 });
@@ -112,12 +161,13 @@ const queryClient = new QueryClient({
 function GlobalAdminListeners() {
   const auth = useAuth();
   if (!auth?.user || !auth?.isAdmin) return null;
-  return (
-    <>
-      <AdminProfitRealtimeListener />
-      <NewOnlineBookingListener />
-    </>
-  );
+  return <NewOnlineBookingListener />;
+}
+
+function GlobalStaffListeners() {
+  const auth = useAuth();
+  if (!auth?.user) return null;
+  return <TriageRealtimeListener />;
 }
 
 const App = () => (
@@ -134,11 +184,15 @@ const App = () => (
               <TourProvider>
                 <InternalDarkMode />
                 <GlobalAdminListeners />
+                <GlobalStaffListeners />
                 <ErrorBoundary>
                   <Suspense fallback={<RouteFallback />}>
                   <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/solucoes" element={<SolucoesPage />} />
+                <Route path="/sobre" element={<SobreNosPage />} />
+                <Route path="/agendar-demonstracao" element={<AgendarDemonstracaoPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/cadastro" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -151,12 +205,25 @@ const App = () => (
                 <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
                 <Route path="/nps/:token" element={<NpsPublico />} />
                 <Route path="/teleconsulta-publica/:token" element={<TeleconsultaPublica />} />
+                <Route path="/painel-chamada" element={<PainelChamada />} />
 
-                {/* Protected routes */}
+                {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}
+                <Route
+                  path="/403"
+                  element={
+                    <ProtectedRoute>
+                      <Forbidden />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* ── Rotas protegidas ─────────────────────────────── */}
+
+                {/* Geral */}
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute resource="dashboard">
                       <>
                         <WelcomeModal />
                         <Dashboard />
@@ -167,16 +234,254 @@ const App = () => (
                 <Route
                   path="/agenda"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute resource="agenda">
                       <Agenda />
                     </ProtectedRoute>
                   }
                 />
                 <Route
+                  path="/clientes"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <Clientes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/clientes/:id"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <ClienteDetalhe />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/mensagens-pacientes"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <MensagensPacientes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lista-espera"
+                  element={
+                    <ProtectedRoute resource="lista_espera">
+                      <ListaEspera />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/disponibilidade"
+                  element={
+                    <ProtectedRoute resource="disponibilidade">
+                      <Disponibilidade />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Atendimento */}
+                <Route
+                  path="/triagem"
+                  element={
+                    <ProtectedRoute resource="triagem">
+                      <Triagem />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/teleconsulta"
+                  element={
+                    <ProtectedRoute resource="teleconsulta">
+                      <Teleconsulta />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/chat"
+                  element={
+                    <ProtectedRoute resource="chat">
+                      <Chat />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Prontuário & Docs */}
+                <Route
+                  path="/prontuarios"
+                  element={
+                    <ProtectedRoute resource="prontuarios">
+                      <Prontuarios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/prontuarios/:id"
+                  element={
+                    <ProtectedRoute resource="prontuarios">
+                      <ProntuarioDetalhe />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/evolucoes"
+                  element={
+                    <ProtectedRoute resource="evolucoes">
+                      <Evolucoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/receituarios"
+                  element={
+                    <ProtectedRoute resource="receituarios">
+                      <Receituarios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/laudos"
+                  element={
+                    <ProtectedRoute resource="laudos">
+                      <Laudos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/atestados"
+                  element={
+                    <ProtectedRoute resource="atestados">
+                      <Atestados />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/encaminhamentos"
+                  element={
+                    <ProtectedRoute resource="encaminhamentos">
+                      <Encaminhamentos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/evolucao-enfermagem"
+                  element={<Navigate to="/evolucoes?tipo=enfermagem" replace />}
+                />
+                <Route
+                  path="/odontograma"
+                  element={
+                    <ProtectedRoute resource="odontograma">
+                      <Odontograma />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/planos-tratamento"
+                  element={
+                    <ProtectedRoute resource="odontograma">
+                      <PlanosTratamento />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/periograma"
+                  element={
+                    <ProtectedRoute resource="periograma">
+                      <Periograma />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Financeiro */}
+                <Route
                   path="/financeiro"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="financeiro">
                       <Financeiro />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Repasses */}
+                <Route
+                  path="/repasses"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <Repasses />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/repasses/comissoes"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <RepassesComissoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/repasses/salarios"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <RepassesSalarios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/repasses/relatorios"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <RepassesRelatorios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/repasses/regras"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <ConfigurarRegras />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/repasses/captacao"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <RelatorioCaptacao />
+                    </ProtectedRoute>
+                  }
+                />
+
+
+                <Route
+                  path="/faturamento-tiss"
+                  element={
+                    <ProtectedRoute resource="faturamento_tiss">
+                      <FaturamentoTISS />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/faturamento-tiss/nova-guia"
+                  element={
+                    <ProtectedRoute resource="faturamento_tiss">
+                      <NovaGuiaTISS />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/sngpc"
+                  element={
+                    <ProtectedRoute resource="sngpc">
+                      <TransmissaoSNGPC />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/convenios"
+                  element={
+                    <ProtectedRoute resource="convenios">
+                      <Convenios />
                     </ProtectedRoute>
                   }
                 />
@@ -197,9 +502,43 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/produtos"
+                  path="/meu-financeiro"
                   element={
                     <ProtectedRoute>
+                      <MeuFinanceiro />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/relatorio-financeiro"
+                  element={
+                    <ProtectedRoute resource="relatorios">
+                      <RelatorioFinanceiro />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/relatorios"
+                  element={
+                    <ProtectedRoute resource="relatorios">
+                      <Relatorios />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/relatorios-customizaveis"
+                  element={
+                    <ProtectedRoute resource="relatorios">
+                      <RelatoriosCustomizaveis />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Estoque */}
+                <Route
+                  path="/produtos"
+                  element={
+                    <ProtectedRoute resource="produtos">
                       <Produtos />
                     </ProtectedRoute>
                   }
@@ -207,112 +546,34 @@ const App = () => (
                 <Route
                   path="/compras"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="compras">
                       <Compras />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/compras/nova"
+                  element={
+                    <ProtectedRoute resource="compras">
+                      <NovaCompra />
                     </ProtectedRoute>
                   }
                 />
                 <Route
                   path="/fornecedores"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="fornecedores">
                       <Fornecedores />
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/servicos"
-                  element={
-                    <ProtectedRoute>
-                      <Servicos />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/clientes"
-                  element={
-                    <ProtectedRoute>
-                      <Clientes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/teleconsulta"
-                  element={
-                    <ProtectedRoute>
-                      <Teleconsulta />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/unidades"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Unidades />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/disponibilidade"
-                  element={
-                    <ProtectedRoute>
-                      <Disponibilidade />
-                    </ProtectedRoute>
-                  }
-                />
+
+                {/* Operacional */}
                 <Route
                   path="/metas"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="metas">
                       <Metas />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/auditoria"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Auditoria />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/diagnostico-seguranca"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <DiagnosticoSeguranca />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/agendamento-online"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <AgendamentoOnlineAdmin />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/fidelidade-cashback"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <FidelidadeCashbackAdmin />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/vouchers"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Vouchers />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/cupons"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Cupons />
                     </ProtectedRoute>
                   }
                 />
@@ -324,6 +585,246 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/equipe"
+                  element={
+                    <ProtectedRoute resource="equipe">
+                      <Equipe />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/gerenciar-permissoes"
+                  element={
+                    <ProtectedRoute requireAdmin>
+                      <GerenciarPermissoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/unidades"
+                  element={
+                    <ProtectedRoute resource="unidades">
+                      <Unidades />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/gestao-salas"
+                  element={
+                    <ProtectedRoute resource="gestao_salas">
+                      <GestaoSalas />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Cadastros & Modelos */}
+                <Route
+                  path="/servicos"
+                  element={
+                    <ProtectedRoute resource="procedimentos">
+                      <Servicos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/especialidades"
+                  element={
+                    <ProtectedRoute resource="especialidades">
+                      <Especialidades />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/modelos-prontuario"
+                  element={
+                    <ProtectedRoute resource="modelos_prontuario">
+                      <ModelosProntuario />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/modelos-prontuario/:id"
+                  element={
+                    <ProtectedRoute resource="modelos_prontuario">
+                      <ModeloProntuarioEditor />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/termos-consentimento"
+                  element={
+                    <ProtectedRoute resource="termos_consentimento">
+                      <TermosConsentimento />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/termos-consentimento/:id"
+                  element={
+                    <ProtectedRoute resource="termos_consentimento">
+                      <TermoConsentimentoEditor />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/contratos-termos"
+                  element={
+                    <ProtectedRoute resource="contratos_termos">
+                      <ContratosTermos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/contratos-termos/:id"
+                  element={
+                    <ProtectedRoute resource="contratos_termos">
+                      <ContratoTermoEditor />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Marketing & CRM */}
+                <Route
+                  path="/agendamento-online"
+                  element={
+                    <ProtectedRoute resource="agendamento_online">
+                      <AgendamentoOnlineAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/campanhas"
+                  element={
+                    <ProtectedRoute resource="campanhas">
+                      <Campanhas />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/campanhas/nova"
+                  element={
+                    <ProtectedRoute resource="campanhas">
+                      <NovaCampanha />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/automacoes"
+                  element={
+                    <ProtectedRoute resource="automacoes">
+                      <Automacoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/fidelidade-cashback"
+                  element={
+                    <ProtectedRoute resource="fidelidade">
+                      <FidelidadeCashbackAdmin />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/vouchers"
+                  element={
+                    <ProtectedRoute resource="vouchers">
+                      <Vouchers />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/cupons"
+                  element={
+                    <ProtectedRoute resource="cupons">
+                      <Cupons />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Administração */}
+                <Route
+                  path="/integracoes"
+                  element={
+                    <ProtectedRoute resource="integracoes">
+                      <Integracoes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/api-docs"
+                  element={
+                    <ProtectedRoute resource="api_docs">
+                      <ApiDocumentation />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/auditoria"
+                  element={
+                    <ProtectedRoute resource="auditoria">
+                      <Auditoria />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/overrides"
+                  element={
+                    <ProtectedRoute resource="configuracoes">
+                      <AdminOverrides />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/diagnostico-seguranca"
+                  element={
+                    <ProtectedRoute resource="auditoria">
+                      <DiagnosticoSeguranca />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/compliance"
+                  element={
+                    <ProtectedRoute resource="auditoria">
+                      <Compliance />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard-ona"
+                  element={
+                    <ProtectedRoute resource="auditoria">
+                      <DashboardONA />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/retencao-dados"
+                  element={
+                    <ProtectedRoute resource="auditoria">
+                      <RetencaoDados />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/retornos-pendentes"
+                  element={
+                    <ProtectedRoute resource="agenda">
+                      <RetornosPendentes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/configuracoes"
+                  element={
+                    <ProtectedRoute resource="configuracoes">
+                      <Configuracoes />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Conta */}
                 <Route
                   path="/notificacoes"
                   element={
@@ -341,25 +842,9 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/equipe"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Equipe />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/configuracoes"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Configuracoes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
                   path="/assinatura"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="assinatura">
                       <Assinatura />
                     </ProtectedRoute>
                   }
@@ -367,12 +852,11 @@ const App = () => (
                 <Route
                   path="/assinatura/gerenciar"
                   element={
-                    <ProtectedRoute requireAdmin>
+                    <ProtectedRoute resource="assinatura">
                       <GerenciarAssinatura />
                     </ProtectedRoute>
                   }
                 />
-
                 <Route
                   path="/suporte"
                   element={
@@ -381,7 +865,6 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-
                 <Route
                   path="/ajuda"
                   element={
@@ -390,134 +873,11 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/campanhas"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Campanhas />
-                    </ProtectedRoute>
-                  }
-                />
 
-                <Route
-                  path="/automacoes"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Automacoes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/relatorio-financeiro"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <RelatorioFinanceiro />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/relatorios"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Relatorios />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Rotas médicas */}
-                <Route
-                  path="/prontuarios"
-                  element={
-                    <ProtectedRoute>
-                      <Prontuarios />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/triagem"
-                  element={
-                    <ProtectedRoute>
-                      <Triagem />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/receituarios"
-                  element={
-                    <ProtectedRoute>
-                      <Receituarios />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/laudos"
-                  element={
-                    <ProtectedRoute>
-                      <Laudos />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/especialidades"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Especialidades />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/convenios"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Convenios />
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
-                  path="/integracoes"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <Integracoes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/modelos-prontuario"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <ModelosProntuario />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/faturamento-tiss"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <FaturamentoTISS />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/chat"
-                  element={
-                    <ProtectedRoute>
-                      <Chat />
-                    </ProtectedRoute>
-                  }
-                />
-
+                {/* Redirects legados */}
                 <Route path="/contas-pagar" element={<Navigate to="/financeiro?tab=bills_payable" replace />} />
                 <Route path="/contas-receber" element={<Navigate to="/financeiro?tab=bills_receivable" replace />} />
                 <Route path="/fluxo-de-caixa" element={<Navigate to="/financeiro?tab=projection" replace />} />
-
-                <Route
-                  path="/termos-consentimento"
-                  element={
-                    <ProtectedRoute>
-                      <TermosConsentimento />
-                    </ProtectedRoute>
-                  }
-                />
 
                 {/* Portal do Paciente — rotas públicas */}
                 <Route path="/paciente/login" element={<PatientLogin />} />
@@ -543,6 +903,16 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/paciente/agendar"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientAgendar />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
                   path="/paciente/consultas"
                   element={
                     <PatientProtectedRoute>
@@ -558,6 +928,36 @@ const App = () => (
                     <PatientProtectedRoute>
                       <ConsentGate>
                         <PatientTeleconsulta />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/financeiro"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientFinanceiro />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/mensagens"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientMensagens />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/saude"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientSaude />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }
@@ -597,7 +997,7 @@ const App = () => (
                   element={
                     <PatientProtectedRoute>
                       <ConsentGate>
-                        <PatientDashboard />
+                        <PatientProfile />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }
@@ -607,7 +1007,17 @@ const App = () => (
                   element={
                     <PatientProtectedRoute>
                       <ConsentGate>
-                        <PatientDashboard />
+                        <PatientSettings />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/dependentes"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientDependentes />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }

@@ -10,27 +10,28 @@ import {
   FeaturesSection,
   TestimonialsSection,
   PricingSection,
-  ProductShowcaseSection,
   SocialProofSection,
   ROICalculatorSection,
+  DifferentialsSection,
+  IntegrationsSection,
 } from "@/components/landing";
 import { LandingLayout } from "@/components/landing/LandingLayout";
 
-// Main Landing Page - COMPLETE STRUCTURE
 export default function LandingPage() {
   return (
     <LandingLayout>
       <HeroSection />
       <StatsSection />
       <SocialProofSection />
-      <ProductShowcaseSection />
-      <HowItWorksSection />
+      <DifferentialsSection />
       <FeaturesSection />
+      <IntegrationsSection />
+      <HowItWorksSection />
       <BeforeAfterSection />
       <TestimonialsSection />
       <ROICalculatorSection />
-      <FAQSection />
       <PricingSection />
+      <FAQSection />
       <GuaranteeSection />
       <DevicesSection />
       <UrgentCTASection />

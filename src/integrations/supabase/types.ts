@@ -2832,68 +2832,409 @@ export type Database = {
         }
         Relationships: []
       }
+      medical_certificates: {
+        Row: {
+          id: string
+          tenant_id: string
+          client_id: string
+          appointment_id: string | null
+          medical_record_id: string | null
+          professional_id: string | null
+          certificate_type: string
+          issued_at: string
+          days_off: number | null
+          start_date: string | null
+          end_date: string | null
+          cid_code: string | null
+          content: string
+          notes: string | null
+          digital_signature: string | null
+          printed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          client_id: string
+          appointment_id?: string | null
+          medical_record_id?: string | null
+          professional_id?: string | null
+          certificate_type?: string
+          issued_at?: string
+          days_off?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          cid_code?: string | null
+          content: string
+          notes?: string | null
+          digital_signature?: string | null
+          printed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          client_id?: string
+          appointment_id?: string | null
+          medical_record_id?: string | null
+          professional_id?: string | null
+          certificate_type?: string
+          issued_at?: string
+          days_off?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          cid_code?: string | null
+          content?: string
+          notes?: string | null
+          digital_signature?: string | null
+          printed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_certificates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_certificates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_certificates_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_certificates_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_records: {
         Row: {
+          allergies: string | null
           anamnesis: string | null
           appointment_id: string | null
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
           cid_code: string | null
           chief_complaint: string | null
           client_id: string
           created_at: string
+          current_medications: string | null
           diagnosis: string | null
+          digital_hash: string | null
+          heart_rate: number | null
+          height_cm: number | null
           id: string
           is_confidential: boolean
+          is_locked: boolean
+          lock_reason: string | null
+          medical_history: string | null
           notes: string | null
+          oxygen_saturation: number | null
+          pain_scale: number | null
           physical_exam: string | null
           prescriptions: string | null
           professional_id: string | null
           record_date: string
+          respiratory_rate: number | null
+          signed_at: string | null
+          signed_by_crm: string | null
+          signed_by_name: string | null
           specialty_id: string | null
+          temperature: number | null
           tenant_id: string
           treatment_plan: string | null
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
+          allergies?: string | null
           anamnesis?: string | null
           appointment_id?: string | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
           cid_code?: string | null
           chief_complaint?: string | null
           client_id: string
           created_at?: string
+          current_medications?: string | null
           diagnosis?: string | null
+          digital_hash?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
           id?: string
           is_confidential?: boolean
+          is_locked?: boolean
+          lock_reason?: string | null
+          medical_history?: string | null
           notes?: string | null
+          oxygen_saturation?: number | null
+          pain_scale?: number | null
           physical_exam?: string | null
           prescriptions?: string | null
           professional_id?: string | null
           record_date?: string
+          respiratory_rate?: number | null
+          signed_at?: string | null
+          signed_by_crm?: string | null
+          signed_by_name?: string | null
           specialty_id?: string | null
+          temperature?: number | null
           tenant_id: string
           treatment_plan?: string | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
+          allergies?: string | null
           anamnesis?: string | null
           appointment_id?: string | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
           cid_code?: string | null
           chief_complaint?: string | null
           client_id?: string
           created_at?: string
+          current_medications?: string | null
           diagnosis?: string | null
+          digital_hash?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
           id?: string
           is_confidential?: boolean
+          is_locked?: boolean
+          lock_reason?: string | null
+          medical_history?: string | null
           notes?: string | null
+          oxygen_saturation?: number | null
+          pain_scale?: number | null
           physical_exam?: string | null
           prescriptions?: string | null
           professional_id?: string | null
           record_date?: string
+          respiratory_rate?: number | null
+          signed_at?: string | null
+          signed_by_crm?: string | null
+          signed_by_name?: string | null
           specialty_id?: string | null
+          temperature?: number | null
           tenant_id?: string
           treatment_plan?: string | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: []
+      }
+      medical_record_versions: {
+        Row: {
+          id: string
+          record_id: string
+          tenant_id: string
+          version_number: number
+          changed_by: string | null
+          changed_at: string
+          change_reason: string | null
+          snapshot: Json
+          digital_hash: string | null
+        }
+        Insert: {
+          id?: string
+          record_id: string
+          tenant_id: string
+          version_number?: number
+          changed_by?: string | null
+          changed_at?: string
+          change_reason?: string | null
+          snapshot: Json
+          digital_hash?: string | null
+        }
+        Update: {
+          id?: string
+          record_id?: string
+          tenant_id?: string
+          version_number?: number
+          changed_by?: string | null
+          changed_at?: string
+          change_reason?: string | null
+          snapshot?: Json
+          digital_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_record_versions_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_record_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist: {
+        Row: {
+          id: string
+          tenant_id: string
+          client_id: string
+          service_id: string | null
+          professional_id: string | null
+          specialty_id: string | null
+          priority: string
+          status: string
+          reason: string | null
+          preferred_periods: string[] | null
+          notified_at: string | null
+          scheduled_at: string | null
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          client_id: string
+          service_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          priority?: string
+          status?: string
+          reason?: string | null
+          preferred_periods?: string[] | null
+          notified_at?: string | null
+          scheduled_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          client_id?: string
+          service_id?: string | null
+          professional_id?: string | null
+          specialty_id?: string | null
+          priority?: string
+          status?: string
+          reason?: string | null
+          preferred_periods?: string[] | null
+          notified_at?: string | null
+          scheduled_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          id: string
+          tenant_id: string
+          client_id: string
+          from_professional: string
+          to_professional: string | null
+          to_specialty_id: string | null
+          medical_record_id: string | null
+          appointment_id: string | null
+          status: string
+          priority: string
+          reason: string
+          clinical_summary: string | null
+          notes: string | null
+          responded_at: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          client_id: string
+          from_professional: string
+          to_professional?: string | null
+          to_specialty_id?: string | null
+          medical_record_id?: string | null
+          appointment_id?: string | null
+          status?: string
+          priority?: string
+          reason: string
+          clinical_summary?: string | null
+          notes?: string | null
+          responded_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          client_id?: string
+          from_professional?: string
+          to_professional?: string | null
+          to_specialty_id?: string | null
+          medical_record_id?: string | null
+          appointment_id?: string | null
+          status?: string
+          priority?: string
+          reason?: string
+          clinical_summary?: string | null
+          notes?: string | null
+          responded_at?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       triage_records: {
         Row: {
@@ -2973,6 +3314,7 @@ export type Database = {
       prescriptions: {
         Row: {
           appointment_id: string | null
+          medical_record_id: string | null
           client_id: string
           created_at: string
           digital_signature: string | null
@@ -2991,6 +3333,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
+          medical_record_id?: string | null
           client_id: string
           created_at?: string
           digital_signature?: string | null
@@ -3009,6 +3352,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string | null
+          medical_record_id?: string | null
           client_id?: string
           created_at?: string
           digital_signature?: string | null
@@ -3030,6 +3374,7 @@ export type Database = {
       exam_results: {
         Row: {
           appointment_id: string | null
+          medical_record_id: string | null
           client_id: string
           created_at: string
           exam_name: string
@@ -3050,6 +3395,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
+          medical_record_id?: string | null
           client_id: string
           created_at?: string
           exam_name: string
@@ -3070,6 +3416,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string | null
+          medical_record_id?: string | null
           client_id?: string
           created_at?: string
           exam_name?: string

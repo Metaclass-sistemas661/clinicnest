@@ -17,83 +17,138 @@ import {
   Activity,
   Award,
   DollarSign,
-  CreditCard,
-  ClipboardList,
-  BarChart3,
+  Smile,
+  Video,
+  Building2,
+  Lock,
+  Zap,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ─── 3 Hero variants — each has unique content ───────────────────────────────
 const VARIANTS = [
   {
-    // Variant 1: Prontuário + Agenda — Deep Medical Teal
+    id: "hybrid",
     bg: "linear-gradient(135deg, #0f4c4c 0%, #0d6e6e 40%, #0e7490 70%, #0c4a6e 100%)",
-    badgeIcon: Stethoscope,
-    badge: "Prontuário & Agenda Digital",
-    headlinePlain: "Do prontuário à agenda,",
-    headlineHighlight: "tudo integrado",
+    badgeIcon: HeartPulse,
+    badge: "Único Sistema Híbrido do Brasil",
+    headlinePlain: "Médico + Odontológico",
+    headlineHighlight: "em uma só plataforma",
     headlineHighlightClass: "bg-gradient-to-r from-teal-300 via-cyan-200 to-white/90 bg-clip-text text-transparent",
-    headlineSuffix: "na sua clínica",
-    sub: "Registre consultas, anamneses e histórico clínico. Agende com lembretes automáticos e nunca perca um atendimento.",
+    headlineSuffix: "",
+    sub: "O único sistema do mercado que atende clínicas médicas, odontológicas e multiprofissionais com módulos completos para cada especialidade.",
     bullets: [
-      "Prontuário eletrônico com histórico completo",
-      "Agenda com confirmação automática via WhatsApp",
-      "Receituários e laudos digitais integrados",
+      "Prontuário SOAP + Odontograma + Periograma integrados",
+      "Faturamento TISS médico e odontológico (GTO)",
+      "11 perfis profissionais com permissões granulares",
     ],
     trustChips: [
       { icon: Shield, label: "LGPD Compliant" },
-      { icon: Clock, label: "Setup em 5 min" },
-      { icon: HeartPulse, label: "+500 clínicas" },
-      { icon: Stethoscope, label: "Prontuário digital" },
+      { icon: Smile, label: "Módulo Odonto" },
+      { icon: Stethoscope, label: "Módulo Médico" },
+      { icon: Award, label: "Segurança Avançada" },
     ],
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80&fit=crop&crop=top",
+    imageAlt: "Médica utilizando o ClinicNest",
   },
   {
-    // Variant 2: Convênios + Financeiro — Midnight Navy-Teal
+    id: "tiss",
     bg: "linear-gradient(135deg, #0c3558 0%, #0c5078 40%, #0e7490 68%, #0f5a8f 100%)",
     badgeIcon: DollarSign,
-    badge: "Financeiro & Convênios",
-    headlinePlain: "Convênios e financeiro",
-    headlineHighlight: "sem complicação",
+    badge: "Faturamento TISS Completo",
+    headlinePlain: "Convênios sem dor de cabeça,",
+    headlineHighlight: "glosas sob controle",
     headlineHighlightClass: "bg-gradient-to-r from-blue-300 via-cyan-200 to-teal-200 bg-clip-text text-transparent",
     headlineSuffix: "",
-    sub: "Gerencie planos de saúde, fature procedimentos e acompanhe a saúde financeira da sua clínica em tempo real.",
+    sub: "Gere guias TISS (Consulta, SP/SADT, Honorários, GTO), processe retornos XML automaticamente e gerencie recursos de glosa com workflow completo.",
     bullets: [
-      "Gestão completa de convênios e planos de saúde",
-      "Fluxo de caixa e DRE automáticos",
-      "Contas a pagar e receber integradas",
+      "4 tipos de guias TISS + lote automático",
+      "Parser de retorno XML com identificação de glosas",
+      "Dashboard de faturamento por convênio",
     ],
     trustChips: [
-      { icon: Shield, label: "Dados seguros" },
-      { icon: CreditCard, label: "Multi-convênio" },
-      { icon: TrendingUp, label: "ROI comprovado" },
-      { icon: BarChart3, label: "Relatórios avançados" },
+      { icon: Shield, label: "ANS 3.05" },
+      { icon: FileText, label: "4 Tipos de Guia" },
+      { icon: TrendingUp, label: "Reduz Glosas" },
+      { icon: Building2, label: "Multi-convênio" },
     ],
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80&fit=crop",
+    imageAlt: "Profissional de saúde analisando dados financeiros",
   },
   {
-    // Variant 3: Equipe + Multi-especialidade — Emerald Forest
+    id: "portal",
     bg: "linear-gradient(135deg, #064e3b 0%, #047857 38%, #059669 62%, #0f766e 100%)",
-    badgeIcon: Users,
-    badge: "Equipe & Multi-especialidade",
-    headlinePlain: "Sua equipe em sintonia,",
-    headlineHighlight: "cada especialidade",
+    badgeIcon: Globe,
+    badge: "Portal do Paciente Completo",
+    headlinePlain: "Seus pacientes agendam sozinhos,",
+    headlineHighlight: "24 horas por dia",
     headlineHighlightClass: "bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-200 bg-clip-text text-transparent",
-    headlineSuffix: "sob controle",
-    sub: "Gerencie médicos, enfermeiros e recepcionistas com permissões por função. Escale sem perder o controle.",
+    headlineSuffix: "",
+    sub: "Portal completo onde o paciente agenda consultas, visualiza documentos, acompanha financeiro e conversa com a clínica. Reduza ligações em até 70%.",
     bullets: [
-      "Multi-especialidade e múltiplos usuários",
-      "Permissões e funções por profissional",
-      "Relatórios de desempenho por especialidade",
+      "Agendamento self-service com slots em tempo real",
+      "Visualização de receitas, atestados e exames",
+      "Chat integrado e acompanhamento financeiro",
     ],
     trustChips: [
-      { icon: Shield, label: "Acesso seguro" },
-      { icon: Users, label: "Equipe ilimitada" },
-      { icon: HeartPulse, label: "Multi-especialidade" },
-      { icon: ClipboardList, label: "Escalonável" },
+      { icon: Calendar, label: "Agenda Online" },
+      { icon: FileText, label: "Documentos" },
+      { icon: DollarSign, label: "Financeiro" },
+      { icon: Video, label: "Teleconsulta" },
     ],
+    image: "https://images.unsplash.com/photo-1551076805-e1869033e561?w=800&q=80&fit=crop",
+    imageAlt: "Paciente usando aplicativo de saúde no celular",
+  },
+  {
+    id: "rbac",
+    bg: "linear-gradient(135deg, #4c1d95 0%, #5b21b6 38%, #6d28d9 62%, #7c3aed 100%)",
+    badgeIcon: Lock,
+    badge: "RBAC Enterprise",
+    headlinePlain: "11 perfis profissionais,",
+    headlineHighlight: "cada um vê o que precisa",
+    headlineHighlightClass: "bg-gradient-to-r from-violet-300 via-purple-200 to-pink-200 bg-clip-text text-transparent",
+    headlineSuffix: "",
+    sub: "Médico, dentista, enfermeiro, secretária, faturista... cada profissional tem acesso apenas ao que precisa. Dashboards diferenciados e auditoria completa.",
+    bullets: [
+      "Permissões granulares por recurso e ação",
+      "Dashboards específicos por tipo profissional",
+      "Auditoria de acessos clínicos (LGPD)",
+    ],
+    trustChips: [
+      { icon: Shield, label: "LGPD" },
+      { icon: Users, label: "11 Perfis" },
+      { icon: Lock, label: "RLS Banco" },
+      { icon: Activity, label: "Auditoria" },
+    ],
+    image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=800&q=80&fit=crop",
+    imageAlt: "Equipe médica multiprofissional em reunião",
+  },
+  {
+    id: "compliance",
+    bg: "linear-gradient(135deg, #1e3a5f 0%, #1e4976 38%, #1d5a8a 62%, #1a6b9e 100%)",
+    badgeIcon: Award,
+    badge: "Compliance Total",
+    headlinePlain: "Preparado para certificações,",
+    headlineHighlight: "pronto para crescer",
+    headlineHighlightClass: "bg-gradient-to-r from-sky-300 via-blue-200 to-indigo-200 bg-clip-text text-transparent",
+    headlineSuffix: "",
+    sub: "Assinatura digital, interoperabilidade, SNGPC para controlados, retenção CFM 20 anos. Tudo que você precisa para escalar com segurança.",
+    bullets: [
+      "Suporte a assinatura digital (A1/A3)",
+      "Interoperabilidade HL7 FHIR",
+      "SNGPC para controlados, retenção CFM 20 anos",
+    ],
+    trustChips: [
+      { icon: Shield, label: "Assinatura Digital" },
+      { icon: Zap, label: "FHIR R4" },
+      { icon: Award, label: "Backup Automático" },
+      { icon: FileText, label: "CFM 20 anos" },
+    ],
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80&fit=crop",
+    imageAlt: "Médico assinando documento digital em tablet",
   },
 ];
 
-// ─── Floating info card ──────────────────────────────────────────────────────
 function FloatingCard({
   children,
   className,
@@ -117,23 +172,19 @@ function FloatingCard({
   );
 }
 
-// ─── Doctor photo + floating cards ──────────────────────────────────────────
-function DoctorVisual() {
+function HeroVisual({ variant }: { variant: typeof VARIANTS[0] }) {
   return (
     <div className="relative w-full max-w-[480px] mx-auto">
-      {/* Photo */}
-      <div className="relative h-[560px] w-full rounded-3xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)]">
+      <div className="relative h-[520px] w-full rounded-3xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)]">
         <img
-          src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80&fit=crop&crop=top"
-          alt="Médica utilizando o ClinicNest"
+          src={variant.image}
+          alt={variant.imageAlt}
           className="w-full h-full object-cover object-top"
           loading="eager"
         />
-        {/* Edge overlays for depth */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/15 via-transparent to-black/10" />
 
-        {/* Status strip */}
         <div className="absolute bottom-0 left-0 right-0 px-5 py-4 bg-gradient-to-t from-black/60 to-transparent">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-teal-300" />
@@ -143,54 +194,165 @@ function DoctorVisual() {
         </div>
       </div>
 
-      {/* ── Floating card: Consultas hoje ── */}
-      <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-teal-100 flex items-center justify-center flex-shrink-0">
-            <Calendar className="h-4 w-4 text-teal-600" />
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Consultas hoje</p>
-            <p className="font-bold text-gray-900 text-base leading-none">18 agendadas</p>
-          </div>
-        </div>
-      </FloatingCard>
+      {variant.id === "hybrid" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-teal-100 flex items-center justify-center flex-shrink-0">
+                <Stethoscope className="h-4 w-4 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Módulo Médico</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">100% Completo</p>
+              </div>
+            </div>
+          </FloatingCard>
 
-      {/* ── Floating card: Prontuário digital ── */}
-      <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
-        <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-            <FileText className="h-4 w-4 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Prontuários</p>
-            <p className="font-bold text-gray-900 text-sm leading-none">100% digital</p>
-          </div>
-        </div>
-      </FloatingCard>
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-pink-100 flex items-center justify-center flex-shrink-0">
+                <Smile className="h-4 w-4 text-pink-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Módulo Odonto</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">100% Completo</p>
+              </div>
+            </div>
+          </FloatingCard>
 
-      {/* ── Floating chip: LGPD — right middle ── */}
-      <FloatingCard className="top-1/2 -right-10 -translate-y-1/2 px-3.5 py-2.5" delay={3.2}>
-        <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-teal-600" />
-          <span className="text-xs font-semibold text-gray-800">LGPD Seguro</span>
-        </div>
-      </FloatingCard>
+          <FloatingCard className="top-1/2 -right-10 -translate-y-1/2 px-3.5 py-2.5" delay={3.2}>
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-teal-600" />
+              <span className="text-xs font-semibold text-gray-800">Único Híbrido</span>
+            </div>
+          </FloatingCard>
+        </>
+      )}
 
-      {/* ── Floating card: Receita ── */}
+      {variant.id === "tiss" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <FileText className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Guias TISS</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">4 Tipos</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Redução Glosas</p>
+                <p className="font-bold text-green-600 text-sm leading-none">-45%</p>
+              </div>
+            </div>
+          </FloatingCard>
+        </>
+      )}
+
+      {variant.id === "portal" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Agendamentos Online</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">24/7</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Video className="h-4 w-4 text-cyan-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Teleconsulta</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">Integrada</p>
+              </div>
+            </div>
+          </FloatingCard>
+        </>
+      )}
+
+      {variant.id === "rbac" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <Users className="h-4 w-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Perfis</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">11 Tipos</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Lock className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Segurança</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">RLS + RBAC</p>
+              </div>
+            </div>
+          </FloatingCard>
+        </>
+      )}
+
+      {variant.id === "compliance" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+                <Shield className="h-4 w-4 text-sky-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Assinatura</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">A1 / A3</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">FHIR</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">FHIR R4</p>
+              </div>
+            </div>
+          </FloatingCard>
+        </>
+      )}
+
       <FloatingCard className="-bottom-5 -left-8 p-3.5 min-w-[160px]" delay={2.5}>
         <div className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="h-4 w-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Receita do mês</p>
-            <p className="font-bold text-emerald-600 text-base leading-none">+38%</p>
+            <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Economia média</p>
+            <p className="font-bold text-emerald-600 text-base leading-none">+40%</p>
           </div>
         </div>
       </FloatingCard>
 
-      {/* ── Floating card: Rating ── */}
       <FloatingCard className="-bottom-5 -right-8 p-3.5" delay={4}>
         <div className="flex items-center gap-1.5 mb-1">
           {[...Array(5)].map((_, i) => (
@@ -200,19 +362,10 @@ function DoctorVisual() {
         </div>
         <p className="text-[10px] text-gray-400">+500 clínicas ativas</p>
       </FloatingCard>
-
-      {/* ── Floating chip: Convênios — left middle ── */}
-      <FloatingCard className="top-2/5 -left-10 px-3.5 py-2.5" delay={1.2}>
-        <div className="flex items-center gap-2">
-          <Award className="h-4 w-4 text-cyan-600" />
-          <span className="text-xs font-semibold text-gray-800">Convênios OK</span>
-        </div>
-      </FloatingCard>
     </div>
   );
 }
 
-// ─── Main Hero ───────────────────────────────────────────────────────────────
 export function HeroSection() {
   const [activeVariant, setActiveVariant] = useState(0);
   const v = VARIANTS[activeVariant];
@@ -221,18 +374,16 @@ export function HeroSection() {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveVariant((prev) => (prev + 1) % VARIANTS.length);
-    }, 6000);
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
-
-      {/* ── Animated background layers ── */}
       <div className="absolute inset-0">
         {VARIANTS.map((variant, i) => (
           <div
-            key={i}
+            key={variant.id}
             className="absolute inset-0 transition-opacity duration-[1200ms] ease-in-out"
             style={{
               background: variant.bg,
@@ -241,14 +392,12 @@ export function HeroSection() {
           />
         ))}
 
-        {/* Ambient blobs */}
         <div className="absolute top-[-10%] left-[-5%] w-[700px] h-[700px] bg-white/[0.04] rounded-full blur-[160px] animate-pulse" />
         <div
           className="absolute bottom-[-10%] right-[-5%] w-[600px] h-[600px] bg-white/[0.04] rounded-full blur-[140px] animate-pulse"
           style={{ animationDelay: "2s" }}
         />
 
-        {/* Subtle grid */}
         <div
           className="absolute inset-0 opacity-[0.035]"
           style={{
@@ -258,25 +407,18 @@ export function HeroSection() {
           }}
         />
 
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent" />
       </div>
 
-      {/* ── Content ── */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20 lg:py-28">
         <div className="grid lg:grid-cols-2 gap-14 xl:gap-24 items-center">
-
-          {/* ──── LEFT: Text + CTA ──── */}
           <div className="flex flex-col items-start text-left">
-
-            {/* Live badge — changes per variant */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/12 backdrop-blur-md border border-white/20 mb-7 transition-all duration-700">
               <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-sm font-medium text-white">{v.badge}</span>
               <BadgeIcon className="h-4 w-4 text-teal-300" />
             </div>
 
-            {/* Headline — changes per variant */}
             <h1 className="font-display text-4xl sm:text-5xl md:text-[3.5rem] font-bold tracking-tight leading-[1.08] mb-6 text-white drop-shadow-lg">
               {v.headlinePlain}{" "}
               <span className={v.headlineHighlightClass}>
@@ -287,12 +429,10 @@ export function HeroSection() {
               )}
             </h1>
 
-            {/* Subheadline — changes per variant */}
             <p className="text-lg sm:text-xl text-white/78 max-w-[520px] leading-relaxed mb-8 transition-all duration-700">
               {v.sub}
             </p>
 
-            {/* Feature checkmarks — changes per variant */}
             <div className="flex flex-col gap-2.5 mb-10">
               {v.bullets.map((item) => (
                 <div key={item} className="flex items-center gap-2.5">
@@ -304,7 +444,6 @@ export function HeroSection() {
               ))}
             </div>
 
-            {/* CTA */}
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <Link to="/cadastro">
                 <Button
@@ -315,25 +454,18 @@ export function HeroSection() {
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-              <a
-                href="#features"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
+              <Link to="/demonstracao">
                 <Button
                   size="lg"
                   variant="outline"
                   className="text-base px-8 py-6 h-auto bg-white/10 border-white/30 text-white hover:bg-white/18 backdrop-blur-sm font-semibold"
                 >
-                  Ver recursos
+                  Agendar demonstração
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
-              </a>
+              </Link>
             </div>
 
-            {/* Trust chips — changes per variant */}
             <div className="flex flex-wrap gap-2 mb-8">
               {v.trustChips.map(({ icon: Icon, label }) => (
                 <div
@@ -346,7 +478,6 @@ export function HeroSection() {
               ))}
             </div>
 
-            {/* Social proof avatars */}
             <div className="flex items-center gap-3">
               <div className="flex -space-x-2">
                 {["DR", "AM", "PC", "JS", "RL"].map((initials, i) => (
@@ -365,28 +496,26 @@ export function HeroSection() {
                   ))}
                   <span className="text-white font-semibold text-sm ml-1">4.9</span>
                 </div>
-                <p className="text-white/50 text-xs">+500 médicos e gestores ativos</p>
+                <p className="text-white/50 text-xs">+500 clínicas confiam no ClinicNest</p>
               </div>
             </div>
           </div>
 
-          {/* ──── RIGHT: Doctor photo ──── */}
           <div
             className="hidden lg:flex items-center justify-center animate-fade-in"
             style={{ animationDelay: "0.2s" }}
           >
-            <DoctorVisual />
+            <HeroVisual variant={v} />
           </div>
         </div>
       </div>
 
-      {/* ── Variant selector dots ── */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-        {VARIANTS.map((_, i) => (
+        {VARIANTS.map((variant, i) => (
           <button
-            key={i}
+            key={variant.id}
             onClick={() => setActiveVariant(i)}
-            aria-label={`Tema ${i + 1}`}
+            aria-label={`Banner ${i + 1}: ${variant.badge}`}
             className={cn(
               "h-2 rounded-full transition-all duration-500",
               activeVariant === i
@@ -397,7 +526,6 @@ export function HeroSection() {
         ))}
       </div>
 
-      {/* ── Scroll indicator ── */}
       <div className="absolute bottom-8 right-8 hidden lg:flex items-center gap-2 text-white/40 text-xs">
         <span>Role para explorar</span>
         <div className="w-px h-8 bg-white/20 ml-2" />

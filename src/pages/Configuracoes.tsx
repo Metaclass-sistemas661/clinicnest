@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
+import { GamificationSettings } from "@/components/settings/GamificationSettings";
 
 type LgpdRequestStatus = "pending" | "in_progress" | "completed" | "rejected";
 type LgpdRequestType =
@@ -907,7 +908,10 @@ export default function Configuracoes() {
           </CardContent>
         </Card>
 
-        
+        {/* Gamification Settings */}
+        <div className="xl:col-span-1">
+          <GamificationSettings isAdmin={true} />
+        </div>
 
         <Card className="xl:col-span-1">
           <CardHeader>

@@ -1,7 +1,57 @@
 // Application types derived from database schema
 
 export type AppRole = 'admin' | 'staff';
-export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+export type ProfessionalType =
+  | 'admin'
+  | 'medico'
+  | 'dentista'
+  | 'enfermeiro'
+  | 'tec_enfermagem'
+  | 'fisioterapeuta'
+  | 'nutricionista'
+  | 'psicologo'
+  | 'fonoaudiologo'
+  | 'secretaria'
+  | 'faturista'
+  | 'custom';
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
+
+export interface ResourcePermission {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  delete: boolean;
+}
+
+export type PermissionsMap = Record<string, ResourcePermission>;
+
+export const COUNCIL_BY_TYPE: Partial<Record<ProfessionalType, string>> = {
+  medico: 'CRM',
+  dentista: 'CRO',
+  enfermeiro: 'COREN',
+  tec_enfermagem: 'COREN',
+  fisioterapeuta: 'CREFITO',
+  nutricionista: 'CRN',
+  psicologo: 'CRP',
+  fonoaudiologo: 'CRFa',
+};
+
+export const PROFESSIONAL_TYPE_LABELS: Record<ProfessionalType, string> = {
+  admin: 'Administrador',
+  medico: 'Médico(a)',
+  dentista: 'Dentista',
+  enfermeiro: 'Enfermeiro(a)',
+  tec_enfermagem: 'Téc. Enfermagem',
+  fisioterapeuta: 'Fisioterapeuta',
+  nutricionista: 'Nutricionista',
+  psicologo: 'Psicólogo(a)',
+  fonoaudiologo: 'Fonoaudiólogo(a)',
+  secretaria: 'Secretária / Recepcionista',
+  faturista: 'Faturista',
+  custom: 'Perfil Customizado',
+};
+export type AppointmentStatus = 'pending' | 'confirmed' | 'arrived' | 'completed' | 'cancelled';
 export type TransactionType = 'income' | 'expense';
 
 export interface Tenant {
@@ -21,6 +71,7 @@ export interface Tenant {
   cashback_percent?: number;
   asaas_api_key?: string | null;
   asaas_environment?: string | null;
+  gamification_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +86,11 @@ export interface Profile {
   avatar_url: string | null;
   allowed_product?: 'salon' | 'clinic';
   show_goals_progress_in_header?: boolean;
+  show_gamification_popups?: boolean;
+  professional_type: ProfessionalType;
+  council_type: string | null;
+  council_number: string | null;
+  council_state: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,6 +121,7 @@ export interface Client {
   neighborhood: string | null;
   city: string | null;
   state: string | null;
+  allergies: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -348,6 +405,39 @@ export interface DashboardStats {
   pendingAppointments: number;
 }
 
+// ─── Sistema de Comissões Avançado — Fase 31 ───────────────────────────
+
+export type CommissionRuleType = 'default' | 'service' | 'insurance' | 'procedure' | 'sale';
+export type CommissionCalculationType = 'percentage' | 'fixed' | 'tiered';
+
+export interface CommissionTier {
+  min: number;
+  max: number | null;
+  value: number;
+}
+
+export interface CommissionRule {
+  id: string;
+  tenant_id: string;
+  professional_id: string;
+  rule_type: CommissionRuleType;
+  service_id: string | null;
+  insurance_id: string | null;
+  procedure_code: string | null;
+  calculation_type: CommissionCalculationType;
+  value: number;
+  tier_config: CommissionTier[] | null;
+  priority: number;
+  is_inverted: boolean;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  service?: { id: string; name: string };
+  insurance?: { id: string; name: string };
+}
+
 // ─── Financeiro Avançado — Fase 2 ───────────────────────────
 
 export type BillStatus = 'pending' | 'paid' | 'cancelled';
@@ -404,4 +494,33 @@ export interface BillReceivable {
   updated_at: string;
   // Joined
   client?: { id: string; name: string };
+}
+
+export type ClinicalEvolutionType = 'medica' | 'fisioterapia' | 'fonoaudiologia' | 'nutricao' | 'psicologia' | 'enfermagem' | 'outro';
+
+export interface ClinicalEvolution {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  professional_id: string;
+  appointment_id: string | null;
+  medical_record_id: string | null;
+  evolution_date: string;
+  evolution_type: ClinicalEvolutionType;
+  subjective: string | null;
+  objective: string | null;
+  assessment: string | null;
+  plan: string | null;
+  cid_code: string | null;
+  vital_signs: Record<string, unknown>;
+  digital_hash: string | null;
+  signed_at: string | null;
+  signed_by_name: string | null;
+  signed_by_crm: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  clients?: { name: string };
+  profiles?: { full_name: string };
 }

@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -533,30 +533,20 @@ export default function Disponibilidade() {
       )}
 
       {/* Confirmação de exclusão de bloqueio */}
-      <AlertDialog open={!!blockToDelete} onOpenChange={(open) => !open && setBlockToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover bloqueio?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O período será liberado na agenda.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setBlockToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                if (blockToDelete) {
-                  await handleDeleteBlock(blockToDelete);
-                  setBlockToDelete(null);
-                }
-              }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!blockToDelete}
+        onConfirm={async () => {
+          if (blockToDelete) {
+            await handleDeleteBlock(blockToDelete);
+            setBlockToDelete(null);
+          }
+        }}
+        onCancel={() => setBlockToDelete(null)}
+        itemName="este bloqueio"
+        itemType="bloqueio de agenda"
+        warningText="O período será liberado na agenda."
+        confirmButtonText="Remover"
+      />
     </MainLayout>
   );
 }

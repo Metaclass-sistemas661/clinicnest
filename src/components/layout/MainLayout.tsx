@@ -8,6 +8,7 @@ import { AdminCommissionReminderDialog } from "@/components/admin/AdminCommissio
 import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
 import { ProfessionalGoalMotivationDialog } from "@/components/admin/ProfessionalGoalMotivationDialog";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
+import { AdverseEventButton } from "@/components/quality/AdverseEventButton";
 import { useAppStatus, usePersistedLastRefresh } from "@/contexts/AppStatusContext";
 import { formatInAppTz } from "@/lib/date";
 import {
@@ -20,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
+import { GlobalSearch } from "@/components/header/GlobalSearch";
+import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -73,6 +76,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         </>
       )}
       {!isAdmin && <ProfessionalGoalMotivationDialog />}
+      <KeyboardShortcutsDialog />
       <div className="min-h-screen bg-background">
         <Sidebar onCollapsedChange={setSidebarCollapsed} />
         <main className={cn(
@@ -83,7 +87,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           {/* Header: título + sino (staff) + actions */}
           <header className={cn(
             "sticky top-0 z-30 glass border-b border-border",
-            isMobile && "top-14"
+            isMobile && "top-[88px]"
           )}>
             <div className={cn(
               "flex items-center justify-between",
@@ -110,6 +114,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                 isMobile && "w-full justify-center sm:w-auto sm:justify-end flex-wrap"
               )}>
                 <div className="hidden md:flex items-center gap-3 text-xs text-muted-foreground">
+                  <GlobalSearch />
                   <span className="flex items-center gap-2">
                     <span
                       className={cn(
@@ -158,6 +163,9 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           )}>
             {children}
           </div>
+          
+          {/* Botão flutuante para notificar eventos adversos */}
+          <AdverseEventButton />
         </main>
       </div>
     </SubscriptionGuard>

@@ -20,6 +20,11 @@ import {
   Clock,
   Building2,
   Stethoscope,
+  Smile,
+  Globe,
+  Lock,
+  Video,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -27,6 +32,10 @@ import { useState } from "react";
 type BillingKey = "monthly" | "annual";
 
 const PRICING = {
+  starter: {
+    monthly: { price: "89,90", perMonth: null, total: null },
+    annual:  { price: "809,00", perMonth: "R$67,42/mês", total: "R$809,00 cobrados anualmente", savings: "Economize R$269,80/ano" },
+  },
   solo: {
     monthly: { price: "149,90", perMonth: null, total: null },
     annual:  { price: "1.349,00", perMonth: "R$112,42/mês", total: "R$1.349,00 cobrados anualmente", savings: "Economize R$450,80/ano" },
@@ -57,23 +66,43 @@ const TIERS: Array<{
   ctaLabel: string;
 }> = [
   {
+    key: "starter",
+    name: "Starter",
+    tagline: "Para começar",
+    target: "Profissional iniciante, consultório simples",
+    icon: Stethoscope,
+    features: [
+      { type: "include", icon: Users,      label: "1 profissional" },
+      { type: "include", icon: Calendar,   label: "Até 100 pacientes" },
+      { type: "include", icon: Calendar,   label: "200 agendamentos/mês" },
+      { type: "include", icon: FileText,   label: "Prontuário básico" },
+      { type: "include", icon: DollarSign, label: "Financeiro básico" },
+      { type: "include", icon: Clock,      label: "Histórico de 6 meses" },
+      { type: "include", icon: Headphones, label: "Suporte por e-mail" },
+      { type: "exclude",                   label: "Portal do paciente" },
+      { type: "exclude",                   label: "Evoluções SOAP" },
+      { type: "exclude",                   label: "Equipe e permissões" },
+    ],
+    ctaLabel: "Começar grátis",
+  },
+  {
     key: "solo",
     name: "Solo",
     tagline: "Para profissionais autônomos",
-    target: "Médico, psicólogo, fisioterapeuta individual",
+    target: "Médico, dentista, psicólogo individual",
     icon: Stethoscope,
     features: [
       { type: "include", icon: Users,      label: "1 profissional + 1 admin" },
       { type: "include", icon: Calendar,   label: "Até 500 pacientes" },
-      { type: "include", icon: Calendar,   label: "Agenda médica completa" },
-      { type: "include", icon: FileText,   label: "Prontuário eletrônico" },
-      { type: "include", icon: DollarSign, label: "Financeiro básico" },
-      { type: "include", icon: Package,    label: "Gestão de insumos" },
+      { type: "include", icon: Calendar,   label: "500 agendamentos/mês" },
+      { type: "include", icon: FileText,   label: "Prontuário SOAP completo" },
+      { type: "include", icon: Smile,      label: "Odontograma básico" },
+      { type: "include", icon: DollarSign, label: "Financeiro + receitas" },
+      { type: "include", icon: Globe,      label: "Portal do paciente" },
       { type: "include", icon: Clock,      label: "Histórico de 12 meses" },
       { type: "include", icon: Headphones, label: "Suporte por e-mail" },
-      { type: "exclude",                   label: "Convênios e faturamento" },
+      { type: "exclude",                   label: "Convênios e TISS" },
       { type: "exclude",                   label: "Comissões e metas" },
-      { type: "exclude",                   label: "Múltiplos profissionais" },
     ],
     ctaLabel: "Começar grátis",
   },
@@ -81,21 +110,21 @@ const TIERS: Array<{
     key: "clinic",
     name: "Clínica",
     tagline: "Para clínicas em crescimento",
-    target: "Clínicas com equipe e múltiplos profissionais",
+    target: "Clínicas médicas e odontológicas com equipe",
     icon: Building2,
     popular: true,
     dark: true,
     features: [
       { type: "include", icon: Users,      label: "Até 5 profissionais + admin" },
       { type: "include", icon: Calendar,   label: "Até 3.000 pacientes" },
-      { type: "include", icon: Calendar,   label: "Agenda médica completa" },
-      { type: "include", icon: FileText,   label: "Prontuário eletrônico completo" },
-      { type: "include", icon: Award,      label: "Convênios e faturamento" },
+      { type: "include", icon: Calendar,   label: "Agendamentos ilimitados" },
+      { type: "include", icon: FileText,   label: "Prontuário + 7 tipos evolução" },
+      { type: "include", icon: Smile,      label: "Odontograma + Periograma" },
+      { type: "include", icon: Award,      label: "TISS médico + GTO odonto" },
       { type: "include", icon: DollarSign, label: "Financeiro avançado" },
-      { type: "include", icon: Target,     label: "Comissões, metas e performance" },
-      { type: "include", icon: BarChart3,  label: "Relatórios e exportação" },
-      { type: "include", icon: Package,    label: "Gestão de insumos" },
-      { type: "include", icon: Clock,      label: "Histórico ilimitado" },
+      { type: "include", icon: Target,     label: "Comissões e metas" },
+      { type: "include", icon: Globe,      label: "Portal paciente + Teleconsulta" },
+      { type: "include", icon: Lock,       label: "RBAC (5 perfis)" },
       { type: "include", icon: Headphones, label: "Suporte via chat (Seg–Sáb)" },
     ],
     ctaLabel: "Começar grátis",
@@ -109,15 +138,15 @@ const TIERS: Array<{
     features: [
       { type: "include", icon: Users,      label: "Profissionais ilimitados" },
       { type: "include", icon: Calendar,   label: "Pacientes ilimitados" },
-      { type: "include", icon: Calendar,   label: "Agenda médica completa" },
-      { type: "include", icon: FileText,   label: "Prontuário + modelos personalizados" },
-      { type: "include", icon: Award,      label: "Convênios e faturamento TISS" },
-      { type: "include", icon: DollarSign, label: "Financeiro e DRE avançado" },
-      { type: "include", icon: Target,     label: "Comissões, metas e performance" },
-      { type: "include", icon: Download,   label: "Exportação completa (PDF/Excel)" },
-      { type: "include", icon: Zap,        label: "API de integração" },
-      { type: "include", icon: Clock,      label: "Histórico ilimitado" },
-      { type: "include", icon: Headphones, label: "Suporte prioritário via WhatsApp" },
+      { type: "include", icon: FileText,   label: "Prontuário + modelos custom" },
+      { type: "include", icon: Smile,      label: "Módulo odonto completo" },
+      { type: "include", icon: Award,      label: "TISS + Recurso de glosas" },
+      { type: "include", icon: Activity,   label: "SNGPC para controlados" },
+      { type: "include", icon: Lock,       label: "RBAC (11 perfis) + Auditoria" },
+      { type: "include", icon: Shield,     label: "Assinatura Digital" },
+      { type: "include", icon: Zap,        label: "API REST + Webhooks" },
+      { type: "include", icon: Download,   label: "FHIR R4 + Relatórios custom" },
+      { type: "include", icon: Headphones, label: "Suporte prioritário WhatsApp" },
     ],
     ctaLabel: "Falar com consultor",
   },
@@ -130,7 +159,6 @@ export function PricingSection() {
 
   return (
     <section id="pricing" className="py-20 sm:py-32 bg-gradient-to-b from-background to-teal-50/30 relative overflow-hidden">
-      {/* subtle bg blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-32 -right-32 w-96 h-96 bg-teal-100/40 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-100/30 rounded-full blur-3xl" />
@@ -138,7 +166,6 @@ export function PricingSection() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
 
-        {/* ── Header ── */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
             <TrendingUp className="h-4 w-4 text-teal-600" aria-hidden="true" />
@@ -155,11 +182,8 @@ export function PricingSection() {
           </p>
         </div>
 
-        {/* ── Billing Toggle ── */}
         <div className="flex flex-col items-center gap-4 mb-12">
-          {/* Container pill */}
           <div className="relative inline-flex items-stretch rounded-2xl bg-teal-950/8 border-2 border-teal-200 p-1.5 gap-1.5 shadow-inner">
-            {/* Mensal */}
             <button
               onClick={() => setBilling("monthly")}
               className={cn(
@@ -172,7 +196,6 @@ export function PricingSection() {
               Mensal
             </button>
 
-            {/* Anual — highlighted as primary choice */}
             <button
               onClick={() => setBilling("annual")}
               className={cn(
@@ -196,11 +219,10 @@ export function PricingSection() {
             </button>
           </div>
 
-          {/* Subtitle line */}
           <p className="text-sm text-center text-muted-foreground">
             {billing === "annual" ? (
               <span className="text-teal-700 font-medium">
-                🎉 Pague anualmente e ganhe{" "}
+                Pague anualmente e ganhe{" "}
                 <strong>3 meses grátis</strong> em qualquer plano.
               </span>
             ) : (
@@ -219,8 +241,7 @@ export function PricingSection() {
           </p>
         </div>
 
-        {/* ── Cards ── */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto items-start">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-7xl mx-auto items-start">
           {TIERS.map((tier) => {
             const price = PRICING[tier.key][billing];
             const Icon = tier.icon;
@@ -235,7 +256,6 @@ export function PricingSection() {
                     : "border-gray-200 bg-white shadow-lg hover:-translate-y-1"
                 )}
               >
-                {/* Popular ribbon */}
                 {tier.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <div className="px-5 py-1.5 rounded-full bg-gradient-to-r from-teal-400 to-cyan-400 text-teal-950 text-xs font-bold shadow-lg whitespace-nowrap tracking-wide uppercase">
@@ -246,7 +266,6 @@ export function PricingSection() {
 
                 <div className={cn("p-6 sm:p-8", tier.popular && "pt-10")}>
 
-                  {/* Plan header */}
                   <div className="flex items-start justify-between mb-5">
                     <div>
                       <div className={cn(
@@ -264,7 +283,6 @@ export function PricingSection() {
                     </div>
                   </div>
 
-                  {/* Target audience pill */}
                   <div className={cn(
                     "text-xs px-3 py-1.5 rounded-lg mb-6 leading-snug",
                     tier.popular ? "bg-white/10 text-teal-100" : "bg-teal-50 text-teal-700"
@@ -272,7 +290,6 @@ export function PricingSection() {
                     {tier.target}
                   </div>
 
-                  {/* Price */}
                   <div className="mb-2">
                     <div className="flex items-baseline gap-1">
                       <span className={cn("text-sm font-medium", tier.popular ? "text-teal-300" : "text-muted-foreground")}>
@@ -301,7 +318,6 @@ export function PricingSection() {
                     )}
                   </div>
 
-                  {/* Savings badge */}
                   {billing === "annual" && (
                     <div className={cn(
                       "inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full mb-6",
@@ -314,10 +330,8 @@ export function PricingSection() {
                     </div>
                   )}
 
-                  {/* Divider */}
                   <div className={cn("h-px mb-6", tier.popular ? "bg-white/15" : "bg-gray-100")} />
 
-                  {/* Features */}
                   <ul className="space-y-3 mb-8 flex-1">
                     {tier.features.map((feat, i) => (
                       <li key={i} className="flex items-start gap-3">
@@ -347,7 +361,6 @@ export function PricingSection() {
                     ))}
                   </ul>
 
-                  {/* CTA */}
                   <Link to="/cadastro" className="block">
                     <Button
                       size="lg"
@@ -374,7 +387,6 @@ export function PricingSection() {
           })}
         </div>
 
-        {/* ── Guarantee Strip ── */}
         <div className="mt-16 max-w-4xl mx-auto">
           <div className="rounded-2xl border border-teal-100 bg-white/80 backdrop-blur-sm px-6 py-6 sm:px-10 sm:py-8">
             <div className="grid sm:grid-cols-4 gap-6 text-center">
@@ -415,7 +427,6 @@ export function PricingSection() {
           </div>
         </div>
 
-        {/* ── FAQ Strip ── */}
         <div className="mt-10 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             Precisa de um plano personalizado para redes de clínicas ou hospitais?{" "}

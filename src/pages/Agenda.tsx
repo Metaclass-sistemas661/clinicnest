@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -40,11 +41,18 @@ import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda
 import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useLimitCheck } from "@/hooks/useUsageStats";
+import { UsageIndicator } from "@/components/subscription/LimitGate";
 
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const goalMotivation = useGoalMotivation();
   const subscription = useSubscription();
+  const { isWithinLimit } = usePlanFeatures();
+  const { currentValue: appointmentsThisMonth } = useLimitCheck('appointmentsPerMonth');
+  const { currentValue: teleconsultasThisMonth } = useLimitCheck('teleconsultasPerMonth');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -119,6 +127,7 @@ export default function Agenda() {
     notes: "",
     status: "pending" as AppointmentStatus,
     telemedicine: false,
+    booked_by_id: "",
   });
 
   useEffect(() => {
@@ -236,9 +245,20 @@ export default function Agenda() {
     });
   };
 
-  const handleCreateAppointment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateAppointment = async () => {
     if (!profile?.tenant_id) return;
+
+    // Verificar limite de agendamentos do mês
+    if (!isWithinLimit('appointmentsPerMonth', appointmentsThisMonth)) {
+      toast.error("Você atingiu o limite de agendamentos do mês. Faça upgrade para continuar.");
+      return;
+    }
+
+    // Verificar limite de teleconsultas se for teleconsulta
+    if (formData.telemedicine && !isWithinLimit('teleconsultasPerMonth', teleconsultasThisMonth)) {
+      toast.error("Você atingiu o limite de teleconsultas do mês. Faça upgrade para continuar.");
+      return;
+    }
 
     setIsSaving(true);
 
@@ -265,6 +285,7 @@ export default function Agenda() {
         p_status: formData.status,
         p_notes: formData.notes || null,
         p_telemedicine: Boolean(formData.telemedicine),
+        p_booked_by_id: formData.booked_by_id || null,
       });
       if (error) {
         toastRpcError(toast, error, "Erro ao criar agendamento");
@@ -340,9 +361,10 @@ export default function Agenda() {
         return;
       }
 
-      const statusMessages = {
+      const statusMessages: Record<string, string> = {
         pending: "Agendamento marcado como pendente",
         confirmed: "Agendamento confirmado!",
+        arrived: "Paciente marcado como presente!",
         completed: "Agendamento concluído! Receita registrada.",
         cancelled: "Agendamento cancelado",
       };
@@ -561,6 +583,19 @@ export default function Agenda() {
     }
   };
 
+  const handleStartConsultation = useCallback((appointment: any) => {
+    const clientId = appointment.client_id || (appointment.client as any)?.id;
+    if (!clientId) {
+      toast.error("Agendamento sem paciente vinculado");
+      return;
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      appointment_id: appointment.id,
+    });
+    navigate(`/prontuarios?new=1&${params.toString()}`);
+  }, [navigate]);
+
   // Memoized filtered appointments
   const filteredAppointments = useMemo(() => {
     return appointments.filter((apt) => {
@@ -583,11 +618,13 @@ export default function Agenda() {
       total: appointments.length,
       pending: 0,
       confirmed: 0,
+      arrived: 0,
       completed: 0,
       cancelled: 0,
     };
     appointments.forEach((apt) => {
-      counts[apt.status as keyof typeof counts]++;
+      const s = apt.status as keyof typeof counts;
+      if (s in counts) counts[s]++;
     });
     return counts;
   }, [appointments]);
@@ -629,163 +666,178 @@ export default function Agenda() {
               Semana
             </Button>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground text-sm" data-tour="agenda-new-appointment">
+                    <Button className="gradient-primary text-primary-foreground text-sm" onClick={() => setIsDialogOpen(true)} data-tour="agenda-new-appointment">
                 <Plus className="mr-1 md:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo agendamento</span>
                 <span className="sm:hidden">Novo</span>
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Novo agendamento</DialogTitle>
-                <DialogDescription>
-                  Preencha os dados do agendamento
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleCreateAppointment}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Paciente</Label>
-                    <Select
-                      value={formData.client_id}
-                      onValueChange={(v) => setFormData({ ...formData, client_id: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o paciente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Procedimento</Label>
-                    <Select
-                      value={formData.service_id}
-                      onValueChange={(v) => {
-                        setFormData({ 
-                          ...formData, 
-                          service_id: v,
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o procedimento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service.id} value={service.id}>
-                            {service.name} - {formatCurrency(service.price)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {isAdmin ? (
-                  <div className="space-y-2">
-                    <Label>Profissional</Label>
-                    <Select
-                      value={formData.professional_id}
-                      onValueChange={(v) => {
-                        setFormData({ 
-                          ...formData, 
-                          professional_id: v,
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o profissional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {professionals.map((prof) => (
-                          <SelectItem key={prof.id} value={prof.id}>
-                            {prof.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Profissional</Label>
-                    <Input
-                      value={profile?.full_name ?? "Você"}
-                      disabled
-                      className="bg-muted"
-                    />
-                    <p className="text-xs text-muted-foreground">Agendamentos são direcionados para você</p>
-                  </div>
-                )}
-                  <div className="space-y-2">
-                    <Label>Data</Label>
-                    <Input
-                      type="date"
-                      value={formData.scheduled_at}
-                      onChange={(e) =>
-                        setFormData({ ...formData, scheduled_at: e.target.value, scheduled_time: "" })
-                      }
-                      required
-                    />
-                  </div>
-                  
-                  {formData.scheduled_at && (
-                    <div className="sm:col-span-2">
-                    <TimeSlotPicker
-                      selectedTime={formData.scheduled_time}
-                      onTimeChange={(time) => setFormData({ ...formData, scheduled_time: time })}
-                      selectedDate={formData.scheduled_at}
-                      selectedProfessional={formData.professional_id}
-                      professionals={professionals}
-                      existingAppointments={allAppointments}
-                      onProfessionalChange={isAdmin ? (profId) => setFormData({ ...formData, professional_id: profId }) : undefined}
-                    />
-                    </div>
-                  )}
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Observações</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Observações opcionais..."
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
-                      <div className="flex flex-col">
-                        <Label>Teleconsulta</Label>
-                        <span className="text-xs text-muted-foreground">Atendimento remoto via vídeo</span>
-                      </div>
-                      <Switch
-                        checked={formData.telemedicine}
-                        onCheckedChange={(checked) => setFormData({ ...formData, telemedicine: checked })}
-                      />
-                    </div>
-                  </div>
+          <FormDrawer
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            title="Novo agendamento"
+            description="Preencha os dados do agendamento"
+            width="lg"
+            onSubmit={handleCreateAppointment}
+            isSubmitting={isSaving}
+            submitLabel="Criar Agendamento"
+          >
+            <FormDrawerSection title="Paciente e Procedimento">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Paciente</Label>
+                  <Select
+                    value={formData.client_id}
+                    onValueChange={(v) => setFormData({ ...formData, client_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o paciente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="agenda-create-appointment">
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Criar Agendamento"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                <div className="space-y-2">
+                  <Label>Procedimento</Label>
+                  <Select
+                    value={formData.service_id}
+                    onValueChange={(v) => {
+                      setFormData({ 
+                        ...formData, 
+                        service_id: v,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name} - {formatCurrency(service.price)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </FormDrawerSection>
+
+            <FormDrawerSection title="Profissional">
+              {isAdmin ? (
+                <div className="space-y-2">
+                  <Label>Profissional</Label>
+                  <Select
+                    value={formData.professional_id}
+                    onValueChange={(v) => {
+                      setFormData({ 
+                        ...formData, 
+                        professional_id: v,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o profissional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {professionals.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Profissional</Label>
+                  <Input
+                    value={profile?.full_name ?? "Você"}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">Agendamentos são direcionados para você</p>
+                </div>
+              )}
+            </FormDrawerSection>
+
+            <FormDrawerSection title="Data e Horário">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input
+                    type="date"
+                    value={formData.scheduled_at}
+                    onChange={(e) =>
+                      setFormData({ ...formData, scheduled_at: e.target.value, scheduled_time: "" })
+                    }
+                    required
+                  />
+                </div>
+                
+                {formData.scheduled_at && (
+                  <TimeSlotPicker
+                    selectedTime={formData.scheduled_time}
+                    onTimeChange={(time) => setFormData({ ...formData, scheduled_time: time })}
+                    selectedDate={formData.scheduled_at}
+                    selectedProfessional={formData.professional_id}
+                    professionals={professionals}
+                    existingAppointments={allAppointments}
+                    onProfessionalChange={isAdmin ? (profId) => setFormData({ ...formData, professional_id: profId }) : undefined}
+                  />
+                )}
+              </div>
+            </FormDrawerSection>
+
+            <FormDrawerSection title="Opções">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Agendado/Indicado por <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Select
+                    value={formData.booked_by_id}
+                    onValueChange={(v) => setFormData({ ...formData, booked_by_id: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Quem agendou ou indicou?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum / Não informado</SelectItem>
+                      {professionals.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.user_id || prof.id}>
+                          {prof.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Usado para comissão por captação/indicação
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Observações opcionais..."
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+                  <div className="flex flex-col">
+                    <Label>Teleconsulta</Label>
+                    <span className="text-xs text-muted-foreground">Atendimento remoto via vídeo</span>
+                  </div>
+                  <Switch
+                    checked={formData.telemedicine}
+                    onCheckedChange={(checked) => setFormData({ ...formData, telemedicine: checked })}
+                  />
+                </div>
+              </div>
+            </FormDrawerSection>
+          </FormDrawer>
         </div>
       }
     >
@@ -833,7 +885,7 @@ export default function Agenda() {
         <div className="flex-1 min-w-0">
 
           {/* Stats overview card — above content, full width */}
-          <div className="mb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="mb-5 grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-xl border border-border bg-card p-4 flex flex-col">
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Total</span>
               <span className="text-3xl font-bold text-foreground mt-1">{appointmentCounts.total}</span>
@@ -848,6 +900,11 @@ export default function Agenda() {
               <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Confirmados</span>
               <span className="text-3xl font-bold text-blue-700 dark:text-blue-300 mt-1">{appointmentCounts.confirmed}</span>
               <span className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">prontos para atender</span>
+            </div>
+            <div className="rounded-xl border border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/5 p-4 flex flex-col">
+              <span className="text-[11px] font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wide">Chegou</span>
+              <span className="text-3xl font-bold text-violet-700 dark:text-violet-300 mt-1">{appointmentCounts.arrived}</span>
+              <span className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-1">aguardando atendimento</span>
             </div>
             <div className="rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5 p-4 flex flex-col">
               <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Concluídos</span>
@@ -1007,6 +1064,7 @@ export default function Agenda() {
                   isLoading={isLoading}
                   isAdmin={isAdmin}
                   products={products}
+                  onStartConsultation={handleStartConsultation}
                 />
               )}
             </CardContent>

@@ -29,6 +29,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { CommissionTierIndicator } from "@/components/commission/CommissionTierIndicator";
 
 type CommissionStatus = "pending" | "paid";
 type CommissionPayment = {
@@ -200,6 +201,9 @@ export default function MinhasComissoes() {
       }
     >
       <div className="space-y-6">
+        {/* Commission Tier Indicator */}
+        <CommissionTierIndicator />
+
         {/* Resumo */}
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
           <Card>

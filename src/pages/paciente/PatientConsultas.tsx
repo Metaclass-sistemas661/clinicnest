@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PatientLayout } from "@/components/layout/PatientLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Calendar,
   Clock,
@@ -12,13 +22,19 @@ import {
   Building2,
   RefreshCw,
   Video,
+  XCircle,
+  CalendarClock,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
-import { format } from "date-fns";
+import { toast } from "sonner";
+import { format, addHours, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
 import { consultasBanners } from "@/components/patient/patientBannerData";
+import { SlotPicker } from "@/components/patient/SlotPicker";
 
 interface PatientAppointment {
   id: string;
@@ -30,7 +46,9 @@ interface PatientAppointment {
   telemedicine: boolean;
   client_name: string;
   service_name: string;
+  service_id: string;
   professional_name: string;
+  professional_id: string;
   clinic_name: string;
 }
 
@@ -44,10 +62,42 @@ function statusLabel(status: string): { label: string; variant: "default" | "sec
   }
 }
 
+interface Slot {
+  slot_date: string;
+  slot_time: string;
+  slot_datetime: string;
+}
+
+const MIN_HOURS_CANCEL = 24;
+
+function canModify(appt: PatientAppointment): { allowed: boolean; reason?: string } {
+  if (appt.status !== "pending" && appt.status !== "confirmed") {
+    return { allowed: false, reason: "Só consultas pendentes ou confirmadas podem ser alteradas." };
+  }
+  const hoursUntil = (new Date(appt.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60);
+  if (hoursUntil < MIN_HOURS_CANCEL) {
+    return { allowed: false, reason: `Alterações devem ser feitas com pelo menos ${MIN_HOURS_CANCEL}h de antecedência.` };
+  }
+  return { allowed: true };
+}
+
 export default function PatientConsultas() {
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
+
+  // Cancel dialog
+  const [cancelTarget, setCancelTarget] = useState<PatientAppointment | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Reschedule dialog
+  const [rescheduleTarget, setRescheduleTarget] = useState<PatientAppointment | null>(null);
+  const [rescheduleSlots, setRescheduleSlots] = useState<Slot[]>([]);
+  const [selectedRescheduleSlot, setSelectedRescheduleSlot] = useState<Slot | null>(null);
+  const [rescheduleReason, setRescheduleReason] = useState("");
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   useEffect(() => {
     void fetchAppointments();
@@ -64,12 +114,10 @@ export default function PatientConsultas() {
       };
 
       const { data, error } = await (supabasePatient as any).rpc("get_patient_appointments", params);
-
       if (error) throw error;
 
       const list = (Array.isArray(data) ? data : []) as PatientAppointment[];
 
-      // Sort: upcoming = asc, past = desc
       if (filter === "upcoming") {
         list.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
       }
@@ -80,6 +128,96 @@ export default function PatientConsultas() {
       setAppointments([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ── Cancel ─────────────────────────────────────────────────────────────────
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+    try {
+      const { data, error } = await (supabasePatient as any).rpc("patient_cancel_appointment", {
+        p_appointment_id: cancelTarget.id,
+        p_reason: cancelReason.trim() || null,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; message?: string } | null;
+      if (result?.success) {
+        toast.success(result.message || "Consulta cancelada com sucesso");
+      }
+      setCancelTarget(null);
+      setCancelReason("");
+      void fetchAppointments();
+    } catch (err: any) {
+      logger.error("PatientConsultas cancel:", err);
+      const msg = err?.message || "Erro ao cancelar consulta";
+      toast.error(msg);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // ── Reschedule ─────────────────────────────────────────────────────────────
+  const openRescheduleDialog = (appt: PatientAppointment) => {
+    setRescheduleTarget(appt);
+    setSelectedRescheduleSlot(null);
+    setRescheduleReason("");
+    setRescheduleSlots([]);
+  };
+
+  const loadRescheduleSlots = useCallback(
+    async (startDate: Date, endDate: Date) => {
+      if (!rescheduleTarget) return;
+
+      setIsLoadingSlots(true);
+      try {
+        const { data, error } = await (supabasePatient as any).rpc(
+          "get_available_slots_for_patient",
+          {
+            p_service_id: rescheduleTarget.service_id,
+            p_professional_id: rescheduleTarget.professional_id,
+            p_date_from: format(startDate, "yyyy-MM-dd"),
+            p_date_to: format(endDate, "yyyy-MM-dd"),
+          }
+        );
+        if (error) throw error;
+        setRescheduleSlots((data as Slot[]) || []);
+      } catch (err) {
+        logger.error("Error loading reschedule slots:", err);
+        toast.error("Erro ao carregar horários disponíveis");
+      } finally {
+        setIsLoadingSlots(false);
+      }
+    },
+    [rescheduleTarget]
+  );
+
+  const handleReschedule = async () => {
+    if (!rescheduleTarget || !selectedRescheduleSlot) {
+      toast.error("Selecione um novo horário");
+      return;
+    }
+
+    setIsRescheduling(true);
+    try {
+      const { data, error } = await (supabasePatient as any).rpc("patient_reschedule_appointment", {
+        p_appointment_id: rescheduleTarget.id,
+        p_new_scheduled_at: selectedRescheduleSlot.slot_datetime,
+        p_reason: rescheduleReason.trim() || null,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; message?: string } | null;
+      if (result?.success) {
+        toast.success(result.message || "Consulta reagendada com sucesso");
+      }
+      setRescheduleTarget(null);
+      void fetchAppointments();
+    } catch (err: any) {
+      logger.error("PatientConsultas reschedule:", err);
+      const msg = err?.message || "Erro ao reagendar consulta";
+      toast.error(msg);
+    } finally {
+      setIsRescheduling(false);
     }
   };
 
@@ -138,6 +276,7 @@ export default function PatientConsultas() {
             const date = new Date(appt.scheduled_at);
             const dateStr = format(date, "EEEE, dd 'de' MMMM", { locale: ptBR });
             const time = format(date, "HH:mm", { locale: ptBR });
+            const { allowed: modifiable, reason: modReason } = canModify(appt);
 
             return (
               <Card key={appt.id} className="hover:shadow-sm transition-shadow">
@@ -177,12 +316,149 @@ export default function PatientConsultas() {
                       <span className="truncate">{appt.clinic_name || "—"}</span>
                     </div>
                   </div>
+
+                  {/* Action buttons for modifiable appointments */}
+                  {(appt.status === "pending" || appt.status === "confirmed") && (
+                    <div className="mt-3 pt-3 border-t flex flex-wrap gap-2 items-center">
+                      {modifiable ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={() => openRescheduleDialog(appt)}
+                          >
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            Reagendar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                            onClick={() => { setCancelTarget(appt); setCancelReason(""); }}
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          {modReason}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
       )}
+
+      {/* ── Dialog: Cancelar Consulta ──────────────────────────────────────── */}
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => { if (!open) setCancelTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Cancelar Consulta
+            </DialogTitle>
+            <DialogDescription>
+              {cancelTarget && (
+                <>
+                  {format(new Date(cancelTarget.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} — {cancelTarget.service_name} com {cancelTarget.professional_name}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive mb-1">Atenção</p>
+            <p className="text-muted-foreground text-xs">
+              O cancelamento é permanente. Caso deseje outro horário, utilize a opção "Reagendar".
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Motivo (opcional)</Label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Descreva o motivo do cancelamento..."
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>Voltar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleCancel()}
+              disabled={isCancelling}
+            >
+              {isCancelling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cancelando...</> : "Confirmar Cancelamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Reagendar Consulta ─────────────────────────────────────── */}
+      <Dialog open={!!rescheduleTarget} onOpenChange={(open) => { if (!open) setRescheduleTarget(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" />
+              Reagendar Consulta
+            </DialogTitle>
+            <DialogDescription>
+              {rescheduleTarget && (
+                <>
+                  Atual: {format(new Date(rescheduleTarget.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} — {rescheduleTarget.service_name}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+              <p className="text-muted-foreground text-xs">
+                Escolha um novo horário disponível. A consulta voltará ao status "Pendente" e a clínica será notificada do reagendamento.
+              </p>
+            </div>
+
+            <SlotPicker
+              slots={rescheduleSlots}
+              isLoading={isLoadingSlots}
+              selectedSlot={selectedRescheduleSlot}
+              onSelectSlot={setSelectedRescheduleSlot}
+              onWeekChange={loadRescheduleSlots}
+              minDate={addHours(new Date(), 2)}
+              maxDate={addDays(new Date(), 60)}
+            />
+
+            <div className="space-y-2">
+              <Label>Motivo (opcional)</Label>
+              <Textarea
+                value={rescheduleReason}
+                onChange={(e) => setRescheduleReason(e.target.value)}
+                placeholder="Ex: Conflito de horário, viagem..."
+                rows={2}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRescheduleTarget(null)}>Voltar</Button>
+            <Button
+              onClick={() => void handleReschedule()}
+              disabled={isRescheduling || !selectedRescheduleSlot}
+            >
+              {isRescheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reagendando...</> : "Confirmar Reagendamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PatientLayout>
   );
 }

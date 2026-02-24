@@ -267,7 +267,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-commissions">
+              <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-commissions">
                 <StatCard
                   title="Comissões Recebidas"
                   value={formatCurrency(professionalCommissionsReceived)}
@@ -282,7 +282,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
           {mySalaryAmount !== null && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-salary">
+                <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-stat-my-salary">
                   <StatCard
                     title="Meu Salário"
                     value={formatCurrency(mySalaryAmount)}

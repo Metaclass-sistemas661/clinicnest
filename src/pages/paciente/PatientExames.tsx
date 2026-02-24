@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
 import { examesBanners } from "@/components/patient/patientBannerData";
+import { generateExamPdf } from "@/utils/patientDocumentPdf";
 
 interface ExamResult {
   id: string;
@@ -116,14 +117,25 @@ export default function PatientExames() {
                   {exam.interpretation && (
                     <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3">{exam.interpretation}</p>
                   )}
-                  {exam.file_url && (
-                    <a href={exam.file_url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="gap-1.5">
-                        <Download className="h-3.5 w-3.5" />
-                        {exam.file_name || "Baixar arquivo"}
-                      </Button>
-                    </a>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => generateExamPdf(exam)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Baixar PDF
+                    </Button>
+                    {exam.file_url && (
+                      <a href={exam.file_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="outline" className="gap-1.5">
+                          <Download className="h-3.5 w-3.5" />
+                          {exam.file_name || "Baixar arquivo"}
+                        </Button>
+                      </a>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Building2, CalendarCheck, Heart, DollarSign } from "lucide-react";
+import { Building2, CalendarCheck, Heart, DollarSign, TrendingDown, Users, Shield, Smile } from "lucide-react";
 
 interface StatItemProps {
   icon: React.ElementType;
@@ -57,6 +57,8 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
     green: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
     blue: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
     cyan: { bg: "bg-cyan-100", text: "text-cyan-600", border: "border-cyan-200" },
+    pink: { bg: "bg-pink-100", text: "text-pink-600", border: "border-pink-200" },
+    violet: { bg: "bg-violet-100", text: "text-violet-600", border: "border-violet-200" },
   };
   const colors = colorClasses[color] || colorClasses.teal;
 
@@ -80,18 +82,26 @@ function StatItem({ icon: Icon, value, suffix, label, color }: StatItemProps) {
 
 export function StatsSection() {
   const stats = [
-    { icon: Building2, value: 500, suffix: "+", label: "Clínicas Atendidas", color: "teal" },
-    { icon: CalendarCheck, value: 50000, suffix: "+", label: "Consultas/Mês", color: "green" },
-    { icon: Heart, value: 98, suffix: "%", label: "De Satisfação", color: "cyan" },
-    { icon: DollarSign, value: 2, suffix: "M+", label: "Gerenciados (R$)", color: "blue" },
+    { icon: Building2, value: 500, suffix: "+", label: "Clínicas ativas", color: "teal" },
+    { icon: CalendarCheck, value: 100000, suffix: "+", label: "Agendamentos/mês", color: "green" },
+    { icon: TrendingDown, value: 45, suffix: "%", label: "Redução de glosas", color: "blue" },
+    { icon: Heart, value: 98, suffix: "%", label: "Taxa de renovação", color: "cyan" },
+    { icon: Users, value: 11, suffix: "", label: "Perfis profissionais", color: "violet" },
+    { icon: Smile, value: 100, suffix: "%", label: "Módulo odonto completo", color: "pink" },
+    { icon: Shield, value: 20, suffix: " anos", label: "Retenção CFM", color: "blue" },
+    { icon: DollarSign, value: 5, suffix: "M+", label: "Faturados em TISS (R$)", color: "green" },
   ];
 
   return (
     <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <p className="text-lg text-muted-foreground">
-            Números que comprovam nossa excelência
+          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2">
+            Números que comprovam nossa{" "}
+            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">excelência</span>
+          </h2>
+          <p className="text-muted-foreground">
+            O único sistema híbrido do Brasil com resultados comprovados
           </p>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">

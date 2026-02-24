@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import type { Profile, UserRole, Tenant } from '@/types/database';
+import type { Profile, UserRole, Tenant, ProfessionalType, PermissionsMap } from '@/types/database';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,8 @@ interface AuthContextType {
   tenant: Tenant | null;
   isAdmin: boolean;
   isLoading: boolean;
+  professionalType: ProfessionalType;
+  permissions: PermissionsMap;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
     email: string,
@@ -28,19 +30,50 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Retorna a URL base do site para redirecionamentos de autenticação.
+ * Em produção, sempre usa a URL de produção para evitar links de localhost em emails.
+ * Em desenvolvimento (localhost), usa localhost para facilitar testes.
+ */
+function getAuthRedirectOrigin(): string {
+  if (typeof window === "undefined") return "";
+  
+  const origin = window.location.origin;
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  
+  // Em produção, sempre usar URL de produção
+  // Em desenvolvimento, usar localhost para facilitar testes locais
+  if (!isLocalhost) {
+    return origin;
+  }
+  
+  // Para desenvolvimento: verificar se há uma variável de ambiente de produção
+  // Se VITE_PRODUCTION_URL estiver definida, usar ela para emails (evita localhost em emails)
+  const productionUrl = import.meta.env.VITE_PRODUCTION_URL;
+  if (productionUrl && typeof productionUrl === "string") {
+    return productionUrl.replace(/\/+$/, "");
+  }
+  
+  // Fallback: usar URL de produção hardcoded para evitar localhost em emails
+  // Isso garante que mesmo em dev, os emails tenham links corretos
+  return "https://clinicnest.metaclass.com.br";
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [permissions, setPermissions] = useState<PermissionsMap>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  const siteOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const siteOrigin = getAuthRedirectOrigin();
 
   const isAdmin = userRole?.role === 'admin';
+  const professionalType: ProfessionalType = profile?.professional_type ?? 'secretaria';
 
-  const fetchUserData = async (userId: string): Promise<{ profile: Profile | null; userRole: UserRole | null; tenant: Tenant | null }> => {
+  const fetchUserData = async (userId: string): Promise<{ profile: Profile | null; userRole: UserRole | null; tenant: Tenant | null; permissions: PermissionsMap }> => {
     try {
       // Prefer single-roundtrip context load via RPC (enterprise hardening)
       try {
@@ -50,10 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const profileData = (ctxAny.profile ?? null) as Profile | null;
           const roleData = (ctxAny.role ?? null) as UserRole | null;
           const tenantData = (ctxAny.tenant ?? null) as Tenant | null;
+          const permsData = (ctxAny.permissions ?? {}) as PermissionsMap;
 
-          // Ensure returned context is for the same user
           if (profileData?.user_id === userId) {
-            return { profile: profileData, userRole: roleData, tenant: tenantData };
+            return { profile: profileData, userRole: roleData, tenant: tenantData, permissions: permsData };
           }
         }
       } catch {
@@ -66,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', userId)
         .single();
 
-      if (!profileData) return { profile: null, userRole: null, tenant: null };
+      if (!profileData) return { profile: null, userRole: null, tenant: null, permissions: {} };
 
       let roleData: UserRole | null = null;
       let tenantData: Tenant | null = null;
@@ -90,10 +123,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile: profileData as Profile,
         userRole: roleData,
         tenant: tenantData,
+        permissions: {},
       };
     } catch (error) {
       logger.error('Error fetching user data:', error);
-      return { profile: null, userRole: null, tenant: null };
+      return { profile: null, userRole: null, tenant: null, permissions: {} };
     }
   };
 
@@ -103,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.profile) setProfile(data.profile);
       setUserRole(data.userRole);
       setTenant(data.tenant);
+      setPermissions(data.permissions);
     }
   };
 
@@ -128,10 +163,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data.profile);
       setUserRole(data.userRole);
       setTenant(data.tenant);
+      setPermissions(data.permissions);
     } else {
       setProfile(null);
       setUserRole(null);
       setTenant(null);
+      setPermissions({});
     }
     setIsLoading(false);
   };
@@ -247,6 +284,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setUserRole(null);
     setTenant(null);
+    setPermissions({});
   };
 
   return (
@@ -259,6 +297,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenant,
         isAdmin,
         isLoading,
+        professionalType,
+        permissions,
         signIn,
         signUp,
         resetPassword,

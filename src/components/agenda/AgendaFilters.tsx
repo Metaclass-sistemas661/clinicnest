@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Calendar, UserCheck } from "lucide-react";
 import type { Profile, AppointmentStatus } from "@/types/database";
 
 interface AgendaFiltersProps {
@@ -21,6 +21,7 @@ interface AgendaFiltersProps {
     total: number;
     pending: number;
     confirmed: number;
+    arrived: number;
     completed: number;
     cancelled: number;
   };
@@ -56,6 +57,13 @@ export function AgendaFilters({
       count: appointmentCounts.confirmed,
       className: "bg-info/20 text-info",
       icon: CheckCircle2,
+    },
+    {
+      value: "arrived" as const,
+      label: "Chegou",
+      count: appointmentCounts.arrived,
+      className: "bg-violet-500/20 text-violet-600",
+      icon: UserCheck,
     },
     {
       value: "completed" as const,

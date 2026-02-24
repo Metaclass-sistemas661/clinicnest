@@ -45,10 +45,45 @@ import {
   DashboardTodayAppointments,
   DashboardNextAppointmentCard,
   DashboardLowStockCard,
+  DashboardMedico,
+  DashboardSecretaria,
+  DashboardEnfermeiro,
+  DashboardFaturista,
+  DashboardClinico,
+  DashboardDentista,
+  DailyGamificationSummary,
 } from "@/components/dashboard";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { ProfessionalType } from "@/types/database";
+import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
+import { RbacWizard } from "@/components/admin/RbacWizard";
+
+function getDashboardForType(pType: ProfessionalType): React.ComponentType | null {
+  switch (pType) {
+    case 'medico':
+      return DashboardMedico;
+    case 'dentista':
+      return DashboardDentista;
+    case 'secretaria':
+      return DashboardSecretaria;
+    case 'enfermeiro':
+    case 'tec_enfermagem':
+      return DashboardEnfermeiro;
+    case 'faturista':
+      return DashboardFaturista;
+    case 'fisioterapeuta':
+    case 'nutricionista':
+    case 'psicologo':
+    case 'fonoaudiologo':
+      return DashboardClinico;
+    default:
+      return null;
+  }
+}
 
 export default function Dashboard() {
   const { user, profile, tenant, isAdmin } = useAuth();
+  const { professionalType } = usePermissions();
   const { enabled: simpleModeEnabled } = useSimpleMode(tenant?.id);
   const { markRefreshed } = useAppStatus();
   const [activityOpen, setActivityOpen] = useState(false);
@@ -65,6 +100,7 @@ export default function Dashboard() {
   const [activityLoading, setActivityLoading] = useState(false);
 
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [rbacWizardOpen, setRbacWizardOpen] = useState(false);
   const [dashboardPrefs, setDashboardPrefsState] = useState<DashboardPreferences>(() =>
     defaultDashboardPreferences(Boolean(isAdmin))
   );
@@ -78,6 +114,9 @@ export default function Dashboard() {
   });
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const [pendingTriages, setPendingTriages] = useState<Array<{
+    id: string; client_name: string; priority: string; chief_complaint: string; triaged_at: string; appointment_id: string | null;
+  }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
@@ -100,6 +139,16 @@ export default function Dashboard() {
   const [mySalaryAmount, setMySalaryAmount] = useState<number | null>(null);
   const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
   const [bannerSlide, setBannerSlide] = useState(0);
+
+  // 12G.5 — Check if RBAC wizard should be shown for admin
+  useEffect(() => {
+    if (isAdmin && tenant?.id) {
+      const wizardDone = localStorage.getItem(`rbac_wizard_done_${tenant.id}`);
+      if (!wizardDone) {
+        setRbacWizardOpen(true);
+      }
+    }
+  }, [isAdmin, tenant?.id]);
 
   // Auto-advance promotional banner carousel
   useEffect(() => {
@@ -421,6 +470,7 @@ export default function Dashboard() {
         _salariesPaidResult,
         mySalaryConfigResult,
         mySalaryPaymentsResult,
+        pendingTriagesResult,
       ] = await Promise.all([
         // 1. Financeiro do mês (admin)
         isAdmin
@@ -596,6 +646,14 @@ export default function Dashboard() {
               p_month: null,
             })
           : Promise.resolve({ data: null }),
+        // 16. Triagens pendentes (admin: todas; staff: todas — exibir no dashboard)
+        supabase
+          .from("triage_records")
+          .select("id, chief_complaint, priority, triaged_at, appointment_id, client:clients(name)")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("status", "pendente")
+          .order("triaged_at", { ascending: true })
+          .limit(10),
       ]);
 
       const financialData = financialResult.data;
@@ -742,6 +800,19 @@ export default function Dashboard() {
       setTodayAppointments(apts);
       setLowStockProducts(lowStockData);
 
+      const triagesRaw = (pendingTriagesResult?.data || []) as Array<{
+        id: string; chief_complaint: string | null; priority: string; triaged_at: string; appointment_id: string | null;
+        client?: { name?: string } | null;
+      }>;
+      setPendingTriages(triagesRaw.map((t) => ({
+        id: t.id,
+        client_name: t.client?.name || "Paciente",
+        priority: t.priority,
+        chief_complaint: t.chief_complaint || "",
+        triaged_at: t.triaged_at,
+        appointment_id: t.appointment_id,
+      })));
+
       if (!isAdmin && Array.isArray(staffPerformanceData) && staffPerformanceData.length > 0) {
         const completed = staffPerformanceData.length;
         const valueGenerated = staffPerformanceData.reduce((sum, a) => sum + Number(a.price || 0), 0);
@@ -822,6 +893,17 @@ export default function Dashboard() {
         </Button>
       }
     >
+      {/* Role-based dashboard: non-admin users with a specific type see a tailored view */}
+      {(() => {
+        if (!isAdmin) {
+          const RoleDashboard = getDashboardForType(professionalType);
+          if (RoleDashboard) return <RoleDashboard />;
+        }
+        return null;
+      })()}
+
+      {/* Admin dashboard (full) — only rendered when no role-specific dashboard was shown */}
+      {(isAdmin || !getDashboardForType(professionalType)) && (
       <TooltipProvider>
         <div className="space-y-6">
 
@@ -1099,7 +1181,7 @@ export default function Dashboard() {
                 </div>
               </Link>
             ) : (
-              <Link to="/minhas-comissoes" data-tour="dashboard-insights-my-performance" className="[&:hover]:no-underline">
+              <Link to="/meu-financeiro" data-tour="dashboard-insights-my-performance" className="[&:hover]:no-underline">
                 <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-teal-200 hover:shadow-md">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100">
@@ -1220,17 +1302,9 @@ export default function Dashboard() {
                       )}
                       {!isAdmin && (
                         <Button asChild variant="outline" className="justify-start">
-                          <Link to="/minhas-comissoes" data-tour="dashboard-quick-my-commissions">
+                          <Link to="/meu-financeiro" data-tour="dashboard-quick-my-commissions">
                             <Wallet className="mr-2 h-4 w-4" />
-                            Minhas comissões
-                          </Link>
-                        </Button>
-                      )}
-                      {!isAdmin && (
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/meus-salarios" data-tour="dashboard-quick-my-salary">
-                            <DollarSign className="mr-2 h-4 w-4" />
-                            Meu salário
+                            Meu financeiro
                           </Link>
                         </Button>
                       )}
@@ -1329,22 +1403,77 @@ export default function Dashboard() {
 
             if (sectionKey === "today") {
               return (
-                <div key={sectionKey} className="grid gap-4 md:gap-6 lg:grid-cols-3">
-                  {/* Agenda: 2/3 width */}
-                  <div className="lg:col-span-2">
-                    <DashboardTodayAppointments
-                      appointments={myTodayAppointments}
-                      isAdmin={isAdmin}
-                      getStatusBadge={getStatusBadge}
-                    />
+                <div key={sectionKey} className="space-y-4">
+                  <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                      <DashboardTodayAppointments
+                        appointments={myTodayAppointments}
+                        isAdmin={isAdmin}
+                        getStatusBadge={getStatusBadge}
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      {!isAdmin && nextAppointment && (
+                        <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
+                      )}
+                      {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+                      {/* Resumo diário de gamificação (quando pop-ups desativados) */}
+                      <DailyGamificationSummary />
+                    </div>
                   </div>
-                  {/* Right panel: 1/3 width */}
-                  <div className="space-y-4">
-                    {!isAdmin && nextAppointment && (
-                      <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
-                    )}
-                    {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
-                  </div>
+
+                  {pendingTriages.length > 0 && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center gap-2 pb-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600/10">
+                          <Stethoscope className="h-4 w-4 text-violet-600" />
+                        </div>
+                        <div className="flex-1">
+                          <CardTitle className="text-base font-semibold">Triagens pendentes</CardTitle>
+                          <CardDescription className="text-xs">Pacientes aguardando atendimento após triagem</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-500/30">
+                          {pendingTriages.length}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          {pendingTriages.map((triage) => {
+                            const priorityStyles: Record<string, string> = {
+                              emergencia: "bg-red-500/10 text-red-600 border-red-500/30",
+                              urgente: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+                              pouco_urgente: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+                              nao_urgente: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+                            };
+                            const priorityLabels: Record<string, string> = {
+                              emergencia: "Emergência",
+                              urgente: "Urgente",
+                              pouco_urgente: "Pouco Urgente",
+                              nao_urgente: "Não Urgente",
+                            };
+                            return (
+                              <div key={triage.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/70 p-3 hover:bg-muted/40 transition-colors">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">{triage.client_name}</p>
+                                  {triage.chief_complaint && (
+                                    <p className="text-xs text-muted-foreground truncate">{triage.chief_complaint}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge variant="outline" className={priorityStyles[triage.priority] || priorityStyles.nao_urgente}>
+                                    {priorityLabels[triage.priority] || triage.priority}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground tabular-nums">
+                                    {formatInAppTz(new Date(triage.triaged_at), "HH:mm")}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               );
             }
@@ -1429,21 +1558,11 @@ export default function Dashboard() {
                       {!isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link to="/minhas-comissoes" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
-                              <StatCard title="Minhas comissões (pendentes)" value={formatCurrency(professionalCommissionsToReceive)} icon={Wallet} variant={professionalCommissionsToReceive > 0 ? "warning" : "default"} description="Clique para ver detalhes" />
+                            <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
+                              <StatCard title="Meu financeiro (pendente)" value={formatCurrency(professionalCommissionsToReceive + (mySalaryAmount || 0))} icon={Wallet} variant={professionalCommissionsToReceive > 0 ? "warning" : "default"} description="Clique para ver detalhes" />
                             </Link>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">Comissões do mês que ainda não foram pagas para você.</TooltipContent>
-                        </Tooltip>
-                      )}
-                      {!isAdmin && mySalaryAmount !== null && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/meus-salarios" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-salary">
-                              <StatCard title="Meu salário" value={formatCurrency(mySalaryAmount)} icon={DollarSign} variant="info" description={lastSalaryPayment ? `Último pagamento: ${formatInAppTz(lastSalaryPayment.date || "", "dd/MM/yyyy")}` : "Salário fixo configurado"} />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Seu salário configurado + histórico de pagamento.</TooltipContent>
+                          <TooltipContent side="bottom">Comissões e salários pendentes.</TooltipContent>
                         </Tooltip>
                       )}
                     </div>
@@ -1501,6 +1620,14 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
       </TooltipProvider>
+      )}
+
+      {/* 12G.5 — RBAC Setup Wizard */}
+      <RbacWizard
+        open={rbacWizardOpen}
+        onOpenChange={setRbacWizardOpen}
+        onComplete={() => setRbacWizardOpen(false)}
+      />
     </MainLayout>
   );
 }

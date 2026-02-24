@@ -7,14 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Select,
   SelectContent,
@@ -35,6 +28,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { Loader2, Plus, Zap } from "lucide-react";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useLimitCheck } from "@/hooks/useUsageStats";
+import { UsageIndicator } from "@/components/subscription/LimitGate";
 
 type TriggerType =
   | "appointment_created"
@@ -91,6 +87,8 @@ function interpolateTemplate(template: string, vars: Record<string, string>): st
 
 export default function Automacoes() {
   const { profile, tenant, isAdmin } = useAuth();
+  const { isWithinLimit } = usePlanFeatures();
+  const { currentValue: automationsCount } = useLimitCheck('automations');
   const [isLoading, setIsLoading] = useState(true);
   const [rows, setRows] = useState<AutomationRow[]>([]);
 
@@ -173,6 +171,13 @@ export default function Automacoes() {
       return;
     }
 
+    // Verificar limite de automações
+    const activeAutomations = rows.filter(r => r.is_active).length;
+    if (!isWithinLimit('automations', activeAutomations)) {
+      toast.error("Você atingiu o limite de automações do seu plano. Faça upgrade para criar mais.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const trigger_config =
@@ -226,9 +231,18 @@ export default function Automacoes() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Regras</CardTitle>
-            <CardDescription>Ative/desative e personalize mensagens.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle>Regras</CardTitle>
+              <CardDescription>Ative/desative e personalize mensagens.</CardDescription>
+            </div>
+            <UsageIndicator 
+              limit="automations" 
+              currentValue={rows.filter(r => r.is_active).length} 
+              showLabel={false} 
+              size="sm" 
+              className="w-40"
+            />
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -277,19 +291,25 @@ export default function Automacoes() {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova automação</DialogTitle>
-              <DialogDescription>Defina gatilho, canal e mensagem.</DialogDescription>
-            </DialogHeader>
+        <FormDrawer
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          title="Nova automação"
+          description="Defina gatilho, canal e mensagem."
+          width="lg"
+          onSubmit={() => void createAutomation()}
+          isSubmitting={isSaving}
+          submitLabel="Criar"
+        >
+          <FormDrawerSection title="Identificação">
+            <div className="grid gap-2">
+              <Label>Nome</Label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+            </div>
+          </FormDrawerSection>
 
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label>Nome</Label>
-                <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
-              </div>
-
+          <FormDrawerSection title="Gatilho">
+            <div className="space-y-4">
               <div className="grid gap-2">
                 <Label>Gatilho</Label>
                 <Select value={form.trigger_type} onValueChange={(v) => setForm((p) => ({ ...p, trigger_type: v as TriggerType }))}>
@@ -325,23 +345,29 @@ export default function Automacoes() {
                   />
                 </div>
               )}
+            </div>
+          </FormDrawerSection>
 
-              <div className="grid gap-2">
-                <Label>Canal</Label>
-                <Select value={form.channel} onValueChange={(v) => setForm((p) => ({ ...p, channel: v as Channel }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["whatsapp", "email"] as Channel[]).map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {channelLabel[c]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <FormDrawerSection title="Canal">
+            <div className="grid gap-2">
+              <Label>Canal</Label>
+              <Select value={form.channel} onValueChange={(v) => setForm((p) => ({ ...p, channel: v as Channel }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["whatsapp", "email"] as Channel[]).map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {channelLabel[c]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </FormDrawerSection>
 
+          <FormDrawerSection title="Mensagem">
+            <div className="space-y-4">
               <div className="grid gap-2">
                 <Label>Mensagem</Label>
                 <Textarea
@@ -364,18 +390,8 @@ export default function Automacoes() {
                 </CardContent>
               </Card>
             </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={() => void createAutomation()} disabled={isSaving}>
-                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                Criar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </FormDrawerSection>
+        </FormDrawer>
       </div>
     </MainLayout>
   );

@@ -16,6 +16,7 @@ import {
   Wallet,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Menu,
   Clock,
   Target,
@@ -27,7 +28,6 @@ import {
   Globe,
   Gift,
   Zap,
-  Tag,
   Ticket,
   Plug,
   ClipboardList,
@@ -43,100 +43,218 @@ import {
   Building,
   Calculator,
   ShieldCheck,
+  FileSignature,
+  FileCheck2,
+  ArrowRightLeft,
+  ClockArrowUp,
+  Smile,
+  DoorOpen,
+  Code2,
+  NotebookPen,
+  Archive,
+  CalendarClock,
+  Search,
+  MonitorPlay,
+  FileText,
+  Sparkles,
+  Lock,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useSimpleMode } from "@/lib/simple-mode";
+import { usePermissions } from "@/hooks/usePermissions";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
+import { FeatureKey, PLAN_CONFIG, getMinimumTierForFeature as getMinTierForFeature } from "@/types/subscription-plans";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
-  adminOnly?: boolean;
+  /** Recurso RBAC. Filtra via `usePermissions().can(resource, 'view')`. */
+  resource?: string;
+  /** Feature do plano. Filtra via `usePlanFeatures().hasFeature(feature)`. */
+  requiredFeature?: FeatureKey;
+  /** Legado — mantido apenas para itens exclusivos de staff (ex: Minhas Comissões). */
   staffOnly?: boolean;
+  /** Badge de notificação */
+  badge?: number;
 }
 
 interface NavCategory {
   label: string;
+  icon: React.ElementType;
   items: NavItem[];
+  /** Cor do tema da categoria */
+  color: string;
+  /** Cor do gradiente */
+  gradient: string;
+}
+
+const STORAGE_KEY = "sidebar-open-categories";
+
+function loadOpenCategories(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* noop */ }
+  return {};
+}
+
+function saveOpenCategories(state: Record<string, boolean>) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* noop */ }
 }
 
 const navCategories: NavCategory[] = [
   {
-    label: "Atendimento",
+    label: "Recepção",
+    icon: MonitorPlay,
+    color: "text-teal-500",
+    gradient: "from-teal-500 to-cyan-500",
     items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Agenda", href: "/agenda", icon: Calendar },
-      { title: "Teleconsulta", href: "/teleconsulta", icon: Video },
-      { title: "Disponibilidade", href: "/disponibilidade", icon: Clock },
-      { title: "Pacientes", href: "/clientes", icon: Users },
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, resource: "dashboard" },
+      { title: "Agenda", href: "/agenda", icon: Calendar, resource: "agenda" },
+      { title: "Lista de Espera", href: "/lista-espera", icon: ClockArrowUp, resource: "lista_espera", requiredFeature: "waitlist" },
+      { title: "Retornos Pendentes", href: "/retornos-pendentes", icon: CalendarClock, resource: "agenda", requiredFeature: "returnReminders" },
+      { title: "Disponibilidade", href: "/disponibilidade", icon: Clock, resource: "disponibilidade" },
     ],
   },
   {
     label: "Clínico",
+    icon: Stethoscope,
+    color: "text-blue-500",
+    gradient: "from-blue-500 to-indigo-500",
     items: [
-      { title: "Triagem & Anamnese", href: "/triagem", icon: Activity },
-      { title: "Prontuários", href: "/prontuarios", icon: ClipboardList },
-      { title: "Receituários", href: "/receituarios", icon: FilePlus2 },
-      { title: "Laudos & Exames", href: "/laudos", icon: FlaskConical },
-      { title: "Procedimentos", href: "/servicos", icon: Stethoscope, adminOnly: true },
-      { title: "Especialidades", href: "/especialidades", icon: HeartPulse, adminOnly: true },
-      { title: "Convênios", href: "/convenios", icon: Building2, adminOnly: true },
-      { title: "Modelos de Prontuário", href: "/modelos-prontuario", icon: FileCode2, adminOnly: true },
-      { title: "Termos e Consentimentos", href: "/termos-consentimento", icon: ShieldCheck, adminOnly: true },
+      { title: "Pacientes", href: "/clientes", icon: Users, resource: "pacientes" },
+      { title: "Triagem", href: "/triagem", icon: Activity, resource: "triagem", requiredFeature: "triage" },
+      { title: "Prontuários", href: "/prontuarios", icon: ClipboardList, resource: "prontuarios" },
+      { title: "Evoluções", href: "/evolucoes", icon: NotebookPen, resource: "evolucoes", requiredFeature: "soapEvolutions" },
+      { title: "Teleconsulta", href: "/teleconsulta", icon: Video, resource: "teleconsulta" },
+      { title: "Chat Interno", href: "/chat", icon: MessageSquare, resource: "chat", requiredFeature: "internalChat" },
+    ],
+  },
+  {
+    label: "Documentos",
+    icon: FileText,
+    color: "text-violet-500",
+    gradient: "from-violet-500 to-purple-500",
+    items: [
+      { title: "Receituários", href: "/receituarios", icon: FilePlus2, resource: "receituarios" },
+      { title: "Atestados", href: "/atestados", icon: FileCheck2, resource: "atestados" },
+      { title: "Laudos & Exames", href: "/laudos", icon: FlaskConical, resource: "laudos", requiredFeature: "reports" },
+      { title: "Encaminhamentos", href: "/encaminhamentos", icon: ArrowRightLeft, resource: "encaminhamentos", requiredFeature: "referrals" },
+      { title: "Termos & Contratos", href: "/contratos-termos", icon: FileSignature, resource: "contratos_termos", requiredFeature: "contracts" },
+    ],
+  },
+  {
+    label: "Odontologia",
+    icon: Smile,
+    color: "text-pink-500",
+    gradient: "from-pink-500 to-rose-500",
+    items: [
+      { title: "Odontograma", href: "/odontograma", icon: Smile, resource: "odontograma", requiredFeature: "odontogram" },
+      { title: "Periograma", href: "/periograma", icon: Activity, resource: "periograma", requiredFeature: "periogram" },
+      { title: "Planos de Tratamento", href: "/planos-tratamento", icon: ClipboardList, resource: "odontograma", requiredFeature: "treatmentPlans" },
     ],
   },
   {
     label: "Financeiro",
+    icon: DollarSign,
+    color: "text-emerald-500",
+    gradient: "from-emerald-500 to-green-500",
     items: [
-      { title: "Financeiro", href: "/financeiro", icon: DollarSign, adminOnly: true },
-      { title: "Faturamento TISS", href: "/faturamento-tiss", icon: Calculator, adminOnly: true },
-      { title: "Minhas Comissões", href: "/minhas-comissoes", icon: Wallet, staffOnly: true },
-      { title: "Meus Salários", href: "/meus-salarios", icon: DollarSign, staffOnly: true },
-      { title: "Relatório DRE", href: "/relatorio-financeiro", icon: BarChart3, adminOnly: true },
-      { title: "Relatórios & BI", href: "/relatorios", icon: BarChart3, adminOnly: true },
+      { title: "Visão Geral", href: "/financeiro", icon: DollarSign, resource: "financeiro" },
+      { title: "Contas a Pagar", href: "/contas-pagar", icon: ArrowRightLeft, resource: "financeiro" },
+      { title: "Contas a Receber", href: "/contas-receber", icon: ArrowRightLeft, resource: "financeiro" },
+      { title: "Faturamento TISS", href: "/faturamento-tiss", icon: Calculator, resource: "faturamento_tiss", requiredFeature: "tissBilling" },
+      { title: "Convênios", href: "/convenios", icon: Building2, resource: "convenios", requiredFeature: "insurancePlans" },
+      { title: "Relatórios", href: "/relatorios", icon: BarChart3, resource: "relatorios" },
+    ],
+  },
+  {
+    label: "Repasses",
+    icon: Wallet,
+    color: "text-cyan-500",
+    gradient: "from-cyan-500 to-teal-500",
+    items: [
+      { title: "Visão Geral", href: "/repasses", icon: Wallet, resource: "financeiro" },
+      { title: "Comissões", href: "/repasses/comissoes", icon: Wallet, resource: "financeiro" },
+      { title: "Salários", href: "/repasses/salarios", icon: DollarSign, resource: "financeiro" },
+      { title: "Relatórios", href: "/repasses/relatorios", icon: FileText, resource: "financeiro" },
+      { title: "Regras de Comissão", href: "/repasses/regras", icon: Settings, resource: "financeiro" },
+      { title: "Captação e Indicações", href: "/repasses/captacao", icon: Users, resource: "financeiro" },
     ],
   },
   {
     label: "Estoque",
+    icon: Package,
+    color: "text-amber-500",
+    gradient: "from-amber-500 to-orange-500",
     items: [
-      { title: "Insumos & Produtos", href: "/produtos", icon: Package },
-      { title: "Compras", href: "/compras", icon: ShoppingCart, adminOnly: true },
-      { title: "Fornecedores", href: "/fornecedores", icon: Truck, adminOnly: true },
+      { title: "Produtos & Insumos", href: "/produtos", icon: Package, resource: "produtos" },
+      { title: "Compras", href: "/compras", icon: ShoppingCart, resource: "compras", requiredFeature: "purchases" },
+      { title: "Fornecedores", href: "/fornecedores", icon: Truck, resource: "fornecedores", requiredFeature: "suppliers" },
     ],
   },
   {
     label: "Marketing",
+    icon: Sparkles,
+    color: "text-fuchsia-500",
+    gradient: "from-fuchsia-500 to-pink-500",
     items: [
-      { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, adminOnly: true },
-      { title: "Campanhas", href: "/campanhas", icon: Send, adminOnly: true },
-      { title: "Automações", href: "/automacoes", icon: Zap, adminOnly: true },
-      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, adminOnly: true },
-      { title: "Vouchers", href: "/vouchers", icon: Ticket, adminOnly: true },
-      { title: "Cupons", href: "/cupons", icon: Tag, adminOnly: true },
+      { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, resource: "agendamento_online" },
+      { title: "Campanhas", href: "/campanhas", icon: Send, resource: "campanhas", requiredFeature: "campaigns" },
+      { title: "Automações", href: "/automacoes", icon: Zap, resource: "automacoes", requiredFeature: "automations" },
+      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, resource: "fidelidade", requiredFeature: "loyalty" },
+      { title: "Cupons & Vouchers", href: "/cupons", icon: Ticket, resource: "cupons", requiredFeature: "coupons" },
     ],
   },
   {
-    label: "Gestão",
+    label: "Administração",
+    icon: Settings,
+    color: "text-slate-500",
+    gradient: "from-slate-500 to-gray-500",
     items: [
-      { title: "Metas", href: "/metas", icon: Target, adminOnly: true },
-      { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true },
-      { title: "Equipe", href: "/equipe", icon: UserCog, adminOnly: true },
-      { title: "Unidades", href: "/unidades", icon: Building, adminOnly: true },
-      { title: "Chat Interno", href: "/chat", icon: MessageSquare },
-      { title: "Integrações", href: "/integracoes", icon: Plug, adminOnly: true },
-      { title: "Auditoria", href: "/auditoria", icon: Shield, adminOnly: true },
-      { title: "Configurações", href: "/configuracoes", icon: Settings, adminOnly: true },
+      { title: "Equipe", href: "/equipe", icon: UserCog, resource: "equipe", requiredFeature: "team" },
+      { title: "Permissões", href: "/gerenciar-permissoes", icon: Shield, requiredFeature: "advancedRbac" },
+      { title: "Unidades", href: "/unidades", icon: Building, resource: "unidades", requiredFeature: "multiUnit" },
+      { title: "Gestão de Salas", href: "/gestao-salas", icon: DoorOpen, resource: "gestao_salas", requiredFeature: "rooms" },
+      { title: "Procedimentos", href: "/servicos", icon: Stethoscope, resource: "procedimentos" },
+      { title: "Especialidades", href: "/especialidades", icon: HeartPulse, resource: "especialidades", requiredFeature: "specialties" },
+      { title: "Modelos Prontuário", href: "/modelos-prontuario", icon: FileCode2, resource: "modelos_prontuario", requiredFeature: "recordTemplates" },
+      { title: "Integrações", href: "/integracoes", icon: Plug, resource: "integracoes", requiredFeature: "integrations" },
+      { title: "API Pública", href: "/api-docs", icon: Code2, resource: "api_docs", requiredFeature: "apiAccess" },
+      { title: "Compliance & LGPD", href: "/compliance", icon: ShieldCheck, resource: "auditoria", requiredFeature: "compliance" },
+      { title: "SNGPC/ANVISA", href: "/sngpc", icon: Shield, resource: "sngpc", requiredFeature: "sngpc" },
+      { title: "Auditoria", href: "/auditoria", icon: Shield, resource: "auditoria", requiredFeature: "audit" },
+      { title: "Overrides Admin", href: "/admin/overrides", icon: Settings, resource: "configuracoes" },
+      { title: "Retenção de Dados", href: "/retencao-dados", icon: Archive, resource: "auditoria", requiredFeature: "dataRetention" },
+      { title: "Configurações", href: "/configuracoes", icon: Settings, resource: "configuracoes" },
     ],
   },
   {
-    label: "Conta",
+    label: "Minha Conta",
+    icon: Users,
+    color: "text-cyan-500",
+    gradient: "from-cyan-500 to-teal-500",
     items: [
+      { title: "Meu Financeiro", href: "/meu-financeiro", icon: Wallet, staffOnly: true },
+      { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true, requiredFeature: "goals" },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
-      { title: "Assinatura", href: "/assinatura", icon: CreditCard, adminOnly: true },
+      { title: "Assinatura", href: "/assinatura", icon: CreditCard, resource: "assinatura" },
       { title: "Ajuda", href: "/ajuda", icon: BookOpen },
     ],
   },
@@ -157,9 +275,18 @@ const prefetchByHref: Record<string, () => void> = {
   "/triagem": () => void import("@/pages/Triagem"),
   "/receituarios": () => void import("@/pages/Receituarios"),
   "/laudos": () => void import("@/pages/Laudos"),
+  "/atestados": () => void import("@/pages/Atestados"),
+  "/encaminhamentos": () => void import("@/pages/Encaminhamentos"),
+  "/lista-espera": () => void import("@/pages/ListaEspera"),
   "/especialidades": () => void import("@/pages/Especialidades"),
   "/convenios": () => void import("@/pages/Convenios"),
   "/financeiro": () => void import("@/pages/Financeiro"),
+  "/repasses": () => void import("@/pages/Repasses"),
+  "/repasses/comissoes": () => void import("@/pages/RepassesComissoes"),
+  "/repasses/salarios": () => void import("@/pages/RepassesSalarios"),
+  "/repasses/relatorios": () => void import("@/pages/RepassesRelatorios"),
+  "/repasses/regras": () => void import("@/pages/repasses/ConfigurarRegras"),
+  "/repasses/captacao": () => void import("@/pages/RelatorioCaptacao"),
   "/produtos": () => void import("@/pages/Produtos"),
   "/compras": () => void import("@/pages/Compras"),
   "/fornecedores": () => void import("@/pages/Fornecedores"),
@@ -167,8 +294,10 @@ const prefetchByHref: Record<string, () => void> = {
   "/auditoria": () => void import("@/pages/Auditoria"),
   "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
+  "/gerenciar-permissoes": () => void import("@/pages/GerenciarPermissoes"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
   "/termos-consentimento": () => void import("@/pages/TermosConsentimento"),
+  "/contratos-termos": () => void import("@/pages/ContratosTermos"),
   "/agendamento-online": () => void import("@/pages/AgendamentoOnlineAdmin"),
   "/fidelidade-cashback": () => void import("@/pages/FidelidadeCashbackAdmin"),
   "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),
@@ -177,6 +306,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/assinatura/gerenciar": () => void import("@/pages/GerenciarAssinatura"),
   "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
   "/meus-salarios": () => void import("@/pages/MeusSalarios"),
+  "/meu-financeiro": () => void import("@/pages/MeuFinanceiro"),
   "/campanhas": () => void import("@/pages/Campanhas"),
   "/automacoes": () => void import("@/pages/Automacoes"),
   "/relatorio-financeiro": () => void import("@/pages/RelatorioFinanceiro"),
@@ -186,6 +316,16 @@ const prefetchByHref: Record<string, () => void> = {
   "/vouchers": () => void import("@/pages/Vouchers"),
   "/cupons": () => void import("@/pages/Cupons"),
   "/integracoes": () => void import("@/pages/Integracoes"),
+  "/odontograma": () => void import("@/pages/Odontograma"),
+  "/evolucoes": () => void import("@/pages/Evolucoes"),
+  "/gestao-salas": () => void import("@/pages/GestaoSalas"),
+  "/api-docs": () => void import("@/pages/ApiDocumentation"),
+  "/sngpc": () => void import("@/pages/TransmissaoSNGPC"),
+  "/relatorios-customizaveis": () => void import("@/pages/RelatoriosCustomizaveis"),
+  "/compliance": () => void import("@/pages/Compliance"),
+  "/dashboard-ona": () => void import("@/pages/DashboardONA"),
+  "/retencao-dados": () => void import("@/pages/RetencaoDados"),
+  "/retornos-pendentes": () => void import("@/pages/RetornosPendentes"),
 };
 
 function prefetchRoute(href: string) {
@@ -199,6 +339,183 @@ function prefetchRoute(href: string) {
 // Persist nav scroll position across re-renders / route changes
 let savedNavScroll = 0;
 
+function CategoryGroup({
+  category,
+  filteredItems,
+  lockedItems,
+  isCollapsed,
+  isOpen,
+  onToggle,
+  location,
+  onNavigate,
+}: {
+  category: NavCategory;
+  filteredItems: NavItem[];
+  lockedItems: NavItem[];
+  isCollapsed: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  location: ReturnType<typeof useLocation>;
+  onNavigate?: () => void;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const hasActiveChild = filteredItems.some((item) => location.pathname === item.href);
+  const allItems = [...filteredItems, ...lockedItems];
+
+  if (isCollapsed) {
+    return (
+      <div className="space-y-1 py-1">
+        <div
+          className={cn(
+            "mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg transition-all",
+            hasActiveChild ? `bg-gradient-to-br ${category.gradient} text-white shadow-md` : "bg-muted/50"
+          )}
+          title={category.label}
+        >
+          <category.icon className={cn("h-4 w-4", !hasActiveChild && category.color)} />
+        </div>
+        {filteredItems.map((item) => {
+          const isActive = location.pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              onClick={onNavigate}
+              onMouseEnter={() => prefetchRoute(item.href)}
+              className={cn(
+                "group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? `bg-gradient-to-r ${category.gradient} text-white shadow-lg shadow-primary/20`
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+              title={item.title}
+            >
+              <item.icon className={cn(
+                "h-5 w-5 shrink-0 transition-transform duration-200",
+                isActive && "scale-110",
+                !isActive && "group-hover:scale-110"
+              )} />
+            </Link>
+          );
+        })}
+        {lockedItems.map((item) => (
+          <Link
+            key={item.href}
+            to="/assinatura"
+            className="group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground/50 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            title={`${item.title} - Upgrade necessário`}
+          >
+            <Lock className="h-4 w-4 shrink-0" />
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200",
+          hasActiveChild
+            ? `bg-gradient-to-r ${category.gradient} text-white shadow-md`
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+        )}
+      >
+        <div className={cn(
+          "flex h-7 w-7 items-center justify-center rounded-lg transition-all",
+          hasActiveChild ? "bg-white/20" : "bg-muted"
+        )}>
+          <category.icon className={cn(
+            "h-4 w-4 transition-transform group-hover:scale-110",
+            hasActiveChild ? "text-white" : category.color
+          )} />
+        </div>
+        <span className="flex-1 text-left">{category.label}</span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 transition-transform duration-300",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-all duration-300 ease-out"
+        style={{
+          maxHeight: isOpen ? `${allItems.length * 44 + 12}px` : "0px",
+          opacity: isOpen ? 1 : 0,
+        }}
+      >
+        <div className="space-y-0.5 py-1 pl-3">
+          {filteredItems.map((item) => {
+            const isActive = location.pathname === item.href;
+            const tourKey =
+              item.href === "/dashboard" ? "sidebar-dashboard" :
+              item.href === "/agenda" ? "sidebar-agenda" :
+              item.href === "/clientes" ? "sidebar-clientes" :
+              item.href === "/servicos" ? "sidebar-servicos" :
+              item.href === "/produtos" ? "sidebar-produtos" :
+              item.href === "/financeiro" ? "sidebar-financeiro" :
+              item.href === "/minhas-comissoes" ? "sidebar-minhas-comissoes" :
+              item.href === "/meus-salarios" ? "sidebar-meus-salarios" :
+              item.href === "/ajuda" ? "sidebar-ajuda" :
+              undefined;
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                onClick={onNavigate}
+                onMouseEnter={() => prefetchRoute(item.href)}
+                data-tour={tourKey}
+                className={cn(
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-primary"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                )}
+              >
+                <item.icon className={cn(
+                  "h-4 w-4 shrink-0 transition-all duration-200",
+                  isActive ? "text-primary" : category.color,
+                  "group-hover:scale-110"
+                )} />
+                <span className="truncate">{item.title}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-white">
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+          {lockedItems.map((item) => {
+            const minTier = item.requiredFeature ? getMinTierForFeature(item.requiredFeature) : null;
+            const tierName = minTier ? PLAN_CONFIG[minTier].name : 'Pro';
+            return (
+              <Link
+                key={item.href}
+                to="/assinatura"
+                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                title={`Disponível no plano ${tierName}`}
+              >
+                <Lock className="h-4 w-4 shrink-0 text-amber-500/70" />
+                <span className="truncate">{item.title}</span>
+                <span className="ml-auto rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  {tierName}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SidebarContent({
   isCollapsed,
   onNavigate
@@ -211,17 +528,49 @@ function SidebarContent({
   const auth = useAuth();
   const { profile, tenant, signOut } = auth;
   const isAdmin = auth?.isAdmin ?? false;
+  const { can, professionalType } = usePermissions();
+  const { hasFeature } = usePlanFeatures();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const navRef = useRef<HTMLElement>(null);
 
-  // Restore scroll position after render
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
+    const saved = loadOpenCategories();
+    const defaults: Record<string, boolean> = {};
+    navCategories.forEach((cat) => {
+      defaults[cat.label] = saved[cat.label] ?? false;
+    });
+    defaults["Recepção"] = true;
+    return defaults;
+  });
+
+  const toggleCategory = useCallback((label: string) => {
+    setOpenCategories((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      saveOpenCategories(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    for (const category of navCategories) {
+      const hasActive = category.items.some((item) => location.pathname === item.href);
+      if (hasActive && !openCategories[category.label]) {
+        setOpenCategories((prev) => {
+          const next = { ...prev, [category.label]: true };
+          saveOpenCategories(next);
+          return next;
+        });
+        break;
+      }
+    }
+  }, [location.pathname]);
+
   useEffect(() => {
     if (navRef.current) {
       navRef.current.scrollTop = savedNavScroll;
     }
   });
 
-  // Save scroll position on scroll
   const handleNavScroll = useCallback(() => {
     if (navRef.current) {
       savedNavScroll = navRef.current.scrollTop;
@@ -234,96 +583,131 @@ function SidebarContent({
     navigate("/", { replace: true });
   };
 
+  const quickAccessItems = [
+    { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { title: "Agenda", href: "/agenda", icon: Calendar },
+    { title: "Pacientes", href: "/clientes", icon: Users },
+  ];
+
   return (
     <>
       {/* Header */}
-      <div className="flex h-16 md:h-20 items-center justify-between border-b border-white/10 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
               <HeartPulse className="h-5 w-5 text-white" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
             </div>
             <div>
-              <span className="font-display text-base md:text-lg font-bold text-foreground">
+              <span className="font-display text-base font-bold text-foreground">
                 {tenant?.name || "ClinicNest"}
               </span>
-              <p className="text-xs text-muted-foreground">Gestão de Clínicas</p>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Gestão Clínica
+              </p>
             </div>
           </div>
         )}
         {isCollapsed && (
-          <div className="mx-auto flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-2xl gradient-vibrant shadow-glow">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
             <HeartPulse className="h-5 w-5 text-white" />
           </div>
         )}
       </div>
 
+      {/* Quick Search */}
+      {!isCollapsed && (
+        <div className="px-3 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+              document.dispatchEvent(event);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground transition-all hover:border-primary/50 hover:bg-muted/50"
+          >
+            <Search className="h-4 w-4" />
+            <span className="flex-1 text-left">Buscar...</span>
+            <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
+
+      {/* Quick Access */}
+      {!isCollapsed && (
+        <div className="px-3 pb-2">
+          <div className="flex items-center gap-1">
+            {quickAccessItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-all",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Divider */}
+      {!isCollapsed && (
+        <div className="mx-3 mb-2 border-t border-border/50" />
+      )}
+
       {/* Navigation */}
-      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto px-2 pb-2 scrollbar-hide">
         {navCategories.map((category) => {
-          const filteredItems = category.items.filter((item) => {
-            if (item.adminOnly && !isAdmin) return false;
-            if (item.staffOnly && isAdmin) return false;
-            if (simpleModeEnabled && item.href === "/auditoria") return false;
-            return true;
+          const accessibleItems: NavItem[] = [];
+          const lockedItems: NavItem[] = [];
+          
+          category.items.forEach((item) => {
+            if (item.staffOnly && isAdmin) return;
+            if (!item.staffOnly && !isAdmin && item.resource && !can(item.resource, 'view')) return;
+            if (simpleModeEnabled && item.href === "/auditoria") return;
+            
+            if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
+              lockedItems.push(item);
+            } else {
+              accessibleItems.push(item);
+            }
           });
-          if (filteredItems.length === 0) return null;
+          
+          if (accessibleItems.length === 0 && lockedItems.length === 0) return null;
+          
           return (
-            <div key={category.label} className="space-y-1.5">
-              {!isCollapsed && (
-                <p className="px-3 md:px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {category.label}
-                </p>
-              )}
-              <div className="space-y-1">
-                {filteredItems.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  const tourKey =
-                    item.href === "/dashboard" ? "sidebar-dashboard" :
-                    item.href === "/agenda" ? "sidebar-agenda" :
-                    item.href === "/clientes" ? "sidebar-clientes" :
-                    item.href === "/servicos" ? "sidebar-servicos" :
-                    item.href === "/produtos" ? "sidebar-produtos" :
-                    item.href === "/financeiro" ? "sidebar-financeiro" :
-                    item.href === "/minhas-comissoes" ? "sidebar-minhas-comissoes" :
-                    item.href === "/meus-salarios" ? "sidebar-meus-salarios" :
-                    item.href === "/ajuda" ? "sidebar-ajuda" :
-                    undefined;
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      onClick={onNavigate}
-                      onMouseEnter={() => prefetchRoute(item.href)}
-                      data-tour={tourKey}
-                      className={cn(
-                        "group flex items-center gap-3 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium transition-all duration-200",
-                        isActive
-                          ? "gradient-primary text-white shadow-glow"
-                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
-                        isCollapsed && "justify-center px-3"
-                      )}
-                      title={isCollapsed ? item.title : undefined}
-                    >
-                      <item.icon className={cn(
-                        "h-5 w-5 shrink-0 transition-transform duration-200",
-                        isActive && "scale-110",
-                        !isActive && "group-hover:scale-110"
-                      )} />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+            <CategoryGroup
+              key={category.label}
+              category={category}
+              filteredItems={accessibleItems}
+              lockedItems={lockedItems}
+              isCollapsed={isCollapsed}
+              isOpen={openCategories[category.label] ?? true}
+              onToggle={() => toggleCategory(category.label)}
+              location={location}
+              onNavigate={onNavigate}
+            />
           );
         })}
       </nav>
 
       {/* User section */}
-      <div className="border-t border-white/10 p-3 md:p-4">
+      <div className="border-t border-border/50 p-3">
         {!isCollapsed && (
-          <div className="mb-3 md:mb-4 rounded-xl border-gradient bg-card p-3 md:p-4">
+          <div className="mb-3 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 p-3">
             <div className="flex items-center gap-3">
               <Link
                 to="/minhas-configuracoes"
@@ -332,15 +716,14 @@ function SidebarContent({
                 className="flex flex-1 items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
                 title="Meu Perfil"
               >
-                {/* Avatar: foto ou inicial */}
                 {profile?.avatar_url ? (
                   <img
                     src={profile.avatar_url}
                     alt={profile.full_name || "Avatar"}
-                    className="h-9 w-9 md:h-10 md:w-10 rounded-xl object-cover shrink-0"
+                    className="h-10 w-10 rounded-xl object-cover shrink-0 ring-2 ring-primary/20"
                   />
                 ) : (
-                  <div className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-xl gradient-accent text-white font-bold text-sm md:text-base">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white font-bold shadow-lg shadow-cyan-500/25">
                     {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
                   </div>
                 )}
@@ -348,8 +731,8 @@ function SidebarContent({
                   <p className="text-sm font-semibold text-foreground truncate">
                     {profile?.full_name || "Usuário"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isAdmin ? "Administrador" : "Profissional"}
+                  <p className="text-[11px] text-muted-foreground">
+                    {isAdmin ? "Administrador" : (PROFESSIONAL_TYPE_LABELS[professionalType] || "Profissional")}
                   </p>
                 </div>
               </Link>
@@ -383,6 +766,8 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { tenant, profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
   // Close mobile menu on route change
   const location = useLocation();
@@ -394,36 +779,140 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   if (isMobile) {
     return (
       <>
-        {/* Mobile Header Bar */}
-        <div className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-vibrant shadow-glow">
-              <HeartPulse className="h-4 w-4 text-white" />
+        {/* Mobile Header Bar - Modern Design */}
+        <div className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+          {/* Main Header Row */}
+          <div className="flex h-14 items-center justify-between px-4">
+            {/* Left: Menu + Logo */}
+            <div className="flex items-center gap-3">
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-xl hover:bg-primary/10"
+                    aria-label="Abrir menu"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-80 p-0 border-r border-border/50 bg-background">
+                  <div className="flex h-full flex-col">
+                    <SidebarContent isCollapsed={false} onNavigate={() => setIsOpen(false)} />
+                  </div>
+                </SheetContent>
+              </Sheet>
+              
+              {/* Clinic Name or Logo */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 shadow-md shadow-teal-500/20">
+                  <HeartPulse className="h-4 w-4 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate max-w-[140px]">
+                    {tenant?.name || "ClinicNest"}
+                  </p>
+                </div>
+              </div>
             </div>
-            <span className="font-display text-lg font-bold text-foreground">ClinicNest</span>
-          </div>
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
+
+            {/* Right: Quick Actions */}
+            <div className="flex items-center gap-1">
+              {/* Quick Add Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-xl hover:bg-primary/10"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate("/agenda")}>
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Novo agendamento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/clientes")}>
+                    <Users className="mr-2 h-4 w-4" />
+                    Novo paciente
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/financeiro")}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Nova transação
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User Avatar */}
               <Button
-                type="button"
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
-                aria-label="Abrir menu"
+                className="h-9 w-9 rounded-xl p-0 overflow-hidden"
+                onClick={() => navigate("/minhas-configuracoes")}
               >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Abrir menu</span>
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.full_name || "Avatar"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500 to-teal-500 text-white text-sm font-bold">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+                )}
               </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 glass-sidebar">
-              <div className="flex h-full flex-col">
-                <SidebarContent isCollapsed={false} onNavigate={() => setIsOpen(false)} />
-              </div>
-            </SheetContent>
-          </Sheet>
+            </div>
+          </div>
+
+          {/* Quick Access Bar */}
+          <div className="flex items-center gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
+            <Button
+              variant={location.pathname === "/agenda" ? "default" : "outline"}
+              size="sm"
+              className="h-8 rounded-full text-xs gap-1.5 shrink-0"
+              onClick={() => navigate("/agenda")}
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              Agenda
+            </Button>
+            <Button
+              variant={location.pathname === "/clientes" ? "default" : "outline"}
+              size="sm"
+              className="h-8 rounded-full text-xs gap-1.5 shrink-0"
+              onClick={() => navigate("/clientes")}
+            >
+              <Users className="h-3.5 w-3.5" />
+              Pacientes
+            </Button>
+            <Button
+              variant={location.pathname === "/financeiro" ? "default" : "outline"}
+              size="sm"
+              className="h-8 rounded-full text-xs gap-1.5 shrink-0"
+              onClick={() => navigate("/financeiro")}
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+              Financeiro
+            </Button>
+            {isAdmin && (
+              <Button
+                variant={location.pathname === "/dashboard" ? "default" : "outline"}
+                size="sm"
+                className="h-8 rounded-full text-xs gap-1.5 shrink-0"
+                onClick={() => navigate("/dashboard")}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Dashboard
+              </Button>
+            )}
+          </div>
         </div>
         {/* Spacer for fixed header */}
-        <div className="h-14" />
+        <div className="h-[88px]" />
       </>
     );
   }
@@ -432,8 +921,8 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300",
-        "glass-sidebar border-r border-border shadow-xl",
+        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-out",
+        "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
@@ -442,10 +931,10 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
       {/* Collapse Toggle */}
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="icon"
         className={cn(
-          "absolute -right-4 top-24 z-50 h-8 w-8 rounded-full border bg-card shadow-lg hover:bg-primary hover:text-primary-foreground transition-all",
+          "absolute -right-3 top-20 z-50 h-6 w-6 rounded-full border border-border/50 bg-background shadow-md hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all",
         )}
         aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
         onClick={() => {
@@ -455,9 +944,9 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
         }}
       >
         {isCollapsed ? (
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3 w-3" />
         ) : (
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3 w-3" />
         )}
       </Button>
     </aside>

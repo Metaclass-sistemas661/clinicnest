@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Select,
   SelectContent,
@@ -313,40 +306,39 @@ export default function Vouchers() {
         </Card>
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Novo Voucher</DialogTitle>
-            <DialogDescription>
-              Crie um voucher de valor fixo ou serviço para presentear pacientes.
-            </DialogDescription>
-          </DialogHeader>
+      {/* Create FormDrawer */}
+      <FormDrawer
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="Novo Voucher"
+        description="Crie um voucher de valor fixo ou serviço para presentear pacientes."
+        width="md"
+        onSubmit={handleSave}
+        isSubmitting={isSaving}
+        submitLabel="Criar Voucher"
+      >
+        <FormDrawerSection title="Código">
+          <div className="flex gap-2">
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="EX: VOUCHER2026"
+              className="font-mono uppercase"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              type="button"
+              onClick={() => setCode(randomCode())}
+              title="Gerar código aleatório"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        </FormDrawerSection>
 
-          <div className="space-y-4 py-4">
-            {/* Code */}
-            <div className="space-y-2">
-              <Label>Código</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="EX: VOUCHER2026"
-                  className="font-mono uppercase"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  type="button"
-                  onClick={() => setCode(randomCode())}
-                  title="Gerar código aleatório"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Type */}
+        <FormDrawerSection title="Tipo e Valor">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tipo</Label>
               <Select value={type} onValueChange={(v) => setType(v as "valor_fixo" | "servico")}>
@@ -358,7 +350,6 @@ export default function Vouchers() {
               </Select>
             </div>
 
-            {/* Valor ou Serviço */}
             {type === "valor_fixo" ? (
               <div className="space-y-2">
                 <Label>Valor (R$)</Label>
@@ -386,8 +377,11 @@ export default function Vouchers() {
                 </Select>
               </div>
             )}
+          </div>
+        </FormDrawerSection>
 
-            {/* Expiry */}
+        <FormDrawerSection title="Validade e Observações">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Validade (opcional)</Label>
               <Input
@@ -396,8 +390,6 @@ export default function Vouchers() {
                 onChange={(e) => setExpiresAt(e.target.value)}
               />
             </div>
-
-            {/* Notes */}
             <div className="space-y-2">
               <Label>Observações (opcional)</Label>
               <Input
@@ -407,25 +399,8 @@ export default function Vouchers() {
               />
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gradient-primary text-primary-foreground"
-            >
-              {isSaving ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</>
-              ) : (
-                "Criar Voucher"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </FormDrawerSection>
+      </FormDrawer>
     </MainLayout>
   );
 }

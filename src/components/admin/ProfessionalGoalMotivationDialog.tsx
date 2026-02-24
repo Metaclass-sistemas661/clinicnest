@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Target, TrendingUp, Sparkles } from "lucide-react";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { goalTypeLabels } from "@/lib/goals";
+import { useGamificationEnabled } from "@/hooks/useGamificationEnabled";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -27,7 +28,10 @@ function getMotivationalMessage(progressPct: number): string {
 
 export function ProfessionalGoalMotivationDialog() {
   const { motivationOpen, motivationData, closeMotivation } = useGoalMotivation() ?? {};
+  const gamificationEnabled = useGamificationEnabled();
 
+  // Não mostrar se gamificação estiver desabilitada
+  if (!gamificationEnabled) return null;
   if (!motivationData) return null;
 
   const primaryGoal = motivationData.goals[0];

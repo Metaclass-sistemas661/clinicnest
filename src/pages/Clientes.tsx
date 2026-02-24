@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -33,8 +34,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck, FileSignature, ClipboardList, Pill, FlaskConical, ArrowRightLeft, FileText, AlertTriangle, NotebookPen, ExternalLink, Lock, Sparkles } from "lucide-react";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
+import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
+import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
+import type { ClinicalEvolution } from "@/types/database";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -42,6 +46,9 @@ import { z } from "zod";
 import type { Client } from "@/types/database";
 import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
 import type { ClientTimelineEventRow, CashbackLedgerRow } from "@/types/supabase-extensions";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { UsageIndicator } from "@/components/subscription/LimitGate";
+import { Link } from "react-router-dom";
 
 const formatCpf = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -83,6 +90,7 @@ const clientFormSchema = z.object({
   neighborhood: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
+  allergies: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -95,6 +103,8 @@ const packageFormSchema = z.object({
 
 export default function Clientes() {
   const { profile, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { isWithinLimit, getLimit, getLimitMessage } = usePlanFeatures();
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSpending, setClientSpending] = useState<ClientSpendingRow[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,6 +152,13 @@ export default function Clientes() {
   const [newAccessCode, setNewAccessCode] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+
+  const [contractsClient, setContractsClient] = useState<Client | null>(null);
+
+  const [clinicalHistory, setClinicalHistory] = useState<Array<{
+    id: string; type: string; title: string; subtitle: string; date: string;
+  }>>([]);
+  const [clientEvolutions, setClientEvolutions] = useState<ClinicalEvolution[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -252,6 +269,65 @@ export default function Clientes() {
         setCashbackWallet(walletRes.data ? { balance: Number(walletRes.data.balance ?? 0) } : null);
         setCashbackLedger((ledgerRes.data as unknown as CashbackLedgerRow[]) ?? []);
         setMarketingOptOut(mktPrefRes.data?.marketing_opt_out ?? false);
+
+        const clinDocs: typeof clinicalHistory = [];
+        const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
+          supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
+            .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+            .order("issued_at", { ascending: false }).limit(20),
+          supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
+            .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+            .order("issued_at", { ascending: false }).limit(20),
+          supabase.from("exam_results").select("id, created_at, exam_name, status")
+            .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+            .order("created_at", { ascending: false }).limit(20),
+          supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
+            .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+            .order("created_at", { ascending: false }).limit(20),
+          supabase.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code")
+            .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+            .order("record_date", { ascending: false }).limit(20),
+        ]);
+
+        (mrRes.data || []).forEach((d: any) => clinDocs.push({
+          id: d.id, type: "prontuario",
+          title: d.chief_complaint || "Prontuário",
+          subtitle: [d.diagnosis, d.cid_code].filter(Boolean).join(" — "),
+          date: d.record_date,
+        }));
+        (recRes.data || []).forEach((d: any) => clinDocs.push({
+          id: d.id, type: "receita",
+          title: d.prescription_type === "simples" ? "Receita Simples" : d.prescription_type === "especial_b" ? "Receita Especial B" : "Receita Especial A",
+          subtitle: (d.medications || "").substring(0, 60),
+          date: d.issued_at,
+        }));
+        (certRes.data || []).forEach((d: any) => clinDocs.push({
+          id: d.id, type: "atestado",
+          title: d.certificate_type === "atestado" ? "Atestado Médico" : d.certificate_type === "declaracao_comparecimento" ? "Declaração" : d.certificate_type === "laudo" ? "Laudo Médico" : "Relatório Médico",
+          subtitle: (d.content || "").substring(0, 60),
+          date: d.issued_at,
+        }));
+        (examRes.data || []).forEach((d: any) => clinDocs.push({
+          id: d.id, type: "laudo",
+          title: d.exam_name,
+          subtitle: d.status,
+          date: d.created_at,
+        }));
+        (refRes.data || []).forEach((d: any) => clinDocs.push({
+          id: d.id, type: "encaminhamento",
+          title: `Encaminhamento${d.specialties?.name ? ` — ${d.specialties.name}` : ""}`,
+          subtitle: (d.reason || "").substring(0, 60),
+          date: d.created_at,
+        }));
+
+        clinDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setClinicalHistory(clinDocs);
+
+        const { data: evoData } = await (supabase as any).from("clinical_evolutions")
+          .select("*, clients(name), profiles(full_name)")
+          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .order("evolution_date", { ascending: false }).limit(50);
+        setClientEvolutions((evoData ?? []) as ClinicalEvolution[]);
       } catch (err) {
         logger.error("Error loading client extras:", err);
         toast.error("Erro ao carregar detalhes do paciente");
@@ -268,6 +344,8 @@ export default function Clientes() {
       setCashbackWallet(null);
       setCashbackLedger([]);
       setMarketingOptOut(false);
+      setClinicalHistory([]);
+      setClientEvolutions([]);
       setIsDetailLoadingExtras(false);
     }
   }, [isDetailOpen, detailClient?.id, profile?.tenant_id]);
@@ -465,7 +543,7 @@ export default function Clientes() {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("id,tenant_id,name,phone,email,notes,cpf,access_code,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,created_at,updated_at")
+        .select("id,tenant_id,name,phone,email,notes,cpf,access_code,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,allergies,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
 
@@ -479,7 +557,7 @@ export default function Clientes() {
     }
   };
 
-  const emptyFormData = { name: "", phone: "", email: "", cpf: "", date_of_birth: "", marital_status: "", zip_code: "", street: "", street_number: "", complement: "", neighborhood: "", city: "", state: "", notes: "" };
+  const emptyFormData = { name: "", phone: "", email: "", cpf: "", date_of_birth: "", marital_status: "", zip_code: "", street: "", street_number: "", complement: "", neighborhood: "", city: "", state: "", allergies: "", notes: "" };
 
   const handleOpenDialog = (client?: Client) => {
     if (client) {
@@ -498,6 +576,7 @@ export default function Clientes() {
         neighborhood: client.neighborhood || "",
         city: client.city || "",
         state: client.state || "",
+        allergies: client.allergies || "",
         notes: client.notes || "",
       });
     } else {
@@ -580,6 +659,7 @@ export default function Clientes() {
         p_neighborhood: parsed.data.neighborhood || null,
         p_city: parsed.data.city || null,
         p_state: parsed.data.state || null,
+        p_allergies: parsed.data.allergies || null,
       });
 
       if (error) {
@@ -619,32 +699,58 @@ export default function Clientes() {
 
   const cashbackReasonLabel: Record<string, string> = { earn: "Crédito", redeem: "Resgate", adjust: "Ajuste", revert: "Estorno" };
 
+  const canAddPatient = isWithinLimit('patients', clients.length);
+  const patientLimit = getLimit('patients');
+
+  const renderAddPatientButton = () => {
+    if (!canAddPatient && !editingClient) {
+      return (
+        <Link to="/assinatura">
+          <Button variant="outline" className="gap-2 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+            <Lock className="h-4 w-4" />
+            Limite Atingido
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        </Link>
+      );
+    }
+    return (
+      <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new">
+        <Plus className="mr-2 h-4 w-4" />
+        Novo Paciente
+      </Button>
+    );
+  };
+
   return (
     <MainLayout
       title="Pacientes"
       subtitle={isAdmin ? "Gerencie os pacientes da clínica" : "Pacientes da clínica"}
       actions={
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Paciente
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">{editingClient ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
-              <DialogDescription>
-                {editingClient ? "Atualize os dados do paciente" : "Preencha os dados para cadastrar um novo paciente na clínica"}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-6 py-4">
-                {/* Dados Pessoais */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">Dados Pessoais</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+        <div className="flex items-center gap-4">
+          {patientLimit !== -1 && (
+            <div className="hidden sm:block">
+              <UsageIndicator limit="patients" currentValue={clients.length} showLabel={false} size="sm" />
+            </div>
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              {renderAddPatientButton()}
+            </DialogTrigger>
+            <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl">{editingClient ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
+                <DialogDescription>
+                  {editingClient ? "Atualize os dados do paciente" : "Preencha os dados para cadastrar um novo paciente na clínica"}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-6 py-4">
+                  {/* Dados Pessoais */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">Dados Pessoais</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                       <Label>Nome <span className="text-destructive">*</span></Label>
                       <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required />
                     </div>
@@ -666,7 +772,7 @@ export default function Clientes() {
                     </div>
                     <div className="space-y-2">
                       <Label>Estado Civil</Label>
-                      <Select value={formData.marital_status} onValueChange={(v) => setFormData({ ...formData, marital_status: v })}>
+                      <Select value={formData.marital_status || undefined} onValueChange={(v) => setFormData({ ...formData, marital_status: v })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
@@ -721,7 +827,7 @@ export default function Clientes() {
                     </div>
                     <div className="space-y-2">
                       <Label>Estado</Label>
-                      <Select value={formData.state} onValueChange={(v) => setFormData({ ...formData, state: v })}>
+                      <Select value={formData.state || undefined} onValueChange={(v) => setFormData({ ...formData, state: v })}>
                         <SelectTrigger>
                           <SelectValue placeholder="UF" />
                         </SelectTrigger>
@@ -735,10 +841,24 @@ export default function Clientes() {
                   </div>
                 </div>
 
+                {/* Alergias */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-destructive border-b border-destructive/20 pb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Alergias
+                  </h3>
+                  <Input
+                    value={formData.allergies}
+                    onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+                    placeholder="Ex: Penicilina, AAS, Dipirona, Látex..."
+                    className="border-destructive/30 focus-visible:ring-destructive/30"
+                  />
+                </div>
+
                 {/* Observações */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground border-b pb-2">Observações</h3>
-                  <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Observações clínicas, alergias conhecidas, convênio..." rows={3} />
+                  <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Observações clínicas, convênio..." rows={3} />
                 </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
@@ -750,6 +870,7 @@ export default function Clientes() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       }
     >
       {/* Search + Staff filter */}
@@ -835,12 +956,22 @@ export default function Clientes() {
                             </span>
                           )}
                           <p className="font-medium">{client.name}</p>
+                          {client.allergies && (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] gap-1 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">
+                              <AlertTriangle className="h-3 w-3" />Alergia
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           {isAdmin && (
-                            <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
-                              <Package className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts">
+                                <FileSignature className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
+                                <Package className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                             <Pencil className="h-4 w-4" />
@@ -871,10 +1002,10 @@ export default function Clientes() {
                             variant="ghost"
                             size="sm"
                             className="h-6 text-xs"
-                            onClick={() => { setDetailClient(client); setIsDetailOpen(true); }}
+                            onClick={() => navigate(`/clientes/${client.id}`)}
                             data-tour="clients-item-details"
                           >
-                            <Info className="h-3 w-3 mr-1" />Detalhes
+                            <ExternalLink className="h-3 w-3 mr-1" />Ver Ficha
                           </Button>
                         </div>
                       )}
@@ -904,7 +1035,16 @@ export default function Clientes() {
                       return (
                         <TableRow key={client.id}>
                           {isAdmin && clientSpending.length > 0 && <TableCell className="font-bold text-primary">{index + 1}</TableCell>}
-                          <TableCell className="font-medium">{client.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {client.name}
+                              {client.allergies && (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] gap-1 shrink-0 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30" title={`Alergias: ${client.allergies}`}>
+                                  <AlertTriangle className="h-3 w-3" />Alergia
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             {client.access_code ? (
                               <Badge variant="outline" className="font-mono text-xs tracking-wider">{client.access_code}</Badge>
@@ -918,8 +1058,8 @@ export default function Clientes() {
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <Badge variant="secondary" className="text-xs">{formatCurrency(spending.total_amount)}</Badge>
                                   <Badge variant="outline" className="text-xs">Ticket: {formatCurrency(spending.ticket_medio)}</Badge>
-                                  <Button variant="ghost" size="sm" className="h-6 text-xs px-1" onClick={() => { setDetailClient(client); setIsDetailOpen(true); }} aria-label={`Ver detalhes de ${client.name}`} data-tour="clients-item-details">
-                                    <Info className="h-3 w-3" />
+                                  <Button variant="ghost" size="sm" className="h-6 text-xs px-1" onClick={() => navigate(`/clientes/${client.id}`)} aria-label={`Ver ficha de ${client.name}`} data-tour="clients-item-details">
+                                    <ExternalLink className="h-3 w-3" />
                                   </Button>
                                 </div>
                               ) : <span className="text-muted-foreground text-sm">—</span>}
@@ -929,9 +1069,14 @@ export default function Clientes() {
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                               {isAdmin && (
-                                <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
-                                  <Package className="h-4 w-4" />
-                                </Button>
+                                <>
+                                  <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts" title="Gerar Contrato e Termos">
+                                    <FileSignature className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
+                                    <Package className="h-4 w-4" />
+                                  </Button>
+                                </>
                               )}
                               <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                                 <Pencil className="h-4 w-4" />
@@ -958,6 +1103,19 @@ export default function Clientes() {
               <DialogDescription>Histórico, pacotes e fidelidade</DialogDescription>
             </DialogHeader>
 
+            {/* Botão Ver Ficha Completa */}
+            <Button
+              variant="outline"
+              className="w-full mb-4"
+              onClick={() => {
+                setIsDetailOpen(false);
+                navigate(`/clientes/${detailClient.id}`);
+              }}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Ver Ficha Completa
+            </Button>
+
             {isDetailLoadingExtras ? (
               <div className="space-y-3 py-4">
                 <Skeleton className="h-8 w-full" />
@@ -966,8 +1124,10 @@ export default function Clientes() {
               </div>
             ) : (
               <Tabs defaultValue="consumo" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 h-auto gap-1 p-1">
+                <TabsList className="grid w-full grid-cols-7 h-auto gap-1 p-1">
                   <TabsTrigger value="consumo" className="text-xs py-2"><DollarSign className="h-3 w-3 mr-1" />Consumo</TabsTrigger>
+                  <TabsTrigger value="clinico" className="text-xs py-2"><ClipboardList className="h-3 w-3 mr-1" />Clínico</TabsTrigger>
+                  <TabsTrigger value="evolucoes" className="text-xs py-2"><NotebookPen className="h-3 w-3 mr-1" />Evoluções</TabsTrigger>
                   <TabsTrigger value="pacotes" className="text-xs py-2"><Package className="h-3 w-3 mr-1" />Pacotes</TabsTrigger>
                   <TabsTrigger value="timeline" className="text-xs py-2"><Clock className="h-3 w-3 mr-1" />Timeline</TabsTrigger>
                   <TabsTrigger value="cashback" className="text-xs py-2"><Gift className="h-3 w-3 mr-1" />Cashback</TabsTrigger>
@@ -1031,6 +1191,84 @@ export default function Clientes() {
                       </>
                     );
                   })()}
+                </TabsContent>
+
+                {/* Tab: Histórico Clínico */}
+                <TabsContent value="clinico" className="mt-4 space-y-3">
+                  {clinicalHistory.length === 0 ? (
+                    <EmptyState icon={ClipboardList} title="Nenhum registro clínico" description="Prontuários, receitas, atestados, laudos e encaminhamentos deste paciente aparecerão aqui." />
+                  ) : (
+                    <div className="space-y-2">
+                      {clinicalHistory.map((doc) => {
+                        const iconMap: Record<string, React.ReactNode> = {
+                          prontuario: <ClipboardList className="h-4 w-4 text-primary" />,
+                          receita: <Pill className="h-4 w-4 text-blue-500" />,
+                          atestado: <FileText className="h-4 w-4 text-emerald-500" />,
+                          laudo: <FlaskConical className="h-4 w-4 text-amber-500" />,
+                          encaminhamento: <ArrowRightLeft className="h-4 w-4 text-purple-500" />,
+                        };
+                        const colorMap: Record<string, string> = {
+                          prontuario: "bg-primary/10 text-primary border-primary/20",
+                          receita: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+                          atestado: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+                          laudo: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                          encaminhamento: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+                        };
+                        const labelMap: Record<string, string> = {
+                          prontuario: "Prontuário", receita: "Receita", atestado: "Atestado", laudo: "Laudo", encaminhamento: "Encaminhamento",
+                        };
+                        return (
+                          <div key={`${doc.type}-${doc.id}`} className="rounded-lg border p-3 flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
+                              {iconMap[doc.type]}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium truncate">{doc.title}</p>
+                                <Badge variant="outline" className={`text-[10px] ${colorMap[doc.type] || ""}`}>
+                                  {labelMap[doc.type] || doc.type}
+                                </Badge>
+                              </div>
+                              {doc.subtitle && <p className="text-xs text-muted-foreground truncate">{doc.subtitle}</p>}
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                              {new Date(doc.date).toLocaleDateString("pt-BR")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Tab: Evoluções SOAP */}
+                <TabsContent value="evolucoes" className="mt-4 space-y-3">
+                  {clientEvolutions.length === 0 ? (
+                    <EmptyState icon={NotebookPen} title="Nenhuma evolução" description="Evoluções clínicas SOAP deste paciente aparecerão aqui." />
+                  ) : (
+                    <div className="space-y-2">
+                      {clientEvolutions.map((evo) => (
+                        <div key={evo.id} className="rounded-lg border p-3 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className={`text-[10px] ${EVOLUTION_TYPE_COLORS[evo.evolution_type]}`}>
+                              {EVOLUTION_TYPE_LABELS[evo.evolution_type]}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(evo.evolution_date).toLocaleDateString("pt-BR")}
+                            </span>
+                            <span className="text-xs text-muted-foreground">— {evo.profiles?.full_name ?? ""}</span>
+                            {evo.cid_code && <Badge variant="outline" className="text-[10px]">{evo.cid_code}</Badge>}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                            {evo.subjective && <div><span className="font-bold text-blue-600">S: </span><span className="text-muted-foreground">{evo.subjective.substring(0, 120)}</span></div>}
+                            {evo.objective && <div><span className="font-bold text-emerald-600">O: </span><span className="text-muted-foreground">{evo.objective.substring(0, 120)}</span></div>}
+                            {evo.assessment && <div><span className="font-bold text-amber-600">A: </span><span className="text-muted-foreground">{evo.assessment.substring(0, 120)}</span></div>}
+                            {evo.plan && <div><span className="font-bold text-violet-600">P: </span><span className="text-muted-foreground">{evo.plan.substring(0, 120)}</span></div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
 
                 {/* Tab: Pacotes */}
@@ -1128,7 +1366,14 @@ export default function Clientes() {
                 </TabsContent>
 
                 {/* Tab: Termos e Consentimentos */}
-                <TabsContent value="termos" className="mt-4">
+                <TabsContent value="termos" className="mt-4 space-y-4">
+                  <Button
+                    size="sm"
+                    className="gradient-primary text-primary-foreground"
+                    onClick={() => { setIsDetailOpen(false); setContractsClient(detailClient); }}
+                  >
+                    <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos
+                  </Button>
                   <PatientConsentsViewer
                     clientId={detailClient.id}
                     clientName={detailClient.name}
@@ -1151,7 +1396,7 @@ export default function Clientes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Serviço</Label>
-              <Select value={packageForm.service_id} onValueChange={(v) => setPackageForm({ ...packageForm, service_id: v })}>
+              <Select value={packageForm.service_id || undefined} onValueChange={(v) => setPackageForm({ ...packageForm, service_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione o serviço" /></SelectTrigger>
                 <SelectContent>
                   {services.map((s) => (
@@ -1224,6 +1469,14 @@ export default function Clientes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Dialog: Gerar Contratos e Termos */}
+      {contractsClient && (
+        <GenerateContractsDialog
+          open={!!contractsClient}
+          onOpenChange={(open) => { if (!open) setContractsClient(null); }}
+          client={contractsClient}
+        />
+      )}
     </MainLayout>
   );
 }

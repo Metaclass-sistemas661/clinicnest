@@ -8,14 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Table,
   TableBody,
@@ -27,7 +20,6 @@ import {
 import {
   Building2,
   Plus,
-  Loader2,
   Search,
   Pencil,
   Phone,
@@ -130,8 +122,7 @@ export default function Convenios() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!formData.name.trim()) {
       toast.error("Nome do convênio é obrigatório");
       return;
@@ -384,101 +375,98 @@ export default function Convenios() {
         </CardContent>
       </Card>
 
-      {/* Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Convênio" : "Novo Convênio"}</DialogTitle>
-            <DialogDescription>
-              {editingId ? "Atualize os dados do convênio" : "Cadastre um novo plano de saúde"}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-2">
+      {/* FormDrawer */}
+      <FormDrawer
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingId ? "Editar Convênio" : "Novo Convênio"}
+        description={editingId ? "Atualize os dados do convênio" : "Cadastre um novo plano de saúde"}
+        width="md"
+        onSubmit={handleSubmit}
+        isSubmitting={isSaving}
+        submitLabel={editingId ? "Atualizar" : "Cadastrar"}
+      >
+        <FormDrawerSection title="Identificação">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome do Convênio *</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Unimed, Bradesco Saúde..."
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome do Convênio *</Label>
+                <Label>Código ANS</Label>
                 <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Unimed, Bradesco Saúde..."
-                  required
+                  value={formData.ans_code}
+                  onChange={(e) => setFormData({ ...formData, ans_code: e.target.value })}
+                  placeholder="000.000"
+                  className="font-mono"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Código ANS</Label>
-                  <Input
-                    value={formData.ans_code}
-                    onChange={(e) => setFormData({ ...formData, ans_code: e.target.value })}
-                    placeholder="000.000"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Prazo de Reembolso (dias)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="90"
-                    value={formData.reimbursement_days}
-                    onChange={(e) => setFormData({ ...formData, reimbursement_days: e.target.value })}
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label>Telefone de Contato</Label>
+                <Label>Prazo de Reembolso (dias)</Label>
                 <Input
-                  value={formData.contact_phone}
-                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                  placeholder="0800 000 0000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>E-mail de Contato</Label>
-                <Input
-                  type="email"
-                  value={formData.contact_email}
-                  onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                  placeholder="credenciamento@convenio.com.br"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Observações / Instruções</Label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Regras de faturamento, prazos especiais, documentações necessárias..."
-                  rows={3}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <Label>Convênio Ativo</Label>
-                  <p className="text-sm text-muted-foreground">Convênios inativos não aparecem no agendamento</p>
-                </div>
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={formData.reimbursement_days}
+                  onChange={(e) => setFormData({ ...formData, reimbursement_days: e.target.value })}
                 />
               </div>
             </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                {isSaving ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</>
-                ) : editingId ? (
-                  "Atualizar"
-                ) : (
-                  "Cadastrar"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </FormDrawerSection>
+
+        <FormDrawerSection title="Contato">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Telefone de Contato</Label>
+              <Input
+                value={formData.contact_phone}
+                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                placeholder="0800 000 0000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>E-mail de Contato</Label>
+              <Input
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                placeholder="credenciamento@convenio.com.br"
+              />
+            </div>
+          </div>
+        </FormDrawerSection>
+
+        <FormDrawerSection title="Observações e Status">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Observações / Instruções</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Regras de faturamento, prazos especiais, documentações necessárias..."
+                rows={3}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label>Convênio Ativo</Label>
+                <p className="text-sm text-muted-foreground">Convênios inativos não aparecem no agendamento</p>
+              </div>
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+            </div>
+          </div>
+        </FormDrawerSection>
+      </FormDrawer>
     </MainLayout>
   );
 }

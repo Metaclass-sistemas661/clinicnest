@@ -8,15 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Table,
   TableBody,
@@ -28,7 +20,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { setServiceActiveV2, upsertServiceV2 } from "@/lib/supabase-typed-rpc";
-import { Stethoscope, Plus, Loader2, Clock, Pencil } from "lucide-react";
+import { Stethoscope, Plus, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -111,8 +103,7 @@ export default function Servicos() {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!profile?.tenant_id) return;
 
     const parsed = serviceFormSchema.safeParse({
@@ -198,41 +189,46 @@ export default function Servicos() {
       subtitle={isAdmin ? "Gerencie os procedimentos e consultas oferecidos" : "Consulte os procedimentos da clínica"}
       actions={
         isAdmin ? (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
+          <>
             <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="services-new">
               <Plus className="mr-2 h-4 w-4" />
               Novo Procedimento
             </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingService ? "Editar Procedimento" : "Novo Procedimento"}</DialogTitle>
-              <DialogDescription>
-                {editingService
-                  ? "Atualize os dados do procedimento"
-                  : "Cadastre um novo procedimento ou consulta na clínica"}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label>Nome do Procedimento</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Ex: Consulta Clínica, Eletrocardiograma..."
-                    required
-                  />
+            <FormDrawer
+              open={isDialogOpen}
+              onOpenChange={setIsDialogOpen}
+              title={editingService ? "Editar Procedimento" : "Novo Procedimento"}
+              description={editingService
+                ? "Atualize os dados do procedimento"
+                : "Cadastre um novo procedimento ou consulta na clínica"}
+              width="md"
+              onSubmit={handleSubmit}
+              isSubmitting={isSaving}
+              submitLabel={editingService ? "Atualizar" : "Cadastrar"}
+            >
+              <FormDrawerSection title="Informações Básicas">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome do Procedimento</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Ex: Consulta Clínica, Eletrocardiograma..."
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Input
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Descrição opcional..."
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Input
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descrição opcional..."
-                  />
-                </div>
+              </FormDrawerSection>
+
+              <FormDrawerSection title="Duração e Preço">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Duração (minutos)</Label>
@@ -260,7 +256,10 @@ export default function Servicos() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4 sm:col-span-2">
+              </FormDrawerSection>
+
+              <FormDrawerSection title="Status">
+                <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
                     <Label>Procedimento Ativo</Label>
                     <p className="text-sm text-muted-foreground">
@@ -272,27 +271,9 @@ export default function Servicos() {
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="services-save">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : editingService ? (
-                    "Atualizar"
-                  ) : (
-                    "Cadastrar"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </FormDrawerSection>
+            </FormDrawer>
+          </>
         ) : null
       }
     >

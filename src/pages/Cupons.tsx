@@ -6,14 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
   Select,
   SelectContent,
@@ -324,87 +317,97 @@ export default function Cupons() {
         </Card>
       </div>
 
-      {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Cupom" : "Novo Cupom"}</DialogTitle>
-            <DialogDescription>
-              Configure o código, desconto e regras de validade.
-            </DialogDescription>
-          </DialogHeader>
+      {/* Create / Edit FormDrawer */}
+      <FormDrawer
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={editingId ? "Editar Cupom" : "Novo Cupom"}
+        description="Configure o código, desconto e regras de validade."
+        width="md"
+        onSubmit={handleSave}
+        isSubmitting={isSaving}
+        submitLabel={editingId ? "Salvar" : "Criar Cupom"}
+      >
+        <FormDrawerSection title="Código">
+          <div className="space-y-2">
+            <Label>Código</Label>
+            <Input
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+              placeholder="EX: DESCONTO10"
+              className="font-mono uppercase"
+              disabled={!!editingId}
+            />
+          </div>
+        </FormDrawerSection>
 
-          <div className="space-y-4 py-4">
+        <FormDrawerSection title="Tipo e Valor">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Código</Label>
-              <Input
-                value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-                placeholder="EX: DESCONTO10"
-                className="font-mono uppercase"
-                disabled={!!editingId}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select
-                  value={form.type}
-                  onValueChange={(v) => setForm((f) => ({ ...f, type: v as "percent" | "fixed" }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percent">Percentual (%)</SelectItem>
-                    <SelectItem value="fixed">Valor fixo (R$)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{form.type === "percent" ? "Percentual (%)" : "Valor (R$)"}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max={form.type === "percent" ? 100 : undefined}
-                  step={form.type === "percent" ? 1 : 0.01}
-                  value={form.value}
-                  onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                  placeholder={form.type === "percent" ? "10" : "25.00"}
-                />
-              </div>
+              <Label>Tipo</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => setForm((f) => ({ ...f, type: v as "percent" | "fixed" }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Percentual (%)</SelectItem>
+                  <SelectItem value="fixed">Valor fixo (R$)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Máximo de usos (em branco = ilimitado)</Label>
+              <Label>{form.type === "percent" ? "Percentual (%)" : "Valor (R$)"}</Label>
               <Input
                 type="number"
-                min="1"
-                value={form.max_uses}
-                onChange={(e) => setForm((f) => ({ ...f, max_uses: e.target.value }))}
-                placeholder="Ex: 50"
+                min="0"
+                max={form.type === "percent" ? 100 : undefined}
+                step={form.type === "percent" ? 1 : 0.01}
+                value={form.value}
+                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                placeholder={form.type === "percent" ? "10" : "25.00"}
               />
             </div>
+          </div>
+        </FormDrawerSection>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Válido a partir de</Label>
-                <Input
-                  type="date"
-                  value={form.valid_from}
-                  onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Válido até</Label>
-                <Input
-                  type="date"
-                  value={form.valid_until}
-                  onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
-                />
-              </div>
+        <FormDrawerSection title="Limites de Uso">
+          <div className="space-y-2">
+            <Label>Máximo de usos (em branco = ilimitado)</Label>
+            <Input
+              type="number"
+              min="1"
+              value={form.max_uses}
+              onChange={(e) => setForm((f) => ({ ...f, max_uses: e.target.value }))}
+              placeholder="Ex: 50"
+            />
+          </div>
+        </FormDrawerSection>
+
+        <FormDrawerSection title="Validade">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Válido a partir de</Label>
+              <Input
+                type="date"
+                value={form.valid_from}
+                onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))}
+              />
             </div>
+            <div className="space-y-2">
+              <Label>Válido até</Label>
+              <Input
+                type="date"
+                value={form.valid_until}
+                onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
+              />
+            </div>
+          </div>
+        </FormDrawerSection>
 
+        <FormDrawerSection title="Serviço e Status">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label>Serviço específico (opcional)</Label>
               <Select
@@ -433,23 +436,8 @@ export default function Cupons() {
               />
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="gradient-primary text-primary-foreground"
-            >
-              {isSaving ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{editingId ? "Salvando..." : "Criando..."}</>
-              ) : (
-                editingId ? "Salvar" : "Criar Cupom"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </FormDrawerSection>
+      </FormDrawer>
     </MainLayout>
   );
 }

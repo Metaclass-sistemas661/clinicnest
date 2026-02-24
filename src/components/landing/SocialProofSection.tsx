@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 const certifications = [
   {
     icon: Shield,
-    title: "Segurança Certificada",
-    description: "Dados protegidos com criptografia SSL",
+    title: "Segurança Avançada",
+    description: "Dados protegidos com criptografia",
     color: "green",
   },
   {
@@ -16,8 +16,8 @@ const certifications = [
   },
   {
     icon: CheckCircle2,
-    title: "LGPD Compliant",
-    description: "Totalmente em conformidade com a LGPD",
+    title: "LGPD",
+    description: "Em conformidade com a LGPD",
     color: "blue",
   },
   {

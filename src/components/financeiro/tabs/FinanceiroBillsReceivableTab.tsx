@@ -15,16 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   Select,
   SelectContent,
@@ -493,22 +484,15 @@ export function FinanceiroBillsReceivableTab() {
       )}
 
       {/* Delete AlertDialog */}
-      <AlertDialog open={!!deletingBill} onOpenChange={(o) => { if (!o) setDeletingBill(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir conta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A conta "<strong>{deletingBill?.description}</strong>" ({formatCurrency(deletingBill?.amount ?? 0)}) será excluída permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!deletingBill}
+        onConfirm={handleDelete}
+        onCancel={() => setDeletingBill(null)}
+        itemName={deletingBill?.description || ""}
+        itemType="conta a receber"
+        warningText={`Valor: ${formatCurrency(deletingBill?.amount ?? 0)}`}
+        isDeleting={isSaving}
+      />
 
       {/* PIX Dialog */}
       {pixBill && (

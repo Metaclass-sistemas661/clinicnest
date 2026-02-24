@@ -9,14 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormDrawer } from "@/components/ui/form-drawer";
 import {
   Select,
   SelectContent,
@@ -222,8 +215,7 @@ export default function Triagem() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.chief_complaint.trim()) { toast.error("Queixa principal é obrigatória"); return; }
 
@@ -449,218 +441,212 @@ export default function Triagem() {
         </div>
       )}
 
-      {/* Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Triagem</DialogTitle>
-            <DialogDescription>Registre os sinais vitais e anamnese inicial do paciente</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <Tabs defaultValue="identificacao" className="mt-2">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-                <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
-                <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
-              </TabsList>
+      {/* Drawer */}
+      <FormDrawer
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title="Nova Triagem"
+        description="Registre os sinais vitais e anamnese inicial do paciente"
+        width="lg"
+        onSubmit={handleSubmit}
+        isSubmitting={isSaving}
+        submitLabel="Salvar Triagem"
+      >
+        <Tabs defaultValue="identificacao" className="mt-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="identificacao">Identificação</TabsTrigger>
+            <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
+            <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
+          </TabsList>
 
-              {/* Tab 1: Identificação */}
-              <TabsContent value="identificacao" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Paciente *</Label>
-                  <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v, appointment_id: "" })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
-                    <SelectContent>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {formData.client_id && appointments.filter((a) => a.client_id === formData.client_id).length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Agendamento do Dia (opcional)</Label>
-                    <Select value={formData.appointment_id} onValueChange={(v) => setFormData({ ...formData, appointment_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Vincular a um agendamento" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem vínculo</SelectItem>
-                        {appointments.filter((a) => a.client_id === formData.client_id).map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {new Date(a.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {a.service_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Prioridade / Classificação de Risco</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(v: any) => setFormData({ ...formData, priority: v })}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="emergencia">🔴 Emergência</SelectItem>
-                      <SelectItem value="urgente">🟠 Urgente</SelectItem>
-                      <SelectItem value="pouco_urgente">🟡 Pouco Urgente</SelectItem>
-                      <SelectItem value="nao_urgente">🟢 Não Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Queixa Principal *</Label>
-                  <Textarea
-                    value={formData.chief_complaint}
-                    onChange={(e) => setFormData({ ...formData, chief_complaint: e.target.value })}
-                    placeholder="Motivo da consulta, sintomas principais..."
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Escala de Dor (0-10)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="10"
-                    value={formData.pain_scale}
-                    onChange={(e) => setFormData({ ...formData, pain_scale: e.target.value })}
-                    placeholder="0 = sem dor, 10 = dor máxima"
-                  />
-                </div>
-              </TabsContent>
+          {/* Tab 1: Identificação */}
+          <TabsContent value="identificacao" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Paciente *</Label>
+              <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v, appointment_id: "" })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {formData.client_id && appointments.filter((a) => a.client_id === formData.client_id).length > 0 && (
+              <div className="space-y-2">
+                <Label>Agendamento do Dia (opcional)</Label>
+                <Select value={formData.appointment_id} onValueChange={(v) => setFormData({ ...formData, appointment_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Vincular a um agendamento" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem vínculo</SelectItem>
+                    {appointments.filter((a) => a.client_id === formData.client_id).map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {new Date(a.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {a.service_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Prioridade / Classificação de Risco</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(v: any) => setFormData({ ...formData, priority: v })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="emergencia">🔴 Emergência</SelectItem>
+                  <SelectItem value="urgente">🟠 Urgente</SelectItem>
+                  <SelectItem value="pouco_urgente">🟡 Pouco Urgente</SelectItem>
+                  <SelectItem value="nao_urgente">🟢 Não Urgente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Queixa Principal *</Label>
+              <Textarea
+                value={formData.chief_complaint}
+                onChange={(e) => setFormData({ ...formData, chief_complaint: e.target.value })}
+                placeholder="Motivo da consulta, sintomas principais..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Escala de Dor (0-10)</Label>
+              <Input
+                type="number"
+                min="0"
+                max="10"
+                value={formData.pain_scale}
+                onChange={(e) => setFormData({ ...formData, pain_scale: e.target.value })}
+                placeholder="0 = sem dor, 10 = dor máxima"
+              />
+            </div>
+          </TabsContent>
 
-              {/* Tab 2: Sinais Vitais */}
-              <TabsContent value="sinais" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Pressão Sistólica (mmHg)</Label>
-                    <Input
-                      type="number"
-                      value={formData.blood_pressure_systolic}
-                      onChange={(e) => setFormData({ ...formData, blood_pressure_systolic: e.target.value })}
-                      placeholder="Ex: 120"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Pressão Diastólica (mmHg)</Label>
-                    <Input
-                      type="number"
-                      value={formData.blood_pressure_diastolic}
-                      onChange={(e) => setFormData({ ...formData, blood_pressure_diastolic: e.target.value })}
-                      placeholder="Ex: 80"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Freq. Cardíaca (bpm)</Label>
-                    <Input
-                      type="number"
-                      value={formData.heart_rate}
-                      onChange={(e) => setFormData({ ...formData, heart_rate: e.target.value })}
-                      placeholder="Ex: 72"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Freq. Respiratória (irpm)</Label>
-                    <Input
-                      type="number"
-                      value={formData.respiratory_rate}
-                      onChange={(e) => setFormData({ ...formData, respiratory_rate: e.target.value })}
-                      placeholder="Ex: 16"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Temperatura (°C)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={formData.temperature}
-                      onChange={(e) => setFormData({ ...formData, temperature: e.target.value })}
-                      placeholder="Ex: 36.8"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Saturação O₂ (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.oxygen_saturation}
-                      onChange={(e) => setFormData({ ...formData, oxygen_saturation: e.target.value })}
-                      placeholder="Ex: 98"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Peso (kg)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={formData.weight}
-                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                      placeholder="Ex: 70"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Altura (cm)</Label>
-                    <Input
-                      type="number"
-                      value={formData.height}
-                      onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                      placeholder="Ex: 170"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
+          {/* Tab 2: Sinais Vitais */}
+          <TabsContent value="sinais" className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Pressão Sistólica (mmHg)</Label>
+                <Input
+                  type="number"
+                  value={formData.blood_pressure_systolic}
+                  onChange={(e) => setFormData({ ...formData, blood_pressure_systolic: e.target.value })}
+                  placeholder="Ex: 120"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pressão Diastólica (mmHg)</Label>
+                <Input
+                  type="number"
+                  value={formData.blood_pressure_diastolic}
+                  onChange={(e) => setFormData({ ...formData, blood_pressure_diastolic: e.target.value })}
+                  placeholder="Ex: 80"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Freq. Cardíaca (bpm)</Label>
+                <Input
+                  type="number"
+                  value={formData.heart_rate}
+                  onChange={(e) => setFormData({ ...formData, heart_rate: e.target.value })}
+                  placeholder="Ex: 72"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Freq. Respiratória (irpm)</Label>
+                <Input
+                  type="number"
+                  value={formData.respiratory_rate}
+                  onChange={(e) => setFormData({ ...formData, respiratory_rate: e.target.value })}
+                  placeholder="Ex: 16"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Temperatura (°C)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.temperature}
+                  onChange={(e) => setFormData({ ...formData, temperature: e.target.value })}
+                  placeholder="Ex: 36.8"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Saturação O₂ (%)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.oxygen_saturation}
+                  onChange={(e) => setFormData({ ...formData, oxygen_saturation: e.target.value })}
+                  placeholder="Ex: 98"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Peso (kg)</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={formData.weight}
+                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                  placeholder="Ex: 70"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Altura (cm)</Label>
+                <Input
+                  type="number"
+                  value={formData.height}
+                  onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                  placeholder="Ex: 170"
+                />
+              </div>
+            </div>
+          </TabsContent>
 
-              {/* Tab 3: Anamnese */}
-              <TabsContent value="anamnese" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label>Alergias Conhecidas</Label>
-                  <Input
-                    value={formData.allergies}
-                    onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
-                    placeholder="Medicamentos, alimentos, substâncias..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Medicamentos em Uso</Label>
-                  <Textarea
-                    value={formData.current_medications}
-                    onChange={(e) => setFormData({ ...formData, current_medications: e.target.value })}
-                    placeholder="Nome, dose e frequência..."
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Antecedentes Médicos</Label>
-                  <Textarea
-                    value={formData.medical_history}
-                    onChange={(e) => setFormData({ ...formData, medical_history: e.target.value })}
-                    placeholder="Doenças crônicas, cirurgias anteriores, internações..."
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Observações da Triagem</Label>
-                  <Textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="Notas adicionais do profissional de enfermagem..."
-                    rows={2}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-                {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : "Salvar Triagem"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          {/* Tab 3: Anamnese */}
+          <TabsContent value="anamnese" className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label>Alergias Conhecidas</Label>
+              <Input
+                value={formData.allergies}
+                onChange={(e) => setFormData({ ...formData, allergies: e.target.value })}
+                placeholder="Medicamentos, alimentos, substâncias..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Medicamentos em Uso</Label>
+              <Textarea
+                value={formData.current_medications}
+                onChange={(e) => setFormData({ ...formData, current_medications: e.target.value })}
+                placeholder="Nome, dose e frequência..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Antecedentes Médicos</Label>
+              <Textarea
+                value={formData.medical_history}
+                onChange={(e) => setFormData({ ...formData, medical_history: e.target.value })}
+                placeholder="Doenças crônicas, cirurgias anteriores, internações..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações da Triagem</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Notas adicionais do profissional de enfermagem..."
+                rows={2}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </FormDrawer>
     </MainLayout>
   );
 }

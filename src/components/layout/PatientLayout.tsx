@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
   Calendar,
+  CalendarPlus,
   Video,
   FileText,
   Pill,
@@ -17,12 +18,20 @@ import {
   ChevronRight,
   User,
   Settings,
+  Wallet,
+  MessageCircle,
+  Search,
+  Users,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PatientNotificationsBell } from "@/components/patient/PatientNotificationsBell";
+import { PatientBottomNav } from "@/components/patient/PatientBottomNav";
+import { PatientGlobalSearch, usePatientGlobalSearch } from "@/components/patient/PatientGlobalSearch";
+import { DependentBanner } from "@/components/patient/DependentSelector";
+import { DependentsProvider, useDependentsOptional } from "@/hooks/useDependents";
 
 interface NavItem {
   label: string;
@@ -32,11 +41,16 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Início", href: "/paciente/dashboard", icon: LayoutDashboard },
+  { label: "Agendar", href: "/paciente/agendar", icon: CalendarPlus },
   { label: "Minhas Consultas", href: "/paciente/consultas", icon: Calendar },
   { label: "Teleconsulta", href: "/paciente/teleconsulta", icon: Video },
+  { label: "Minha Saúde", href: "/paciente/saude", icon: Heart },
+  { label: "Mensagens", href: "/paciente/mensagens", icon: MessageCircle },
+  { label: "Financeiro", href: "/paciente/financeiro", icon: Wallet },
   { label: "Exames e Laudos", href: "/paciente/exames", icon: FileText },
   { label: "Receitas", href: "/paciente/receitas", icon: Pill },
   { label: "Atestados", href: "/paciente/atestados", icon: ClipboardList },
+  { label: "Dependentes", href: "/paciente/dependentes", icon: Users },
 ];
 
 const bottomItems: NavItem[] = [
@@ -187,9 +201,57 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
   const [collapsed, setCollapsed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { isOpen: searchOpen, setIsOpen: setSearchOpen } = usePatientGlobalSearch();
+  const dependentsContext = useDependentsOptional();
+
+  return (
+    <DependentsProvider>
+      <PatientLayoutInner
+        title={title}
+        subtitle={subtitle}
+        actions={actions}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+        sheetOpen={sheetOpen}
+        setSheetOpen={setSheetOpen}
+        isMobile={isMobile}
+        searchOpen={searchOpen}
+        setSearchOpen={setSearchOpen}
+      >
+        {children}
+      </PatientLayoutInner>
+    </DependentsProvider>
+  );
+}
+
+function PatientLayoutInner({ 
+  title, 
+  subtitle, 
+  actions, 
+  children,
+  collapsed,
+  setCollapsed,
+  sheetOpen,
+  setSheetOpen,
+  isMobile,
+  searchOpen,
+  setSearchOpen,
+}: PatientLayoutProps & {
+  collapsed: boolean;
+  setCollapsed: (v: boolean) => void;
+  sheetOpen: boolean;
+  setSheetOpen: (v: boolean) => void;
+  isMobile: boolean;
+  searchOpen: boolean;
+  setSearchOpen: (v: boolean) => void;
+}) {
+  const dependentsContext = useDependentsOptional();
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Global Search */}
+      <PatientGlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+
       {/* Desktop sidebar */}
       {!isMobile && (
         <aside
@@ -221,7 +283,15 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className={cn("flex-1 overflow-auto flex flex-col", isMobile && "pb-20")}>
+        {/* Dependent context banner */}
+        {dependentsContext?.activeDependent && (
+          <DependentBanner
+            dependent={dependentsContext.activeDependent}
+            onClear={() => dependentsContext.setActiveDependent(null)}
+          />
+        )}
+
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border/50 px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className={cn(isMobile && "pl-12")}>
@@ -229,6 +299,24 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
               {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchOpen(true)}
+                className="hidden sm:flex gap-2 text-muted-foreground"
+              >
+                <Search className="h-4 w-4" />
+                <span className="text-xs">Buscar</span>
+                <kbd className="ml-2 px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘K</kbd>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSearchOpen(true)}
+                className="sm:hidden"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
               <PatientNotificationsBell />
               <ThemeToggle />
               {actions}
@@ -240,6 +328,9 @@ export function PatientLayout({ title, subtitle, actions, children }: PatientLay
           {children}
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      {isMobile && <PatientBottomNav />}
     </div>
   );
 }

@@ -14,7 +14,7 @@ export interface SubscriptionStatus {
   error: string | null;
 }
 
-export type SubscriptionTier = "solo" | "clinica" | "premium";
+export type SubscriptionTier = "starter" | "solo" | "clinica" | "premium";
 export type SubscriptionInterval = "monthly" | "annual";
 
 export function normalizePlanKey(input: unknown): string | null {
@@ -45,7 +45,7 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
   if (!interval) return null;
 
   // Novos nomes
-  if (tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+  if (tierRaw === "starter" || tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
     return { tier: tierRaw, interval };
   }
   // Legado: basic → solo, pro → clinica

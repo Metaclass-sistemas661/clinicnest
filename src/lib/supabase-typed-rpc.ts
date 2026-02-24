@@ -118,6 +118,7 @@ export async function createAppointmentV2(params: {
   p_status?: AppointmentStatus;
   p_notes?: string | null;
   p_telemedicine?: boolean;
+  p_booked_by_id?: string | null;
 }): Promise<{ data: CreateAppointmentV2Result | null; error: unknown }> {
   return rpc<CreateAppointmentV2Result>("create_appointment_v2", params);
 }
@@ -138,6 +139,7 @@ export async function updateAppointmentV2(params: {
   p_price?: number | null;
   p_notes?: string | null;
   p_telemedicine?: boolean | null;
+  p_booked_by_id?: string | null;
 }): Promise<{ data: UpdateAppointmentV2Result | null; error: unknown }> {
   return rpc<UpdateAppointmentV2Result>("update_appointment_v2", params);
 }
@@ -248,6 +250,7 @@ export async function upsertClientV2(params: {
   p_neighborhood?: string | null;
   p_city?: string | null;
   p_state?: string | null;
+  p_allergies?: string | null;
 }): Promise<{ data: UpsertClientV2Result | null; error: unknown }> {
   return rpc<UpsertClientV2Result>("upsert_client_v2", params as Record<string, unknown>);
 }

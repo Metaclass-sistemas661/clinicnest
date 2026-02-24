@@ -18,3 +18,5 @@ export { SidebarPreview } from "./SidebarPreview";
 export { ProductShowcaseSection } from "./ProductShowcaseSection";
 export { SocialProofSection } from "./SocialProofSection";
 export { ROICalculatorSection } from "./ROICalculatorSection";
+export { DifferentialsSection } from "./DifferentialsSection";
+export { IntegrationsSection } from "./IntegrationsSection";
