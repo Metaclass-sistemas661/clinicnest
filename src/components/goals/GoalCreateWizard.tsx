@@ -73,7 +73,11 @@ export function GoalCreateWizard({
     formData.goal_type === "revenue" ||
     formData.goal_type === "services_count" ||
     formData.goal_type === "clientes_novos" ||
-    formData.goal_type === "ticket_medio";
+    formData.goal_type === "ticket_medio" ||
+    formData.goal_type === "appointments_count" ||
+    formData.goal_type === "procedures_count" ||
+    formData.goal_type === "new_patients" ||
+    formData.goal_type === "patient_return_rate";
   const canHaveProduct =
     formData.goal_type === "product_quantity" || formData.goal_type === "product_revenue";
 

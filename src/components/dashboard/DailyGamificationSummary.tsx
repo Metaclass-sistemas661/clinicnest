@@ -68,7 +68,7 @@ export function DailyGamificationSummary() {
 
         // Buscar comissões do dia
         const { data: commissions, error: commError } = await supabase
-          .from("commissions")
+          .from("commission_payments")
           .select("amount")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.user_id)
@@ -81,20 +81,20 @@ export function DailyGamificationSummary() {
 
         // Buscar metas do profissional
         const { data: goals, error: goalsError } = await supabase
-          .from("professional_goals")
-          .select("id, name, goal_type, target_value, current_value")
+          .from("goals")
+          .select("id, name, goal_type, target_value")
           .eq("tenant_id", profile.tenant_id)
-          .eq("professional_id", profile.user_id)
-          .eq("status", "active")
+          .eq("is_active", true)
+          .or(`professional_id.is.null,professional_id.eq.${profile.id}`)
           .limit(3);
 
         if (goalsError) throw goalsError;
 
         const goalsProgress = (goals ?? []).map((g) => ({
           name: g.name || g.goal_type,
-          current: Number(g.current_value ?? 0),
+          current: 0,
           target: Number(g.target_value ?? 1),
-          progressPct: Math.min(100, Math.round((Number(g.current_value ?? 0) / Number(g.target_value ?? 1)) * 100)),
+          progressPct: 0,
         }));
 
         setSummary({

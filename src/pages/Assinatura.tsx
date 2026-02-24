@@ -8,11 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { CreditCard, Check, Sparkles, Crown, Loader2, Calendar, RefreshCw, Settings } from "lucide-react";
+import { 
+  CreditCard, Check, Sparkles, Crown, Loader2, Calendar, RefreshCw, Settings,
+  Stethoscope, Building2, Shield
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
 
-type TierKey = "solo" | "clinica" | "premium";
+type TierKey = "starter" | "solo" | "clinic" | "premium";
 type IntervalKey = "monthly" | "annual";
 
 const intervalNames: Record<IntervalKey, string> = {
@@ -21,77 +24,110 @@ const intervalNames: Record<IntervalKey, string> = {
 };
 
 const tierNames: Record<TierKey, string> = {
+  starter: "Starter",
   solo: "Solo",
-  clinica: "Clínica",
+  clinic: "Clínica",
   premium: "Premium",
 };
 
-const PRICING: Record<TierKey, Record<IntervalKey, { label: string; amountCents: number; savings?: string }>> = {
+const tierIcons: Record<TierKey, React.ElementType> = {
+  starter: Stethoscope,
+  solo: Stethoscope,
+  clinic: Building2,
+  premium: Shield,
+};
+
+const PRICING: Record<TierKey, Record<IntervalKey, { label: string; amountCents: number; perMonth?: string; savings?: string }>> = {
+  starter: {
+    monthly: { label: "R$89,90", amountCents: 8990 },
+    annual:  { label: "R$809,00", amountCents: 80900, perMonth: "R$67,42/mês", savings: "Economize R$269,80/ano" },
+  },
   solo: {
     monthly: { label: "R$149,90", amountCents: 14990 },
-    annual:  { label: "R$1.349,00", amountCents: 134900, savings: "Economize ~25%" },
+    annual:  { label: "R$1.349,00", amountCents: 134900, perMonth: "R$112,42/mês", savings: "Economize R$450,80/ano" },
   },
-  clinica: {
+  clinic: {
     monthly: { label: "R$249,90", amountCents: 24990 },
-    annual:  { label: "R$2.249,00", amountCents: 224900, savings: "Economize ~25%" },
+    annual:  { label: "R$2.249,00", amountCents: 224900, perMonth: "R$187,42/mês", savings: "Economize R$749,80/ano" },
   },
   premium: {
     monthly: { label: "R$399,90", amountCents: 39990 },
-    annual:  { label: "R$3.599,00", amountCents: 359900, savings: "Economize ~25%" },
+    annual:  { label: "R$3.599,00", amountCents: 359900, perMonth: "R$299,92/mês", savings: "Economize R$1.199,80/ano" },
   },
 };
 
 const tiers: Array<{
   key: TierKey;
+  tagline: string;
   description: string;
   recommended?: boolean;
   features: string[];
 }> = [
   {
+    key: "starter",
+    tagline: "Para começar",
+    description: "Profissional iniciante, consultório simples",
+    features: [
+      "1 profissional",
+      "Até 100 pacientes",
+      "200 agendamentos/mês",
+      "Prontuário básico",
+      "Financeiro básico",
+      "Histórico de 6 meses",
+      "Suporte por e-mail",
+    ],
+  },
+  {
     key: "solo",
-    description: "Médico, psicólogo, fisioterapeuta individual",
+    tagline: "Para profissionais autônomos",
+    description: "Médico, dentista, psicólogo individual",
     features: [
       "1 profissional + 1 admin",
       "Até 500 pacientes",
-      "Agenda médica completa",
-      "Prontuário eletrônico",
-      "Financeiro básico",
-      "Gestão de insumos",
+      "500 agendamentos/mês",
+      "Prontuário SOAP completo",
+      "Odontograma básico",
+      "Financeiro + receitas",
+      "Portal do paciente",
       "Histórico de 12 meses",
       "Suporte por e-mail",
     ],
   },
   {
-    key: "clinica",
-    description: "Clínicas com equipe e múltiplos profissionais",
+    key: "clinic",
+    tagline: "Para clínicas em crescimento",
+    description: "Clínicas médicas e odontológicas com equipe",
     recommended: true,
     features: [
       "Até 5 profissionais + admin",
       "Até 3.000 pacientes",
-      "Agenda médica completa",
-      "Prontuário eletrônico completo",
-      "Convênios e faturamento",
+      "Agendamentos ilimitados",
+      "Prontuário + 7 tipos evolução",
+      "Odontograma + Periograma",
+      "TISS médico + GTO odonto",
       "Financeiro avançado",
-      "Comissões, metas e performance",
-      "Relatórios e exportação",
-      "Histórico ilimitado",
+      "Comissões e metas",
+      "Portal paciente + Teleconsulta",
+      "RBAC (5 perfis)",
       "Suporte via chat (Seg–Sáb)",
     ],
   },
   {
     key: "premium",
-    description: "Policlínicas, centros médicos e alta demanda",
+    tagline: "Para policlínicas e centros médicos",
+    description: "Múltiplas especialidades, alta demanda",
     features: [
       "Profissionais ilimitados",
       "Pacientes ilimitados",
-      "Prontuário + modelos personalizados",
-      "Convênios e faturamento TISS",
-      "Financeiro e DRE avançado",
-      "Comissões, metas e performance",
-      "Exportação completa (PDF/Excel)",
-      "API de integração",
-      "Histórico ilimitado",
-      "Suporte prioritário via WhatsApp",
+      "Prontuário + modelos custom",
+      "Módulo odonto completo",
+      "TISS + Recurso de glosas",
+      "SNGPC para controlados",
+      "RBAC (11 perfis) + Auditoria",
+      "Assinatura Digital",
+      "API REST + Webhooks",
+      "FHIR R4 + Relatórios custom",
+      "Suporte prioritário WhatsApp",
     ],
   },
 ];
@@ -102,9 +138,9 @@ function parseStoredPlan(plan: string | null): { tier: TierKey; interval: Interv
   const s = plan.trim();
   if (!s) return null;
 
-  // Legado: "monthly" | "annual" sem tier → solo
+  // Legado: "monthly" | "annual" sem tier → starter
   if (s === "monthly" || s === "annual") {
-    return { tier: "solo", interval: s };
+    return { tier: "starter", interval: s };
   }
 
   const [tierRaw, intervalRaw] = s.split("_");
@@ -112,13 +148,13 @@ function parseStoredPlan(plan: string | null): { tier: TierKey; interval: Interv
   if (!interval) return null;
 
   // Novos nomes
-  if (tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+  if (tierRaw === "starter" || tierRaw === "solo" || tierRaw === "clinic" || tierRaw === "premium") {
     return { tier: tierRaw, interval };
   }
 
-  // Legado: basic → solo, pro → clinica
-  if (tierRaw === "basic") return { tier: "solo", interval };
-  if (tierRaw === "pro")   return { tier: "clinica", interval };
+  // Legado: basic → starter, pro → clinic, clinica → clinic
+  if (tierRaw === "basic") return { tier: "starter", interval };
+  if (tierRaw === "pro" || tierRaw === "clinica") return { tier: "clinic", interval };
 
   return null;
 }
@@ -141,8 +177,9 @@ export default function Assinatura() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const [selectedInterval, setSelectedInterval] = useState<Record<TierKey, IntervalKey>>({
+    starter: "annual",
     solo:    "annual",
-    clinica: "annual",
+    clinic:  "annual",
     premium: "annual",
   });
 
@@ -262,13 +299,14 @@ export default function Assinatura() {
       </div>
 
       {/* Plans */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {tiers.map((tier) => {
           const stored = parseStoredPlan(plan);
           const isCurrentPlan = subscribed && stored?.tier === tier.key;
           const interval = selectedInterval[tier.key];
           const currentPrice = PRICING[tier.key][interval];
           const loadingKey = `${tier.key}_${interval}`;
+          const TierIcon = tierIcons[tier.key];
 
           return (
             <Card
@@ -292,8 +330,18 @@ export default function Assinatura() {
                 </div>
               )}
               <CardHeader className="pt-8">
-                <CardTitle>{tierNames[tier.key]}</CardTitle>
-                <CardDescription>{tier.description}</CardDescription>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50">
+                    <TierIcon className="h-5 w-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{tierNames[tier.key]}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{tier.tagline}</p>
+                  </div>
+                </div>
+                <CardDescription className="text-xs bg-teal-50 text-teal-700 px-2 py-1 rounded-md">
+                  {tier.description}
+                </CardDescription>
 
                 <div className="pt-4">
                   <ToggleGroup
@@ -312,25 +360,31 @@ export default function Assinatura() {
                 </div>
 
                 <div className="pt-4">
-                  <span className="text-4xl font-bold">{currentPrice.label}</span>
-                  <span className="text-muted-foreground">
+                  <span className="text-3xl font-bold">{currentPrice.label}</span>
+                  <span className="text-muted-foreground text-sm">
                     {interval === "monthly" ? "/mês" : "/ano"}
                   </span>
+                  {currentPrice.perMonth && interval === "annual" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      equivale a {currentPrice.perMonth}
+                    </p>
+                  )}
                 </div>
-                {currentPrice.savings && (
-                  <Badge variant="secondary" className="mt-2 w-fit bg-green-100 text-green-700">
+                {currentPrice.savings && interval === "annual" && (
+                  <Badge variant="secondary" className="mt-2 w-fit bg-green-100 text-green-700 text-xs">
+                    <Check className="h-3 w-3 mr-1" />
                     {currentPrice.savings}
                   </Badge>
                 )}
               </CardHeader>
               <CardContent>
-                <ul className="mb-6 space-y-3">
+                <ul className="mb-6 space-y-2">
                   {tier.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/20 text-green-600">
-                        <Check className="h-3 w-3" />
+                    <li key={feature} className="flex items-start gap-2">
+                      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-teal-100 text-teal-600 mt-0.5 flex-shrink-0">
+                        <Check className="h-2.5 w-2.5" />
                       </div>
-                      <span className="text-sm">{feature}</span>
+                      <span className="text-xs leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -348,7 +402,7 @@ export default function Assinatura() {
                     variant={tier.recommended ? "default" : "outline"}
                     onClick={() => handleSubscribe(tier.key)}
                     disabled={loadingPlan !== null}
-                    data-tour={tier.key === "clinica" ? "subscription-choose-clinica" : tier.key === "premium" ? "subscription-choose-premium" : "subscription-choose-solo"}
+                    data-tour={`subscription-choose-${tier.key}`}
                   >
                     {loadingPlan === loadingKey ? (
                       <>
@@ -368,9 +422,15 @@ export default function Assinatura() {
         })}
       </div>
 
-      <div className="mt-8 text-center">
+      <div className="mt-8 text-center space-y-2">
         <p className="text-sm text-muted-foreground">
-          Cancele a qualquer momento sem multas.
+          5 dias grátis · Sem cartão de crédito · Cancele a qualquer momento
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Precisa de um plano personalizado?{" "}
+          <a href="mailto:contato@metaclass.com.br" className="text-teal-600 hover:underline">
+            Fale com nossa equipe
+          </a>
         </p>
       </div>
     </MainLayout>

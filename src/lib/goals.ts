@@ -1,4 +1,4 @@
-// Tipos e constantes compartilhados para metas
+// Tipos e constantes compartilhados para metas de clínicas
 
 export type GoalType =
   | "revenue"
@@ -6,17 +6,25 @@ export type GoalType =
   | "product_quantity"
   | "product_revenue"
   | "clientes_novos"
-  | "ticket_medio";
+  | "ticket_medio"
+  | "appointments_count"
+  | "procedures_count"
+  | "new_patients"
+  | "patient_return_rate";
 
 export type GoalPeriod = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export const goalTypeLabels: Record<GoalType, string> = {
-  revenue: "Receita",
-  services_count: "Serviços concluídos",
-  product_quantity: "Quantidade vendida (produtos)",
-  product_revenue: "Receita de produtos",
+  revenue: "Faturamento",
+  services_count: "Atendimentos concluídos",
+  appointments_count: "Consultas realizadas",
+  procedures_count: "Procedimentos realizados",
+  new_patients: "Novos pacientes",
   clientes_novos: "Novos pacientes",
+  patient_return_rate: "Taxa de retorno (%)",
   ticket_medio: "Ticket médio",
+  product_quantity: "Produtos vendidos",
+  product_revenue: "Receita de produtos",
 };
 
 export const periodLabels: Record<GoalPeriod, string> = {

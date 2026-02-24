@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -43,13 +44,13 @@ import {
   Eye,
   ShieldCheck,
   Camera,
-  Copy,
   Info,
+  Sparkles,
+  Library,
 } from "lucide-react";
-import { CONSENT_TEMPLATES } from "@/lib/consent-templates-default";
-import { getAvailableVariables, replaceVariables } from "@/lib/consent-variables";
-
-const AVAILABLE_VARS = getAvailableVariables();
+import { ConsentRichTextEditor } from "@/components/consent/ConsentRichTextEditor";
+import { CONSENT_TEMPLATES_LIBRARY, TEMPLATE_CATEGORIES, type TemplateCategory } from "@/lib/consent-templates-library";
+import { replaceVariables } from "@/lib/consent-variables";
 
 export default function TermosConsentimento() {
   const { profile, isAdmin } = useAuth();
@@ -74,6 +75,9 @@ export default function TermosConsentimento() {
 
   // Deactivate confirm
   const [deactivateTarget, setDeactivateTarget] = useState<ConsentTemplate | null>(null);
+
+  // Library filter
+  const [libraryCategory, setLibraryCategory] = useState<TemplateCategory | "all">("all");
 
   const fetchTemplates = useCallback(async () => {
     if (!profile?.tenant_id) return;
@@ -125,22 +129,20 @@ export default function TermosConsentimento() {
     setIsDialogOpen(true);
   };
 
-  const handleUseSuggestion = (suggestion: typeof CONSENT_TEMPLATES[number]) => {
+  const handleUseSuggestion = (template: typeof CONSENT_TEMPLATES_LIBRARY[number]) => {
     setFormData((prev) => ({
       ...prev,
-      title: suggestion.title,
-      slug: suggestion.slug,
-      body_html: suggestion.body_html,
+      title: template.title,
+      slug: template.slug,
+      body_html: template.body_html,
+      is_required: template.is_required_default,
     }));
+    toast.success(`Modelo "${template.title}" carregado!`);
   };
 
-  const insertVariable = (key: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      body_html: prev.body_html + `{{${key}}}`,
-    }));
-    toast.success(`Variável {{${key}}} inserida`);
-  };
+  const filteredLibrary = libraryCategory === "all" 
+    ? CONSENT_TEMPLATES_LIBRARY 
+    : CONSENT_TEMPLATES_LIBRARY.filter(t => t.category === libraryCategory);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,132 +349,160 @@ export default function TermosConsentimento() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full lg:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>{editingTemplate ? "Editar Termo" : "Novo Termo de Consentimento"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              {editingTemplate ? "Editar Termo" : "Novo Termo de Consentimento"}
+            </DialogTitle>
             <DialogDescription>
               {editingTemplate
                 ? "Atualize o conteúdo do termo. Assinaturas já feitas mantêm o snapshot da versão anterior."
-                : "Crie um novo termo que será exibido ao paciente no portal. Use HTML para formatação."}
+                : "Crie um novo termo usando o editor visual ou escolha um modelo pronto da biblioteca."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-5 py-4">
-              {/* Suggestions */}
-              {!editingTemplate && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Modelos prontos (clique para usar o conteúdo completo)</Label>
+          <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
+            <Tabs defaultValue={editingTemplate ? "editor" : "library"} className="flex-1 flex flex-col overflow-hidden">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="library" className="gap-2">
+                  <Library className="h-4 w-4" />
+                  Biblioteca de Modelos
+                </TabsTrigger>
+                <TabsTrigger value="editor" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Editor Visual
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Library Tab */}
+              <TabsContent value="library" className="flex-1 overflow-hidden mt-0">
+                <div className="space-y-3 h-full flex flex-col">
                   <div className="flex flex-wrap gap-2">
-                    {CONSENT_TEMPLATES.map((s) => (
+                    <Button
+                      type="button"
+                      variant={libraryCategory === "all" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setLibraryCategory("all")}
+                      className="text-xs"
+                    >
+                      Todos
+                    </Button>
+                    {(Object.keys(TEMPLATE_CATEGORIES) as TemplateCategory[]).map((cat) => (
                       <Button
-                        key={s.slug}
+                        key={cat}
                         type="button"
-                        variant="outline"
+                        variant={libraryCategory === cat ? "default" : "outline"}
                         size="sm"
+                        onClick={() => setLibraryCategory(cat)}
                         className="text-xs"
-                        onClick={() => handleUseSuggestion(s)}
                       >
-                        {s.title}
+                        {TEMPLATE_CATEGORIES[cat].label}
                       </Button>
                     ))}
                   </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Título *</Label>
-                  <Input
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Ex: Termo de Uso de Imagem"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Identificador (slug) *</Label>
-                  <Input
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") })}
-                    placeholder="Ex: uso_imagem"
-                    required
-                  />
-                  <p className="text-[11px] text-muted-foreground">Identificador único, sem espaços ou acentos</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Conteúdo do Termo (HTML) *</Label>
-                <Textarea
-                  value={formData.body_html}
-                  onChange={(e) => setFormData({ ...formData, body_html: e.target.value })}
-                  placeholder="<h2>Termo de Uso de Imagem</h2>&#10;<p>Eu, paciente abaixo identificado...</p>"
-                  rows={12}
-                  className="font-mono text-xs"
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Use tags HTML para formatação: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;, etc.
-                </p>
-
-                <details className="mt-2">
-                  <summary className="text-xs font-medium text-primary cursor-pointer flex items-center gap-1">
-                    <Info className="h-3 w-3" /> Variáveis dinâmicas disponíveis (clique para inserir)
-                  </summary>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {AVAILABLE_VARS.map((v) => (
-                      <Button
-                        key={v.key}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="text-[10px] h-6 px-2 gap-1 font-mono"
-                        onClick={() => insertVariable(v.key)}
-                        title={`${v.label} — ex: ${v.example}`}
-                      >
-                        <Copy className="h-2.5 w-2.5" />
-                        {`{{${v.key}}}`}
-                      </Button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-1.5">
-                    Estas variáveis são substituídas automaticamente pelos dados reais do paciente no momento da assinatura.
+                  <ScrollArea className="flex-1 pr-4" style={{ maxHeight: "400px" }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {filteredLibrary.map((template) => (
+                        <Card 
+                          key={template.id} 
+                          className="cursor-pointer hover:border-primary/50 transition-colors"
+                          onClick={() => handleUseSuggestion(template)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="secondary" className={`text-[10px] ${TEMPLATE_CATEGORIES[template.category].color}`}>
+                                    {TEMPLATE_CATEGORIES[template.category].label}
+                                  </Badge>
+                                  {template.is_required_default && (
+                                    <Badge variant="outline" className="text-[10px]">Obrigatório</Badge>
+                                  )}
+                                </div>
+                                <h4 className="font-medium text-sm truncate">{template.title}</h4>
+                                <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Clique em um modelo para carregar no editor
                   </p>
-                </details>
-              </div>
+                </div>
+              </TabsContent>
 
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is_required"
-                    checked={formData.is_required}
-                    onCheckedChange={(v) => setFormData({ ...formData, is_required: v })}
-                  />
-                  <Label htmlFor="is_required" className="cursor-pointer text-sm">Obrigatório para acessar o portal</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
-                  />
-                  <Label htmlFor="is_active" className="cursor-pointer text-sm">Ativo</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Ordem</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    className="w-20"
-                    value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-            </div>
+              {/* Editor Tab */}
+              <TabsContent value="editor" className="flex-1 overflow-auto mt-0">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Título *</Label>
+                      <Input
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="Ex: Termo de Uso de Imagem"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Identificador (slug) *</Label>
+                      <Input
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") })}
+                        placeholder="Ex: uso_imagem"
+                        required
+                      />
+                      <p className="text-[11px] text-muted-foreground">Identificador único, sem espaços ou acentos</p>
+                    </div>
+                  </div>
 
-            <DialogFooter>
+                  <div className="space-y-2">
+                    <Label>Conteúdo do Termo *</Label>
+                    <ConsentRichTextEditor
+                      value={formData.body_html}
+                      onChange={(html) => setFormData({ ...formData, body_html: html })}
+                      placeholder="Comece a escrever seu termo ou selecione um modelo da biblioteca..."
+                      minHeight="280px"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="is_required"
+                        checked={formData.is_required}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_required: v })}
+                      />
+                      <Label htmlFor="is_required" className="cursor-pointer text-sm">Obrigatório para acessar o portal</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="is_active"
+                        checked={formData.is_active}
+                        onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
+                      />
+                      <Label htmlFor="is_active" className="cursor-pointer text-sm">Ativo</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Ordem</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-20"
+                        value={formData.sort_order}
+                        onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter className="mt-4 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
                 {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingTemplate ? "Atualizar Termo" : "Criar Termo"}

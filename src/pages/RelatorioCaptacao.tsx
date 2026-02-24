@@ -58,7 +58,7 @@ interface Profile {
   id: string;
   user_id: string;
   full_name: string;
-  role: string;
+  professional_type: string;
 }
 
 export default function RelatorioCaptacao() {
@@ -95,7 +95,7 @@ export default function RelatorioCaptacao() {
     try {
       const { data: profs, error } = await supabase
         .from("profiles")
-        .select("id, user_id, full_name, role")
+        .select("id, user_id, full_name, professional_type")
         .eq("tenant_id", profile.tenant_id)
         .order("full_name");
 

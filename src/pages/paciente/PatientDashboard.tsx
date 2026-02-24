@@ -22,8 +22,15 @@ import { Link } from "react-router-dom";
 import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
 import { dashboardBanners } from "@/components/patient/patientBannerData";
 import { supabasePatient } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function formatScheduledAt(scheduledAt: string | null | undefined): string {
+  if (!scheduledAt) return "Data não disponível";
+  const date = parseISO(scheduledAt);
+  if (!isValid(date)) return "Data inválida";
+  return format(date, "dd/MM 'às' HH:mm", { locale: ptBR });
+}
 import { OnboardingTour, useOnboardingTour } from "@/components/patient/OnboardingTour";
 import { useAppointmentRating } from "@/components/patient/AppointmentRating";
 import { logger } from "@/lib/logger";
@@ -242,7 +249,7 @@ export default function PatientDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{appt.service_name}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {appt.professional_name} • {format(new Date(appt.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                        {appt.professional_name} • {formatScheduledAt(appt.scheduled_at)}
                       </p>
                     </div>
                     {appt.telemedicine && (
@@ -305,7 +312,7 @@ export default function PatientDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{appt.service_name}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {appt.professional_name} • {format(new Date(appt.scheduled_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                        {appt.professional_name} • {formatScheduledAt(appt.scheduled_at)}
                       </p>
                     </div>
                     <Link to="/paciente/teleconsulta">

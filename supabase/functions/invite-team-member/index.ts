@@ -102,25 +102,31 @@ interface InviteBody {
   council_state?: string;
 }
 
-type TierKey = "basic" | "pro" | "premium";
+type TierKey = "starter" | "solo" | "clinic" | "premium";
 
 const TEAM_LIMIT_ADDITIONAL: Record<TierKey, number> = {
-  basic: 1,
-  pro: 4,
+  starter: 0,
+  solo: 1,
+  clinic: 4,
   premium: Number.POSITIVE_INFINITY,
 };
 
 function parseTierFromPlan(plan: unknown): TierKey {
-  if (typeof plan !== "string") return "basic";
+  if (typeof plan !== "string") return "starter";
   const s = plan.trim();
-  if (!s) return "basic";
+  if (!s) return "starter";
 
-  // Legacy: "monthly" | "quarterly" | "annual" used as "basic".
-  if (s === "monthly" || s === "quarterly" || s === "annual") return "basic";
+  // Legacy: "monthly" | "quarterly" | "annual" used as "starter".
+  if (s === "monthly" || s === "quarterly" || s === "annual") return "starter";
 
   const [tierRaw] = s.split("_");
-  if (tierRaw === "basic" || tierRaw === "pro" || tierRaw === "premium") return tierRaw;
-  return "basic";
+  // Map legacy names
+  if (tierRaw === "basic") return "starter";
+  if (tierRaw === "pro" || tierRaw === "clinica") return "clinic";
+  if (tierRaw === "starter" || tierRaw === "solo" || tierRaw === "clinic" || tierRaw === "premium") {
+    return tierRaw as TierKey;
+  }
+  return "starter";
 }
 
 function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: string, role: string): string {

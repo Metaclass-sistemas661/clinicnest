@@ -30,12 +30,13 @@ async function auditLog(params: {
   }
 }
 
-type TierKey = "solo" | "clinica" | "premium";
+type TierKey = "starter" | "solo" | "clinic" | "premium";
 type IntervalKey = "monthly" | "annual";
 
 const tierNames: Record<TierKey, string> = {
+  starter: "Starter",
   solo: "Solo",
-  clinica: "Clínica",
+  clinic: "Clínica",
   premium: "Premium",
 };
 
@@ -51,11 +52,15 @@ const intervalToCycle: Record<IntervalKey, "MONTHLY" | "YEARLY"> = {
 
 // Pricing matrix (amount in cents)
 const PRICING: Record<TierKey, Record<IntervalKey, number>> = {
+  starter: {
+    monthly: 8990,
+    annual: 80900,
+  },
   solo: {
     monthly: 14990,
     annual: 134900,
   },
-  clinica: {
+  clinic: {
     monthly: 24990,
     annual: 224900,
   },
@@ -65,12 +70,12 @@ const PRICING: Record<TierKey, Record<IntervalKey, number>> = {
   },
 };
 
-/** Legado: mapeia chaves antigas (basic/pro) para novas (solo/clinica) */
+/** Legado: mapeia chaves antigas (basic/pro) para novas (starter/solo/clinic) */
 function parseLegacyPlanKey(planKey: unknown): { tier: TierKey; interval: IntervalKey } | null {
   if (typeof planKey !== "string") return null;
   const s = planKey.trim();
   if (s === "monthly" || s === "annual") {
-    return { tier: "solo", interval: s };
+    return { tier: "starter", interval: s };
   }
   return null;
 }
@@ -83,14 +88,15 @@ function parseTierInterval(body: unknown): { tier: TierKey; interval: IntervalKe
   const interval = b?.interval;
 
   // Novos nomes
-  if ((tier === "solo" || tier === "clinica" || tier === "premium") && (interval === "monthly" || interval === "annual")) {
+  if ((tier === "starter" || tier === "solo" || tier === "clinic" || tier === "premium") && (interval === "monthly" || interval === "annual")) {
     return { tier, interval };
   }
 
-  // Legado: basic → solo, pro → clinica (com mapeamento de interval)
+  // Legado: basic → starter, pro/clinica → clinic (com mapeamento de interval)
   const mappedTier: TierKey | null =
-    tier === "basic" ? "solo" :
-    tier === "pro"   ? "clinica" :
+    tier === "basic" ? "starter" :
+    tier === "solo" ? "solo" :
+    tier === "pro" || tier === "clinica" ? "clinic" :
     tier === "premium" ? "premium" : null;
   const mappedInterval: IntervalKey | null =
     interval === "monthly" ? "monthly" :
