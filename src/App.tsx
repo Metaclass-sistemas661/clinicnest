@@ -242,7 +242,7 @@ const App = () => (
                 <Route
                   path="/clientes"
                   element={
-                    <ProtectedRoute resource="pacientes">
+                    <ProtectedRoute resource="clientes">
                       <Clientes />
                     </ProtectedRoute>
                   }
@@ -250,7 +250,7 @@ const App = () => (
                 <Route
                   path="/clientes/:id"
                   element={
-                    <ProtectedRoute resource="pacientes">
+                    <ProtectedRoute resource="clientes">
                       <ClienteDetalhe />
                     </ProtectedRoute>
                   }
@@ -258,7 +258,7 @@ const App = () => (
                 <Route
                   path="/mensagens-pacientes"
                   element={
-                    <ProtectedRoute resource="pacientes">
+                    <ProtectedRoute resource="clientes">
                       <MensagensPacientes />
                     </ProtectedRoute>
                   }

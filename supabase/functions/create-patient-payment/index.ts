@@ -880,7 +880,7 @@ serve(async (req) => {
 
     const gatewayConfig: PaymentGatewayConfig = {
       provider: (tenantData?.payment_gateway_type as PaymentGatewayConfig["provider"]) || "stripe",
-      api_key: (tenantData?.payment_gateway_config as any)?.api_key || "",
+      api_key: (tenantData?.payment_gateway_config as { api_key?: string } | null)?.api_key || "",
     };
 
     // Se a clínica não configurou, tentar usar chaves globais (fallback)
@@ -943,7 +943,7 @@ serve(async (req) => {
           );
           break;
 
-        case "stripe":
+        case "stripe": {
           // Stripe não tem PIX nativo no Brasil, redirecionar para checkout
           const stripeResult = await createStripePaymentLink(
             gatewayConfig.api_key,
@@ -965,6 +965,7 @@ serve(async (req) => {
             );
           }
           break;
+        }
       }
 
       if (pixResult) {
@@ -1038,7 +1039,7 @@ serve(async (req) => {
           );
           break;
 
-        case "stripe":
+        case "stripe": {
           // Stripe não tem boleto nativo, redirecionar para checkout
           const stripeResult = await createStripePaymentLink(
             gatewayConfig.api_key,
@@ -1060,6 +1061,7 @@ serve(async (req) => {
             );
           }
           break;
+        }
       }
 
       if (boletoResult) {

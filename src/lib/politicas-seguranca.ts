@@ -130,7 +130,7 @@ export const POLITICA_SENHAS = {
   },
   
   validacao: {
-    regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,}$/,
+    regex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{}|;:,.<>?]).{8,}$/,
     mensagemErro: "A senha deve ter no mínimo 8 caracteres, incluindo maiúsculas, minúsculas, números e caracteres especiais.",
   },
   
@@ -219,7 +219,7 @@ export function validarSenha(senha: string): { valida: boolean; erros: string[] 
   if (requisitosComplexidade.numeros && !/\d/.test(senha)) {
     erros.push("Deve conter número");
   }
-  if (requisitosComplexidade.especiais && !/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(senha)) {
+  if (requisitosComplexidade.especiais && !/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(senha)) {
     erros.push("Deve conter caractere especial");
   }
 
@@ -235,8 +235,8 @@ export function calcularForcaSenha(senha: string): { forca: number; nivel: strin
   if (/[a-z]/.test(senha)) forca += 10;
   if (/[A-Z]/.test(senha)) forca += 10;
   if (/\d/.test(senha)) forca += 10;
-  if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(senha)) forca += 15;
-  if (senha.length >= 8 && /[a-z]/.test(senha) && /[A-Z]/.test(senha) && /\d/.test(senha) && /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(senha)) {
+  if (/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(senha)) forca += 15;
+  if (senha.length >= 8 && /[a-z]/.test(senha) && /[A-Z]/.test(senha) && /\d/.test(senha) && /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(senha)) {
     forca += 15;
   }
 
