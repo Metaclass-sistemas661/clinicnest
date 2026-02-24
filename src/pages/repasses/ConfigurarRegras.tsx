@@ -44,7 +44,7 @@ interface Professional {
   user_id: string;
   full_name: string;
   email: string;
-  role: string;
+  professional_type: string;
 }
 
 export default function ConfigurarRegras() {
@@ -71,9 +71,8 @@ export default function ConfigurarRegras() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("user_id, full_name, email, role")
+          .select("user_id, full_name, email, professional_type")
           .eq("tenant_id", profile.tenant_id)
-          .in("role", ["professional", "admin"])
           .order("full_name");
 
         if (error) throw error;
@@ -239,9 +238,11 @@ export default function ConfigurarRegras() {
                   <SelectItem key={prof.user_id} value={prof.user_id}>
                     <div className="flex items-center gap-2">
                       <span>{prof.full_name || prof.email}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {prof.role === "admin" ? "Admin" : "Profissional"}
-                      </Badge>
+                      {prof.professional_type && (
+                        <Badge variant="outline" className="text-xs">
+                          {prof.professional_type}
+                        </Badge>
+                      )}
                     </div>
                   </SelectItem>
                 ))}

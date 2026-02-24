@@ -5,7 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { Plus, AlertTriangle, ArrowUp, Tag } from "lucide-react";
+import { Plus, AlertTriangle, ArrowUp, ArrowDown, Tag, ChevronDown, Package, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -407,37 +414,31 @@ export default function Produtos() {
             onSubmit={handleCreateCategory}
             isSaving={isSavingCategory}
           />
-          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)} data-tour="products-new-category">
-            <Tag className="mr-2 h-4 w-4" />
-            Nova Categoria
-          </Button>
 
-          <Button
-            variant="outline"
-            onClick={() => openMovement("in", "")}
-            data-tour="products-stock-movement-in"
-          >
-            <ArrowUp className="mr-2 h-4 w-4" />
-            Comprar (entrada)
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => openMovement("out", "sale")}
-            data-tour="products-stock-movement-sale"
-          >
-            <ArrowUp className="mr-2 h-4 w-4" />
-            Venda (saída)
-          </Button>
-
-          <Button
-            variant="outline"
-            onClick={() => openMovement("out", "damaged")}
-            data-tour="products-stock-movement-damaged"
-          >
-            <ArrowUp className="mr-2 h-4 w-4" />
-            Baixa danificado
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" data-tour="products-stock-actions">
+                <Package className="mr-2 h-4 w-4" />
+                Movimentação
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => openMovement("in", "")} data-tour="products-stock-movement-in">
+                <ArrowUp className="mr-2 h-4 w-4 text-success" />
+                Comprar (entrada)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => openMovement("out", "sale")} data-tour="products-stock-movement-sale">
+                <ArrowDown className="mr-2 h-4 w-4 text-primary" />
+                Venda (saída)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openMovement("out", "damaged")} data-tour="products-stock-movement-damaged">
+                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                Baixa danificado
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <StockMovementDialog
             open={isMovementDialogOpen}
             onOpenChange={setIsMovementDialogOpen}
@@ -447,6 +448,11 @@ export default function Produtos() {
             onSubmit={handleStockMovement}
             isSaving={isSaving}
           />
+
+          <Button variant="outline" onClick={() => setIsCategoryDialogOpen(true)} data-tour="products-new-category">
+            <Tag className="mr-2 h-4 w-4" />
+            Nova Categoria
+          </Button>
 
           <Button className="gradient-primary text-primary-foreground" onClick={() => setIsProductDialogOpen(true)} data-tour="products-new">
             <Plus className="mr-2 h-4 w-4" />

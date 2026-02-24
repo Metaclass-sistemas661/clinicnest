@@ -1,12 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { FormDrawer, FormDrawerSection, FormDrawerDivider } from "@/components/ui/form-drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import type { Product } from "@/types/database";
 
 export interface MovementFormState {
@@ -48,74 +40,107 @@ export function StockMovementDialog({
   onSubmit,
   isSaving,
 }: StockMovementDialogProps) {
+  const handleSubmit = () => {
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    onSubmit(fakeEvent);
+  };
+
+  const selectedProduct = products.find((p) => p.id === form.product_id);
+  const isValid = form.product_id && Number(form.quantity) > 0 && 
+    (form.movement_type === "in" || form.out_reason_type);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Movimentação de Estoque</DialogTitle>
-          <DialogDescription>Registre entrada ou saída de produtos</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={onSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Select
-                value={form.product_id}
-                onValueChange={(v) => setForm({ ...form, product_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} ({product.quantity} em estoque)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select
-                value={form.movement_type}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    movement_type: v as "in" | "out",
-                    out_reason_type: v === "in" ? "" : form.out_reason_type,
-                    purchased_with_company_cash: v === "out" ? "no" : form.purchased_with_company_cash,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in">
-                    <span className="flex items-center gap-2">
-                      <ArrowUp className="h-4 w-4 text-success" /> Entrada
-                    </span>
+    <FormDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Movimentação de Estoque"
+      description="Registre entrada ou saída de produtos"
+      width="md"
+      onSubmit={handleSubmit}
+      isSubmitting={isSaving}
+      submitLabel="Registrar"
+      submitDisabled={!isValid}
+    >
+      <div className="space-y-6">
+        <FormDrawerSection title="Produto">
+          <div className="space-y-2">
+            <Label>
+              Selecione o produto <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={form.product_id}
+              onValueChange={(v) => setForm({ ...form, product_id: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o produto" />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name} ({product.quantity} em estoque)
                   </SelectItem>
-                  <SelectItem value="out">
-                    <span className="flex items-center gap-2">
-                      <ArrowDown className="h-4 w-4 text-destructive" /> Saída
-                    </span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
-              <Input
-                type="number"
-                min="1"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                required
-              />
-            </div>
-            {form.movement_type === "in" && (
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedProduct && (
+              <p className="text-xs text-muted-foreground">
+                Estoque atual: <strong>{selectedProduct.quantity}</strong> unidades
+              </p>
+            )}
+          </div>
+        </FormDrawerSection>
+
+        <FormDrawerDivider />
+
+        <FormDrawerSection title="Tipo de Movimentação">
+          <div className="space-y-2">
+            <Label>Tipo</Label>
+            <Select
+              value={form.movement_type}
+              onValueChange={(v) =>
+                setForm({
+                  ...form,
+                  movement_type: v as "in" | "out",
+                  out_reason_type: v === "in" ? "" : form.out_reason_type,
+                  purchased_with_company_cash: v === "out" ? "no" : form.purchased_with_company_cash,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="in">
+                  <span className="flex items-center gap-2">
+                    <ArrowUp className="h-4 w-4 text-success" /> Entrada
+                  </span>
+                </SelectItem>
+                <SelectItem value="out">
+                  <span className="flex items-center gap-2">
+                    <ArrowDown className="h-4 w-4 text-destructive" /> Saída
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Quantidade <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="number"
+              min="1"
+              value={form.quantity}
+              onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+            />
+          </div>
+        </FormDrawerSection>
+
+        {form.movement_type === "in" && (
+          <>
+            <FormDrawerDivider />
+            <FormDrawerSection title="Financeiro">
               <div className="space-y-3">
                 <Label>Você utilizou o caixa da empresa para comprar esse produto?</Label>
                 <RadioGroup
@@ -138,10 +163,19 @@ export function StockMovementDialog({
                   Se sim, a entrada será registrada como despesa no financeiro.
                 </p>
               </div>
-            )}
-            {form.movement_type === "out" && (
+            </FormDrawerSection>
+          </>
+        )}
+
+        {form.movement_type === "out" && (
+          <>
+            <FormDrawerDivider />
+            <FormDrawerSection title="Motivo da Saída">
               <div className="space-y-3">
-                <Label>Você está registrando essa saída como venda ou baixa danificado?</Label>
+                <Label>
+                  Você está registrando essa saída como venda ou baixa danificado?{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <RadioGroup
                   value={form.out_reason_type}
                   onValueChange={(v) =>
@@ -162,33 +196,23 @@ export function StockMovementDialog({
                   Venda gera receita no financeiro. Baixa danificado apenas registra histórico para conferência.
                 </p>
               </div>
-            )}
-            <div className="space-y-2">
-              <Label>Motivo</Label>
-              <Input
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="Ex: Compra de fornecedor, uso em serviço..."
-              />
-            </div>
+            </FormDrawerSection>
+          </>
+        )}
+
+        <FormDrawerDivider />
+
+        <FormDrawerSection title="Observações">
+          <div className="space-y-2">
+            <Label>Motivo</Label>
+            <Input
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              placeholder="Ex: Compra de fornecedor, uso em serviço..."
+            />
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} data-tour="products-movement-cancel">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="products-movement-submit">
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registrando...
-                </>
-              ) : (
-                "Registrar"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormDrawerSection>
+      </div>
+    </FormDrawer>
   );
 }
