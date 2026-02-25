@@ -34,9 +34,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createClientPackageV1, getClientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertClientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck, FileSignature, ClipboardList, Pill, FlaskConical, ArrowRightLeft, FileText, AlertTriangle, NotebookPen, ExternalLink, Lock, Sparkles } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Gift, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck, FileSignature, ClipboardList, Pill, FlaskConical, ArrowRightLeft, FileText, AlertTriangle, NotebookPen, ExternalLink, Lock, Sparkles, MessageCircle } from "lucide-react";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
+import { SendConsentLinkDialog } from "@/components/consent/SendConsentLinkDialog";
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import type { ClinicalEvolution } from "@/types/database";
 import { toast } from "sonner";
@@ -154,6 +155,7 @@ export default function Clientes() {
   const [codeCopied, setCodeCopied] = useState(false);
 
   const [contractsClient, setContractsClient] = useState<Client | null>(null);
+  const [sendLinkClient, setSendLinkClient] = useState<Client | null>(null);
 
   const [clinicalHistory, setClinicalHistory] = useState<Array<{
     id: string; type: string; title: string; subtitle: string; date: string;
@@ -963,6 +965,9 @@ export default function Clientes() {
                           )}
                         </div>
                         <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setSendLinkClient(client)} aria-label={`Enviar link de assinatura para ${client.name}`} title="Enviar Link WhatsApp">
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts">
                             <FileSignature className="h-4 w-4" />
                           </Button>
@@ -1066,6 +1071,9 @@ export default function Clientes() {
                           <TableCell className="max-w-xs truncate text-muted-foreground">{client.notes || "—"}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setSendLinkClient(client)} aria-label={`Enviar link de assinatura para ${client.name}`} title="Enviar Link WhatsApp">
+                                <MessageCircle className="h-4 w-4 text-green-600" />
+                              </Button>
                               <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts" title="Gerar Contrato e Termos">
                                 <FileSignature className="h-4 w-4" />
                               </Button>
@@ -1363,13 +1371,22 @@ export default function Clientes() {
 
                 {/* Tab: Termos e Consentimentos */}
                 <TabsContent value="termos" className="mt-4 space-y-4">
-                  <Button
-                    size="sm"
-                    className="gradient-primary text-primary-foreground"
-                    onClick={() => { setIsDetailOpen(false); setContractsClient(detailClient); }}
-                  >
-                    <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      className="gradient-primary text-primary-foreground"
+                      onClick={() => { setIsDetailOpen(false); setContractsClient(detailClient); }}
+                    >
+                      <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setIsDetailOpen(false); setSendLinkClient(detailClient); }}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4 text-green-600" />Enviar Link WhatsApp
+                    </Button>
+                  </div>
                   <PatientConsentsViewer
                     clientId={detailClient.id}
                     clientName={detailClient.name}
@@ -1473,6 +1490,12 @@ export default function Clientes() {
           client={contractsClient}
         />
       )}
+      {/* Dialog: Enviar Link de Assinatura */}
+      <SendConsentLinkDialog
+        open={!!sendLinkClient}
+        onOpenChange={(open) => { if (!open) setSendLinkClient(null); }}
+        client={sendLinkClient}
+      />
     </MainLayout>
   );
 }

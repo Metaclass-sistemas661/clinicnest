@@ -41,6 +41,7 @@ const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 const AgendarOnline = lazyWithRetry(() => import("@/pages/AgendarOnline"));
 const ConfirmarAgendamento = lazyWithRetry(() => import("@/pages/ConfirmarAgendamento"));
 const TeleconsultaPublica = lazyWithRetry(() => import("@/pages/TeleconsultaPublica"));
+const AssinarTermosPublico = lazyWithRetry(() => import("@/pages/AssinarTermosPublico"));
 
 const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"));
 const Agenda = lazyWithRetry(() => import("@/pages/Agenda"));
@@ -205,6 +206,7 @@ const App = () => (
                 <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
                 <Route path="/nps/:token" element={<NpsPublico />} />
                 <Route path="/teleconsulta-publica/:token" element={<TeleconsultaPublica />} />
+                <Route path="/assinar-termos/:token" element={<AssinarTermosPublico />} />
                 <Route path="/painel-chamada" element={<PainelChamada />} />
 
                 {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}

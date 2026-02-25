@@ -506,7 +506,7 @@ export default function TermosConsentimento() {
                       onClick={() => setLibraryCategory("all")}
                       className="text-xs"
                     >
-                      Todos
+                      Todos ({CONSENT_TEMPLATES_LIBRARY.length})
                     </Button>
                     {(Object.keys(TEMPLATE_CATEGORIES) as TemplateCategory[]).map((cat) => (
                       <Button
@@ -521,8 +521,8 @@ export default function TermosConsentimento() {
                       </Button>
                     ))}
                   </div>
-                  <ScrollArea className="flex-1 pr-4" style={{ maxHeight: "400px" }}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: "calc(60vh - 120px)", minHeight: "300px" }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
                       {filteredLibrary.map((template) => (
                         <Card 
                           key={template.id} 
@@ -548,8 +548,8 @@ export default function TermosConsentimento() {
                         </Card>
                       ))}
                     </div>
-                  </ScrollArea>
-                  <p className="text-xs text-muted-foreground text-center">
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center flex-shrink-0">
                     Clique em um modelo para carregar no editor
                   </p>
                 </div>
@@ -558,6 +558,22 @@ export default function TermosConsentimento() {
               {/* Editor Tab */}
               <TabsContent value="editor" className="flex-1 overflow-auto mt-0">
                 <div className="space-y-4">
+                  {/* Aviso quando é um PDF */}
+                  {formData.template_type === "pdf" && formData.pdf_storage_path && (
+                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4">
+                      <div className="flex gap-3">
+                        <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-amber-800 dark:text-amber-200">
+                          <p className="font-medium mb-1">Este termo usa um arquivo PDF</p>
+                          <p className="text-xs text-amber-700 dark:text-amber-300">
+                            O conteúdo do PDF não pode ser editado aqui. Para modificar, vá na aba <strong>Upload PDF</strong> e envie uma nova versão, 
+                            ou remova o PDF para usar o Editor Visual.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Título *</Label>
@@ -581,13 +597,18 @@ export default function TermosConsentimento() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Conteúdo do Termo *</Label>
+                    <Label>Conteúdo do Termo {formData.template_type !== "pdf" && "*"}</Label>
                     <ConsentRichTextEditor
                       value={formData.body_html}
-                      onChange={(html) => setFormData({ ...formData, body_html: html })}
+                      onChange={(html) => setFormData({ ...formData, body_html: html, template_type: "html" })}
                       placeholder="Comece a escrever seu termo ou selecione um modelo da biblioteca..."
                       minHeight="280px"
                     />
+                    {formData.template_type === "pdf" && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Se você escrever aqui, o PDF será substituído pelo conteúdo do editor.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-6 flex-wrap">
