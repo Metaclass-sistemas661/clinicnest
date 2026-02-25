@@ -1,12 +1,37 @@
 import { lazy, ComponentType } from "react";
 
+const RELOAD_KEY = "chunk_reload_attempted";
+
+function shouldReload(): boolean {
+  const lastReload = sessionStorage.getItem(RELOAD_KEY);
+  if (!lastReload) return true;
+  const elapsed = Date.now() - parseInt(lastReload, 10);
+  return elapsed > 10000;
+}
+
+function markReloadAttempted(): void {
+  sessionStorage.setItem(RELOAD_KEY, Date.now().toString());
+}
+
 function retryImport<T>(
   importFn: () => Promise<{ default: T }>,
   retriesLeft: number,
   interval: number
 ): Promise<{ default: T }> {
   return importFn().catch((error) => {
-    if (retriesLeft <= 0) throw error;
+    const isChunkError =
+      error?.message?.includes("Failed to fetch dynamically imported module") ||
+      error?.message?.includes("Loading chunk") ||
+      error?.message?.includes("Loading CSS chunk");
+
+    if (retriesLeft <= 0) {
+      if (isChunkError && shouldReload()) {
+        markReloadAttempted();
+        window.location.reload();
+      }
+      throw error;
+    }
+
     return new Promise((resolve, reject) => {
       setTimeout(() => {
         retryImport(importFn, retriesLeft - 1, interval).then(resolve).catch(reject);
@@ -18,6 +43,7 @@ function retryImport<T>(
 /**
  * Lazy load com retry automático quando o chunk falha (ex: deploy novo, cache desatualizado).
  * Útil para erros "Failed to fetch dynamically imported module".
+ * Após esgotar retries, faz reload automático da página uma vez.
  */
 export function lazyWithRetry<T extends ComponentType<unknown>>(
   importFn: () => Promise<{ default: T }>,

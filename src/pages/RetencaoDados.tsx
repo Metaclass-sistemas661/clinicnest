@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Archive,
   AlertTriangle,
+  ArrowLeft,
   Calendar,
   Clock,
   FileText,
@@ -95,6 +97,7 @@ function StatCard({
 }
 
 export default function RetencaoDados() {
+  const navigate = useNavigate();
   const [monthsFilter, setMonthsFilter] = useState("12");
   const [searchArchived, setSearchArchived] = useState("");
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -129,11 +132,21 @@ export default function RetencaoDados() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Política de Retenção de Dados</h1>
-        <p className="text-muted-foreground">
-          Conformidade com CFM 1.821/2007 — Guarda de prontuários por 20 anos
-        </p>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Política de Retenção de Dados</h1>
+          <p className="text-muted-foreground">
+            Conformidade com CFM 1.821/2007 — Guarda de prontuários por 20 anos
+          </p>
+        </div>
       </div>
 
       <Alert>

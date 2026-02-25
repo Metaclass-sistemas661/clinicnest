@@ -1,7 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/react";
 
@@ -13,6 +13,8 @@ interface State {
   hasError: boolean;
   error: Error | null;
 }
+
+const RELOAD_KEY = "error_boundary_reload";
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -26,6 +28,23 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error("ErrorBoundary caught an error:", error, errorInfo);
+    
+    const isChunkError = 
+      error?.message?.includes("Failed to fetch dynamically imported module") ||
+      error?.message?.includes("Loading chunk") ||
+      error?.message?.includes("Loading CSS chunk");
+
+    if (isChunkError) {
+      const lastReload = sessionStorage.getItem(RELOAD_KEY);
+      const shouldReload = !lastReload || (Date.now() - parseInt(lastReload, 10)) > 10000;
+      
+      if (shouldReload) {
+        sessionStorage.setItem(RELOAD_KEY, Date.now().toString());
+        window.location.reload();
+        return;
+      }
+    }
+
     Sentry.captureException(error, {
       extra: {
         componentStack: errorInfo.componentStack,
@@ -33,9 +52,17 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   }
 
+  handleHardReload = () => {
+    sessionStorage.removeItem(RELOAD_KEY);
+    window.location.href = window.location.href.split("?")[0] + "?_=" + Date.now();
+  };
+
   render() {
     if (this.state.hasError) {
-      const isChunkError = this.state.error?.message?.includes("Failed to fetch dynamically imported module");
+      const isChunkError = 
+        this.state.error?.message?.includes("Failed to fetch dynamically imported module") ||
+        this.state.error?.message?.includes("Loading chunk");
+        
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-muted p-4">
           <div className="max-w-md text-center space-y-6">
@@ -46,24 +73,33 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                Algo deu errado
+                {isChunkError ? "Atualização Disponível" : "Algo deu errado"}
               </h1>
               <p className="text-muted-foreground">
                 {isChunkError
-                  ? "O site foi atualizado. Pressione Ctrl+F5 (ou Cmd+Shift+R no Mac) para recarregar completamente."
+                  ? "O sistema foi atualizado. Clique no botão abaixo para carregar a nova versão."
                   : "Ocorreu um erro inesperado. Tente recarregar a página ou voltar ao início."}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild variant="default">
-                <Link to="/">Voltar ao início</Link>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-              >
-                Recarregar página
-              </Button>
+              {isChunkError ? (
+                <Button onClick={this.handleHardReload} className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Atualizar Agora
+                </Button>
+              ) : (
+                <>
+                  <Button asChild variant="default">
+                    <Link to="/">Voltar ao início</Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Recarregar página
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
