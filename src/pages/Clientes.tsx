@@ -963,15 +963,13 @@ export default function Clientes() {
                           )}
                         </div>
                         <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts">
+                            <FileSignature className="h-4 w-4" />
+                          </Button>
                           {isAdmin && (
-                            <>
-                              <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts">
-                                <FileSignature className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
-                                <Package className="h-4 w-4" />
-                              </Button>
-                            </>
+                            <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
+                              <Package className="h-4 w-4" />
+                            </Button>
                           )}
                           <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                             <Pencil className="h-4 w-4" />
@@ -1068,15 +1066,13 @@ export default function Clientes() {
                           <TableCell className="max-w-xs truncate text-muted-foreground">{client.notes || "—"}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts" title="Gerar Contrato e Termos">
+                                <FileSignature className="h-4 w-4" />
+                              </Button>
                               {isAdmin && (
-                                <>
-                                  <Button variant="ghost" size="icon" onClick={() => setContractsClient(client)} aria-label={`Gerar contratos para ${client.name}`} data-tour="clients-item-contracts" title="Gerar Contrato e Termos">
-                                    <FileSignature className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
-                                    <Package className="h-4 w-4" />
-                                  </Button>
-                                </>
+                                <Button variant="ghost" size="icon" onClick={() => openPackageDialog(client.id)} aria-label={`Vender pacote para ${client.name}`} data-tour="clients-item-package">
+                                  <Package className="h-4 w-4" />
+                                </Button>
                               )}
                               <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(client)} aria-label={`Editar paciente ${client.name}`} data-tour="clients-item-edit">
                                 <Pencil className="h-4 w-4" />
