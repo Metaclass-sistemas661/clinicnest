@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 export interface DocumentContext {
-  clientId: string;
+  patientId: string;
   clientName: string;
   clientCpf?: string;
   clientBirthDate?: string;

@@ -2,7 +2,7 @@
  * HL7 FHIR R4 — Export/Import de dados clínicos padronizados
  *
  * Gera recursos FHIR (Patient, Encounter, Observation, Condition, etc.)
- * a partir dos dados do ClinicaFlow, e importa recursos FHIR recebidos
+ * a partir dos dados do ClinicNest, e importa recursos FHIR recebidos
  * de outros sistemas.
  *
  * Profiles: RNDS (Rede Nacional de Dados em Saúde) — Ministério da Saúde

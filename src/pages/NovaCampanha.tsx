@@ -14,7 +14,7 @@ import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Loader2, Send, Users, Eye, Mail } from "lucide-react";
 
-type ClientEntry = { id: string; name: string | null; email: string };
+type PatientEntry = { id: string; name: string | null; email: string };
 
 const STEPS = [
   { id: 1, title: "Conteúdo", description: "Nome, assunto e HTML" },
@@ -34,14 +34,14 @@ export default function NovaCampanha() {
   const [html, setHtml] = useState("");
 
   const [sendMode, setSendMode] = useState<"all" | "selected">("all");
-  const [clients, setClients] = useState<ClientEntry[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [clientSearch, setClientSearch] = useState("");
+  const [patients, setPatients] = useState<PatientEntry[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const loadClients = useCallback(async () => {
+  const loadPatients = useCallback(async () => {
     if (!profile?.tenant_id) return;
-    setIsLoadingClients(true);
+    setIsLoadingPatients(true);
     try {
       const { data } = await supabase
         .from("patients")
@@ -50,7 +50,7 @@ export default function NovaCampanha() {
         .not("email", "is", null)
         .order("name")
         .limit(500);
-      setClients(
+      setPatients(
         ((data || []) as { id: string; name: string | null; email: string | null }[])
           .filter((c) => !!c.email)
           .map((c) => ({ id: c.id, name: c.name, email: c.email! }))
@@ -58,20 +58,20 @@ export default function NovaCampanha() {
     } catch (err) {
       logger.error(err);
     } finally {
-      setIsLoadingClients(false);
+      setIsLoadingPatients(false);
     }
   }, [profile?.tenant_id]);
 
   useEffect(() => {
-    if (step === 2) loadClients();
-  }, [step, loadClients]);
+    if (step === 2) loadPatients();
+  }, [step, loadPatients]);
 
-  const filteredClients = clients.filter((c) => {
-    const q = clientSearch.toLowerCase();
+  const filteredPatients = patients.filter((c) => {
+    const q = patientSearch.toLowerCase();
     return !q || (c.name ?? "").toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
   });
 
-  const toggleClient = (id: string) => {
+  const togglePatient = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -81,10 +81,10 @@ export default function NovaCampanha() {
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === filteredClients.length) {
+    if (selectedIds.size === filteredPatients.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredClients.map((c) => c.id)));
+      setSelectedIds(new Set(filteredPatients.map((c) => c.id)));
     }
   };
 
@@ -206,7 +206,7 @@ export default function NovaCampanha() {
                   <Users className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <div className="font-medium">Todos os pacientes</div>
-                    <div className="text-sm text-muted-foreground">{clients.length} com email</div>
+                    <div className="text-sm text-muted-foreground">{patients.length} com email</div>
                   </div>
                 </button>
                 <button
@@ -231,25 +231,25 @@ export default function NovaCampanha() {
                   <div className="p-3 border-b bg-muted/30 flex items-center gap-2">
                     <Input
                       placeholder="Buscar por nome ou email..."
-                      value={clientSearch}
-                      onChange={(e) => setClientSearch(e.target.value)}
+                      value={patientSearch}
+                      onChange={(e) => setPatientSearch(e.target.value)}
                       className="h-9"
                     />
-                    <Button variant="ghost" size="sm" onClick={toggleAll} disabled={filteredClients.length === 0}>
-                      {selectedIds.size === filteredClients.length && filteredClients.length > 0 ? "Desmarcar" : "Marcar"} todos
+                    <Button variant="ghost" size="sm" onClick={toggleAll} disabled={filteredPatients.length === 0}>
+                      {selectedIds.size === filteredPatients.length && filteredPatients.length > 0 ? "Desmarcar" : "Marcar"} todos
                     </Button>
                   </div>
                   <div className="max-h-64 overflow-y-auto divide-y">
-                    {isLoadingClients ? (
+                    {isLoadingPatients ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       </div>
-                    ) : filteredClients.length === 0 ? (
+                    ) : filteredPatients.length === 0 ? (
                       <div className="py-8 text-center text-sm text-muted-foreground">Nenhum paciente encontrado</div>
                     ) : (
-                      filteredClients.map((c) => (
+                      filteredPatients.map((c) => (
                         <label key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer">
-                          <Checkbox checked={selectedIds.has(c.id)} onCheckedChange={() => toggleClient(c.id)} />
+                          <Checkbox checked={selectedIds.has(c.id)} onCheckedChange={() => togglePatient(c.id)} />
                           <div className="min-w-0">
                             <div className="text-sm font-medium truncate">{c.name || "—"}</div>
                             <div className="text-xs text-muted-foreground truncate">{c.email}</div>
@@ -278,7 +278,7 @@ export default function NovaCampanha() {
                 <div className="rounded-lg border p-4">
                   <p className="text-xs text-muted-foreground mb-1">Destinatários</p>
                   <p className="font-medium">
-                    {sendMode === "all" ? `Todos (${clients.length})` : `${selectedIds.size} selecionado(s)`}
+                    {sendMode === "all" ? `Todos (${patients.length})` : `${selectedIds.size} selecionado(s)`}
                   </p>
                 </div>
               </div>

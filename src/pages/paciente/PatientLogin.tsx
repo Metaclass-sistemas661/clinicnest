@@ -26,7 +26,7 @@ import { logger } from "@/lib/logger";
 type Step = "identify" | "login" | "create_password" | "success";
 
 interface PatientInfo {
-  client_id: string;
+  patient_id: string;
   client_name: string;
   client_email: string | null;
   masked_email: string | null;
@@ -85,7 +85,7 @@ export default function PatientLogin() {
       }
 
       const info: PatientInfo = {
-        client_id: data.client_id,
+        patient_id: data.patient_id,
         client_name: data.client_name,
         client_email: data.client_email,
         masked_email: data.masked_email,
@@ -166,7 +166,7 @@ export default function PatientLogin() {
     try {
       const { data, error } = await supabasePatient.functions.invoke("activate-patient-account", {
         body: {
-          client_id: patientInfo.client_id,
+          patient_id: patientInfo.patient_id,
           email: email.trim(),
           password: newPassword,
           full_name: patientInfo.client_name,

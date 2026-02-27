@@ -39,7 +39,7 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
       const [aptsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, client:clients(name, phone), service:services(name, duration_minutes), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
@@ -181,14 +181,14 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
                       {formatInAppTz(apt.scheduled_at, "HH:mm")}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
+                      <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {apt.professional?.full_name && <span className="truncate">{apt.professional.full_name}</span>}
-                        {apt.service?.name && <span className="truncate">• {apt.service.name}</span>}
+                        {apt.procedure?.name && <span className="truncate">• {apt.procedure.name}</span>}
                       </div>
                     </div>
-                    {apt.client?.phone && (
-                      <a href={`tel:${apt.client.phone}`} className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg hover:bg-amber-100 transition-colors">
+                    {apt.patient?.phone && (
+                      <a href={`tel:${apt.patient.phone}`} className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg hover:bg-amber-100 transition-colors">
                         <Phone className="h-4 w-4 text-amber-600" />
                       </a>
                     )}
@@ -229,10 +229,10 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
                         {formatInAppTz(apt.scheduled_at, "HH:mm")}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
+                        <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           {apt.professional?.full_name && <span className="truncate">{apt.professional.full_name}</span>}
-                          {apt.service?.name && <span className="truncate">• {apt.service.name}</span>}
+                          {apt.procedure?.name && <span className="truncate">• {apt.procedure.name}</span>}
                         </div>
                       </div>
                       <Badge variant="outline" className={sb?.className}>{sb?.label}</Badge>
@@ -274,10 +274,10 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
                     {formatInAppTz(apt.scheduled_at, "HH:mm")}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
+                    <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       {apt.professional?.full_name && <span className="truncate">{apt.professional.full_name}</span>}
-                      {apt.service?.name && <span className="truncate">• {apt.service.name}</span>}
+                      {apt.procedure?.name && <span className="truncate">• {apt.procedure.name}</span>}
                     </div>
                   </div>
                   <Badge variant="outline" className="bg-violet-500/20 text-violet-600 border-violet-500/30">Chegou</Badge>

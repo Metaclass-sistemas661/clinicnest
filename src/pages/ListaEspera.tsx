@@ -21,13 +21,13 @@ import {
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-interface Client { id: string; name: string; phone?: string; }
-interface Service { id: string; name: string; }
+interface Patient { id: string; name: string; phone?: string; }
+interface ProcedureOption { id: string; name: string; }
 interface Professional { id: string; full_name: string; }
 
 interface WaitlistEntry {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   client_phone: string;
   service_name: string | null;
@@ -59,8 +59,8 @@ const periodLabels: Record<string, string> = {
 };
 
 const emptyForm = {
-  client_id: "",
-  service_id: "",
+  patient_id: "",
+  procedure_id: "",
   professional_id: "",
   priority: "normal",
   reason: "",
@@ -69,8 +69,8 @@ const emptyForm = {
 
 export default function ListaEspera() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,19 +93,19 @@ export default function ListaEspera() {
         supabase.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
         supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
         supabase.from("waitlist")
-          .select("*, clients(name, phone), services(name), profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name), profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .order("created_at", { ascending: false }),
       ]);
-      setClients((cRes.data as Client[]) || []);
-      setServices((sRes.data as Service[]) || []);
+      setPatients((cRes.data as Patient[]) || []);
+      setProcedures((sRes.data as ProcedureOption[]) || []);
       setProfessionals((pRes.data as Professional[]) || []);
       setEntries((wRes.data || []).map((r: any) => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
-        client_phone: r.clients?.phone ?? "",
-        service_name: r.services?.name ?? null,
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
+        client_phone: r.patient?.phone ?? "",
+        service_name: r.procedure?.name ?? null,
         professional_name: r.profiles?.full_name ?? null,
         priority: r.priority,
         status: r.status,
@@ -122,13 +122,13 @@ export default function ListaEspera() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     setIsSaving(true);
     try {
       const { error } = await supabase.from("waitlist").insert({
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
-        service_id: formData.service_id || null,
+        patient_id: formData.patient_id,
+        procedure_id: formData.procedure_id || null,
         professional_id: formData.professional_id || null,
         priority: formData.priority,
         reason: formData.reason || null,
@@ -309,10 +309,10 @@ export default function ListaEspera() {
           <FormDrawerSection title="Paciente">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={formData.client_id || undefined} onValueChange={(v) => setFormData({ ...formData, client_id: v })}>
+              <Select value={formData.patient_id || undefined} onValueChange={(v) => setFormData({ ...formData, patient_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -322,10 +322,10 @@ export default function ListaEspera() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Serviço</Label>
-                <Select value={formData.service_id || undefined} onValueChange={(v) => setFormData({ ...formData, service_id: v })}>
+                <Select value={formData.procedure_id || undefined} onValueChange={(v) => setFormData({ ...formData, procedure_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                   <SelectContent>
-                    {services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {procedures.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

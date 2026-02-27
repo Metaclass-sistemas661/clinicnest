@@ -28,7 +28,7 @@ export interface CommissionRule {
   tenant_id: string;
   professional_id: string;
   rule_type: "default" | "service" | "insurance" | "procedure" | "sale" | "referral";
-  service_id: string | null;
+  procedure_id: string | null;
   insurance_id: string | null;
   procedure_code: string | null;
   calculation_type: "percentage" | "fixed" | "tiered";
@@ -108,7 +108,7 @@ export function CommissionRuleCard({
       case "insurance":
         return rule.insurance?.name || "Convênio não encontrado";
       case "service":
-        return rule.service?.name || "Serviço não encontrado";
+        return rule.procedure?.name || "Serviço não encontrado";
       case "procedure":
         return `TUSS: ${rule.procedure_code}`;
       case "referral":

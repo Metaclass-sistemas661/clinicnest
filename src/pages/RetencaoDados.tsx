@@ -50,10 +50,10 @@ import {
 } from "@/components/ui/alert";
 import {
   useRetentionStatistics,
-  useClientsNearExpiry,
+  usePatientsNearExpiry,
   useDeletionAttempts,
-  useArchivedClients,
-  useArchiveClient,
+  usearchivedPatients,
+  useArchivePatient,
 } from "@/hooks/useRetentionPolicy";
 
 function StatCard({
@@ -101,30 +101,30 @@ export default function RetencaoDados() {
   const [monthsFilter, setMonthsFilter] = useState("12");
   const [searchArchived, setSearchArchived] = useState("");
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<{
+  const [selectedPatient, setSelectedPatient] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
   const { data: stats, isLoading: loadingStats } = useRetentionStatistics();
-  const { data: clientsNearExpiry, isLoading: loadingClients } = useClientsNearExpiry(
+  const { data: patientsNearExpiry, isLoading: loadingPatients } = usePatientsNearExpiry(
     parseInt(monthsFilter)
   );
   const { data: deletionAttempts } = useDeletionAttempts();
-  const { data: archivedClients } = useArchivedClients(
+  const { data: archivedPatients } = usearchivedPatients(
     undefined,
     searchArchived || undefined
   );
-  const archiveMutation = useArchiveClient();
+  const archiveMutation = useArchivePatient();
 
   const handleArchive = () => {
-    if (!selectedClient) return;
+    if (!selectedPatient) return;
     archiveMutation.mutate(
-      { clientId: selectedClient.id },
+      { patientId: selectedPatient.id },
       {
         onSuccess: () => {
           setArchiveDialogOpen(false);
-          setSelectedClient(null);
+          setSelectedPatient(null);
         },
       }
     );
@@ -220,9 +220,9 @@ export default function RetencaoDados() {
               </div>
             </CardHeader>
             <CardContent>
-              {loadingClients ? (
+              {loadingPatients ? (
                 <p>Carregando...</p>
-              ) : clientsNearExpiry && clientsNearExpiry.length > 0 ? (
+              ) : patientsNearExpiry && patientsNearExpiry.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -235,45 +235,45 @@ export default function RetencaoDados() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clientsNearExpiry.map((client) => (
-                      <TableRow key={client.client_id}>
+                    {patientsNearExpiry.map((patient) => (
+                      <TableRow key={patient.patient_id}>
                         <TableCell className="font-medium">
-                          {client.client_name}
+                          {patient.client_name}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {client.cpf || "—"}
+                          {patient.cpf || "—"}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(client.last_appointment), "dd/MM/yyyy")}
+                          {format(new Date(patient.last_appointment), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              client.days_until_expiry <= 30
+                              patient.days_until_expiry <= 30
                                 ? "destructive"
-                                : client.days_until_expiry <= 180
+                                : patient.days_until_expiry <= 180
                                 ? "secondary"
                                 : "outline"
                             }
                           >
-                            {client.days_until_expiry} dias
+                            {patient.days_until_expiry} dias
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {client.total_records}
+                          {patient.total_records}
                         </TableCell>
                         <TableCell>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setSelectedClient({
-                                id: client.client_id,
-                                name: client.client_name,
+                              setSelectedPatient({
+                                id: patient.patient_id,
+                                name: patient.client_name,
                               });
                               setArchiveDialogOpen(true);
                             }}
-                            disabled={client.days_until_expiry > 0}
+                            disabled={patient.days_until_expiry > 0}
                           >
                             <Archive className="h-4 w-4 mr-1" />
                             Arquivar
@@ -369,7 +369,7 @@ export default function RetencaoDados() {
               </div>
             </CardHeader>
             <CardContent>
-              {archivedClients && archivedClients.length > 0 ? (
+              {archivedPatients && archivedPatients.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -382,36 +382,36 @@ export default function RetencaoDados() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {archivedClients.map((client) => (
-                      <TableRow key={client.archive_id}>
+                    {archivedPatients.map((patient) => (
+                      <TableRow key={patient.archive_id}>
                         <TableCell className="font-medium">
-                          {client.client_name}
+                          {patient.client_name}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
-                          {client.client_cpf || "—"}
+                          {patient.client_cpf || "—"}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(client.last_appointment), "dd/MM/yyyy")}
+                          {format(new Date(patient.last_appointment), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell>
                           {format(
-                            new Date(client.archived_at),
+                            new Date(patient.archived_at),
                             "dd/MM/yyyy HH:mm",
                             { locale: ptBR }
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {client.total_records}
+                          {patient.total_records}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {client.has_pdf && (
+                            {patient.has_pdf && (
                               <Badge variant="outline">PDF</Badge>
                             )}
-                            {client.has_xml && (
+                            {patient.has_xml && (
                               <Badge variant="outline">XML</Badge>
                             )}
-                            {!client.has_pdf && !client.has_xml && (
+                            {!patient.has_pdf && !patient.has_xml && (
                               <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </div>
@@ -440,7 +440,7 @@ export default function RetencaoDados() {
             </DialogTitle>
             <DialogDescription>
               Você está prestes a arquivar os dados clínicos de{" "}
-              <strong>{selectedClient?.name}</strong>.
+              <strong>{selectedPatient?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
 

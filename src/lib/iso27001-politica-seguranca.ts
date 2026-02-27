@@ -5,6 +5,8 @@
  * Para certificação ISO 27001 e conformidade com LGPD
  */
 
+import { APP_VERSION } from "@/lib/version";
+
 export interface ControleISO {
   id: string;
   dominio: string;
@@ -24,7 +26,7 @@ export const POLITICA_SEGURANCA_INFORMACAO = {
   metadata: {
     titulo: "Política de Segurança da Informação",
     codigo: "PSI-001",
-    versao: "1.0.0",
+    versao: APP_VERSION,
     dataAprovacao: "2026-02-23",
     proximaRevisao: "2027-02-23",
     classificacao: "Interno",
@@ -38,7 +40,7 @@ export const POLITICA_SEGURANCA_INFORMACAO = {
   // ═══════════════════════════════════════════════════════════════════════════
   
   introducao: {
-    objetivo: `Esta Política de Segurança da Informação (PSI) estabelece as diretrizes, responsabilidades e práticas para proteção dos ativos de informação do ClinicaFlow, garantindo a confidencialidade, integridade e disponibilidade das informações de saúde processadas pelo sistema.`,
+    objetivo: `Esta Política de Segurança da Informação (PSI) estabelece as diretrizes, responsabilidades e práticas para proteção dos ativos de informação do ClinicNest, garantindo a confidencialidade, integridade e disponibilidade das informações de saúde processadas pelo sistema.`,
     
     escopo: `Esta política aplica-se a:
 • Todos os colaboradores, terceiros e prestadores de serviço

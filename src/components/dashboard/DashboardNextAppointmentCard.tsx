@@ -28,11 +28,11 @@ export const DashboardNextAppointmentCard = memo(function DashboardNextAppointme
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xl font-bold leading-tight">
-              {nextAppointment.client?.name || "Paciente não informado"}
+              {nextAppointment.patient?.name || "Paciente não informado"}
             </p>
-            {nextAppointment.service?.name && (
+            {nextAppointment.procedure?.name && (
               <p className="mt-0.5 truncate text-sm text-teal-100">
-                {nextAppointment.service.name}
+                {nextAppointment.procedure.name}
               </p>
             )}
           </div>

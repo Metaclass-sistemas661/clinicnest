@@ -56,7 +56,7 @@ import { format, parseISO, isAfter, startOfDay } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { BillReceivable, BillReceivableStatus, Client } from "@/types/database";
+import type { BillReceivable, BillReceivableStatus, Patient } from "@/types/database";
 
 const RECEIVABLE_CATEGORIES = [
   "Serviço Avulso", "Pacote", "Adiantamento", "Reembolso", "Comissão", "Outros",
@@ -69,7 +69,7 @@ const billSchema = z.object({
   amount: z.coerce.number({ invalid_type_error: "Informe um valor válido" }).positive("Valor deve ser positivo"),
   due_date: z.string().min(1, "Vencimento obrigatório"),
   category: z.string().min(1, "Categoria obrigatória"),
-  client_id: z.string().nullable().optional(),
+  patient_id: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
 
@@ -98,7 +98,7 @@ export function FinanceiroBillsReceivableTab() {
   const tenantId = profile?.tenant_id;
 
   const [bills, setBills] = useState<BillReceivable[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
 
@@ -127,14 +127,14 @@ export function FinanceiroBillsReceivableTab() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      const [billsRes, clientsRes] = await Promise.all([
-        db.from("bills_receivable").select("*, client:clients(id, name)").eq("tenant_id", tenantId).order("due_date", { ascending: true }),
+      const [billsRes, patientsRes] = await Promise.all([
+        db.from("bills_receivable").select("*, patient:patients(id, name)").eq("tenant_id", tenantId).order("due_date", { ascending: true }),
         db.from("patients").select("id, name, phone, email, notes, tenant_id, created_at, updated_at").eq("tenant_id", tenantId).eq("is_active", true).order("name").limit(200),
       ]);
       if (billsRes.error) throw billsRes.error;
-      if (clientsRes.error) throw clientsRes.error;
+      if (patientsRes.error) throw patientsRes.error;
       setBills((billsRes.data ?? []) as BillReceivable[]);
-      setClients((clientsRes.data ?? []) as Client[]);
+      setPatients((patientsRes.data ?? []) as Patient[]);
     } catch (err) {
       logger.error("BillsReceivableTab.fetchData", err);
       toast.error("Erro ao carregar contas a receber");
@@ -162,14 +162,14 @@ export function FinanceiroBillsReceivableTab() {
   const totalOverdue = useMemo(() => overdue.reduce((s, b) => s + Number(b.amount), 0), [overdue]);
 
   const openCreate = () => {
-    billForm.reset({ description: "", amount: 0, due_date: "", category: "Serviço Avulso", client_id: null, notes: "" });
+    billForm.reset({ description: "", amount: 0, due_date: "", category: "Serviço Avulso", patient_id: null, notes: "" });
     setEditingBill(null);
     setIsCreateOpen(true);
   };
 
   const openEdit = (bill: BillReceivable) => {
     setEditingBill(bill);
-    billForm.reset({ description: bill.description, amount: bill.amount, due_date: bill.due_date, category: bill.category, client_id: bill.client_id ?? null, notes: bill.notes ?? "" });
+    billForm.reset({ description: bill.description, amount: bill.amount, due_date: bill.due_date, category: bill.category, patient_id: bill.patient_id ?? null, notes: bill.notes ?? "" });
     setIsCreateOpen(true);
   };
 
@@ -177,7 +177,7 @@ export function FinanceiroBillsReceivableTab() {
     if (!tenantId || !profile) return;
     setIsSaving(true);
     try {
-      const payload = { tenant_id: tenantId, description: values.description, amount: values.amount, due_date: values.due_date, category: values.category, client_id: values.client_id ?? null, notes: values.notes ?? null, created_by: profile.id };
+      const payload = { tenant_id: tenantId, description: values.description, amount: values.amount, due_date: values.due_date, category: values.category, patient_id: values.patient_id ?? null, notes: values.notes ?? null, created_by: profile.id };
       if (editingBill) {
         const { error } = await db.from("bills_receivable").update(payload).eq("id", editingBill.id).eq("tenant_id", tenantId);
         if (error) throw error;
@@ -241,7 +241,7 @@ export function FinanceiroBillsReceivableTab() {
       <TableCell>
         <div>
           <p className="font-medium">{bill.description}</p>
-          {bill.client && <p className="text-xs text-muted-foreground">{bill.client.name}</p>}
+          {bill.patient && <p className="text-xs text-muted-foreground">{bill.patient.name}</p>}
         </div>
       </TableCell>
       <TableCell className="text-right font-semibold">{formatCurrency(bill.amount)}</TableCell>
@@ -258,7 +258,7 @@ export function FinanceiroBillsReceivableTab() {
           )}
           {bill.status === "pending" && (
             <Button size="icon" variant="ghost" className="h-7 w-7 text-violet-600 hover:bg-violet-50" title="Gerar cobrança PIX"
-              onClick={() => { setPixBill(bill); setPixData(null); setPixCustomerName(bill.client?.name ?? ""); setPixCustomerCpf(""); }}>
+              onClick={() => { setPixBill(bill); setPixData(null); setPixCustomerName(bill.patient?.name ?? ""); setPixCustomerCpf(""); }}>
               <QrCode className="h-3 w-3" />
             </Button>
           )}
@@ -279,7 +279,7 @@ export function FinanceiroBillsReceivableTab() {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="font-semibold truncate">{bill.description}</p>
-            {bill.client && <p className="text-xs text-muted-foreground">{bill.client.name}</p>}
+            {bill.patient && <p className="text-xs text-muted-foreground">{bill.patient.name}</p>}
           </div>
           {statusBadge(bill.status, bill.due_date)}
         </div>
@@ -425,11 +425,11 @@ export function FinanceiroBillsReceivableTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>Paciente</Label>
-                <Select value={billForm.watch("client_id") ?? "none"} onValueChange={(v) => billForm.setValue("client_id", v === "none" ? null : v)}>
+                <Select value={billForm.watch("patient_id") ?? "none"} onValueChange={(v) => billForm.setValue("patient_id", v === "none" ? null : v)}>
                   <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

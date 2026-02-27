@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 
 type Specialty = "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
 
@@ -183,6 +184,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
   };
 
   return (
+    <FeatureGate feature="aiTranscribe" className={className}>
     <Card className={cn("", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -301,5 +303,6 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         </p>
       </CardContent>
     </Card>
+    </FeatureGate>
   );
 }

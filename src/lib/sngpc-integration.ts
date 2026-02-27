@@ -1,5 +1,5 @@
 // SNGPC Integration Service
-// Integra os dados do ClinicaFlow com a API SNGPC da ANVISA
+// Integra os dados do ClinicNest com a API SNGPC da ANVISA
 
 import { sngpcClient, SNGPCAuthCredentials, SNGPCEnvioResponse, SNGPCConsultaResponse } from './sngpc-api-client';
 import { logger } from '@/lib/logger';

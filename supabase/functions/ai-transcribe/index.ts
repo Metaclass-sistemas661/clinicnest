@@ -5,11 +5,8 @@ import {
   getMedicalTranscriptionJob,
 } from "../_shared/transcribe-client.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
 interface TranscribeRequest {
   action: "start" | "status";
@@ -23,6 +20,8 @@ interface TranscribeRequest {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -74,6 +73,15 @@ serve(async (req) => {
       });
     }
 
+    // Plan gating
+    const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "transcribe");
+    if (!aiAccess.allowed) {
+      return new Response(JSON.stringify({ error: aiAccess.reason }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body: TranscribeRequest = await req.json();
     const { action } = body;
 
@@ -83,6 +91,18 @@ serve(async (req) => {
       if (!audio_base64 || !file_name || !content_type) {
         return new Response(
           JSON.stringify({ error: "audio_base64, file_name, and content_type are required" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      // Limite de tamanho: 10 MB em base64 (~7.5 MB de áudio real)
+      const MAX_AUDIO_SIZE = 10 * 1024 * 1024;
+      if (audio_base64.length > MAX_AUDIO_SIZE) {
+        return new Response(
+          JSON.stringify({ error: "Áudio muito grande. Máximo: ~7.5 MB." }),
           {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -119,6 +139,7 @@ serve(async (req) => {
       });
 
       console.log(`[ai-transcribe] Started job: ${result.jobName} for user: ${user.id}`);
+      logAiUsage(profile.tenant_id, user.id, "transcribe").catch(() => {});
 
       return new Response(
         JSON.stringify({

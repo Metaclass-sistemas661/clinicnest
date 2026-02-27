@@ -47,7 +47,7 @@ import { isMemedConfigured, loadMemedSdk, openMemedPrescription } from "@/lib/me
 import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { generatePrescriptionPdf } from "@/utils/patientDocumentPdf";
 
-interface Client {
+interface Patient {
   id: string;
   name: string;
   phone?: string;
@@ -63,7 +63,7 @@ interface RecentAppointment {
 
 interface Prescription {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   professional_name: string;
   issued_at: string;
@@ -93,7 +93,7 @@ const typeColors: Record<string, string> = {
 };
 
 const emptyForm = {
-  client_id: "",
+  patient_id: "",
   appointment_id: "",
   medications: "",
   instructions: "",
@@ -103,7 +103,7 @@ const emptyForm = {
 
 export default function Receituarios() {
   const { profile, tenant } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -134,12 +134,12 @@ export default function Receituarios() {
 
   useEffect(() => {
     if (profile?.tenant_id) {
-      fetchClients();
+      fetchPatients();
       fetchPrescriptions();
     }
   }, [profile?.tenant_id]);
 
-  const fetchClients = async () => {
+  const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
@@ -148,48 +148,48 @@ export default function Receituarios() {
         .eq("tenant_id", profile.tenant_id)
         .order("name");
       if (error) throw error;
-      setClients((data as Client[]) || []);
+      setPatients((data as Patient[]) || []);
     } catch (err) {
-      logger.error("Error fetching clients:", err);
+      logger.error("Error fetching patients:", err);
     }
   };
 
-  const fetchRecentAppointments = async (clientId: string) => {
-    if (!profile?.tenant_id || !clientId) { setRecentAppointments([]); return; }
+  const fetchRecentAppointments = async (patientId: string) => {
+    if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
       const { data } = await supabase
         .from("appointments")
-        .select("id, scheduled_at, services(name), medical_records(id)")
+        .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
-        .eq("client_id", clientId)
+        .eq("patient_id", patientId)
         .order("scheduled_at", { ascending: false })
         .limit(10);
       setRecentAppointments((data ?? []).map((a: any) => ({
         id: a.id,
         scheduled_at: a.scheduled_at,
-        service_name: a.services?.name ?? "Consulta",
+        service_name: a.procedure?.name ?? "Consulta",
         medical_record_id: Array.isArray(a.medical_records) ? a.medical_records[0]?.id ?? null : a.medical_records?.id ?? null,
       })));
     } catch { setRecentAppointments([]); }
   };
 
-  const handleClientChange = (clientId: string) => {
-    setFormData(f => ({ ...f, client_id: clientId, appointment_id: "" }));
-    void fetchRecentAppointments(clientId);
+  const handlePatientChange = (patientId: string) => {
+    setFormData(f => ({ ...f, patient_id: patientId, appointment_id: "" }));
+    void fetchRecentAppointments(patientId);
   };
 
   const handleMemedPrescription = async () => {
-    if (!formData.client_id) {
+    if (!formData.patient_id) {
       toast.error("Selecione um paciente antes de prescrever via Memed");
       return;
     }
-    const client = clients.find(c => c.id === formData.client_id);
-    if (!client) return;
+    const patient = patients.find(c => c.id === formData.patient_id);
+    if (!patient) return;
 
     setMemedLoading(true);
     try {
       await loadMemedSdk();
-      openMemedPrescription(client.name, client.cpf);
+      openMemedPrescription(client.name, patient.cpf);
       toast.info("Memed aberto — prescreva e salve no painel do Memed");
     } catch (err) {
       logger.error("Memed SDK error:", err);
@@ -203,7 +203,7 @@ export default function Receituarios() {
     if (!memedEnabled) return;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (detail && formData.client_id) {
+      if (detail && formData.patient_id) {
         const meds = Array.isArray(detail)
           ? detail.map((m: any) => `${m.nome || m.name} — ${m.posologia || m.dosage || ""}`).join("\n")
           : typeof detail === "string" ? detail : JSON.stringify(detail);
@@ -214,7 +214,7 @@ export default function Receituarios() {
     };
     window.addEventListener("memed:prescription-saved", handler);
     return () => window.removeEventListener("memed:prescription-saved", handler);
-  }, [memedEnabled, formData.client_id]);
+  }, [memedEnabled, formData.patient_id]);
 
   const fetchPrescriptions = async () => {
     if (!profile?.tenant_id) return;
@@ -222,14 +222,14 @@ export default function Receituarios() {
     try {
       const { data, error } = await supabase
         .from("prescriptions")
-        .select(`*, clients(name), profiles(full_name)`)
+        .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
         .order("issued_at", { ascending: false });
       if (error) throw error;
       const mapped: Prescription[] = (data || []).map((r: any) => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
         professional_name: r.profiles?.full_name ?? "—",
         issued_at: r.issued_at,
         medications: r.medications,
@@ -252,7 +252,7 @@ export default function Receituarios() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.medications.trim()) { toast.error("Adicione ao menos um medicamento"); return; }
 
     setIsSaving(true);
@@ -260,7 +260,7 @@ export default function Receituarios() {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
       const { error } = await supabase.from("prescriptions").insert({
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
+        patient_id: formData.patient_id,
         professional_id: profile!.id,
         appointment_id: formData.appointment_id || null,
         medical_record_id: selectedAppt?.medical_record_id || null,
@@ -303,7 +303,7 @@ export default function Receituarios() {
     const cnpj = tenantAny?.cnpj || "";
     const responsibleDoctor = tenantAny?.responsible_doctor || "";
     const responsibleCrm = tenantAny?.responsible_crm || "";
-    const client = clients.find((c) => c.id === p.client_id);
+    const patient = patients.find((c) => c.id === p.patient_id);
 
     const typeLabels: Record<string, string> = {
       simples: "RECEITUÁRIO SIMPLES",
@@ -386,7 +386,7 @@ export default function Receituarios() {
 
   <div class="patient-section">
     <div class="row"><span class="label">Paciente:</span><span class="value">${p.client_name}</span></div>
-    ${client?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${client.cpf}</span></div>` : ""}
+    ${patient?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${patient.cpf}</span></div>` : ""}
     <div class="row">
       <span class="label">Data:</span><span class="value">${issuedDate}</span>
       <span class="label" style="margin-left:16px;">Validade:</span><span class="value">${p.validity_days} dias</span>
@@ -458,7 +458,7 @@ export default function Receituarios() {
           medications: signingPrescription.medications,
           instructions: signingPrescription.instructions,
           validity_days: signingPrescription.validity_days,
-          client_id: signingPrescription.client_id,
+          patient_id: signingPrescription.patient_id,
           issued_at: signingPrescription.issued_at,
         });
 
@@ -517,7 +517,7 @@ export default function Receituarios() {
   };
 
   const handleDownloadPdf = (p: Prescription) => {
-    const client = clients.find((c) => c.id === p.client_id);
+    const patient = patients.find((c) => c.id === p.patient_id);
     const expiresAt = new Date(new Date(p.issued_at).getTime() + p.validity_days * 24 * 60 * 60 * 1000);
     
     generatePrescriptionPdf({
@@ -532,7 +532,7 @@ export default function Receituarios() {
       professional_uf: p.signed_by_uf,
       clinic_name: tenant?.name || "Clínica",
       patient_name: p.client_name,
-      patient_cpf: client?.cpf,
+      patient_cpf: patient?.cpf,
       digital_hash: p.digital_signature,
       signed_at: p.signed_at,
     });
@@ -557,7 +557,7 @@ export default function Receituarios() {
       actions={
         <div className="flex gap-2">
           {memedEnabled && (
-            <Button variant="outline" onClick={handleMemedPrescription} disabled={memedLoading || !formData.client_id}>
+            <Button variant="outline" onClick={handleMemedPrescription} disabled={memedLoading || !formData.patient_id}>
               {memedLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
               Prescrever via Memed
             </Button>
@@ -707,10 +707,10 @@ export default function Receituarios() {
           <FormDrawerSection title="Paciente">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={formData.client_id || undefined} onValueChange={handleClientChange}>
+              <Select value={formData.patient_id || undefined} onValueChange={handlePatientChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {patients.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

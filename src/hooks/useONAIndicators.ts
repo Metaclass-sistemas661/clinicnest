@@ -50,7 +50,7 @@ export interface AdverseEvent {
   tipo: string;
   tipo_outro?: string;
   severidade: string;
-  client_id?: string;
+  patient_id?: string;
   professional_id?: string;
   setor?: string;
   local_evento?: string;
@@ -83,7 +83,7 @@ export interface CreateAdverseEventInput {
   tipo: string;
   tipo_outro?: string;
   severidade: string;
-  client_id?: string;
+  patient_id?: string;
   professional_id?: string;
   setor?: string;
   local_evento?: string;
@@ -184,7 +184,7 @@ export function useAdverseEvents(status?: string) {
         .from("adverse_events")
         .select(`
           *,
-          client:clients(name),
+          patient:patients(name),
           professional:professionals(name)
         `)
         .order("data_evento", { ascending: false });
@@ -210,7 +210,7 @@ export function useAdverseEvent(id: string) {
         .from("adverse_events")
         .select(`
           *,
-          client:clients(name),
+          patient:patients(name),
           professional:professionals(name)
         `)
         .eq("id", id)

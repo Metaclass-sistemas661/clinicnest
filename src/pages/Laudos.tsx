@@ -41,7 +41,7 @@ import {
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-interface Client {
+interface Patient {
   id: string;
   name: string;
 }
@@ -55,7 +55,7 @@ interface RecentAppointment {
 
 interface Laudo {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   exam_type: string;
   exam_name: string;
@@ -86,7 +86,7 @@ const StatusIcon = ({ status }: { status: Laudo["status"] }) => {
 };
 
 const emptyForm = {
-  client_id: "",
+  patient_id: "",
   appointment_id: "",
   exam_type: "laboratorial",
   exam_name: "",
@@ -101,7 +101,7 @@ const emptyForm = {
 
 export default function Laudos() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [laudos, setLaudos] = useState<Laudo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"" | Laudo["status"]>("");
@@ -114,12 +114,12 @@ export default function Laudos() {
 
   useEffect(() => {
     if (profile?.tenant_id) {
-      fetchClients();
+      fetchPatients();
       fetchLaudos();
     }
   }, [profile?.tenant_id]);
 
-  const fetchClients = async () => {
+  const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
@@ -128,34 +128,34 @@ export default function Laudos() {
         .eq("tenant_id", profile.tenant_id)
         .order("name");
       if (error) throw error;
-      setClients((data as Client[]) || []);
+      setPatients((data as Patient[]) || []);
     } catch (err) {
-      logger.error("Error fetching clients:", err);
+      logger.error("Error fetching patients:", err);
     }
   };
 
-  const fetchRecentAppointments = async (clientId: string) => {
-    if (!profile?.tenant_id || !clientId) { setRecentAppointments([]); return; }
+  const fetchRecentAppointments = async (patientId: string) => {
+    if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
       const { data } = await supabase
         .from("appointments")
-        .select("id, scheduled_at, services(name), medical_records(id)")
+        .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
-        .eq("client_id", clientId)
+        .eq("patient_id", patientId)
         .order("scheduled_at", { ascending: false })
         .limit(10);
       setRecentAppointments((data ?? []).map((a: any) => ({
         id: a.id,
         scheduled_at: a.scheduled_at,
-        service_name: a.services?.name ?? "Consulta",
+        service_name: a.procedure?.name ?? "Consulta",
         medical_record_id: Array.isArray(a.medical_records) ? a.medical_records[0]?.id ?? null : a.medical_records?.id ?? null,
       })));
     } catch { setRecentAppointments([]); }
   };
 
-  const handleClientChange = (clientId: string) => {
-    setFormData(f => ({ ...f, client_id: clientId, appointment_id: "" }));
-    void fetchRecentAppointments(clientId);
+  const handlePatientChange = (patientId: string) => {
+    setFormData(f => ({ ...f, patient_id: patientId, appointment_id: "" }));
+    void fetchRecentAppointments(patientId);
   };
 
   const fetchLaudos = async () => {
@@ -164,14 +164,14 @@ export default function Laudos() {
     try {
       const { data, error } = await supabase
         .from("exam_results")
-        .select(`*, clients(name), profiles(full_name)`)
+        .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const mapped: Laudo[] = (data || []).map((r: any) => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
         exam_type: r.exam_type,
         exam_name: r.exam_name,
         requested_by: r.profiles?.full_name ?? "—",
@@ -193,7 +193,7 @@ export default function Laudos() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.exam_name.trim()) { toast.error("Nome do exame é obrigatório"); return; }
 
     setIsSaving(true);
@@ -201,7 +201,7 @@ export default function Laudos() {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
       const { error } = await supabase.from("exam_results").insert({
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
+        patient_id: formData.patient_id,
         requested_by: profile!.id,
         appointment_id: formData.appointment_id || null,
         medical_record_id: selectedAppt?.medical_record_id || null,
@@ -418,10 +418,10 @@ export default function Laudos() {
           <FormDrawerSection title="Paciente">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={formData.client_id} onValueChange={handleClientChange}>
+              <Select value={formData.patient_id} onValueChange={handlePatientChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {patients.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

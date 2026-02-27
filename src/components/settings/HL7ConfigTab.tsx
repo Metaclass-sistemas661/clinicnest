@@ -78,7 +78,7 @@ export function HL7ConfigTab() {
     remote_port: "",
     webhook_url: "",
     hl7_version: "2.5",
-    sending_application: "CLINICAFLOW",
+    sending_application: "CLINICNEST",
     sending_facility: "",
     receiving_application: "",
     receiving_facility: "",
@@ -152,7 +152,7 @@ export function HL7ConfigTab() {
     setShowNewDialog(false);
     setNewConnection({
       name: "", description: "", connection_type: "inbound", remote_host: "", remote_port: "",
-      webhook_url: "", hl7_version: "2.5", sending_application: "CLINICAFLOW",
+      webhook_url: "", hl7_version: "2.5", sending_application: "CLINICNEST",
       sending_facility: "", receiving_application: "", receiving_facility: "",
     });
     loadData();

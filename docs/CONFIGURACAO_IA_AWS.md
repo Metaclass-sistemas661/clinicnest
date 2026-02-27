@@ -1,8 +1,8 @@
-# Guia Completo de Configuração da IA — ClinicaFlow
+# Guia Completo de Configuração da IA — ClinicNest
 
 ## Visão Geral
 
-O ClinicaFlow usa **AWS Bedrock** (Claude 3 Haiku) para funcionalidades de IA e **Amazon Transcribe Medical** para transcrição de áudio médico.
+O ClinicNest usa **AWS Bedrock** (Claude 3 Haiku) para funcionalidades de IA e **Amazon Transcribe Medical** para transcrição de áudio médico.
 
 ### Funcionalidades de IA Disponíveis
 
@@ -24,7 +24,7 @@ O ClinicaFlow usa **AWS Bedrock** (Claude 3 Haiku) para funcionalidades de IA e 
 3. Preencha os dados:
    - Email
    - Senha
-   - Nome da conta (ex: "ClinicaFlow-Producao")
+   - Nome da conta (ex: "ClinicNest-Producao")
 4. Adicione um cartão de crédito (obrigatório, mas só cobra o que usar)
 5. Verifique seu telefone
 6. Escolha o plano **"Basic Support - Free"**
@@ -77,7 +77,7 @@ O Transcribe Medical precisa de um bucket S3 para armazenar os arquivos de áudi
 2. Clique em **"S3"**
 3. Clique em **"Create bucket"** (Criar bucket)
 4. Configure:
-   - **Bucket name:** `clinicaflow-audio-transcriptions` (ou outro nome único)
+   - **Bucket name:** `ClinicNest-audio-transcriptions` (ou outro nome único)
    - **AWS Region:** `us-east-1` (mesma região do Bedrock)
    - **Object Ownership:** ACLs disabled (recomendado)
    - **Block Public Access:** Mantenha TUDO marcado (bloqueado)
@@ -146,38 +146,38 @@ Para não acumular arquivos de áudio indefinidamente:
                 "s3:DeleteObject"
             ],
             "Resource": [
-                "arn:aws:s3:::clinicaflow-audio-transcriptions/*"
+                "arn:aws:s3:::ClinicNest-audio-transcriptions/*"
             ]
         }
     ]
 }
 ```
 
-> ⚠️ **IMPORTANTE:** Substitua `clinicaflow-audio-transcriptions` pelo nome do seu bucket!
+> ⚠️ **IMPORTANTE:** Substitua `ClinicNest-audio-transcriptions` pelo nome do seu bucket!
 
 7. Clique em **"Next"**
-8. **Policy name:** `ClinicaFlow-AI-Policy`
+8. **Policy name:** `ClinicNest-AI-Policy`
 9. Clique em **"Create policy"**
 
 ### 5.2 Criar Usuário IAM
 
 1. No menu lateral do IAM, clique em **"Users"**
 2. Clique em **"Create user"**
-3. **User name:** `clinicaflow-ai-service`
+3. **User name:** `ClinicNest-ai-service`
 4. Clique em **"Next"**
 5. Selecione **"Attach policies directly"**
-6. Busque e marque **"ClinicaFlow-AI-Policy"**
+6. Busque e marque **"ClinicNest-AI-Policy"**
 7. Clique em **"Next"**
 8. Clique em **"Create user"**
 
 ### 5.3 Criar Access Key
 
-1. Clique no usuário **"clinicaflow-ai-service"**
+1. Clique no usuário **"ClinicNest-ai-service"**
 2. Vá na aba **"Security credentials"**
 3. Em **"Access keys"**, clique em **"Create access key"**
 4. Selecione **"Application running outside AWS"**
 5. Clique em **"Next"**
-6. **Description:** `ClinicaFlow Supabase Edge Functions`
+6. **Description:** `ClinicNest Supabase Edge Functions`
 7. Clique em **"Create access key"**
 8. **COPIE E SALVE** as credenciais:
    - **Access key ID:** `AKIA...` (começa com AKIA)
@@ -200,7 +200,7 @@ Para não acumular arquivos de áudio indefinidamente:
 | `AWS_ACCESS_KEY_ID` | Sua Access Key (AKIA...) |
 | `AWS_SECRET_ACCESS_KEY` | Seu Secret Access Key |
 | `AWS_REGION` | `us-east-1` |
-| `AWS_S3_BUCKET` | `clinicaflow-audio-transcriptions` |
+| `AWS_S3_BUCKET` | `ClinicNest-audio-transcriptions` |
 
 ### 6.2 Via CLI (Alternativa)
 
@@ -208,7 +208,7 @@ Para não acumular arquivos de áudio indefinidamente:
 npx supabase secrets set AWS_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
 npx supabase secrets set AWS_SECRET_ACCESS_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 npx supabase secrets set AWS_REGION=us-east-1
-npx supabase secrets set AWS_S3_BUCKET=clinicaflow-audio-transcriptions
+npx supabase secrets set AWS_S3_BUCKET=ClinicNest-audio-transcriptions
 ```
 
 ---
@@ -300,7 +300,7 @@ curl -X POST 'https://cxficwktocdouerhamhh.supabase.co/functions/v1/ai-cid-sugge
 2. Clique em **"Create budget"**
 3. Selecione **"Cost budget"**
 4. Configure:
-   - **Budget name:** `ClinicaFlow-AI-Budget`
+   - **Budget name:** `ClinicNest-AI-Budget`
    - **Budget amount:** $50 (ou o valor desejado)
    - **Alert threshold:** 80%
    - **Email:** seu email
@@ -363,4 +363,4 @@ Se tiver problemas:
 
 ---
 
-*Documento criado em 25/02/2026 — ClinicaFlow v1.0*
+*Documento criado em 25/02/2026 — ClinicNest v1.0*

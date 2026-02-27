@@ -6,7 +6,7 @@ import { useEffect } from "react";
 
 export interface PatientCall {
   call_id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   call_number: number;
   priority: number;
@@ -20,7 +20,7 @@ export interface PatientCall {
 
 export interface CurrentCall {
   call_id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   call_number: number;
   room_name: string | null;
@@ -218,7 +218,7 @@ export function useAddToQueue() {
 
   return useMutation({
     mutationFn: async ({
-      clientId,
+      patientId,
       appointmentId,
       triageId,
       roomId,
@@ -226,7 +226,7 @@ export function useAddToQueue() {
       priority = 5,
       priorityLabel,
     }: {
-      clientId: string;
+      patientId: string;
       appointmentId?: string;
       triageId?: string;
       roomId?: string;
@@ -236,7 +236,7 @@ export function useAddToQueue() {
     }) => {
       const { data, error } = await supabase.rpc("add_patient_to_queue", {
         p_tenant_id: tenantId,
-        p_client_id: clientId,
+        p_client_id: patientId,
         p_appointment_id: appointmentId || null,
         p_triage_id: triageId || null,
         p_room_id: roomId || null,

@@ -547,7 +547,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
           <p>
             O NFE.io é um serviço intermediário que simplifica a emissão de NFS-e em mais de 2.000 prefeituras brasileiras. 
             O custo médio é de R$ 0,15 a R$ 0,30 por nota emitida. A clínica contrata diretamente com o NFE.io e configura 
-            as credenciais aqui no ClinicaFlow.
+            as credenciais aqui no ClinicNest.
           </p>
         </div>
       </div>

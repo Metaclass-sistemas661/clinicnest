@@ -30,8 +30,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface PatientConsentsViewerProps {
-  clientId: string;
-  clientName: string;
+  patientId: string;
+  patientName: string;
   tenantId: string;
 }
 
@@ -40,7 +40,7 @@ interface ConsentWithTemplate extends PatientConsent {
   template_slug?: string;
 }
 
-export function PatientConsentsViewer({ clientId, clientName, tenantId }: PatientConsentsViewerProps) {
+export function PatientConsentsViewer({ patientId, patientName, tenantId }: PatientConsentsViewerProps) {
   const [consents, setConsents] = useState<ConsentWithTemplate[]>([]);
   const [templates, setTemplates] = useState<ConsentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +55,7 @@ export function PatientConsentsViewer({ clientId, clientName, tenantId }: Patien
         supabase
           .from("patient_consents")
           .select("*")
-          .eq("client_id", clientId)
+          .eq("patient_id", patientId)
           .order("signed_at", { ascending: false }),
         supabase
           .from("consent_templates")
@@ -84,7 +84,7 @@ export function PatientConsentsViewer({ clientId, clientName, tenantId }: Patien
     } finally {
       setIsLoading(false);
     }
-  }, [clientId, tenantId]);
+  }, [patientId, tenantId]);
 
   useEffect(() => {
     fetchData();
@@ -136,7 +136,7 @@ export function PatientConsentsViewer({ clientId, clientName, tenantId }: Patien
   <div class="stamp">✅ TERMO ASSINADO DIGITALMENTE COM RECONHECIMENTO FACIAL</div>
 
   <div class="meta">
-    <p><strong>Paciente:</strong> ${clientName}</p>
+    <p><strong>Paciente:</strong> ${patientName}</p>
     <p><strong>Termo:</strong> ${consent.template_title}</p>
     <p><strong>Data/Hora:</strong> ${format(new Date(consent.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}</p>
     <p><strong>Endereço IP:</strong> ${consent.ip_address || "Não registrado"}</p>
@@ -161,7 +161,7 @@ export function PatientConsentsViewer({ clientId, clientName, tenantId }: Patien
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `comprovante-${consent.template_slug || "termo"}-${clientName.replace(/\s+/g, "_")}.html`;
+    a.download = `comprovante-${consent.template_slug || "termo"}-${patientName.replace(/\s+/g, "_")}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };

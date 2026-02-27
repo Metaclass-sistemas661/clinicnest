@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import type { CommissionRule } from "./CommissionRuleCard";
 
-interface Service {
+interface ProcedureOption {
   id: string;
   name: string;
 }
@@ -91,14 +91,14 @@ export function CommissionRuleForm({
 }: CommissionRuleFormProps) {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
   const [insurances, setInsurances] = useState<Insurance[]>([]);
 
   // Form state
   const [ruleType, setRuleType] = useState<string>("default");
   const [calculationType, setCalculationType] = useState<string>("percentage");
   const [value, setValue] = useState<string>("30");
-  const [serviceId, setServiceId] = useState<string>("");
+  const [procedureId, setServiceId] = useState<string>("");
   const [insuranceId, setInsuranceId] = useState<string>("");
   const [procedureCode, setProcedureCode] = useState<string>("");
   const [isInverted, setIsInverted] = useState(false);
@@ -115,7 +115,7 @@ export function CommissionRuleForm({
 
     const loadData = async () => {
       try {
-        const [servicesRes, insurancesRes] = await Promise.all([
+        const [proceduresRes, insurancesRes] = await Promise.all([
           supabase
             .from("procedures")
             .select("id, name")
@@ -130,7 +130,7 @@ export function CommissionRuleForm({
             .order("name"),
         ]);
 
-        if (servicesRes.data) setServices(servicesRes.data);
+        if (proceduresRes.data) setProcedures(proceduresRes.data);
         if (insurancesRes.data) setInsurances(insurancesRes.data);
       } catch (error) {
         logger.error("Error loading form data:", error);
@@ -146,7 +146,7 @@ export function CommissionRuleForm({
       setRuleType(rule.rule_type);
       setCalculationType(rule.calculation_type);
       setValue(String(rule.value));
-      setServiceId(rule.service_id || "");
+      setServiceId(rule.procedure_id || "");
       setInsuranceId(rule.insurance_id || "");
       setProcedureCode(rule.procedure_code || "");
       setIsInverted(rule.is_inverted);
@@ -198,7 +198,7 @@ export function CommissionRuleForm({
       toast.error("Selecione um convênio");
       return false;
     }
-    if (ruleType === "service" && !serviceId) {
+    if (ruleType === "service" && !procedureId) {
       toast.error("Selecione um serviço");
       return false;
     }
@@ -228,7 +228,7 @@ export function CommissionRuleForm({
         rule_type: ruleType,
         calculation_type: calculationType,
         value: calculationType === "tiered" ? 0 : Number(value),
-        service_id: ruleType === "service" ? serviceId : null,
+        procedure_id: ruleType === "service" ? procedureId : null,
         insurance_id: ruleType === "insurance" ? insuranceId : null,
         procedure_code: ruleType === "procedure" ? procedureCode : null,
         tier_config: calculationType === "tiered" ? tiers : null,
@@ -324,12 +324,12 @@ export function CommissionRuleForm({
           {ruleType === "service" && (
             <div className="space-y-2">
               <Label>Serviço</Label>
-              <Select value={serviceId} onValueChange={setServiceId}>
+              <Select value={procedureId} onValueChange={setServiceId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o procedimento" />
                 </SelectTrigger>
                 <SelectContent>
-                  {services.map((svc) => (
+                  {procedures.map((svc) => (
                     <SelectItem key={svc.id} value={svc.id}>
                       {svc.name}
                     </SelectItem>

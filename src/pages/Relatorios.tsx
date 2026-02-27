@@ -54,12 +54,12 @@ type InactiveCutoff = "30" | "60" | "90" | "180";
 interface ApptRow {
   id: string;
   scheduled_at: string;
-  client_id: string | null;
+  patient_id: string | null;
   professional_id: string | null;
   status: string;
-  services: { id: string; name: string; price: number; duration_minutes?: number } | null;
+  procedure: { id: string; name: string; price: number; duration_minutes?: number } | null;
   profiles: { full_name: string | null } | null;
-  clients: { id: string; name: string | null; phone: string | null; created_at?: string; referral_source?: string | null } | null;
+  patient: { id: string; name: string | null; phone: string | null; created_at?: string; referral_source?: string | null } | null;
 }
 
 interface ChartPoint {
@@ -68,7 +68,7 @@ interface ChartPoint {
   count: number;
 }
 
-interface ServiceRow {
+interface ProcedureRow {
   id: string;
   name: string;
   count: number;
@@ -80,10 +80,10 @@ interface ProfRow {
   name: string;
   count: number;
   revenue: number;
-  clients: number;
+  patients: number;
 }
 
-interface InactiveClient {
+interface InactivePatient {
   id: string;
   name: string | null;
   phone: string | null;
@@ -117,7 +117,7 @@ function groupByDay(appts: ApptRow[]): ChartPoint[] {
   appts.forEach((a) => {
     const day = format(parseISO(a.scheduled_at), "dd/MM", { locale: ptBR });
     const prev = map.get(day) ?? { revenue: 0, count: 0 };
-    map.set(day, { revenue: prev.revenue + (a.services?.price ?? 0), count: prev.count + 1 });
+    map.set(day, { revenue: prev.revenue + (a.procedure?.price ?? 0), count: prev.count + 1 });
   });
   return Array.from(map, ([label, v]) => ({ label, ...v }));
 }
@@ -128,7 +128,7 @@ function groupByWeek(appts: ApptRow[]): ChartPoint[] {
     const wStart = startOfWeek(parseISO(a.scheduled_at), { weekStartsOn: 1 });
     const label = format(wStart, "dd/MM", { locale: ptBR });
     const prev = map.get(label) ?? { revenue: 0, count: 0 };
-    map.set(label, { revenue: prev.revenue + (a.services?.price ?? 0), count: prev.count + 1 });
+    map.set(label, { revenue: prev.revenue + (a.procedure?.price ?? 0), count: prev.count + 1 });
   });
   return Array.from(map, ([label, v]) => ({ label, ...v }));
 }
@@ -139,7 +139,7 @@ function groupByMonth(appts: ApptRow[]): ChartPoint[] {
     const mStart = startOfMonth(parseISO(a.scheduled_at));
     const label = format(mStart, "MMM/yy", { locale: ptBR });
     const prev = map.get(label) ?? { revenue: 0, count: 0 };
-    map.set(label, { revenue: prev.revenue + (a.services?.price ?? 0), count: prev.count + 1 });
+    map.set(label, { revenue: prev.revenue + (a.procedure?.price ?? 0), count: prev.count + 1 });
   });
   return Array.from(map, ([label, v]) => ({ label, ...v }));
 }
@@ -150,11 +150,11 @@ function buildChartData(appts: ApptRow[], period: Period): ChartPoint[] {
   return groupByWeek(appts);
 }
 
-function buildServiceRanking(appts: ApptRow[]): ServiceRow[] {
-  const map = new Map<string, ServiceRow>();
+function buildProcedureRanking(appts: ApptRow[]): ProcedureRow[] {
+  const map = new Map<string, ProcedureRow>();
   appts.forEach((a) => {
-    if (!a.services) return;
-    const s = a.services;
+    if (!a.procedure) return;
+    const s = a.procedure;
     const prev = map.get(s.id) ?? { id: s.id, name: s.name, count: 0, revenue: 0 };
     map.set(s.id, { ...prev, count: prev.count + 1, revenue: prev.revenue + s.price });
   });
@@ -162,23 +162,23 @@ function buildServiceRanking(appts: ApptRow[]): ServiceRow[] {
 }
 
 function buildProfRanking(appts: ApptRow[]): ProfRow[] {
-  const map = new Map<string, ProfRow & { clientSet: Set<string> }>();
+  const map = new Map<string, ProfRow & { patientSet: Set<string> }>();
   appts.forEach((a) => {
     const pid = a.professional_id;
     if (!pid) return;
     const name = a.profiles?.full_name ?? "Desconhecido";
     const prev = map.get(pid) ?? {
-      id: pid, name, count: 0, revenue: 0, clients: 0, clientSet: new Set<string>(),
+      id: pid, name, count: 0, revenue: 0, patients: 0, patientSet: new Set<string>(),
     };
-    if (a.client_id) prev.clientSet.add(a.client_id);
+    if (a.patient_id) prev.patientSet.add(a.patient_id);
     map.set(pid, {
       ...prev,
       count: prev.count + 1,
-      revenue: prev.revenue + (a.services?.price ?? 0),
+      revenue: prev.revenue + (a.procedure?.price ?? 0),
     });
   });
   return Array.from(map.values())
-    .map(({ clientSet, ...rest }) => ({ ...rest, clients: clientSet.size }))
+    .map(({ patientSet, ...rest }) => ({ ...rest, patients: patientSet.size }))
     .sort((a, b) => b.revenue - a.revenue);
 }
 
@@ -249,21 +249,21 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 function TabVisaoGeral({ appts, prevAppts = [], period, isLoading }: { appts: ApptRow[]; prevAppts?: ApptRow[]; period: Period; isLoading: boolean }) {
   const chartData = useMemo(() => buildChartData(appts, period), [appts, period]);
 
-  const totalRevenue = useMemo(() => appts.reduce((s, a) => s + (a.services?.price ?? 0), 0), [appts]);
+  const totalRevenue = useMemo(() => appts.reduce((s, a) => s + (a.procedure?.price ?? 0), 0), [appts]);
   const totalAppts = appts.length;
-  const uniqueClients = useMemo(() => new Set(appts.map((a) => a.client_id).filter(Boolean)).size, [appts]);
+  const uniquePatients = useMemo(() => new Set(appts.map((a) => a.patient_id).filter(Boolean)).size, [appts]);
   const avgTicket = totalAppts > 0 ? totalRevenue / totalAppts : 0;
 
   // Métricas do período anterior para comparativo
-  const prevTotalRevenue = useMemo(() => prevAppts.reduce((s, a) => s + (a.services?.price ?? 0), 0), [prevAppts]);
+  const prevTotalRevenue = useMemo(() => prevAppts.reduce((s, a) => s + (a.procedure?.price ?? 0), 0), [prevAppts]);
   const prevTotalAppts = prevAppts.length;
-  const prevUniqueClients = useMemo(() => new Set(prevAppts.map((a) => a.client_id).filter(Boolean)).size, [prevAppts]);
+  const prevUniquePatients = useMemo(() => new Set(prevAppts.map((a) => a.patient_id).filter(Boolean)).size, [prevAppts]);
   const prevAvgTicket = prevTotalAppts > 0 ? prevTotalRevenue / prevTotalAppts : 0;
 
   // Calcular variações
   const revenueChange = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
   const apptsChange = prevTotalAppts > 0 ? ((totalAppts - prevTotalAppts) / prevTotalAppts) * 100 : 0;
-  const clientsChange = prevUniqueClients > 0 ? ((uniqueClients - prevUniqueClients) / prevUniqueClients) * 100 : 0;
+  const patientsChange = prevUniquePatients > 0 ? ((uniquePatients - prevUniquePatients) / prevUniquePatients) * 100 : 0;
   const ticketChange = prevAvgTicket > 0 ? ((avgTicket - prevAvgTicket) / prevAvgTicket) * 100 : 0;
 
   const formatChange = (change: number) => {
@@ -327,12 +327,12 @@ function TabVisaoGeral({ appts, prevAppts = [], period, isLoading }: { appts: Ap
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Pacientes Únicos</p>
-                <p className="text-2xl font-bold text-foreground">{uniqueClients}</p>
+                <p className="text-2xl font-bold text-foreground">{uniquePatients}</p>
                 <div className="flex items-center gap-1">
-                  {clientsChange !== 0 && (
-                    <span className={`text-xs font-medium flex items-center gap-0.5 ${clientsChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      {clientsChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      {formatChange(clientsChange)}
+                  {patientsChange !== 0 && (
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${patientsChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {patientsChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {formatChange(patientsChange)}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground">no período</span>
@@ -411,11 +411,11 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
   const [cutoff, setCutoff] = useState<InactiveCutoff>("60");
   const [loaded, setLoaded] = useState(false);
 
-  const { data: inactiveClients = [], isFetching } = useQuery({
+  const { data: inactivePatients = [], isFetching } = useQuery({
     queryKey: ["relatorios-inativos", tenantId, cutoff],
     enabled: loaded,
     staleTime: 5 * 60 * 1000,
-    queryFn: async (): Promise<InactiveClient[]> => {
+    queryFn: async (): Promise<InactivePatient[]> => {
       const db = supabase as unknown as {
         from: (t: string) => ReturnType<typeof supabase.from>;
       };
@@ -423,43 +423,43 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
       const cutoffDate = subDays(new Date(), Number(cutoff));
       const windowDate = subDays(new Date(), 180);
 
-      // Appointments in the last 180 days → active client IDs
+      // Appointments in the last 180 days → active patient IDs
       const { data: recentAppts } = await (db as any)
         .from("appointments")
-        .select("client_id, scheduled_at")
+        .select("patient_id, scheduled_at")
         .eq("tenant_id", tenantId)
         .eq("status", "completed")
         .gte("scheduled_at", windowDate.toISOString());
 
       const activeIds = new Set<string>(
         (recentAppts ?? [])
-          .filter((a: { client_id: string | null; scheduled_at: string }) => {
-            if (!a.client_id) return false;
+          .filter((a: { patient_id: string | null; scheduled_at: string }) => {
+            if (!a.patient_id) return false;
             return parseISO(a.scheduled_at) >= cutoffDate;
           })
-          .map((a: { client_id: string }) => a.client_id)
+          .map((a: { patient_id: string }) => a.patient_id)
       );
 
-      // All visits per client in window (for lastVisit + visitCount)
+      // All visits per patient in window (for lastVisit + visitCount)
       const visitMap = new Map<string, { lastVisit: string; count: number }>();
-      (recentAppts ?? []).forEach((a: { client_id: string | null; scheduled_at: string }) => {
-        if (!a.client_id) return;
-        const prev = visitMap.get(a.client_id);
+      (recentAppts ?? []).forEach((a: { patient_id: string | null; scheduled_at: string }) => {
+        if (!a.patient_id) return;
+        const prev = visitMap.get(a.patient_id);
         if (!prev || a.scheduled_at > prev.lastVisit) {
-          visitMap.set(a.client_id, { lastVisit: a.scheduled_at, count: (prev?.count ?? 0) + 1 });
+          visitMap.set(a.patient_id, { lastVisit: a.scheduled_at, count: (prev?.count ?? 0) + 1 });
         } else {
-          visitMap.set(a.client_id, { ...prev, count: prev.count + 1 });
+          visitMap.set(a.patient_id, { ...prev, count: prev.count + 1 });
         }
       });
 
-      // All clients
+      // All patients
       const { data: allClients } = await (supabase as any)
         .from("patients")
         .select("id, name, phone, email")
         .eq("tenant_id", tenantId)
         .eq("is_active", true);
 
-      const result: InactiveClient[] = (allClients ?? [])
+      const result: InactivePatient[] = (allClients ?? [])
         .filter((c: { id: string }) => !activeIds.has(c.id))
         .map((c: { id: string; name: string | null; phone: string | null; email: string | null }) => {
           const visit = visitMap.get(c.id);
@@ -472,7 +472,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
             visitCount: visit?.count ?? 0,
           };
         })
-        .sort((a: InactiveClient, b: InactiveClient) => {
+        .sort((a: InactivePatient, b: InactivePatient) => {
           if (!a.lastVisit && !b.lastVisit) return 0;
           if (!a.lastVisit) return 1;
           if (!b.lastVisit) return -1;
@@ -485,7 +485,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
 
   const handleExport = useCallback(() => {
     downloadCsv(
-      inactiveClients.map((c) => ({
+      inactivePatients.map((c) => ({
         Nome: c.name ?? "",
         Telefone: c.phone ?? "",
         Email: c.email ?? "",
@@ -496,7 +496,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
       })),
       `clientes-inativos-${cutoff}d.csv`
     );
-  }, [inactiveClients, cutoff]);
+  }, [inactivePatients, cutoff]);
 
   const whatsappLink = (phone: string | null) => {
     if (!phone) return null;
@@ -528,7 +528,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
             <Users className="h-4 w-4" /> Carregar Relatório
           </Button>
         ) : (
-          <Button variant="outline" onClick={handleExport} disabled={isFetching || !inactiveClients.length} className="gap-2 sm:ml-auto">
+          <Button variant="outline" onClick={handleExport} disabled={isFetching || !inactivePatients.length} className="gap-2 sm:ml-auto">
             <Download className="h-4 w-4" /> Exportar CSV
           </Button>
         )}
@@ -556,14 +556,14 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
         <>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-sm">
-              {inactiveClients.length} paciente{inactiveClients.length !== 1 ? "s" : ""} inativo{inactiveClients.length !== 1 ? "s" : ""}
+              {inactivePatients.length} paciente{inactivePatients.length !== 1 ? "s" : ""} inativo{inactivePatients.length !== 1 ? "s" : ""}
             </Badge>
-            {inactiveClients.length > 0 && (
+            {inactivePatients.length > 0 && (
               <span className="text-xs text-muted-foreground">sem visita há mais de {cutoff} dias</span>
             )}
           </div>
 
-          {inactiveClients.length === 0 ? (
+          {inactivePatients.length === 0 ? (
             <Card>
               <CardContent className="flex h-48 items-center justify-center text-muted-foreground text-sm">
                 Nenhum paciente inativo no período selecionado.
@@ -572,7 +572,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
           ) : (
             <Card>
               <div className="divide-y">
-                {inactiveClients.map((c) => {
+                {inactivePatients.map((c) => {
                   const wa = whatsappLink(c.phone);
                   return (
                     <div key={c.id} className="flex items-center justify-between px-5 py-3 hover:bg-muted/40 transition-colors">
@@ -620,7 +620,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
 // ─── Serviços Tab ─────────────────────────────────────────────────────────────
 
 function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolean }) {
-  const ranking = useMemo(() => buildServiceRanking(appts), [appts]);
+  const ranking = useMemo(() => buildProcedureRanking(appts), [appts]);
   const maxRevenue = ranking[0]?.revenue ?? 1;
 
   const handleExport = useCallback(() => {
@@ -709,7 +709,7 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
         Posição: i + 1,
         Profissional: p.name,
         Atendimentos: p.count,
-        "Pacientes Únicos": p.clients,
+        "Pacientes Únicos": p.patients,
         Receita: p.revenue.toFixed(2).replace(".", ","),
         "Ticket Médio": p.count > 0 ? (p.revenue / p.count).toFixed(2).replace(".", ",") : "0,00",
       })),
@@ -770,7 +770,7 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2">
                   <p className="text-xs text-muted-foreground">Pacientes</p>
-                  <p className="text-sm font-bold text-foreground">{p.clients}</p>
+                  <p className="text-sm font-bold text-foreground">{p.patients}</p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2">
                   <p className="text-xs text-muted-foreground">T. Médio</p>
@@ -817,7 +817,7 @@ export default function Relatorios() {
       const { data, error } = await (supabase as any)
         .from("appointments")
         .select(
-          "id, scheduled_at, client_id, professional_id, status, services(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
+          "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"
         )
         .eq("tenant_id", profile!.tenant_id)
         .gte("scheduled_at", start)
@@ -838,7 +838,7 @@ export default function Relatorios() {
       const { data, error } = await (supabase as any)
         .from("appointments")
         .select(
-          "id, scheduled_at, client_id, professional_id, status, services(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
+          "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"
         )
         .eq("tenant_id", profile!.tenant_id)
         .gte("scheduled_at", prevPeriod.start)
@@ -859,7 +859,7 @@ export default function Relatorios() {
       const { data, error } = await (supabase as any)
         .from("appointments")
         .select(
-          "id, scheduled_at, client_id, professional_id, status, services(id, name, price), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
+          "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"
         )
         .eq("tenant_id", profile!.tenant_id)
         .eq("status", "completed")

@@ -96,7 +96,7 @@ const patientFormSchema = z.object({
 });
 
 const packageFormSchema = z.object({
-  service_id: z.string().min(1, "Selecione um serviço"),
+  procedure_id: z.string().min(1, "Selecione um serviço"),
   total_sessions: z.coerce.number().int().min(1, "Mínimo 1 sessão").max(100, "Máximo 100 sessões"),
   expires_at: z.string().optional(),
   notes: z.string().optional(),
@@ -120,7 +120,7 @@ export default function Pacientes() {
   const [detailPackages, setDetailPackages] = useState<
     Array<{
       id: string;
-      service_id: string;
+      procedure_id: string;
       service_name: string;
       total_sessions: number;
       remaining_sessions: number;
@@ -136,8 +136,8 @@ export default function Pacientes() {
   // Package creation
   const [packageDialog, setPackageDialog] = useState(false);
   const [packagePatientId, setPackagePatientId] = useState<string>("");
-  const [services, setServices] = useState<Array<{ id: string; name: string }>>([]);
-  const [packageForm, setPackageForm] = useState({ service_id: "", total_sessions: "5", expires_at: "", notes: "" });
+  const [procedures, setProcedures] = useState<Array<{ id: string; name: string }>>([]);
+  const [packageForm, setPackageForm] = useState({ procedure_id: "", total_sessions: "5", expires_at: "", notes: "" });
   const [isSavingPackage, setIsSavingPackage] = useState(false);
 
   // Access code dialog
@@ -175,7 +175,7 @@ export default function Pacientes() {
   useEffect(() => {
     if (profile?.tenant_id) {
       fetchPatients();
-      fetchServices();
+      fetchProcedures();
       if (isAdmin) {
         fetchPatientSpending();
       }
@@ -194,9 +194,9 @@ export default function Pacientes() {
           .eq("professional_id", profile.id)
           .not("patient_id", "is", null);
         const ids = new Set((data || []).map((r: { patient_id: string }) => r.patient_id));
-        setMyClientIds(ids);
+        setMyPatientIds(ids);
       } catch (err) {
-        logger.error("Error fetching my clients:", err);
+        logger.error("Error fetching my patients:", err);
       }
     };
 
@@ -212,8 +212,8 @@ export default function Pacientes() {
         const [{ data: timelineData, error: timelineError }, packagesRes] = await Promise.all([
           getPatientTimelineV1({ p_patient_id: patientId, p_limit: 50 }),
           supabase
-            .from("client_packages")
-            .select("id, service_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, services(name)")
+            .from("patient_packages")
+            .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
             .eq("tenant_id", profile.tenant_id)
             .eq("patient_id", patientId)
             .order("purchased_at", { ascending: false }),
@@ -222,16 +222,16 @@ export default function Pacientes() {
         if (timelineError) {
           toastRpcError(toast, timelineError as any, "Erro ao carregar histórico");
         } else {
-          setDetailTimeline((timelineData || []) as ClientTimelineEventRow[]);
+          setDetailTimeline((timelineData || []) as PatientTimelineEventRow[]);
         }
 
         if (packagesRes.error) {
-          logger.error("Error loading client packages:", packagesRes.error);
+          logger.error("Error loading patient packages:", packagesRes.error);
         } else {
           const normalized = (packagesRes.data || []).map((p: any) => ({
             id: String(p.id),
-            service_id: String(p.service_id),
-            service_name: String(p?.services?.name ?? "Serviço"),
+            procedure_id: String(p.procedure_id),
+            service_name: String(p?.procedure?.name ?? "Serviço"),
             total_sessions: Number(p.total_sessions ?? 0),
             remaining_sessions: Number(p.remaining_sessions ?? 0),
             status: String(p.status ?? ""),
@@ -295,12 +295,12 @@ export default function Pacientes() {
         setClinicalHistory(clinDocs);
 
         const { data: evoData } = await (supabase as any).from("clinical_evolutions")
-          .select("*, clients(name), profiles(full_name)")
+          .select("*, patient:patients(name), profiles(full_name)")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("evolution_date", { ascending: false }).limit(50);
-        setClientEvolutions((evoData ?? []) as ClinicalEvolution[]);
+        setPatientEvolutions((evoData ?? []) as ClinicalEvolution[]);
       } catch (err) {
-        logger.error("Error loading client extras:", err);
+        logger.error("Error loading patient extras:", err);
         toast.error("Erro ao carregar detalhes do paciente");
       } finally {
         setIsDetailLoadingExtras(false);
@@ -313,12 +313,12 @@ export default function Pacientes() {
       setDetailTimeline([]);
       setDetailPackages([]);
       setClinicalHistory([]);
-      setClientEvolutions([]);
+      setPatientEvolutions([]);
       setIsDetailLoadingExtras(false);
     }
   }, [isDetailOpen, detailPatient?.id, profile?.tenant_id]);
 
-  const fetchServices = async () => {
+  const fetchProcedures = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data } = await supabase
@@ -327,9 +327,9 @@ export default function Pacientes() {
         .eq("tenant_id", profile.tenant_id)
         .eq("is_active", true)
         .order("name");
-      setServices((data || []) as Array<{ id: string; name: string }>);
+      setProcedures((data || []) as Array<{ id: string; name: string }>);
     } catch (err) {
-      logger.error("Error fetching services:", err);
+      logger.error("Error fetching procedures:", err);
     }
   };
 
@@ -363,18 +363,18 @@ export default function Pacientes() {
         const [{ data: timelineData }, packagesRes] = await Promise.all([
           getPatientTimelineV1({ p_patient_id: detailPatient.id, p_limit: 50 }),
           supabase
-            .from("client_packages")
-            .select("id, service_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, services(name)")
+            .from("patient_packages")
+            .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
             .eq("tenant_id", profile?.tenant_id)
             .eq("patient_id", detailPatient.id)
             .order("purchased_at", { ascending: false }),
         ]);
-        setDetailTimeline((timelineData || []) as ClientTimelineEventRow[]);
+        setDetailTimeline((timelineData || []) as PatientTimelineEventRow[]);
         if (!packagesRes.error) {
           const normalized = (packagesRes.data || []).map((p: any) => ({
             id: String(p.id),
-            service_id: String(p.service_id),
-            service_name: String(p?.services?.name ?? "Serviço"),
+            procedure_id: String(p.procedure_id),
+            service_name: String(p?.procedure?.name ?? "Serviço"),
             total_sessions: Number(p.total_sessions ?? 0),
             remaining_sessions: Number(p.remaining_sessions ?? 0),
             status: String(p.status ?? ""),
@@ -400,9 +400,9 @@ export default function Pacientes() {
     }
     setIsSavingPackage(true);
     try {
-      const { error } = await createClientPackageV1({
+      const { error } = await createPatientPackageV1({
         p_patient_id: packagePatientId,
-        p_service_id: parsed.data.service_id,
+        p_service_id: parsed.data.procedure_id,
         p_total_sessions: parsed.data.total_sessions,
         p_expires_at: parsed.data.expires_at || null,
         p_notes: parsed.data.notes || null,
@@ -413,21 +413,21 @@ export default function Pacientes() {
       }
       toast.success("Pacote criado com sucesso!");
       setPackageDialog(false);
-      setPackageForm({ service_id: "", total_sessions: "5", expires_at: "", notes: "" });
+      setPackageForm({ procedure_id: "", total_sessions: "5", expires_at: "", notes: "" });
 
       // Reload packages if detail is open for same client
       if (isDetailOpen && detailPatient?.id === packagePatientId && profile?.tenant_id) {
         const packagesRes = await supabase
-          .from("client_packages")
-          .select("id, service_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, services(name)")
+          .from("patient_packages")
+          .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("patient_id", packagePatientId)
           .order("purchased_at", { ascending: false });
         if (!packagesRes.error) {
           const normalized = (packagesRes.data || []).map((p: any) => ({
             id: String(p.id),
-            service_id: String(p.service_id),
-            service_name: String(p?.services?.name ?? "Serviço"),
+            procedure_id: String(p.procedure_id),
+            service_name: String(p?.procedure?.name ?? "Serviço"),
             total_sessions: Number(p.total_sessions ?? 0),
             remaining_sessions: Number(p.remaining_sessions ?? 0),
             status: String(p.status ?? ""),
@@ -445,8 +445,8 @@ export default function Pacientes() {
     }
   };
 
-  const filteredClients = useMemo(() => {
-    let list = clients;
+  const filteredPatients = useMemo(() => {
+    let list = patients;
     if (!isAdmin && patientFilter === "mine") {
       list = list.filter((c) => myPatientIds.has(c.id));
     }
@@ -459,30 +459,30 @@ export default function Pacientes() {
         patient.email?.toLowerCase().includes(q) ||
         patient.access_code?.toLowerCase().includes(q)
     );
-  }, [clients, debouncedSearchQuery, isAdmin, patientFilter, myPatientIds]);
+  }, [patients, debouncedSearchQuery, isAdmin, patientFilter, myPatientIds]);
 
   const fetchPatientSpending = async () => {
     if (!profile?.tenant_id) return;
     try {
       const data = await fetchPatientSpendingAllTime(profile.tenant_id);
-      setClientSpending(data);
+      setPatientSpending(data);
     } catch (err) {
-      logger.error("Error fetching client spending:", err);
+      logger.error("Error fetching patient spending:", err);
       toast.error("Erro ao carregar consumo dos pacientes.");
     }
   };
 
-  const getSpendingForPatient = (clientId: string): ClientSpendingRow | undefined =>
-    patientSpending.find((s) => s.patient_id === clientId);
+  const getSpendingForPatient = (patientId: string): PatientSpendingRow | undefined =>
+    patientSpending.find((s) => s.patient_id === patientId);
 
   const sortedAndFilteredPatients = useMemo(() => {
-    if (!isAdmin || patientSpending.length === 0) return [...filteredClients];
-    return [...filteredClients].sort((a, b) => {
+    if (!isAdmin || patientSpending.length === 0) return [...filteredPatients];
+    return [...filteredPatients].sort((a, b) => {
       const sa = getSpendingForPatient(a.id)?.total_amount ?? 0;
       const sb = getSpendingForPatient(b.id)?.total_amount ?? 0;
       return sb - sa;
     });
-  }, [filteredClients, isAdmin, patientSpending]);
+  }, [filteredPatients, isAdmin, patientSpending]);
 
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
@@ -495,9 +495,9 @@ export default function Pacientes() {
         .order("name");
 
       if (error) throw error;
-      setClients((data as Client[]) || []);
+      setPatients((data as Patient[]) || []);
     } catch (error) {
-      logger.error("Error fetching clients:", error);
+      logger.error("Error fetching patients:", error);
       toast.error("Erro ao carregar pacientes. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -558,7 +558,7 @@ export default function Pacientes() {
 
   const openPackageDialog = (patientId: string) => {
     setPackagePatientId(patientId);
-    setPackageForm({ service_id: "", total_sessions: "5", expires_at: "", notes: "" });
+    setPackageForm({ procedure_id: "", total_sessions: "5", expires_at: "", notes: "" });
     setPackageDialog(true);
   };
 
@@ -590,7 +590,7 @@ export default function Pacientes() {
     setIsSaving(true);
 
     try {
-      const { data: rpcResult, error } = await upsertClientV2({
+      const { data: rpcResult, error } = await upsertPatientV2({
         p_patient_id: editingPatient?.id ?? null,
         p_name: parsed.data.name,
         p_phone: parsed.data.phone || null,
@@ -622,7 +622,7 @@ export default function Pacientes() {
 
       if (isNew && rpcResult?.access_code) {
         setNewAccessCode(rpcResult.access_code);
-        setNewClientName(parsed.data.name);
+        setNewPatientName(parsed.data.name);
         setCodeCopied(false);
         setAccessCodeDialog(true);
       } else {
@@ -644,7 +644,7 @@ export default function Pacientes() {
     }
   };
 
-  const canAddPatient = isWithinLimit('patients', clients.length);
+  const canAddPatient = isWithinLimit('patients', patients.length);
   const patientLimit = getLimit('patients');
 
   const renderAddPatientButton = () => {
@@ -660,7 +660,7 @@ export default function Pacientes() {
       );
     }
     return (
-      <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new">
+      <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="patients-new">
         <Plus className="mr-2 h-4 w-4" />
         Novo Paciente
       </Button>
@@ -675,7 +675,7 @@ export default function Pacientes() {
         <div className="flex items-center gap-4">
           {patientLimit !== -1 && (
             <div className="hidden sm:block">
-              <UsageIndicator limit="patients" currentValue={clients.length} showLabel={false} size="sm" />
+              <UsageIndicator limit="patients" currentValue={patients.length} showLabel={false} size="sm" />
             </div>
           )}
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -808,7 +808,7 @@ export default function Pacientes() {
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="clients-save">
+                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="patients-save">
                   {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingPatient ? "Atualizar Paciente" : "Cadastrar Paciente"}
                 </Button>
               </DialogFooter>
@@ -836,8 +836,8 @@ export default function Pacientes() {
               variant={patientFilter === "all" ? "default" : "ghost"}
               size="sm"
               className={patientFilter === "all" ? "gradient-primary text-primary-foreground" : ""}
-              onClick={() => setClientFilter("all")}
-              data-tour="clients-filter-all"
+              onClick={() => setPatientFilter("all")}
+              data-tour="patients-filter-all"
             >
               Todos
             </Button>
@@ -845,8 +845,8 @@ export default function Pacientes() {
               variant={patientFilter === "mine" ? "default" : "ghost"}
               size="sm"
               className={patientFilter === "mine" ? "gradient-primary text-primary-foreground" : ""}
-              onClick={() => setClientFilter("mine")}
-              data-tour="clients-filter-mine"
+              onClick={() => setPatientFilter("mine")}
+              data-tour="patients-filter-mine"
             >
               Meus pacientes ({myPatientIds.size})
             </Button>
@@ -871,14 +871,14 @@ export default function Pacientes() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : filteredClients.length === 0 ? (
+          ) : filteredPatients.length === 0 ? (
             <EmptyState
               icon={Users}
               title={searchQuery ? "Nenhum paciente encontrado" : "Nenhum paciente cadastrado"}
               description={searchQuery ? "Tente ajustar os termos da busca." : "Cadastre seu primeiro paciente para começar."}
               action={
                 !searchQuery && (
-                  <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="clients-new-empty">
+                  <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="patients-new-empty">
                     <Plus className="mr-2 h-4 w-4" />
                     Novo Paciente
                   </Button>
@@ -1313,10 +1313,10 @@ export default function Pacientes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Serviço</Label>
-              <Select value={packageForm.service_id || undefined} onValueChange={(v) => setPackageForm({ ...packageForm, service_id: v })}>
+              <Select value={packageForm.procedure_id || undefined} onValueChange={(v) => setPackageForm({ ...packageForm, procedure_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione o procedimento" /></SelectTrigger>
                 <SelectContent>
-                  {services.map((s) => (
+                  {procedures.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

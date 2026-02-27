@@ -60,8 +60,8 @@ export function MeuFinanceiroHistorico() {
           created_at,
           payment_date,
           appointment:appointments(
-            service:services(name),
-            client:clients(name)
+            procedure:procedures(name),
+            patient:patients(name)
           )
         `)
         .eq("tenant_id", profile.tenant_id)
@@ -81,8 +81,8 @@ export function MeuFinanceiroHistorico() {
 
       // Mapear comissões
       (commissions || []).forEach((c: any) => {
-        const serviceName = c.appointment?.service?.name || "Serviço";
-        const clientName = c.appointment?.client?.name || "";
+        const serviceName = c.appointment?.procedure?.name || "Serviço";
+        const clientName = c.appointment?.patient?.name || "";
         items.push({
           id: `comm-${c.id}`,
           type: "commission",

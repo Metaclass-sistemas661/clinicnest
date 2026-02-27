@@ -28,11 +28,11 @@ export default function PatientConsentSigning() {
   const [pendingTemplates, setPendingTemplates] = useState<ConsentTemplate[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [patientId, setPatientId] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [varsData, setVarsData] = useState<ConsentVariablesData>({});
 
-  // Resolve the patient's client_id from their auth user
+  // Resolve the patient's patient_id from their auth user
   const resolveClientId = useCallback(async () => {
     try {
       const { data: { user } } = await supabasePatient.auth.getUser();
@@ -49,7 +49,7 @@ export default function PatientConsentSigning() {
         .maybeSingle();
 
       if (error || !data) {
-        logger.warn("[PatientConsent] Could not resolve client_id for email", email);
+        logger.warn("[PatientConsent] Could not resolve patient_id for email", email);
         return null;
       }
 
@@ -92,7 +92,7 @@ export default function PatientConsentSigning() {
         setIsLoading(false);
         return;
       }
-      setClientId(cId);
+      setPatientId(cId);
       const pending = await fetchPending(cId);
       setPendingTemplates(pending);
       if (pending.length === 0) {
@@ -106,7 +106,7 @@ export default function PatientConsentSigning() {
   const currentTemplate = pendingTemplates[currentIndex] ?? null;
 
   const handleSign = async () => {
-    if (!clientId || !currentTemplate) return;
+    if (!patientId || !currentTemplate) return;
 
     if (!capturedBlob) {
       toast.error("Capture sua foto facial antes de assinar");
@@ -116,7 +116,7 @@ export default function PatientConsentSigning() {
     setIsSigning(true);
     try {
       // 1) Upload facial photo to storage
-      const fileName = `${clientId}/${currentTemplate.id}_${Date.now()}.jpg`;
+      const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.jpg`;
       const { error: uploadError } = await supabasePatient.storage
         .from("consent-photos")
         .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
@@ -130,7 +130,7 @@ export default function PatientConsentSigning() {
 
       // 2) Sign the consent via RPC
       const { data, error } = await supabasePatient.rpc("sign_consent", {
-        p_client_id: clientId,
+        p_client_id: patientId,
         p_template_id: currentTemplate.id,
         p_facial_photo_path: fileName,
         p_ip_address: null,
@@ -191,8 +191,8 @@ export default function PatientConsentSigning() {
     );
   }
 
-  // No client_id found
-  if (!clientId) {
+  // No patient_id found
+  if (!patientId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-lg">

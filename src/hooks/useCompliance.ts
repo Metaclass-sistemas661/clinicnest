@@ -33,7 +33,7 @@ export interface TSATimestamp {
 // Tipos Exportação
 export interface ProntuarioExport {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   status: string;
   pdf_url: string | null;
@@ -170,7 +170,7 @@ export function useCompliance() {
   }, [profile?.tenant_id]);
 
   const createExport = useCallback(async (
-    clientId: string,
+    patientId: string,
     clientName: string,
     options: {
       includeProntuarios?: boolean;
@@ -191,7 +191,7 @@ export function useCompliance() {
         .from('prontuario_exports')
         .insert({
           tenant_id: profile.tenant_id,
-          client_id: clientId,
+          patient_id: patientId,
           client_name: clientName,
           include_prontuarios: options.includeProntuarios ?? true,
           include_receituarios: options.includeReceituarios ?? true,

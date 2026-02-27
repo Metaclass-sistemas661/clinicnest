@@ -64,7 +64,7 @@ interface OdontogramEntry {
   created_at: string;
 }
 
-interface ClientOption {
+interface PatientOption {
   id: string;
   name: string;
 }
@@ -131,9 +131,9 @@ function ToothIcon({ number, condition, isSelected, onClick }: {
 
 export default function Odontograma() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [clientSearch, setClientSearch] = useState("");
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<string>("");
   const [teeth, setTeeth] = useState<Map<number, ToothRecord>>(new Map());
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
   const [dialog, setDialog] = useState(false);
@@ -145,24 +145,24 @@ export default function Odontograma() {
   const [currentOdontogramId, setCurrentOdontogramId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile?.tenant_id && clientSearch.length >= 2) {
-      void searchClients();
+    if (profile?.tenant_id && patientSearch.length >= 2) {
+      void searchPatients();
     }
-  }, [clientSearch, profile?.tenant_id]);
+  }, [patientSearch, profile?.tenant_id]);
 
-  const searchClients = async () => {
+  const searchPatients = async () => {
     if (!profile?.tenant_id) return;
     const { data } = await supabase
       .from("patients")
       .select("id, name")
       .eq("tenant_id", profile.tenant_id)
-      .ilike("name", `%${clientSearch}%`)
+      .ilike("name", `%${patientSearch}%`)
       .limit(20);
-    setClients((data ?? []) as ClientOption[]);
+    setPatients((data ?? []) as PatientOption[]);
   };
 
-  const handleSelectClient = async (clientId: string) => {
-    setSelectedClient(clientId);
+  const handleSelectPatient = async (patientId: string) => {
+    setSelectedPatient(patientId);
     if (!profile?.tenant_id) return;
 
     setIsLoading(true);
@@ -171,7 +171,7 @@ export default function Odontograma() {
       const { data: odontograms, error } = await supabase
         .rpc('get_client_odontograms', {
           p_tenant_id: profile.tenant_id,
-          p_client_id: clientId
+          p_client_id: patientId
         });
 
       if (error) throw error;
@@ -266,7 +266,7 @@ export default function Odontograma() {
   };
 
   const handleSaveOdontogram = async () => {
-    if (!profile?.tenant_id || !selectedClient) return;
+    if (!profile?.tenant_id || !selectedPatient) return;
     setIsSaving(true);
     
     try {
@@ -282,7 +282,7 @@ export default function Odontograma() {
       const { data: newOdontogramId, error } = await supabase
         .rpc('create_odontogram_with_teeth', {
           p_tenant_id: profile.tenant_id,
-          p_client_id: selectedClient,
+          p_client_id: selectedPatient,
           p_professional_id: profile.id,
           p_appointment_id: null,
           p_exam_date: new Date().toISOString().split('T')[0],
@@ -295,7 +295,7 @@ export default function Odontograma() {
       toast.success("Odontograma salvo com sucesso");
       
       // Recarrega o histórico
-      await handleSelectClient(selectedClient);
+      await handleSelectPatient(selectedPatient);
     } catch (err: any) {
       logger.error('Erro ao salvar odontograma:', err);
       toast.error(err.message || "Erro ao salvar odontograma");
@@ -323,29 +323,29 @@ export default function Odontograma() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
                   placeholder="Digite o nome do paciente..."
                   className="pl-10"
                 />
               </div>
             </div>
-            {clients.length > 0 && (
+            {patients.length > 0 && (
               <div className="space-y-1">
                 <Label className="text-xs">Paciente</Label>
-                <Select value={selectedClient} onValueChange={(v) => void handleSelectClient(v)}>
+                <Select value={selectedPatient} onValueChange={(v) => void handleSelectPatient(v)}>
                   <SelectTrigger className="w-64">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map(c => (
+                    {patients.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-            {selectedClient && !isViewingOldVersion && (
+            {selectedPatient && !isViewingOldVersion && (
               <Button 
                 onClick={() => void handleSaveOdontogram()} 
                 disabled={isSaving || records.length === 0} 
@@ -370,7 +370,7 @@ export default function Odontograma() {
       )}
 
       {/* History Navigation */}
-      {selectedClient && historyEntries.length > 0 && !isLoading && (
+      {selectedPatient && historyEntries.length > 0 && !isLoading && (
         <Card className="mb-6">
           <CardContent className="pt-5">
             <div className="flex items-center justify-between gap-3">
@@ -514,7 +514,7 @@ export default function Odontograma() {
       )}
 
       {/* Empty state */}
-      {selectedClient && !isLoading && records.length === 0 && historyEntries.length === 0 && (
+      {selectedPatient && !isLoading && records.length === 0 && historyEntries.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Smile className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />

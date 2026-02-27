@@ -275,8 +275,8 @@ export default function FaturamentoTISS() {
         .from("appointments")
         .select(`
           id, scheduled_at, status, cid_code, insurance_authorization, insurance_plan_id,
-          clients(name, cpf, insurance_card_number),
-          services(name, tuss_code, insurance_price),
+          patient:patients(name, cpf, insurance_card_number),
+          procedure:procedures(name, tuss_code, insurance_price),
           profiles(full_name),
           insurance_plans(name)
         `)
@@ -307,12 +307,12 @@ export default function FaturamentoTISS() {
       const mapped: EligibleAppointment[] = ((data ?? []) as AppointmentRaw[]).map((r) => ({
         id: r.id,
         scheduled_at: r.scheduled_at,
-        client_name: r.clients?.name ?? "—",
-        client_cpf: r.clients?.cpf ?? null,
-        client_carteirinha: r.clients?.insurance_card_number ?? null,
-        service_name: r.services?.name ?? "—",
-        service_tuss_code: r.services?.tuss_code ?? null,
-        insurance_price: r.services?.insurance_price ?? 0,
+        client_name: r.patient?.name ?? "—",
+        client_cpf: r.patient?.cpf ?? null,
+        client_carteirinha: r.patient?.insurance_card_number ?? null,
+        service_name: r.procedure?.name ?? "—",
+        service_tuss_code: r.procedure?.tuss_code ?? null,
+        insurance_price: r.procedure?.insurance_price ?? 0,
         insurance_plan_id: r.insurance_plan_id,
         insurance_plan_name: r.insurance_plans?.name ?? "—",
         professional_name: r.profiles?.full_name ?? "—",
@@ -518,7 +518,7 @@ export default function FaturamentoTISS() {
     try {
       const { data, error } = await supabase
         .from("tiss_guides")
-        .select("*, insurance_plans(name), appointments(clients(name))")
+        .select("*, insurance_plans(name), appointments(patient:patients(name))")
         .eq("tenant_id", profile.tenant_id)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -530,7 +530,7 @@ export default function FaturamentoTISS() {
         guide_type: r.guide_type,
         status: r.status,
         insurance_plan_name: r.insurance_plans?.name ?? null,
-        client_name: r.appointments?.clients?.name ?? null,
+        client_name: r.appointments?.patient?.name ?? null,
         created_at: r.created_at,
         submitted_at: r.submitted_at,
         xml_content: r.xml_content,
@@ -636,7 +636,7 @@ export default function FaturamentoTISS() {
     try {
       const { data, error } = await supabase
         .from("tiss_glosa_appeals")
-        .select("*, tiss_guides(guide_number, insurance_plans(name), appointments(clients(name)))")
+        .select("*, tiss_guides(guide_number, insurance_plans(name), appointments(patient:patients(name)))")
         .eq("tenant_id", profile.tenant_id)
         .order("created_at", { ascending: false })
         .limit(200);
@@ -654,7 +654,7 @@ export default function FaturamentoTISS() {
         resolved_at: r.resolved_at,
         created_at: r.created_at,
         guide_number: r.tiss_guides?.guide_number ?? "—",
-        client_name: r.tiss_guides?.appointments?.clients?.name ?? "—",
+        client_name: r.tiss_guides?.appointments?.patient?.name ?? "—",
         insurance_plan_name: r.tiss_guides?.insurance_plans?.name ?? "—",
       }));
       setAppeals(mapped);

@@ -192,6 +192,18 @@ export async function executeTool(
 }
 
 // ---------------------------------------------------------------------------
+// Utilidades de proteção de dados
+// ---------------------------------------------------------------------------
+
+/** Mascara CPF: 123.456.789-00 → ***.***. 789-00 */
+function maskCpf(cpf: string | null | undefined): string {
+  if (!cpf) return "";
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length < 11) return "***";
+  return `***.***. ${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+// ---------------------------------------------------------------------------
 // Implementação de cada ferramenta
 // ---------------------------------------------------------------------------
 
@@ -207,7 +219,9 @@ async function searchPatients(sb: SupabaseClient, tenantId: string, query: strin
 
   if (error) return JSON.stringify({ error: error.message });
   if (!data?.length) return JSON.stringify({ message: "Nenhum paciente encontrado.", patients: [] });
-  return JSON.stringify({ total: data.length, patients: data });
+  // Mascara CPF antes de enviar ao modelo de IA
+  const masked = data.map((p) => ({ ...p, cpf: maskCpf(p.cpf) }));
+  return JSON.stringify({ total: masked.length, patients: masked });
 }
 
 async function getPatientDetails(sb: SupabaseClient, tenantId: string, patientId: string): Promise<string> {
@@ -220,7 +234,8 @@ async function getPatientDetails(sb: SupabaseClient, tenantId: string, patientId
 
   if (error) return JSON.stringify({ error: error.message });
   if (!data) return JSON.stringify({ error: "Paciente não encontrado" });
-  return JSON.stringify(data);
+  // Mascara CPF antes de enviar ao modelo de IA
+  return JSON.stringify({ ...data, cpf: maskCpf(data.cpf) });
 }
 
 async function getPatientRecords(

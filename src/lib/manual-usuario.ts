@@ -1,10 +1,11 @@
 /**
- * Manual do Usuário — ClinicaFlow
+ * Manual do Usuário — ClinicNest
  * Documentação completa para certificação SBIS NGS1/NGS2
  * 
  * Este arquivo contém todo o conteúdo do manual em formato estruturado
- * para renderização na página e exportação em PDF.
  */
+
+import { APP_VERSION } from "@/lib/version";
 
 export interface ManualSection {
   id: string;
@@ -23,12 +24,12 @@ export const MANUAL_USUARIO: ManualSection[] = [
   {
     id: "introducao",
     title: "1. Introdução",
-    content: `O ClinicaFlow é um sistema de gestão clínica completo, desenvolvido para atender às necessidades de clínicas médicas, odontológicas e de saúde em geral. O sistema foi projetado seguindo as normas da SBIS (Sociedade Brasileira de Informática em Saúde) e está em conformidade com a LGPD (Lei Geral de Proteção de Dados).`,
+    content: `O ClinicNest é um sistema de gestão clínica completo, desenvolvido para atender às necessidades de clínicas médicas, odontológicas e de saúde em geral. O sistema foi projetado seguindo as normas da SBIS (Sociedade Brasileira de Informática em Saúde) e está em conformidade com a LGPD (Lei Geral de Proteção de Dados).`,
     subsections: [
       {
         id: "objetivo",
         title: "1.1 Objetivo do Sistema",
-        content: `O ClinicaFlow tem como objetivo centralizar e automatizar os processos administrativos e clínicos, incluindo:
+        content: `O ClinicNest tem como objetivo centralizar e automatizar os processos administrativos e clínicos, incluindo:
 • Agendamento de consultas e procedimentos
 • Prontuário Eletrônico do Paciente (PEP)
 • Prescrição eletrônica de medicamentos
@@ -40,7 +41,7 @@ export const MANUAL_USUARIO: ManualSection[] = [
       {
         id: "requisitos",
         title: "1.2 Requisitos Mínimos",
-        content: `Para utilizar o ClinicaFlow, você precisa de:
+        content: `Para utilizar o ClinicNest, você precisa de:
 • Navegador web atualizado (Chrome, Firefox, Edge ou Safari)
 • Conexão com a internet
 • Resolução mínima de tela: 1280x720 pixels
@@ -51,7 +52,7 @@ export const MANUAL_USUARIO: ManualSection[] = [
   {
     id: "acesso",
     title: "2. Acesso ao Sistema",
-    content: `O acesso ao ClinicaFlow é feito através de autenticação segura com e-mail e senha.`,
+    content: `O acesso ao ClinicNest é feito através de autenticação segura com e-mail e senha.`,
     subsections: [
       {
         id: "login",
@@ -78,7 +79,7 @@ Em caso de esquecimento da senha, utilize a opção "Esqueci minha senha" para r
       {
         id: "seguranca",
         title: "2.3 Segurança",
-        content: `O ClinicaFlow implementa diversas medidas de segurança:
+        content: `O ClinicNest implementa diversas medidas de segurança:
 • Autenticação com JWT (JSON Web Token)
 • Criptografia de dados em trânsito (HTTPS/TLS)
 • Senhas armazenadas com hash seguro
@@ -353,7 +354,7 @@ Cada tipo segue o schema XML da ANS versão 3.05.`,
   {
     id: "suporte",
     title: "9. Suporte",
-    content: `O ClinicaFlow oferece suporte técnico para auxiliar no uso do sistema.`,
+    content: `O ClinicNest oferece suporte técnico para auxiliar no uso do sistema.`,
     subsections: [
       {
         id: "canais",
@@ -381,9 +382,9 @@ Acesse pelo menu "Ajuda" ou pelo ícone de interrogação em cada tela.`,
 ];
 
 export const MANUAL_INFO = {
-  titulo: "Manual do Usuário — ClinicaFlow",
-  versao: "1.0.0",
+  titulo: "Manual do Usuário — ClinicNest",
+  versao: APP_VERSION,
   dataAtualizacao: "2026-02-23",
-  empresa: "ClinicaFlow Sistemas de Saúde",
+  empresa: "ClinicNest Sistemas de Saúde",
   certificacao: "Em conformidade com SBIS NGS1/NGS2",
 };

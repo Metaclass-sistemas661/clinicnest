@@ -403,7 +403,7 @@ export function generateACK(options: ACKOptions): string {
   lines.push([
     'MSH',
     '^~\\&',
-    sendingApplication || 'CLINICAFLOW',
+    sendingApplication || 'CLINICNEST',
     sendingFacility || '',
     originalMessage.sendingApplication || '',
     originalMessage.sendingFacility || '',
@@ -482,7 +482,7 @@ export function generateLabOrder(request: LabOrderRequest): string {
   lines.push([
     'MSH',
     '^~\\&',
-    'CLINICAFLOW',
+    'CLINICNEST',
     request.clinic.cnes || request.clinic.name,
     'LAB',
     '',
@@ -859,7 +859,7 @@ export function generateADTMessage(request: ADTMessageRequest): string {
   lines.push([
     'MSH',
     '^~\\&',
-    'CLINICAFLOW',
+    'CLINICNEST',
     request.clinic.cnes || request.clinic.name,
     'HOSPITAL',
     '',

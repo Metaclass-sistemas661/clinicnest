@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     ),
     __BUILD_ENV__: JSON.stringify(process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? mode),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? "2.6.0"),
   },
   build: {
     chunkSizeWarningLimit: 500,

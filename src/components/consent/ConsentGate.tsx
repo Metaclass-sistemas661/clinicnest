@@ -38,7 +38,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
         return;
       }
 
-      // Resolve client_id
+      // Resolve patient_id
       const { data: client } = await supabasePatient
         .from("patients")
         .select("id")

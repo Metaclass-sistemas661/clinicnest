@@ -127,7 +127,7 @@ export default function PatientProfile() {
 
       const { data: links } = await supabasePatient
         .from("patient_profiles")
-        .select("client_id, tenant_id")
+        .select("patient_id, tenant_id")
         .eq("user_id", user.id)
         .eq("is_active", true)
         .limit(1)
@@ -159,7 +159,7 @@ export default function PatientProfile() {
         .select(
           "id, name, email, phone, cpf, date_of_birth, marital_status, zip_code, street, street_number, complement, neighborhood, city, state, allergies"
         )
-        .eq("id", links.client_id)
+        .eq("id", links.patient_id)
         .single();
 
       if (client) {

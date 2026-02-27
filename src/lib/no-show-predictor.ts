@@ -75,13 +75,13 @@ const HOUR_RISK: Record<number, number> = {
  * Get patient's appointment history
  */
 async function getPatientHistory(
-  clientId: string,
+  patientId: string,
   tenantId: string
 ): Promise<PatientHistory | null> {
   const { data, error } = await supabase
     .from("appointments")
     .select("status, start_time")
-    .eq("client_id", clientId)
+    .eq("patient_id", patientId)
     .eq("tenant_id", tenantId)
     .order("start_time", { ascending: false });
 
@@ -297,7 +297,7 @@ export async function predictNoShow(
     .from("appointments")
     .select(`
       id,
-      client_id,
+      patient_id,
       professional_id,
       start_time,
       is_return
@@ -314,7 +314,7 @@ export async function predictNoShow(
   const now = new Date();
 
   // Get patient history
-  const history = await getPatientHistory(appointment.client_id, tenantId);
+  const history = await getPatientHistory(appointment.patient_id, tenantId);
 
   // Get professional no-show rate
   const professionalRate = await getProfessionalNoShowRate(

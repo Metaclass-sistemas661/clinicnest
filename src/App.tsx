@@ -126,7 +126,7 @@ const Evolucoes = lazyWithRetry(() => import("@/pages/Evolucoes"));
 const ApiDocumentation = lazyWithRetry(() => import("@/pages/ApiDocumentation"));
 
 // Páginas FASE 13D — Dialog → Página
-const ClienteDetalhe = lazyWithRetry(() => import("@/pages/ClienteDetalhe"));
+const PacienteDetalhe = lazyWithRetry(() => import("@/pages/PacienteDetalhe"));
 const NovaCompra = lazyWithRetry(() => import("@/pages/NovaCompra"));
 const NovaCampanha = lazyWithRetry(() => import("@/pages/NovaCampanha"));
 const ModeloProntuarioEditor = lazyWithRetry(() => import("@/pages/ModeloProntuarioEditor"));
@@ -253,7 +253,7 @@ const App = () => (
                   path="/pacientes/:id"
                   element={
                     <ProtectedRoute resource="pacientes">
-                      <ClienteDetalhe />
+                      <PacienteDetalhe />
                     </ProtectedRoute>
                   }
                 />

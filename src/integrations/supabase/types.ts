@@ -71,7 +71,7 @@ export type Database = {
       appointments: {
         Row: {
           cid_code: string | null
-          client_id: string | null
+          patient_id: string | null
           commission_amount: number | null
           consultation_type: string | null
           created_at: string
@@ -84,7 +84,7 @@ export type Database = {
           professional_id: string | null
           room_id: string | null
           scheduled_at: string
-          service_id: string | null
+          procedure_id: string | null
           specialty_id: string | null
           status: Database["public"]["Enums"]["appointment_status"]
           telemedicine: boolean
@@ -94,7 +94,7 @@ export type Database = {
         }
         Insert: {
           cid_code?: string | null
-          client_id?: string | null
+          patient_id?: string | null
           commission_amount?: number | null
           consultation_type?: string | null
           created_at?: string
@@ -107,7 +107,7 @@ export type Database = {
           professional_id?: string | null
           room_id?: string | null
           scheduled_at: string
-          service_id?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           telemedicine?: boolean
@@ -117,7 +117,7 @@ export type Database = {
         }
         Update: {
           cid_code?: string | null
-          client_id?: string | null
+          patient_id?: string | null
           commission_amount?: number | null
           consultation_type?: string | null
           created_at?: string
@@ -130,7 +130,7 @@ export type Database = {
           professional_id?: string | null
           room_id?: string | null
           scheduled_at?: string
-          service_id?: string | null
+          procedure_id?: string | null
           specialty_id?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           telemedicine?: boolean
@@ -141,7 +141,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "appointments_client_id_fkey"
-            columns: ["client_id"]
+            columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -155,7 +155,7 @@ export type Database = {
           },
           {
             foreignKeyName: "appointments_service_id_fkey"
-            columns: ["service_id"]
+            columns: ["procedure_id"]
             isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
@@ -1392,21 +1392,21 @@ export type Database = {
       appointment_cashback_earnings: {
         Row: {
           appointment_id: string
-          client_id: string
+          patient_id: string
           earned_amount: number
           earned_at: string
           tenant_id: string
         }
         Insert: {
           appointment_id: string
-          client_id: string
+          patient_id: string
           earned_amount: number
           earned_at?: string
           tenant_id: string
         }
         Update: {
           appointment_id?: string
-          client_id?: string
+          patient_id?: string
           earned_amount?: number
           earned_at?: string
           tenant_id?: string
@@ -1576,7 +1576,7 @@ export type Database = {
         Row: {
           amount: number
           category: string
-          client_id: string | null
+          patient_id: string | null
           created_at: string
           created_by: string | null
           description: string
@@ -1593,7 +1593,7 @@ export type Database = {
         Insert: {
           amount: number
           category: string
-          client_id?: string | null
+          patient_id?: string | null
           created_at?: string
           created_by?: string | null
           description: string
@@ -1610,7 +1610,7 @@ export type Database = {
         Update: {
           amount?: number
           category?: string
-          client_id?: string | null
+          patient_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
@@ -1762,7 +1762,7 @@ export type Database = {
         Row: {
           actor_user_id: string | null
           appointment_id: string | null
-          client_id: string
+          patient_id: string
           created_at: string
           delta_amount: number
           id: string
@@ -1774,7 +1774,7 @@ export type Database = {
         Insert: {
           actor_user_id?: string | null
           appointment_id?: string | null
-          client_id: string
+          patient_id: string
           created_at?: string
           delta_amount: number
           id?: string
@@ -1786,7 +1786,7 @@ export type Database = {
         Update: {
           actor_user_id?: string | null
           appointment_id?: string | null
-          client_id?: string
+          patient_id?: string
           created_at?: string
           delta_amount?: number
           id?: string
@@ -1800,19 +1800,19 @@ export type Database = {
       cashback_wallets: {
         Row: {
           balance: number
-          client_id: string
+          patient_id: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
           balance?: number
-          client_id: string
+          patient_id: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
           balance?: number
-          client_id?: string
+          patient_id?: string
           tenant_id?: string
           updated_at?: string
         }
@@ -1820,19 +1820,19 @@ export type Database = {
       }
       client_marketing_preferences: {
         Row: {
-          client_id: string
+          patient_id: string
           marketing_opt_out: boolean
           tenant_id: string
           updated_at: string
         }
         Insert: {
-          client_id: string
+          patient_id: string
           marketing_opt_out?: boolean
           tenant_id: string
           updated_at?: string
         }
         Update: {
-          client_id?: string
+          patient_id?: string
           marketing_opt_out?: boolean
           tenant_id?: string
           updated_at?: string
@@ -1877,7 +1877,7 @@ export type Database = {
       }
       client_packages: {
         Row: {
-          client_id: string
+          patient_id: string
           created_at: string
           created_by: string | null
           expires_at: string | null
@@ -1885,14 +1885,14 @@ export type Database = {
           notes: string | null
           purchased_at: string
           remaining_sessions: number
-          service_id: string
+          procedure_id: string
           status: string
           tenant_id: string
           total_sessions: number
           updated_at: string
         }
         Insert: {
-          client_id: string
+          patient_id: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -1900,14 +1900,14 @@ export type Database = {
           notes?: string | null
           purchased_at?: string
           remaining_sessions: number
-          service_id: string
+          procedure_id: string
           status?: string
           tenant_id: string
           total_sessions: number
           updated_at?: string
         }
         Update: {
-          client_id?: string
+          patient_id?: string
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -1915,7 +1915,7 @@ export type Database = {
           notes?: string | null
           purchased_at?: string
           remaining_sessions?: number
-          service_id?: string
+          procedure_id?: string
           status?: string
           tenant_id?: string
           total_sessions?: number
@@ -1960,7 +1960,7 @@ export type Database = {
           id: string
           is_active: boolean
           max_uses: number | null
-          service_id: string | null
+          procedure_id: string | null
           tenant_id: string
           type: string
           used_count: number
@@ -1974,7 +1974,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number | null
-          service_id?: string | null
+          procedure_id?: string | null
           tenant_id: string
           type: string
           used_count?: number
@@ -1988,7 +1988,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_uses?: number | null
-          service_id?: string | null
+          procedure_id?: string | null
           tenant_id?: string
           type?: string
           used_count?: number
@@ -2037,7 +2037,7 @@ export type Database = {
       nps_responses: {
         Row: {
           appointment_id: string | null
-          client_id: string | null
+          patient_id: string | null
           comment: string | null
           created_at: string
           id: string
@@ -2048,7 +2048,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
-          client_id?: string | null
+          patient_id?: string | null
           comment?: string | null
           created_at?: string
           id?: string
@@ -2059,7 +2059,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string | null
-          client_id?: string | null
+          patient_id?: string | null
           comment?: string | null
           created_at?: string
           id?: string
@@ -2079,7 +2079,7 @@ export type Database = {
           product_id: string | null
           professional_id: string | null
           quantity: number
-          service_id: string | null
+          procedure_id: string | null
           tenant_id: string
           total_cost_snapshot: number | null
           total_price: number
@@ -2094,7 +2094,7 @@ export type Database = {
           product_id?: string | null
           professional_id?: string | null
           quantity?: number
-          service_id?: string | null
+          procedure_id?: string | null
           tenant_id: string
           total_cost_snapshot?: number | null
           total_price: number
@@ -2109,7 +2109,7 @@ export type Database = {
           product_id?: string | null
           professional_id?: string | null
           quantity?: number
-          service_id?: string | null
+          procedure_id?: string | null
           tenant_id?: string
           total_cost_snapshot?: number | null
           total_price?: number
@@ -2123,7 +2123,7 @@ export type Database = {
           applied_coupon_id: string | null
           applied_voucher_id: string | null
           appointment_id: string
-          client_id: string | null
+          patient_id: string | null
           created_at: string
           created_by: string | null
           discount_amount: number
@@ -2141,7 +2141,7 @@ export type Database = {
           applied_coupon_id?: string | null
           applied_voucher_id?: string | null
           appointment_id: string
-          client_id?: string | null
+          patient_id?: string | null
           created_at?: string
           created_by?: string | null
           discount_amount?: number
@@ -2159,7 +2159,7 @@ export type Database = {
           applied_coupon_id?: string | null
           applied_voucher_id?: string | null
           appointment_id?: string
-          client_id?: string | null
+          patient_id?: string | null
           created_at?: string
           created_by?: string | null
           discount_amount?: number
@@ -2243,7 +2243,7 @@ export type Database = {
       }
       points_ledger: {
         Row: {
-          client_id: string
+          patient_id: string
           created_at: string | null
           delta: number
           id: string
@@ -2254,7 +2254,7 @@ export type Database = {
           wallet_id: string
         }
         Insert: {
-          client_id: string
+          patient_id: string
           created_at?: string | null
           delta: number
           id?: string
@@ -2265,7 +2265,7 @@ export type Database = {
           wallet_id: string
         }
         Update: {
-          client_id?: string
+          patient_id?: string
           created_at?: string | null
           delta?: number
           id?: string
@@ -2280,7 +2280,7 @@ export type Database = {
       points_wallets: {
         Row: {
           balance: number
-          client_id: string
+          patient_id: string
           created_at: string | null
           id: string
           tenant_id: string
@@ -2288,7 +2288,7 @@ export type Database = {
         }
         Insert: {
           balance?: number
-          client_id: string
+          patient_id: string
           created_at?: string | null
           id?: string
           tenant_id: string
@@ -2296,7 +2296,7 @@ export type Database = {
         }
         Update: {
           balance?: number
-          client_id?: string
+          patient_id?: string
           created_at?: string | null
           id?: string
           tenant_id?: string
@@ -2711,7 +2711,7 @@ export type Database = {
           expires_at: string | null
           id: string
           notes: string | null
-          service_id: string | null
+          procedure_id: string | null
           status: string
           tenant_id: string
           type: string
@@ -2724,7 +2724,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           notes?: string | null
-          service_id?: string | null
+          procedure_id?: string | null
           status?: string
           tenant_id: string
           type: string
@@ -2737,7 +2737,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           notes?: string | null
-          service_id?: string | null
+          procedure_id?: string | null
           status?: string
           tenant_id?: string
           type?: string
@@ -2836,7 +2836,7 @@ export type Database = {
         Row: {
           id: string
           tenant_id: string
-          client_id: string
+          patient_id: string
           appointment_id: string | null
           medical_record_id: string | null
           professional_id: string | null
@@ -2856,7 +2856,7 @@ export type Database = {
         Insert: {
           id?: string
           tenant_id: string
-          client_id: string
+          patient_id: string
           appointment_id?: string | null
           medical_record_id?: string | null
           professional_id?: string | null
@@ -2876,7 +2876,7 @@ export type Database = {
         Update: {
           id?: string
           tenant_id?: string
-          client_id?: string
+          patient_id?: string
           appointment_id?: string | null
           medical_record_id?: string | null
           professional_id?: string | null
@@ -2903,7 +2903,7 @@ export type Database = {
           },
           {
             foreignKeyName: "medical_certificates_client_id_fkey"
-            columns: ["client_id"]
+            columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -2933,7 +2933,7 @@ export type Database = {
           blood_pressure_systolic: number | null
           cid_code: string | null
           chief_complaint: string | null
-          client_id: string
+          patient_id: string
           created_at: string
           current_medications: string | null
           diagnosis: string | null
@@ -2971,7 +2971,7 @@ export type Database = {
           blood_pressure_systolic?: number | null
           cid_code?: string | null
           chief_complaint?: string | null
-          client_id: string
+          patient_id: string
           created_at?: string
           current_medications?: string | null
           diagnosis?: string | null
@@ -3009,7 +3009,7 @@ export type Database = {
           blood_pressure_systolic?: number | null
           cid_code?: string | null
           chief_complaint?: string | null
-          client_id?: string
+          patient_id?: string
           created_at?: string
           current_medications?: string | null
           diagnosis?: string | null
@@ -3096,8 +3096,8 @@ export type Database = {
         Row: {
           id: string
           tenant_id: string
-          client_id: string
-          service_id: string | null
+          patient_id: string
+          procedure_id: string | null
           professional_id: string | null
           specialty_id: string | null
           priority: string
@@ -3113,8 +3113,8 @@ export type Database = {
         Insert: {
           id?: string
           tenant_id: string
-          client_id: string
-          service_id?: string | null
+          patient_id: string
+          procedure_id?: string | null
           professional_id?: string | null
           specialty_id?: string | null
           priority?: string
@@ -3130,8 +3130,8 @@ export type Database = {
         Update: {
           id?: string
           tenant_id?: string
-          client_id?: string
-          service_id?: string | null
+          patient_id?: string
+          procedure_id?: string | null
           professional_id?: string | null
           specialty_id?: string | null
           priority?: string
@@ -3154,7 +3154,7 @@ export type Database = {
           },
           {
             foreignKeyName: "waitlist_client_id_fkey"
-            columns: ["client_id"]
+            columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -3165,7 +3165,7 @@ export type Database = {
         Row: {
           id: string
           tenant_id: string
-          client_id: string
+          patient_id: string
           from_professional: string
           to_professional: string | null
           to_specialty_id: string | null
@@ -3184,7 +3184,7 @@ export type Database = {
         Insert: {
           id?: string
           tenant_id: string
-          client_id: string
+          patient_id: string
           from_professional: string
           to_professional?: string | null
           to_specialty_id?: string | null
@@ -3203,7 +3203,7 @@ export type Database = {
         Update: {
           id?: string
           tenant_id?: string
-          client_id?: string
+          patient_id?: string
           from_professional?: string
           to_professional?: string | null
           to_specialty_id?: string | null
@@ -3229,7 +3229,7 @@ export type Database = {
           },
           {
             foreignKeyName: "referrals_client_id_fkey"
-            columns: ["client_id"]
+            columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
@@ -3243,7 +3243,7 @@ export type Database = {
           blood_pressure_diastolic: number | null
           blood_pressure_systolic: number | null
           chief_complaint: string
-          client_id: string
+          patient_id: string
           created_at: string
           current_medications: string | null
           heart_rate: number | null
@@ -3267,7 +3267,7 @@ export type Database = {
           blood_pressure_diastolic?: number | null
           blood_pressure_systolic?: number | null
           chief_complaint: string
-          client_id: string
+          patient_id: string
           created_at?: string
           current_medications?: string | null
           heart_rate?: number | null
@@ -3291,7 +3291,7 @@ export type Database = {
           blood_pressure_diastolic?: number | null
           blood_pressure_systolic?: number | null
           chief_complaint?: string
-          client_id?: string
+          patient_id?: string
           created_at?: string
           current_medications?: string | null
           heart_rate?: number | null
@@ -3315,7 +3315,7 @@ export type Database = {
         Row: {
           appointment_id: string | null
           medical_record_id: string | null
-          client_id: string
+          patient_id: string
           created_at: string
           digital_signature: string | null
           expires_at: string | null
@@ -3334,7 +3334,7 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           medical_record_id?: string | null
-          client_id: string
+          patient_id: string
           created_at?: string
           digital_signature?: string | null
           expires_at?: string | null
@@ -3353,7 +3353,7 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           medical_record_id?: string | null
-          client_id?: string
+          patient_id?: string
           created_at?: string
           digital_signature?: string | null
           expires_at?: string | null
@@ -3375,7 +3375,7 @@ export type Database = {
         Row: {
           appointment_id: string | null
           medical_record_id: string | null
-          client_id: string
+          patient_id: string
           created_at: string
           exam_name: string
           exam_type: string
@@ -3396,7 +3396,7 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           medical_record_id?: string | null
-          client_id: string
+          patient_id: string
           created_at?: string
           exam_name: string
           exam_type?: string
@@ -3417,7 +3417,7 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           medical_record_id?: string | null
-          client_id?: string
+          patient_id?: string
           created_at?: string
           exam_name?: string
           exam_type?: string
@@ -3470,7 +3470,7 @@ export type Database = {
       consent_forms: {
         Row: {
           appointment_id: string | null
-          client_id: string
+          patient_id: string
           content: string
           created_at: string
           form_type: string
@@ -3488,7 +3488,7 @@ export type Database = {
         }
         Insert: {
           appointment_id?: string | null
-          client_id: string
+          patient_id: string
           content: string
           created_at?: string
           form_type?: string
@@ -3506,7 +3506,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string | null
-          client_id?: string
+          patient_id?: string
           content?: string
           created_at?: string
           form_type?: string

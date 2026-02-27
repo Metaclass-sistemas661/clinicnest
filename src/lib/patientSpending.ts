@@ -43,7 +43,7 @@ export async function fetchPatientSpendingAllTime(
       amount,
       category,
       transaction_date,
-      appointments(patient_id, patients(id, name), service_id, services(name))
+      appointments(patient_id, patients(id, name), procedure_id, procedure:procedures(name))
     `
     )
     .eq("tenant_id", tenantId)
@@ -54,10 +54,10 @@ export async function fetchPatientSpendingAllTime(
 
   type Acc = {
     name: string;
-    services: number;
+    procedures: number;
     products: number;
     total: number;
-    services_detail: { name: string; amount: number; date: string }[];
+    procedures_detail: { name: string; amount: number; date: string }[];
     products_detail: { name: string; amount: number; date: string }[];
   };
 
@@ -67,7 +67,7 @@ export async function fetchPatientSpendingAllTime(
     const apt = row.appointments as {
       patient_id: string | null;
       patients?: { id: string; name: string } | null;
-      services?: { name: string } | null;
+      procedure?: { name: string } | null;
     } | null;
     if (!apt?.patient_id || !apt?.patients) continue;
 
@@ -79,10 +79,10 @@ export async function fetchPatientSpendingAllTime(
     if (!byPatient.has(id)) {
       byPatient.set(id, {
         name,
-        services: 0,
+        procedures: 0,
         products: 0,
         total: 0,
-        services_detail: [],
+        procedures_detail: [],
         products_detail: [],
       });
     }
@@ -90,9 +90,9 @@ export async function fetchPatientSpendingAllTime(
     cur.total += amount;
 
     if (row.category === "Serviço") {
-      cur.services += 1;
-      cur.services_detail.push({
-        name: apt.services?.name ?? "Serviço",
+      cur.procedures += 1;
+      cur.procedures_detail.push({
+        name: apt.procedure?.name ?? "Serviço",
         amount,
         date,
       });
@@ -108,16 +108,16 @@ export async function fetchPatientSpendingAllTime(
 
   return Array.from(byPatient.entries())
     .map(([patient_id, v]) => {
-      const visits = v.services;
+      const visits = v.procedures;
       const ticketMedio = visits > 0 ? v.total / visits : v.total;
       return {
         patient_id,
         patient_name: v.name,
-        services_count: v.services,
+        services_count: v.procedures,
         products_count: v.products,
         total_amount: v.total,
         ticket_medio: Math.round(ticketMedio * 100) / 100,
-        services_detail: v.services_detail,
+        services_detail: v.procedures_detail,
         products_detail: v.products_detail,
       };
     })

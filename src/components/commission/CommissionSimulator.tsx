@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import type { CommissionRule } from "./CommissionRuleCard";
 
-interface Service {
+interface ProcedureOption {
   id: string;
   name: string;
   price: number;
@@ -43,14 +43,14 @@ interface CommissionSimulatorProps {
 
 export function CommissionSimulator({ professionalId, rules }: CommissionSimulatorProps) {
   const { profile } = useAuth();
-  const [services, setServices] = useState<Service[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
   const [insurances, setInsurances] = useState<Insurance[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Simulation inputs
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [selectedProcedureId, setSelectedProcedureId] = useState<string>("");
   const [selectedInsuranceId, setSelectedInsuranceId] = useState<string>("particular");
-  const [serviceValue, setServiceValue] = useState<string>("");
+  const [procedureValue, setProcedureValue] = useState<string>("");
   const [monthlyRevenue, setMonthlyRevenue] = useState<string>("0");
 
   // Simulation result
@@ -65,7 +65,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
 
     const loadData = async () => {
       try {
-        const [servicesRes, insurancesRes] = await Promise.all([
+        const [proceduresRes, insurancesRes] = await Promise.all([
           supabase
             .from("procedures")
             .select("id, name, price")
@@ -80,7 +80,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
             .order("name"),
         ]);
 
-        if (servicesRes.data) setServices(servicesRes.data);
+        if (proceduresRes.data) setProcedures(proceduresRes.data);
         if (insurancesRes.data) setInsurances(insurancesRes.data);
       } catch (error) {
         logger.error("Error loading simulator data:", error);
@@ -92,13 +92,13 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
 
   // Auto-fill service value when service is selected
   useEffect(() => {
-    if (selectedServiceId) {
-      const service = services.find((s) => s.id === selectedServiceId);
+    if (selectedProcedureId) {
+      const procedure = procedures.find((s) => s.id === selectedProcedureId);
       if (service) {
-        setServiceValue(String(service.price));
+        setProcedureValue(String(procedure.price));
       }
     }
-  }, [selectedServiceId, services]);
+  }, [selectedProcedureId, procedures]);
 
   const findApplicableRule = (): CommissionRule | null => {
     const activeRules = rules.filter((r) => r.is_active);
@@ -114,7 +114,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
       }
 
       // Check service rules
-      if (rule.rule_type === "service" && rule.service_id === selectedServiceId) {
+      if (rule.rule_type === "service" && rule.procedure_id === selectedProcedureId) {
         return rule;
       }
 
@@ -169,7 +169,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
     setIsLoading(true);
 
     setTimeout(() => {
-      const value = Number(serviceValue) || 0;
+      const value = Number(procedureValue) || 0;
       const appliedRule = findApplicableRule();
 
       if (appliedRule) {
@@ -214,12 +214,12 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
           {/* Service Select */}
           <div className="space-y-2">
             <Label>Serviço</Label>
-            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+            <Select value={selectedProcedureId} onValueChange={setSelectedProcedureId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um procedimento" />
               </SelectTrigger>
               <SelectContent>
-                {services.map((svc) => (
+                {procedures.map((svc) => (
                   <SelectItem key={svc.id} value={svc.id}>
                     {svc.name} - {formatCurrency(svc.price)}
                   </SelectItem>
@@ -253,8 +253,8 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
               type="number"
               min="0"
               step="0.01"
-              value={serviceValue}
-              onChange={(e) => setServiceValue(e.target.value)}
+              value={procedureValue}
+              onChange={(e) => setProcedureValue(e.target.value)}
               placeholder="0.00"
             />
           </div>
@@ -278,7 +278,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
 
         <Button
           onClick={handleSimulate}
-          disabled={!selectedServiceId || !serviceValue || isLoading}
+          disabled={!selectedProcedureId || !procedureValue || isLoading}
           className="w-full"
         >
           {isLoading ? (
@@ -324,7 +324,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
                         Valor do Serviço
                       </span>
                       <span className="font-semibold">
-                        {formatCurrency(Number(serviceValue))}
+                        {formatCurrency(Number(procedureValue))}
                       </span>
                     </div>
                     <ArrowRight className="h-5 w-5 text-muted-foreground" />

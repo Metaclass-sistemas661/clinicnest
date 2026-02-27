@@ -138,7 +138,7 @@ function generateACK(original: HL7Message, ackCode: 'AA' | 'AE' | 'AR', errorMes
   const messageId = crypto.randomUUID().substring(0, 20);
   
   const lines = [
-    `MSH|^~\\&|CLINICAFLOW||${original.sendingApplication}|${original.sendingFacility}|${timestamp}||ACK|${messageId}|P|${original.version}`,
+    `MSH|^~\\&|ClinicNest||${original.sendingApplication}|${original.sendingFacility}|${timestamp}||ACK|${messageId}|P|${original.version}`,
     `MSA|${ackCode}|${original.messageControlId}|${errorMessage || ''}`,
   ];
   

@@ -56,10 +56,10 @@ export function AgendaPreview() {
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { time: "09:00", client: "Maria Silva", service: "Consulta Clínica Geral", professional: "Dra. Ana", status: "confirmed" },
-                  { time: "10:30", client: "João Santos", service: "Retorno Cardiologia", professional: "Dr. Carlos", status: "confirmed" },
-                  { time: "14:00", client: "Ana Costa", service: "Avaliação Dermatológica", professional: "Dra. Ana", status: "pending" },
-                  { time: "15:30", client: "Pedro Lima", service: "Consulta Pediátrica", professional: "Dr. Carlos", status: "confirmed" },
+                  { time: "09:00", patient: "Maria Silva", procedure: "Consulta Clínica Geral", professional: "Dra. Ana", status: "confirmed" },
+                  { time: "10:30", patient: "João Santos", procedure: "Retorno Cardiologia", professional: "Dr. Carlos", status: "confirmed" },
+                  { time: "14:00", patient: "Ana Costa", procedure: "Avaliação Dermatológica", professional: "Dra. Ana", status: "pending" },
+                  { time: "15:30", patient: "Pedro Lima", procedure: "Consulta Pediátrica", professional: "Dr. Carlos", status: "confirmed" },
                 ].map((apt, idx) => (
                   <div
                     key={idx}
@@ -73,9 +73,9 @@ export function AgendaPreview() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <User className="h-3 w-3 text-muted-foreground" />
-                          <p className="font-medium text-sm text-foreground truncate">{apt.client}</p>
+                          <p className="font-medium text-sm text-foreground truncate">{apt.patient}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">{apt.service}</p>
+                        <p className="text-xs text-muted-foreground truncate">{apt.procedure}</p>
                         <p className="text-xs text-muted-foreground mt-1">Profissional: {apt.professional}</p>
                       </div>
                     </div>

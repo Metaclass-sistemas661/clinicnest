@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Check, Zap, Bug, Wrench } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 interface ChangelogEntry {
   version: string;
@@ -53,8 +54,8 @@ const CHANGELOG: ChangelogEntry[] = [
   },
 ];
 
-const CURRENT_VERSION = CHANGELOG[0]?.version || "2.6.0";
-const STORAGE_KEY = "clinicaflow_last_seen_version";
+const CURRENT_VERSION = APP_VERSION;
+const STORAGE_KEY = "clinicnest_last_seen_version";
 
 export function ChangelogDialog() {
   const [open, setOpen] = useState(false);
@@ -129,7 +130,7 @@ export function ChangelogDialog() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Novidades do ClinicaFlow
+              Novidades do ClinicNest
             </DialogTitle>
             <DialogDescription>
               Confira as últimas atualizações e melhorias

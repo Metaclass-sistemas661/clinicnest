@@ -74,7 +74,7 @@ export async function gerarRelatorioProdutividadeOdonto(
     .from("treatment_plan_items")
     .select(`
       id, procedure_name, procedure_code, tooth_number, total_price, status, completed_at,
-      treatment_plans!inner(tenant_id, professional_id, client_id, profiles(name))
+      treatment_plans!inner(tenant_id, professional_id, patient_id, profiles(name))
     `)
     .eq("treatment_plans.tenant_id", tenantId)
     .eq("status", "concluido")
@@ -106,7 +106,7 @@ export async function gerarRelatorioProdutividadeOdonto(
   const planosList = plans || [];
   
   const valorTotal = procedimentos.reduce((sum, i) => sum + (i.total_price || 0), 0);
-  const pacientesUnicos = new Set(procedimentos.map((i: any) => i.treatment_plans?.client_id)).size;
+  const pacientesUnicos = new Set(procedimentos.map((i: any) => i.treatment_plans?.patient_id)).size;
   const planosAprovados = planosList.filter((p) => ["aprovado", "em_andamento", "concluido"].includes(p.status)).length;
 
   // Agrupar por tipo de procedimento

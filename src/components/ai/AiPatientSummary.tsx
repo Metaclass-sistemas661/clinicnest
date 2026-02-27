@@ -18,14 +18,15 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 
 interface AiPatientSummaryProps {
-  clientId: string;
-  clientName?: string;
+  patientId: string;
+  patientName?: string;
   className?: string;
 }
 
-export function AiPatientSummary({ clientId, clientName, className }: AiPatientSummaryProps) {
+export function AiPatientSummary({ patientId, patientName, className }: AiPatientSummaryProps) {
   const [summary, setSummary] = useState<string>("");
   const [generatedAt, setGeneratedAt] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -40,7 +41,7 @@ export function AiPatientSummary({ clientId, clientName, className }: AiPatientS
     mutationFn: async () => {
       const { data, error } = await supabase.functions.invoke("ai-summary", {
         body: {
-          client_id: clientId,
+          patient_id: patientId,
           ...options,
         },
       });
@@ -64,15 +65,16 @@ export function AiPatientSummary({ clientId, clientName, className }: AiPatientS
   };
 
   return (
+    <FeatureGate feature="aiSummary" className={className}>
     <Card className={cn("", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
             Resumo do Prontuário
-            {clientName && (
+            {patientName && (
               <span className="text-sm font-normal text-muted-foreground">
-                - {clientName}
+                - {patientName}
               </span>
             )}
           </CardTitle>
@@ -190,5 +192,6 @@ export function AiPatientSummary({ clientId, clientName, className }: AiPatientS
         </p>
       </CardContent>
     </Card>
+    </FeatureGate>
   );
 }

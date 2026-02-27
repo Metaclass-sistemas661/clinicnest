@@ -215,7 +215,7 @@ serve(async (req) => {
           </div>
           <div class="footer">
             <p>Este é um email automático. Para desativar, acesse suas preferências de notificação.</p>
-            <p>${summary.tenant_name} - Powered by ClinicaFlow</p>
+            <p>${summary.tenant_name} - Powered by ClinicNest</p>
           </div>
         </body>
         </html>
@@ -230,7 +230,7 @@ serve(async (req) => {
               Authorization: `Bearer ${resendApiKey}`,
             },
             body: JSON.stringify({
-              from: "ClinicaFlow <noreply@clinicaflow.com.br>",
+              from: "ClinicNest <noreply@ClinicNest.com.br>",
               to: summary.email,
               subject: `Resumo Financeiro Semanal - ${summary.tenant_name}`,
               html: emailHtml,

@@ -24,11 +24,11 @@ interface Template {
   is_default: boolean;
 }
 
-interface Client { id: string; name: string; }
+interface PatientOption { id: string; name: string; }
 
 export interface EditableRecord {
   id: string;
-  client_id: string;
+  patient_id: string;
   appointment_id: string | null;
   triage_id?: string | null;
   template_id?: string | null;
@@ -68,9 +68,9 @@ interface Props {
   professionalId: string;
   professionalName?: string;
   professionalCrm?: string;
-  clients: Client[];
+  clients: PatientOption[];
   templates: Template[];
-  initialClientId?: string;
+  initialPatientId?: string;
   initialAppointmentId?: string;
   initialTriage?: TriageData | null;
   builtInFields?: TemplateField[];
@@ -108,7 +108,7 @@ const emptyVitals = {
 export function ProntuarioForm({
   tenantId, professionalId, professionalName, professionalCrm,
   clients, templates,
-  initialClientId, initialAppointmentId, initialTriage,
+  initialPatientId, initialAppointmentId, initialTriage,
   builtInFields, editRecord,
   onSaved, onCancel,
 }: Props) {
@@ -120,7 +120,7 @@ export function ProntuarioForm({
     : false;
   const canEdit = isEditing ? !isLocked && !isOlderThan24h : true;
 
-  const [clientId, setClientId] = useState(editRecord?.client_id || initialClientId || "");
+  const [patientId, setPatientId] = useState(editRecord?.patient_id || initialPatientId || "");
   const [templateId, setTemplateId] = useState(editRecord?.template_id || "none");
   const [attendanceType, setAttendanceType] = useState(editRecord?.attendance_type || "consulta");
   const [base, setBase] = useState(
@@ -200,8 +200,8 @@ export function ProntuarioForm({
   }, [initialTriage]);
 
   useEffect(() => {
-    if (initialClientId) setClientId(initialClientId);
-  }, [initialClientId]);
+    if (initialPatientId) setPatientId(initialPatientId);
+  }, [initialPatientId]);
 
   useEffect(() => {
     if (templates.length > 0 && templateId === "none") {
@@ -218,7 +218,7 @@ export function ProntuarioForm({
         .from("triage_records")
         .select("*")
         .eq("tenant_id", tenantId)
-        .eq("client_id", cid)
+        .eq("patient_id", cid)
         .eq("status", "pendente")
         .gte("triaged_at", `${today}T00:00:00`)
         .order("triaged_at", { ascending: false })
@@ -253,8 +253,8 @@ export function ProntuarioForm({
     }
   };
 
-  const handleClientChange = (cid: string) => {
-    setClientId(cid);
+  const handlePatientChange = (cid: string) => {
+    setPatientId(cid);
     if (!initialTriage) fetchTriageForClient(cid);
   };
 
@@ -336,7 +336,7 @@ export function ProntuarioForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId) { toast.error("Selecione um paciente"); return; }
+    if (!patientId) { toast.error("Selecione um paciente"); return; }
     if (!base.chief_complaint.trim()) { toast.error("Queixa principal é obrigatória"); return; }
     if (isEditing && !canEdit) { toast.error("Este prontuário está bloqueado para edição"); return; }
     if (isEditing && !changeReason.trim()) { toast.error("Informe o motivo da alteração"); return; }
@@ -436,7 +436,7 @@ export function ProntuarioForm({
         const { error } = await supabase.from("medical_records").insert({
           tenant_id: tenantId,
           professional_id: professionalId,
-          client_id: clientId,
+          patient_id: patientId,
           appointment_id: initialAppointmentId || null,
           triage_id: triage?.id || null,
           template_id: templateId && templateId !== "none" ? templateId : null,
@@ -541,7 +541,7 @@ export function ProntuarioForm({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>Paciente *</Label>
-          <Select value={clientId || undefined} onValueChange={handleClientChange}>
+          <Select value={patientId || undefined} onValueChange={handlePatientChange}>
             <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
             <SelectContent>
               {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}

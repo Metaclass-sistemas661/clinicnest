@@ -16,8 +16,8 @@ import { ArrowLeft, Loader2, Calculator, Download } from "lucide-react";
 import { generateConsultaXML, generateSPSADTXML, downloadTissXml, generateLotNumber } from "@/lib/tiss";
 
 type InsurancePlan = { id: string; name: string; ans_code: string | null; tiss_version: string | null };
-type Client = { id: string; name: string; cpf: string | null; insurance_card_number: string | null };
-type Service = { id: string; name: string; tuss_code: string | null; insurance_price: number };
+type PatientOption = { id: string; name: string; cpf: string | null; insurance_card_number: string | null };
+type ProcedureOption = { id: string; name: string; tuss_code: string | null; insurance_price: number };
 
 export default function NovaGuiaTISS() {
   const navigate = useNavigate();
@@ -26,13 +26,13 @@ export default function NovaGuiaTISS() {
   const [isSaving, setIsSaving] = useState(false);
 
   const [plans, setPlans] = useState<InsurancePlan[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
 
   const [guideType, setGuideType] = useState<"consulta" | "sadt">("consulta");
   const [planId, setPlanId] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [serviceId, setServiceId] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [procedureId, setProcedureId] = useState("");
   const [dataAtendimento, setDataAtendimento] = useState(new Date().toISOString().slice(0, 10));
   const [horaInicial, setHoraInicial] = useState("08:00");
   const [cidCode, setCidCode] = useState("");
@@ -52,14 +52,14 @@ export default function NovaGuiaTISS() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const [plansRes, clientsRes, servicesRes] = await Promise.all([
+      const [plansRes, patientsRes, proceduresRes] = await Promise.all([
         supabase.from("insurance_plans").select("id, name, ans_code, tiss_version").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
         supabase.from("patients").select("id, name, cpf, insurance_card_number").eq("tenant_id", profile.tenant_id).order("name").limit(500),
         supabase.from("procedures").select("id, name, tuss_code, insurance_price").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
       ]);
       setPlans((plansRes.data ?? []) as InsurancePlan[]);
-      setClients((clientsRes.data ?? []) as Client[]);
-      setServices((servicesRes.data ?? []) as Service[]);
+      setPatients((patientsRes.data ?? []) as PatientOption[]);
+      setProcedures((proceduresRes.data ?? []) as ProcedureOption[]);
     } catch (err) {
       logger.error(err);
     } finally {
@@ -68,12 +68,12 @@ export default function NovaGuiaTISS() {
   };
 
   const selectedPlan = plans.find((p) => p.id === planId);
-  const selectedClient = clients.find((c) => c.id === clientId);
-  const selectedService = services.find((s) => s.id === serviceId);
-  const valorTotal = (selectedService?.insurance_price ?? 0) * Number(quantidade || 1);
+  const selectedPatient = patients.find((c) => c.id === patientId);
+  const selectedProcedure = procedures.find((s) => s.id === procedureId);
+  const valorTotal = (selectedProcedure?.insurance_price ?? 0) * Number(quantidade || 1);
 
   const handleGenerate = async () => {
-    if (!planId || !clientId || !serviceId) {
+    if (!planId || !patientId || !procedureId) {
       toast.error("Preencha convênio, paciente e serviço");
       return;
     }
@@ -104,9 +104,9 @@ export default function NovaGuiaTISS() {
           profissionalSolicitanteConselho: "CRM",
           profissionalSolicitanteUF: "SP",
           operadoraRegistroANS: selectedPlan?.ans_code ?? "000000",
-          beneficiarioNome: selectedClient?.name ?? "",
-          beneficiarioCarteirinha: selectedClient?.insurance_card_number ?? "000000000000000",
-          beneficiarioCpf: selectedClient?.cpf ?? undefined,
+          beneficiarioNome: selectedPatient?.name ?? "",
+          beneficiarioCarteirinha: selectedPatient?.insurance_card_number ?? "000000000000000",
+          beneficiarioCpf: selectedPatient?.cpf ?? undefined,
           dataAtendimento,
           dataSolicitacao: dataAtendimento,
           numeroGuia: guideNum,
@@ -117,10 +117,10 @@ export default function NovaGuiaTISS() {
           indicacaoClinica: cidCode ? `CID: ${cidCode}` : undefined,
           procedimentos: [{
             codigoTabela: "22",
-            codigoProcedimento: selectedService?.tuss_code ?? "10101012",
-            descricao: selectedService?.name ?? "",
+            codigoProcedimento: selectedProcedure?.tuss_code ?? "10101012",
+            descricao: selectedProcedure?.name ?? "",
             quantidade: Number(quantidade),
-            valorUnitario: selectedService?.insurance_price ?? 0,
+            valorUnitario: selectedProcedure?.insurance_price ?? 0,
             valorTotal,
           }],
           observacao: observacao || undefined,
@@ -138,17 +138,17 @@ export default function NovaGuiaTISS() {
           profissionalConselho: "CRM",
           profissionalUF: "SP",
           operadoraRegistroANS: selectedPlan?.ans_code ?? "000000",
-          beneficiarioNome: selectedClient?.name ?? "",
-          beneficiarioCarteirinha: selectedClient?.insurance_card_number ?? "000000000000000",
-          beneficiarioCpf: selectedClient?.cpf ?? undefined,
+          beneficiarioNome: selectedPatient?.name ?? "",
+          beneficiarioCarteirinha: selectedPatient?.insurance_card_number ?? "000000000000000",
+          beneficiarioCpf: selectedPatient?.cpf ?? undefined,
           dataAtendimento,
           horaInicial,
           numeroGuia: guideNum,
           indicacaoAcidente,
           tipoConsulta,
-          tussCode: selectedService?.tuss_code ?? "10101012",
-          procedimentoDescricao: selectedService?.name ?? "",
-          valorProcedimento: selectedService?.insurance_price ?? 0,
+          tussCode: selectedProcedure?.tuss_code ?? "10101012",
+          procedimentoDescricao: selectedProcedure?.name ?? "",
+          valorProcedimento: selectedProcedure?.insurance_price ?? 0,
           valorTotal,
           observacao: observacao || undefined,
           numLote: lotNum,
@@ -231,10 +231,10 @@ export default function NovaGuiaTISS() {
 
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select value={patientId} onValueChange={setPatientId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {patients.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -243,10 +243,10 @@ export default function NovaGuiaTISS() {
 
             <div className="space-y-2">
               <Label>Serviço/Procedimento *</Label>
-              <Select value={serviceId} onValueChange={setServiceId}>
+              <Select value={procedureId} onValueChange={setProcedureId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o procedimento" /></SelectTrigger>
                 <SelectContent>
-                  {services.map((s) => (
+                  {procedures.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name} {s.tuss_code && `(${s.tuss_code})`}</SelectItem>
                   ))}
                 </SelectContent>

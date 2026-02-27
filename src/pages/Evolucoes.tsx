@@ -79,7 +79,7 @@ function SoapEvolutionCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="font-semibold text-foreground">{evo.clients?.name ?? "Paciente"}</h3>
+              <h3 className="font-semibold text-foreground">{evo.patient?.name ?? "Paciente"}</h3>
               <Badge className={`text-xs ${EVOLUTION_TYPE_COLORS[evo.evolution_type]}`}>
                 {EVOLUTION_TYPE_LABELS[evo.evolution_type]}
               </Badge>
@@ -205,13 +205,13 @@ function NursingEvolutionCard({
   );
 }
 
-interface ClientOption { id: string; name: string }
+interface PatientOption { id: string; name: string }
 interface ProfessionalOption { id: string; full_name: string }
-interface AppointmentOption { id: string; appointment_date: string; start_time: string; client_id: string }
+interface AppointmentOption { id: string; appointment_date: string; start_time: string; patient_id: string }
 
 interface NursingEvolution {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   professional_name: string;
   evolution_date: string;
@@ -246,7 +246,7 @@ export default function Evolucoes() {
 
   const [evolutions, setEvolutions] = useState<ClinicalEvolution[]>([]);
   const [nursingEvolutions, setNursingEvolutions] = useState<NursingEvolution[]>([]);
-  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
   const [appointments, setAppointments] = useState<AppointmentOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -275,7 +275,7 @@ export default function Evolucoes() {
   const [fNotes, setFNotes] = useState("");
 
   // Nursing Form state
-  const [nfClientId, setNfClientId] = useState("");
+  const [nfPatientId, setNfPatientId] = useState("");
   const [nfAppointmentId, setNfAppointmentId] = useState("");
   const [nfNandaCode, setNfNandaCode] = useState("");
   const [nfNandaDiagnosis, setNfNandaDiagnosis] = useState("");
@@ -299,12 +299,12 @@ export default function Evolucoes() {
     try {
       const [evoRes, nursingRes, cliRes, proRes] = await Promise.all([
         db.from("clinical_evolutions")
-          .select("*, clients(name), profiles(full_name)")
+          .select("*, patient:patients(name), profiles(full_name)")
           .eq("tenant_id", tenantId)
           .order("evolution_date", { ascending: false })
           .limit(200),
         supabase.from("nursing_evolutions")
-          .select("*, clients(name), profiles(full_name)")
+          .select("*, patient:patients(name), profiles(full_name)")
           .eq("tenant_id", tenantId)
           .order("evolution_date", { ascending: false })
           .limit(200),
@@ -318,8 +318,8 @@ export default function Evolucoes() {
       // Map nursing evolutions
       setNursingEvolutions(((nursingRes.data ?? []) as any[]).map(r => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
         professional_name: r.profiles?.full_name ?? "—",
         evolution_date: r.evolution_date,
         nanda_code: r.nanda_code,
@@ -335,7 +335,7 @@ export default function Evolucoes() {
         notes: r.notes,
         status: r.status,
       })));
-      setClients((cliRes.data ?? []) as ClientOption[]);
+      setPatients((cliRes.data ?? []) as PatientOption[]);
       setProfessionals((proRes.data ?? []) as ProfessionalOption[]);
     } catch (err) {
       logger.error("Evolucoes.fetchData", err);
@@ -347,18 +347,18 @@ export default function Evolucoes() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const fetchAppointments = useCallback(async (clientId: string) => {
-    if (!tenantId || !clientId) { setAppointments([]); return; }
+  const fetchAppointments = useCallback(async (patientId: string) => {
+    if (!tenantId || !patientId) { setAppointments([]); return; }
     const { data } = await supabase.from("appointments")
-      .select("id, appointment_date, start_time, client_id")
-      .eq("tenant_id", tenantId).eq("client_id", clientId)
+      .select("id, appointment_date, start_time, patient_id")
+      .eq("tenant_id", tenantId).eq("patient_id", patientId)
       .order("appointment_date", { ascending: false }).limit(20);
     setAppointments((data ?? []) as AppointmentOption[]);
   }, [tenantId]);
 
   const filtered = useMemo(() => {
     let list = evolutions;
-    if (filterClient) list = list.filter((e) => e.client_id === filterClient);
+    if (filterClient) list = list.filter((e) => e.patient_id === filterClient);
     if (filterType !== "all") list = list.filter((e) => e.evolution_type === filterType);
     if (filterSearch.trim()) {
       const q = filterSearch.toLowerCase();
@@ -367,7 +367,7 @@ export default function Evolucoes() {
         e.objective?.toLowerCase().includes(q) ||
         e.assessment?.toLowerCase().includes(q) ||
         e.plan?.toLowerCase().includes(q) ||
-        e.clients?.name?.toLowerCase().includes(q)
+        e.patient?.name?.toLowerCase().includes(q)
       );
     }
     return list;
@@ -375,7 +375,7 @@ export default function Evolucoes() {
 
   const filteredNursing = useMemo(() => {
     let list = nursingEvolutions;
-    if (filterClient) list = list.filter((e) => e.client_id === filterClient);
+    if (filterClient) list = list.filter((e) => e.patient_id === filterClient);
     if (filterSearch.trim()) {
       const q = filterSearch.toLowerCase();
       list = list.filter((e) =>
@@ -416,7 +416,7 @@ export default function Evolucoes() {
 
   const openEdit = (evo: ClinicalEvolution) => {
     setEditingId(evo.id);
-    setFClientId(evo.client_id);
+    setFClientId(evo.patient_id);
     setFType(evo.evolution_type);
     setFDate(evo.evolution_date);
     setFAppointmentId(evo.appointment_id ?? "");
@@ -426,7 +426,7 @@ export default function Evolucoes() {
     setFPlan(evo.plan ?? "");
     setFCid(evo.cid_code ?? "");
     setFNotes(evo.notes ?? "");
-    fetchAppointments(evo.client_id);
+    fetchAppointments(evo.patient_id);
     setIsFormOpen(true);
   };
 
@@ -455,7 +455,7 @@ export default function Evolucoes() {
       });
       const payload = {
         tenant_id: tenantId,
-        client_id: fClientId,
+        patient_id: fClientId,
         professional_id: profile.id,
         appointment_id: fAppointmentId || null,
         evolution_date: fDate,
@@ -517,7 +517,7 @@ export default function Evolucoes() {
       generateEvolutionPdf({
         clinicName,
         professionalName: evo.profiles?.full_name ?? evo.signed_by_name ?? "",
-        patientName: evo.clients?.name ?? "",
+        patientName: evo.patient?.name ?? "",
         evolutionDate: evo.evolution_date,
         evolutionType: EVOLUTION_TYPE_LABELS[evo.evolution_type] ?? evo.evolution_type,
         subjective: evo.subjective,
@@ -539,16 +539,16 @@ export default function Evolucoes() {
   };
 
   const clientAppts = useMemo(() =>
-    appointments.filter((a) => a.client_id === fClientId),
+    appointments.filter((a) => a.patient_id === fClientId),
   [appointments, fClientId]);
 
   const nursingClientAppts = useMemo(() =>
-    appointments.filter((a) => a.client_id === nfClientId),
-  [appointments, nfClientId]);
+    appointments.filter((a) => a.patient_id === nfPatientId),
+  [appointments, nfPatientId]);
 
   // Nursing form functions
   const openNursingCreate = () => {
-    setNfClientId("");
+    setNfPatientId("");
     setNfAppointmentId("");
     setNfNandaCode("");
     setNfNandaDiagnosis("");
@@ -565,10 +565,10 @@ export default function Evolucoes() {
     setIsNursingFormOpen(true);
   };
 
-  const handleNursingClientChange = (clientId: string) => {
-    setNfClientId(clientId);
+  const handleNursingPatientChange = (patientId: string) => {
+    setNfPatientId(patientId);
     setNfAppointmentId("");
-    if (clientId) fetchAppointments(clientId);
+    if (patientId) fetchAppointments(patientId);
     else setAppointments([]);
   };
 
@@ -589,7 +589,7 @@ export default function Evolucoes() {
 
   const handleNursingSave = async () => {
     if (!tenantId || !profile) return;
-    if (!nfClientId || !nfNandaDiagnosis.trim()) {
+    if (!nfPatientId || !nfNandaDiagnosis.trim()) {
       toast.error("Paciente e diagnóstico NANDA são obrigatórios");
       return;
     }
@@ -597,7 +597,7 @@ export default function Evolucoes() {
     try {
       const { error } = await supabase.from("nursing_evolutions").insert({
         tenant_id: tenantId,
-        client_id: nfClientId,
+        patient_id: nfPatientId,
         professional_id: profile.id,
         appointment_id: nfAppointmentId || null,
         nanda_code: nfNandaCode || null,
@@ -956,7 +956,7 @@ export default function Evolucoes() {
           <FormDrawerSection title="Paciente">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={nfClientId || "none"} onValueChange={(v) => handleNursingClientChange(v === "none" ? "" : v)}>
+              <Select value={nfPatientId || "none"} onValueChange={(v) => handleNursingPatientChange(v === "none" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Selecionar paciente</SelectItem>

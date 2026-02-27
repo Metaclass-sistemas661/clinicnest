@@ -46,7 +46,7 @@ import {
   FileSignature,
 } from "lucide-react";
 
-export default function ClienteDetalhe() {
+export default function PacienteDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile, isAdmin } = useAuth();
@@ -61,7 +61,7 @@ export default function ClienteDetalhe() {
   }>>([]);
   const [clientEvolutions, setClientEvolutions] = useState<ClinicalEvolution[]>([]);
   const [detailPackages, setDetailPackages] = useState<Array<{
-    id: string; service_id: string; service_name: string;
+    id: string; procedure_id: string; service_name: string;
     total_sessions: number; remaining_sessions: number;
     status: string; purchased_at: string; expires_at: string | null;
   }>>([]);
@@ -97,20 +97,20 @@ export default function ClienteDetalhe() {
     }
   };
 
-  const loadExtras = async (clientId: string) => {
+  const loadExtras = async (patientId: string) => {
     if (!profile?.tenant_id) return;
     setIsLoadingExtras(true);
     try {
       const [spendingData, { data: timelineData, error: timelineError }, packagesRes, walletRes, ledgerRes, mktPrefRes] = await Promise.all([
         fetchClientSpendingAllTime(profile.tenant_id),
-        getClientTimelineV1({ p_client_id: clientId, p_limit: 50 }),
-        supabase.from("client_packages")
-          .select("id, service_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, services(name)")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+        getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
+        supabase.from("patient_packages")
+          .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("purchased_at", { ascending: false }),
       ]);
 
-      const spending = spendingData.find((s) => s.client_id === clientId);
+      const spending = spendingData.find((s) => s.patient_id === patientId);
       setClientSpending(spending || null);
 
       if (timelineError) toastRpcError(toast, timelineError as any, "Erro ao carregar histórico");
@@ -118,8 +118,8 @@ export default function ClienteDetalhe() {
 
       if (!packagesRes.error) {
         setDetailPackages((packagesRes.data || []).map((p: any) => ({
-          id: String(p.id), service_id: String(p.service_id),
-          service_name: String(p?.services?.name ?? "Serviço"),
+          id: String(p.id), procedure_id: String(p.procedure_id),
+          service_name: String(p?.procedure?.name ?? "Serviço"),
           total_sessions: Number(p.total_sessions ?? 0),
           remaining_sessions: Number(p.remaining_sessions ?? 0),
           status: String(p.status ?? ""), purchased_at: String(p.purchased_at ?? ""),
@@ -131,19 +131,19 @@ export default function ClienteDetalhe() {
       const clinDocs: typeof clinicalHistory = [];
       const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
         supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("issued_at", { ascending: false }).limit(20),
         supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("issued_at", { ascending: false }).limit(20),
         supabase.from("exam_results").select("id, created_at, exam_name, status")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
         supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
         supabase.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("record_date", { ascending: false }).limit(20),
       ]);
 
@@ -173,8 +173,8 @@ export default function ClienteDetalhe() {
       setClinicalHistory(clinDocs);
 
       const { data: evoData } = await (supabase as any).from("clinical_evolutions")
-        .select("*, clients(name), profiles(full_name)")
-        .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
+        .select("*, patient:patients(name), profiles(full_name)")
+        .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
         .order("evolution_date", { ascending: false }).limit(50);
       setClientEvolutions((evoData ?? []) as ClinicalEvolution[]);
     } catch (err) {
@@ -504,7 +504,7 @@ export default function ClienteDetalhe() {
               <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => setContractsDialogOpen(true)}>
                 <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos
               </Button>
-              <PatientConsentsViewer clientId={client.id} clientName={client.name} tenantId={profile?.tenant_id ?? ""} />
+              <PatientConsentsViewer patientId={client.id} patientName={client.name} tenantId={profile?.tenant_id ?? ""} />
             </TabsContent>
           </>
         )}

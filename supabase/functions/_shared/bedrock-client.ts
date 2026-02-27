@@ -15,6 +15,22 @@ const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY") || "";
 // Claude 3 Haiku - Best cost-benefit for medical use cases
 const MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
 
+// ── Configurações de resiliência ────────────────────────────────
+const BEDROCK_TIMEOUT_MS = 25_000; // 25 s (edge functions têm 30 s de wall-time)
+const MAX_RETRIES = 2; // até 3 tentativas (1 original + 2 retries)
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 529]);
+
+/** Aguarda ms milissegundos */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Calcula backoff exponencial com jitter: base * 2^attempt ± jitter */
+function backoffMs(attempt: number): number {
+  const base = 1000; // 1 s
+  const exp = base * Math.pow(2, attempt); // 1s, 2s, 4s…
+  const jitter = Math.floor(Math.random() * 500);
+  return exp + jitter;
+}
+
 interface BedrockMessage {
   role: "user" | "assistant";
   content: string;
@@ -122,7 +138,7 @@ async function signRequest(
 }
 
 /**
- * Invoke Claude 3 Haiku via AWS Bedrock
+ * Invoke Claude 3 Haiku via AWS Bedrock with retry + timeout
  */
 export async function invokeBedrockClaude(request: BedrockRequest): Promise<{
   text: string;
@@ -142,25 +158,50 @@ export async function invokeBedrockClaude(request: BedrockRequest): Promise<{
     messages: request.messages,
   });
 
-  const headers = await signRequest("POST", url, body, "bedrock");
+  let lastError: Error | null = null;
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body,
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await sleep(backoffMs(attempt - 1));
+    }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+
+    try {
+      const headers = await signRequest("POST", url, body, "bedrock");
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+        if (RETRYABLE_STATUS.has(response.status)) continue; // retry
+        throw lastError; // 4xx não-retryable: falha imediata
+      }
+
+      const data: BedrockResponse = await response.json();
+      return {
+        text: data.content[0]?.text || "",
+        usage: data.usage,
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (lastError.name === "AbortError") {
+        lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+      }
+      // Retry em erros de rede / timeout (exceto último attempt)
+      if (attempt < MAX_RETRIES) continue;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  const data: BedrockResponse = await response.json();
-
-  return {
-    text: data.content[0]?.text || "",
-    usage: data.usage,
-  };
+  throw lastError ?? new Error("Bedrock request failed after retries");
 }
 
 /**
@@ -238,6 +279,7 @@ export interface AgentResponse {
 /**
  * Invoke Claude 3 Haiku via AWS Bedrock with native tool use support.
  * Used by the AI Agent for function calling (search patients, schedule, etc.).
+ * Includes retry with exponential backoff + AbortController timeout.
  */
 export async function invokeBedrockClaudeWithTools(
   messages: AgentMessage[],
@@ -260,20 +302,45 @@ export async function invokeBedrockClaudeWithTools(
     tools,
   });
 
-  const headers = await signRequest("POST", url, body, "bedrock");
+  let lastError: Error | null = null;
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body,
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await sleep(backoffMs(attempt - 1));
+    }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+
+    try {
+      const headers = await signRequest("POST", url, body, "bedrock");
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+        if (RETRYABLE_STATUS.has(response.status)) continue;
+        throw lastError;
+      }
+
+      return response.json();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (lastError.name === "AbortError") {
+        lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+      }
+      if (attempt < MAX_RETRIES) continue;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
-  return response.json();
+  throw lastError ?? new Error("Bedrock request failed after retries");
 }
 
 // Re-export types

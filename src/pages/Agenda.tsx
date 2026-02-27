@@ -39,7 +39,7 @@ import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import { CallNextButton } from "@/components/queue/CallNextButton";
-import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
+import type { Appointment, Patient, Procedure, Profile, AppointmentStatus, Product } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -58,8 +58,8 @@ export default function Agenda() {
   const [viewMode, setViewMode] = useState<"day" | "week">("week");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,8 +120,8 @@ export default function Agenda() {
 
   // Form state
   const [formData, setFormData] = useState({
-    client_id: "",
-    service_id: "",
+    patient_id: "",
+    procedure_id: "",
     professional_id: "",
     scheduled_at: "",
     scheduled_time: "",
@@ -150,13 +150,13 @@ export default function Agenda() {
     }
 
     try {
-      const [appointmentsRes, clientsRes, servicesRes, professionalsRes, productsRes] = await Promise.all([
+      const [appointmentsRes, clientsRes, proceduresRes, professionalsRes, productsRes] = await Promise.all([
         supabase
           .from("appointments")
           .select(`
             *,
-            client:clients(id, name, phone),
-            service:services(id, name, duration_minutes, price),
+            patient:patients(id, name, phone),
+            procedure:procedures(id, name, duration_minutes, price),
             professional:profiles(id, full_name)
           `)
           .eq("tenant_id", profile.tenant_id)
@@ -191,8 +191,8 @@ export default function Agenda() {
 
       setAppointments((appointmentsRes.data as unknown as Appointment[]) || []);
       setAllAppointments((appointmentsRes.data as unknown as Appointment[]) || []);
-      setClients((clientsRes.data as Client[]) || []);
-      setServices((servicesRes.data as Service[]) || []);
+      setPatients((clientsRes.data as Patient[]) || []);
+      setProcedures((proceduresRes.data as Procedure[]) || []);
       setProfessionals(professionals);
       setProducts(((productsRes.data as Product[]) || []).filter((product) => product.is_active));
     } catch (error) {
@@ -264,9 +264,9 @@ export default function Agenda() {
     setIsSaving(true);
 
     try {
-      const selectedService = services.find((s) => s.id === formData.service_id);
+      const selectedProcedure = procedures.find((s) => s.id === formData.procedure_id);
       const scheduledAt = new Date(`${formData.scheduled_at}T${formData.scheduled_time}`);
-      const durationMinutes = selectedService?.duration_minutes || 45;
+      const durationMinutes = selectedProcedure?.duration_minutes || 45;
 
       // Verificar conflito antes de criar
       if (formData.professional_id && checkConflict(formData.professional_id, scheduledAt, durationMinutes)) {
@@ -277,12 +277,12 @@ export default function Agenda() {
 
       const professionalId = !isAdmin ? (profile?.id ?? null) : (formData.professional_id || null);
       const { data: rpcData, error } = await createAppointmentV2({
-        p_client_id: formData.client_id || null,
-        p_service_id: formData.service_id || null,
+        p_client_id: formData.patient_id || null,
+        p_service_id: formData.procedure_id || null,
         p_professional_profile_id: professionalId,
         p_scheduled_at: scheduledAt.toISOString(),
         p_duration_minutes: durationMinutes,
-        p_price: selectedService?.price || 0,
+        p_price: selectedProcedure?.price || 0,
         p_status: formData.status,
         p_notes: formData.notes || null,
         p_telemedicine: Boolean(formData.telemedicine),
@@ -299,8 +299,8 @@ export default function Agenda() {
       // Notificar profissional: quando admin cria para ele OU quando cria o próprio
       if (createdProfessionalId && profile?.user_id) {
         const prof = professionals.find((p) => p.id === professionalId);
-        const client = clients.find((c) => c.id === formData.client_id);
-        const service = selectedService;
+        const patient = patients.find((c) => c.id === formData.patient_id);
+        const procedure = selectedProcedure;
         const profUserId = prof?.user_id ?? (professionalId === profile.id ? profile.user_id : null);
         if (profUserId) {
           const msg = isAdmin && profUserId !== profile.user_id
@@ -311,7 +311,7 @@ export default function Agenda() {
             profUserId,
             "appointment_created",
             msg,
-            `${client?.name || "Paciente"} • ${service?.name || "Procedimento"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
+            `${patient?.name || "Paciente"} • ${procedure?.name || "Procedimento"} em ${formatInAppTz(scheduledAt, "dd/MM 'às' HH:mm")}`,
             {}
           ).catch(() => {});
         }
@@ -320,8 +320,8 @@ export default function Agenda() {
       toast.success("Agendamento criado com sucesso!");
       setIsDialogOpen(false);
       setFormData({
-        client_id: "",
-        service_id: "",
+        patient_id: "",
+        procedure_id: "",
         professional_id: "",
         scheduled_at: "",
         scheduled_time: "",
@@ -399,14 +399,14 @@ export default function Agenda() {
       // Notificar profissional quando agendamento é cancelado
       if (apt?.professional_id && profile?.tenant_id) {
         const prof = professionals.find((p) => p.id === apt.professional_id);
-        const client = apt.client as { name?: string } | undefined;
+        const patient = apt.patient as { name?: string } | undefined;
         if (prof?.user_id) {
           notifyUser(
             profile.tenant_id,
             prof.user_id,
             "appointment_cancelled",
             "Agendamento cancelado",
-            `O agendamento com ${client?.name || "paciente"} foi cancelado.`,
+            `O agendamento com ${patient?.name || "paciente"} foi cancelado.`,
             {}
           ).catch(() => {});
         }
@@ -425,16 +425,16 @@ export default function Agenda() {
 
   const editAppointment = async (id: string, data: EditAppointmentData) => {
     try {
-      const selectedService = services.find((s) => s.id === data.service_id);
+      const selectedProcedure = procedures.find((s) => s.id === data.procedure_id);
 
       const { error } = await updateAppointmentV2({
         p_appointment_id: id,
-        p_client_id: data.client_id,
-        p_service_id: data.service_id,
+        p_client_id: data.patient_id,
+        p_service_id: data.procedure_id,
         p_professional_profile_id: data.professional_id,
         p_scheduled_at: data.scheduled_at,
-        p_duration_minutes: selectedService?.duration_minutes || 45,
-        p_price: selectedService?.price || 0,
+        p_duration_minutes: selectedProcedure?.duration_minutes || 45,
+        p_price: selectedProcedure?.price || 0,
         p_notes: data.notes,
         p_telemedicine: Boolean(data.telemedicine),
       });
@@ -558,7 +558,7 @@ export default function Agenda() {
       // Notificar profissional quando admin conclui atendimento dele
       if (appointment.professional_id && profile?.tenant_id) {
         const prof = professionals.find((p) => p.id === appointment.professional_id);
-        const serviceName = (result?.service_name ?? (appointment.service as { name?: string })?.name) || "Procedimento";
+        const serviceName = (result?.service_name ?? (appointment.procedure as { name?: string })?.name) || "Procedimento";
         if (prof?.user_id) {
           notifyUser(
             profile.tenant_id,
@@ -585,13 +585,13 @@ export default function Agenda() {
   };
 
   const handleStartConsultation = useCallback((appointment: any) => {
-    const clientId = appointment.client_id || (appointment.client as any)?.id;
-    if (!clientId) {
+    const patientId = appointment.patient_id || (appointment.patient as any)?.id;
+    if (!patientId) {
       toast.error("Agendamento sem paciente vinculado");
       return;
     }
     const params = new URLSearchParams({
-      client_id: clientId,
+      patient_id: patientId,
       appointment_id: appointment.id,
     });
     navigate(`/prontuarios?new=1&${params.toString()}`);
@@ -694,16 +694,16 @@ export default function Agenda() {
                 <div className="space-y-2">
                   <Label>Paciente</Label>
                   <Select
-                    value={formData.client_id}
-                    onValueChange={(v) => setFormData({ ...formData, client_id: v })}
+                    value={formData.patient_id}
+                    onValueChange={(v) => setFormData({ ...formData, patient_id: v })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o paciente" />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
+                      {patients.map((patient) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -712,11 +712,11 @@ export default function Agenda() {
                 <div className="space-y-2">
                   <Label>Procedimento</Label>
                   <Select
-                    value={formData.service_id}
+                    value={formData.procedure_id}
                     onValueChange={(v) => {
                       setFormData({ 
                         ...formData, 
-                        service_id: v,
+                        procedure_id: v,
                       });
                     }}
                   >
@@ -724,9 +724,9 @@ export default function Agenda() {
                       <SelectValue placeholder="Selecione o procedimento" />
                     </SelectTrigger>
                     <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name} - {formatCurrency(service.price)}
+                      {procedures.map((procedure) => (
+                        <SelectItem key={procedure.id} value={procedure.id}>
+                          {procedure.name} - {formatCurrency(procedure.price)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1060,8 +1060,8 @@ export default function Agenda() {
               ) : (
                 <AppointmentsTable
                   appointments={filteredAppointments}
-                  clients={clients}
-                  services={services}
+                  clients={patients}
+                  procedures={procedures}
                   professionals={professionals}
                   allAppointments={allAppointments}
                   onStatusChange={updateAppointmentStatus}

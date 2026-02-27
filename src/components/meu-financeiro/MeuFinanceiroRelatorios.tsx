@@ -77,8 +77,8 @@ export function MeuFinanceiroRelatorios() {
             created_at,
             payment_date,
             appointment:appointments(
-              service:services(name),
-              client:clients(name)
+              procedure:procedures(name),
+              patient:patients(name)
             )
           `)
           .eq("tenant_id", profile.tenant_id)
@@ -340,8 +340,8 @@ export function MeuFinanceiroRelatorios() {
 
         lines.push([
           formatInAppTz(c.created_at, "dd/MM/yyyy"),
-          c.appointment?.client?.name || "—",
-          c.appointment?.service?.name || "—",
+          c.appointment?.patient?.name || "—",
+          c.appointment?.procedure?.name || "—",
           Number(c.service_price || 0).toFixed(2).replace(".", ","),
           amount.toFixed(2).replace(".", ","),
           c.status === "paid" ? "Pago" : "Pendente",
@@ -476,8 +476,8 @@ export function MeuFinanceiroRelatorios() {
               ${commissions.map((c) => `
                 <tr>
                   <td>${formatInAppTz(c.created_at, "dd/MM/yyyy")}</td>
-                  <td>${c.appointment?.client?.name || "—"}</td>
-                  <td>${c.appointment?.service?.name || "—"}</td>
+                  <td>${c.appointment?.patient?.name || "—"}</td>
+                  <td>${c.appointment?.procedure?.name || "—"}</td>
                   <td class="text-right">${formatCurrency(Number(c.service_price || 0))}</td>
                   <td class="text-right">${formatCurrency(Number(c.amount || 0))}</td>
                   <td class="${c.status === "paid" ? "status-paid" : "status-pending"}">

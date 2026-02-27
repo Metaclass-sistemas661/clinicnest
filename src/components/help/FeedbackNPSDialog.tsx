@@ -121,14 +121,14 @@ export function FeedbackNPSDialog() {
             Como está sua experiência?
           </DialogTitle>
           <DialogDescription>
-            Sua opinião nos ajuda a melhorar o ClinicaFlow
+            Sua opinião nos ajuda a melhorar o ClinicNest
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           <div>
             <p className="text-sm font-medium mb-3">
-              De 0 a 10, qual a probabilidade de você recomendar o ClinicaFlow?
+              De 0 a 10, qual a probabilidade de você recomendar o ClinicNest?
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (

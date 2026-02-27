@@ -26,7 +26,7 @@ import {
   setOrderDiscountV1,
   finalizeOrderV1,
 } from "@/lib/supabase-typed-rpc";
-import type { Order, OrderItem, Service, Product, PaymentMethod } from "@/types/database";
+import type { Order, OrderItem, Procedure, Product, PaymentMethod } from "@/types/database";
 
 interface ComandaDetailProps {
   open: boolean;
@@ -61,7 +61,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [services, setServices] = useState<Service[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
@@ -97,7 +97,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
     try {
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .select("*, client:clients(*), professional:profiles!orders_professional_id_fkey(*)")
+        .select("*, patient:patients(*), professional:profiles!orders_professional_id_fkey(*)")
         .eq("id", orderId)
         .eq("tenant_id", profile.tenant_id)
         .single();
@@ -118,7 +118,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
 
       const { data: itemsData, error: itemsError } = await supabase
         .from("order_items")
-        .select("*, service:services(*), product:products(*)")
+        .select("*, procedure:procedures(*), product:products(*)")
         .eq("order_id", orderId)
         .eq("tenant_id", profile.tenant_id)
         .order("created_at");
@@ -140,7 +140,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
         supabase.from("products").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
         supabase.from("payment_methods").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("sort_order"),
       ]);
-      setServices((sRes.data as unknown as Service[]) || []);
+      setProcedures((sRes.data as unknown as Procedure[]) || []);
       setProducts((pRes.data as unknown as Product[]) || []);
       setPaymentMethods((pmRes.data as unknown as PaymentMethod[]) || []);
     } catch (error) {
@@ -166,7 +166,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
   const handleSelectItem = (id: string) => {
     setSelectedItemId(id);
     if (itemKind === "service") {
-      const svc = services.find((s) => s.id === id);
+      const svc = procedures.find((s) => s.id === id);
       if (svc) setItemPrice(String(svc.price));
     } else {
       const prod = products.find((p) => p.id === id);
@@ -328,7 +328,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Paciente</span>
-                  <p className="font-medium">{(order.client as any)?.name ?? "Walk-in"}</p>
+                  <p className="font-medium">{(order.patient as any)?.name ?? "Walk-in"}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Profissional</span>
@@ -362,7 +362,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                           )}
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {item.service?.name ?? item.product?.name ?? "Item"}
+                              {item.procedure?.name ?? item.product?.name ?? "Item"}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               {item.quantity}x {formatCurrency(item.unit_price)}

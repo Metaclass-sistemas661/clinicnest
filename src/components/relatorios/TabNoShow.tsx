@@ -22,7 +22,7 @@ import { ptBR } from "date-fns/locale";
 interface ApptRow {
   id: string;
   scheduled_at: string;
-  client_id: string | null;
+  patient_id: string | null;
   professional_id: string | null;
   status: string;
   profiles: { full_name: string | null } | null;

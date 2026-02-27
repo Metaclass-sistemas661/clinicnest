@@ -345,7 +345,7 @@ export default function RetornosPendentes() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  window.open(`/agenda?client=${ret.client_id}`, "_blank")
+                                  window.open(`/agenda?patient=${ret.patient_id}`, "_blank")
                                 }
                               >
                                 Agendar Retorno
@@ -435,7 +435,7 @@ export default function RetornosPendentes() {
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={() => window.open(`/agenda?client=${ret.client_id}`, "_blank")}
+                      onClick={() => window.open(`/agenda?patient=${ret.patient_id}`, "_blank")}
                     >
                       Agendar
                     </Button>

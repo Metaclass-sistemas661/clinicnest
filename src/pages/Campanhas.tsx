@@ -39,7 +39,7 @@ const statusConfig: Record<CampaignStatus, { label: string; variant: "default" |
   cancelled: { label: "Cancelada",variant: "outline"   },
 };
 
-type ClientEntry = { id: string; name: string | null; email: string };
+type PatientEntry = { id: string; name: string | null; email: string };
 
 export default function Campanhas() {
   const { profile, tenant, isAdmin } = useAuth();
@@ -56,9 +56,9 @@ export default function Campanhas() {
   const [sendCampaign, setSendCampaign] = useState<CampaignRow | null>(null);
   const [testEmail, setTestEmail] = useState("");
   const [sendMode, setSendMode] = useState<"all" | "selected">("all");
-  const [clients, setClients] = useState<ClientEntry[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(false);
-  const [clientSearch, setClientSearch] = useState("");
+  const [patients, setPatients] = useState<PatientEntry[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+  const [patientSearch, setPatientSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sendStats, setSendStats] = useState({ sent: 0, skipped: 0, failed: 0, opted_out: 0, already_sent: 0 });
   const [hasMore, setHasMore] = useState<boolean | null>(null);
@@ -129,9 +129,9 @@ export default function Campanhas() {
   };
 
   // ── Load clients for recipient selection ────────────────────────────────────
-  const loadClients = useCallback(async () => {
+  const loadPatients = useCallback(async () => {
     if (!profile?.tenant_id) return;
-    setIsLoadingClients(true);
+    setIsLoadingPatients(true);
     try {
       const { data, error } = await supabase
         .from("patients")
@@ -141,7 +141,7 @@ export default function Campanhas() {
         .order("name", { ascending: true })
         .limit(500) as any;
       if (error) throw error;
-      setClients(
+      setPatients(
         ((data || []) as { id: string; name: string | null; email: string | null }[])
           .filter((c) => !!c.email)
           .map((c) => ({ id: c.id, name: c.name, email: c.email! }))
@@ -149,7 +149,7 @@ export default function Campanhas() {
     } catch (err) {
       logger.error("[Campanhas] load clients error", err);
     } finally {
-      setIsLoadingClients(false);
+      setIsLoadingPatients(false);
     }
   }, [profile?.tenant_id]);
 
@@ -163,7 +163,7 @@ export default function Campanhas() {
     setHasMore(null);
     setAfterClientId(null);
     setIsSendOpen(true);
-    loadClients();
+    loadPatients();
   };
 
   const openPreview = (campaign: CampaignRow) => {
@@ -172,12 +172,12 @@ export default function Campanhas() {
   };
 
   // ── Filtered clients list ───────────────────────────────────────────────────
-  const filteredClients = clients.filter((c) => {
-    const q = clientSearch.toLowerCase();
+  const filteredPatients = patients.filter((c) => {
+    const q = patientSearch.toLowerCase();
     return !q || (c.name ?? "").toLowerCase().includes(q) || c.email.toLowerCase().includes(q);
   });
 
-  const toggleClient = (id: string) => {
+  const togglePatient = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -186,10 +186,10 @@ export default function Campanhas() {
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === filteredClients.length) {
+    if (selectedIds.size === filteredPatients.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredClients.map((c) => c.id)));
+      setSelectedIds(new Set(filteredPatients.map((c) => c.id)));
     }
   };
 
@@ -513,7 +513,7 @@ export default function Campanhas() {
                     <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div>
                       <div className="text-sm font-medium">Todos os pacientes</div>
-                      <div className="text-xs text-muted-foreground">{clients.length} com email</div>
+                      <div className="text-xs text-muted-foreground">{patients.length} com email</div>
                     </div>
                   </button>
                   <button
@@ -541,7 +541,7 @@ export default function Campanhas() {
                     <div className="p-2 border-b bg-muted/30 flex items-center gap-2">
                       <Input
                         placeholder="Buscar por nome ou email..."
-                        value={clientSearch}
+                        value={patientSearch}
                         onChange={(e) => setClientSearch(e.target.value)}
                         className="h-8 text-sm"
                       />
@@ -550,29 +550,29 @@ export default function Campanhas() {
                         size="sm"
                         className="text-xs whitespace-nowrap"
                         onClick={toggleAll}
-                        disabled={filteredClients.length === 0}
+                        disabled={filteredPatients.length === 0}
                       >
-                        {selectedIds.size === filteredClients.length && filteredClients.length > 0 ? "Desmarcar todos" : "Marcar todos"}
+                        {selectedIds.size === filteredPatients.length && filteredPatients.length > 0 ? "Desmarcar todos" : "Marcar todos"}
                       </Button>
                     </div>
                     <div className="max-h-48 overflow-y-auto divide-y">
-                      {isLoadingClients ? (
+                      {isLoadingPatients ? (
                         <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />Carregando pacientes...
                         </div>
-                      ) : filteredClients.length === 0 ? (
+                      ) : filteredPatients.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
                           Nenhum paciente encontrado
                         </div>
                       ) : (
-                        filteredClients.map((c) => (
+                        filteredPatients.map((c) => (
                           <label
                             key={c.id}
                             className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 cursor-pointer"
                           >
                             <Checkbox
                               checked={selectedIds.has(c.id)}
-                              onCheckedChange={() => toggleClient(c.id)}
+                              onCheckedChange={() => togglePatient(c.id)}
                             />
                             <div className="min-w-0">
                               <div className="text-sm font-medium truncate">{c.name || "—"}</div>

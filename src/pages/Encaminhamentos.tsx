@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
-interface Client { id: string; name: string; }
+interface Patient { id: string; name: string; }
 interface Professional { id: string; full_name: string; }
 interface Specialty { id: string; name: string; }
 interface RecentAppointment {
@@ -60,7 +60,7 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
 };
 
 const emptyForm = {
-  client_id: "",
+  patient_id: "",
   appointment_id: "",
   to_professional: "",
   to_specialty_id: "",
@@ -72,7 +72,7 @@ const emptyForm = {
 
 export default function Encaminhamentos() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -90,28 +90,28 @@ export default function Encaminhamentos() {
     }
   }, [profile?.tenant_id]);
 
-  const fetchRecentAppointments = async (clientId: string) => {
-    if (!profile?.tenant_id || !clientId) { setRecentAppointments([]); return; }
+  const fetchRecentAppointments = async (patientId: string) => {
+    if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
       const { data } = await supabase
         .from("appointments")
-        .select("id, scheduled_at, services(name), medical_records(id)")
+        .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
-        .eq("client_id", clientId)
+        .eq("patient_id", patientId)
         .order("scheduled_at", { ascending: false })
         .limit(10);
       setRecentAppointments((data ?? []).map((a: any) => ({
         id: a.id,
         scheduled_at: a.scheduled_at,
-        service_name: a.services?.name ?? "Consulta",
+        service_name: a.procedure?.name ?? "Consulta",
         medical_record_id: Array.isArray(a.medical_records) ? a.medical_records[0]?.id ?? null : a.medical_records?.id ?? null,
       })));
     } catch { setRecentAppointments([]); }
   };
 
-  const handleClientChange = (clientId: string) => {
-    setFormData(f => ({ ...f, client_id: clientId, appointment_id: "" }));
-    void fetchRecentAppointments(clientId);
+  const handlePatientChange = (patientId: string) => {
+    setFormData(f => ({ ...f, patient_id: patientId, appointment_id: "" }));
+    void fetchRecentAppointments(patientId);
   };
 
   const fetchAll = async () => {
@@ -123,16 +123,16 @@ export default function Encaminhamentos() {
         supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
         supabase.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
         supabase.from("referrals")
-          .select("*, clients(name), from:profiles!referrals_from_professional_fkey(full_name), to:profiles!referrals_to_professional_fkey(full_name), specialties(name)")
+          .select("*, patient:patients(name), from:profiles!referrals_from_professional_fkey(full_name), to:profiles!referrals_to_professional_fkey(full_name), specialties(name)")
           .eq("tenant_id", profile.tenant_id)
           .order("created_at", { ascending: false }),
       ]);
-      setClients((cRes.data as Client[]) || []);
+      setPatients((cRes.data as Patient[]) || []);
       setProfessionals((pRes.data as Professional[]) || []);
       setSpecialties((sRes.data as Specialty[]) || []);
       setReferrals((rRes.data || []).map((r: any) => ({
         id: r.id,
-        client_name: r.clients?.name ?? "—",
+        client_name: r.patient?.name ?? "—",
         from_name: r.from?.full_name ?? "—",
         to_name: r.to?.full_name ?? null,
         specialty_name: r.specialties?.name ?? null,
@@ -151,7 +151,7 @@ export default function Encaminhamentos() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.reason.trim()) { toast.error("Informe o motivo do encaminhamento"); return; }
     if (!formData.to_professional && !formData.to_specialty_id) {
       toast.error("Selecione o profissional ou especialidade de destino"); return;
@@ -162,7 +162,7 @@ export default function Encaminhamentos() {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
       const { error } = await supabase.from("referrals").insert({
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
+        patient_id: formData.patient_id,
         from_professional: profile!.id,
         to_professional: formData.to_professional || null,
         to_specialty_id: formData.to_specialty_id || null,
@@ -337,10 +337,10 @@ export default function Encaminhamentos() {
           <FormDrawerSection title="Paciente">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={formData.client_id || undefined} onValueChange={handleClientChange}>
+              <Select value={formData.patient_id || undefined} onValueChange={handlePatientChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

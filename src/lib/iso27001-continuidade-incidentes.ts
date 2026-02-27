@@ -5,6 +5,8 @@
  * seguindo ISO 22301 e ISO 27035
  */
 
+import { APP_VERSION } from "@/lib/version";
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PLANO DE CONTINUIDADE DE NEGÓCIOS (PCN)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -13,17 +15,17 @@ export const PLANO_CONTINUIDADE = {
   metadata: {
     titulo: "Plano de Continuidade de Negócios",
     codigo: "PCN-001",
-    versao: "1.0.0",
+    versao: APP_VERSION,
     dataAprovacao: "2026-02-23",
     proximaRevisao: "2027-02-23",
     aprovadoPor: "Diretoria Executiva",
     normaReferencia: "ISO 22301:2019",
   },
 
-  objetivo: `Estabelecer procedimentos para garantir a continuidade das operações críticas do ClinicaFlow em caso de interrupção, minimizando impactos aos clientes e à organização.`,
+  objetivo: `Estabelecer procedimentos para garantir a continuidade das operações críticas do ClinicNest em caso de interrupção, minimizando impactos aos clientes e à organização.`,
 
   escopo: `Este plano cobre:
-• Sistema ClinicaFlow (aplicação web)
+• Sistema ClinicNest (aplicação web)
 • Banco de dados e backups
 • Serviços de autenticação
 • Integrações críticas (TISS, laboratórios)
@@ -156,9 +158,9 @@ export const PLANO_CONTINUIDADE = {
     
     comunicacaoCrise: {
       templates: {
-        inicial: "Identificamos uma interrupção no serviço ClinicaFlow. Nossa equipe está trabalhando para resolver. Atualizações em [status page].",
+        inicial: "Identificamos uma interrupção no serviço ClinicNest. Nossa equipe está trabalhando para resolver. Atualizações em [status page].",
         progresso: "Atualização: [descrição do progresso]. Previsão de normalização: [horário].",
-        resolucao: "O serviço ClinicaFlow foi normalizado às [horário]. Pedimos desculpas pelo inconveniente. [link para post-mortem se aplicável].",
+        resolucao: "O serviço ClinicNest foi normalizado às [horário]. Pedimos desculpas pelo inconveniente. [link para post-mortem se aplicável].",
       },
       canais: ["Status page", "E-mail", "WhatsApp (clientes Premium)", "Redes sociais"],
     },
@@ -194,7 +196,7 @@ export const PLANO_RESPOSTA_INCIDENTES = {
   metadata: {
     titulo: "Plano de Resposta a Incidentes de Segurança",
     codigo: "PRI-001",
-    versao: "1.0.0",
+    versao: APP_VERSION,
     dataAprovacao: "2026-02-23",
     normaReferencia: "ISO 27035:2016",
   },

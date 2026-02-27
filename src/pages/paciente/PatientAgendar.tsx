@@ -28,7 +28,7 @@ import { ProfessionalList } from "@/components/patient/ProfessionalCard";
 import { DependentSelector } from "@/components/patient/DependentSelector";
 import { useDependents, Dependent } from "@/hooks/useDependents";
 
-interface Service {
+interface ProcedureOption {
   id: string;
   name: string;
   description: string | null;
@@ -77,7 +77,7 @@ export default function PatientAgendar() {
   const [userName, setUserName] = useState("Eu mesmo");
 
   // Data
-  const [services, setServices] = useState<Service[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
 
@@ -88,7 +88,7 @@ export default function PatientAgendar() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Selections
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedProcedure, setSelectedProcedure] = useState<ProcedureOption | null>(null);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
@@ -116,7 +116,7 @@ export default function PatientAgendar() {
     void loadSettings();
   }, []);
 
-  // Load services
+  // Load procedures
   useEffect(() => {
     if (!settings?.enabled) return;
 
@@ -125,9 +125,9 @@ export default function PatientAgendar() {
       try {
         const { data, error } = await (supabasePatient as any).rpc("get_patient_bookable_services");
         if (error) throw error;
-        setServices((data as Service[]) || []);
+        setProcedures((data as ProcedureOption[]) || []);
       } catch (err) {
-        logger.error("Error loading services:", err);
+        logger.error("Error loading procedures:", err);
         toast.error("Erro ao carregar serviços");
       } finally {
         setIsLoadingServices(false);
@@ -136,9 +136,9 @@ export default function PatientAgendar() {
     void loadServices();
   }, [settings?.enabled]);
 
-  // Load professionals when service is selected
+  // Load professionals when procedure is selected
   useEffect(() => {
-    if (!selectedService) {
+    if (!selectedProcedure) {
       setProfessionals([]);
       return;
     }
@@ -148,7 +148,7 @@ export default function PatientAgendar() {
       try {
         const { data, error } = await (supabasePatient as any).rpc(
           "get_patient_bookable_professionals",
-          { p_service_id: selectedService.id }
+          { p_service_id: selectedProcedure.id }
         );
         if (error) throw error;
         setProfessionals((data as Professional[]) || []);
@@ -160,19 +160,19 @@ export default function PatientAgendar() {
       }
     };
     void loadProfessionals();
-  }, [selectedService]);
+  }, [selectedProcedure]);
 
   // Load slots
   const loadSlots = useCallback(
     async (startDate: Date, endDate: Date) => {
-      if (!selectedService || !selectedProfessional) return;
+      if (!selectedProcedure || !selectedProfessional) return;
 
       setIsLoadingSlots(true);
       try {
         const { data, error } = await (supabasePatient as any).rpc(
           "get_available_slots_for_patient",
           {
-            p_service_id: selectedService.id,
+            p_service_id: selectedProcedure.id,
             p_professional_id: selectedProfessional.id,
             p_date_from: format(startDate, "yyyy-MM-dd"),
             p_date_to: format(endDate, "yyyy-MM-dd"),
@@ -187,12 +187,12 @@ export default function PatientAgendar() {
         setIsLoadingSlots(false);
       }
     },
-    [selectedService, selectedProfessional]
+    [selectedProcedure, selectedProfessional]
   );
 
-  // Handle service selection
-  const handleSelectService = (service: Service) => {
-    setSelectedService(service);
+  // Handle procedure selection
+  const handleSelectProcedure = (proc: ProcedureOption) => {
+    setSelectedProcedure(proc);
     setSelectedProfessional(null);
     setSelectedSlot(null);
     setCurrentStep("professional");
@@ -213,12 +213,12 @@ export default function PatientAgendar() {
 
   // Handle submit
   const handleSubmit = async () => {
-    if (!selectedService || !selectedProfessional || !selectedSlot) return;
+    if (!selectedProcedure || !selectedProfessional || !selectedSlot) return;
 
     setIsSubmitting(true);
     try {
       const { data, error } = await (supabasePatient as any).rpc("patient_create_appointment", {
-        p_service_id: selectedService.id,
+        p_service_id: selectedProcedure.id,
         p_professional_id: selectedProfessional.id,
         p_scheduled_at: selectedSlot.slot_datetime,
         p_for_dependent_id: selectedDependent?.dependent_id || null,
@@ -243,7 +243,7 @@ export default function PatientAgendar() {
   const goBack = () => {
     if (currentStep === "professional") {
       setCurrentStep("service");
-      setSelectedService(null);
+      setSelectedProcedure(null);
     } else if (currentStep === "datetime") {
       setCurrentStep("professional");
       setSelectedProfessional(null);
@@ -374,43 +374,43 @@ export default function PatientAgendar() {
                   <Skeleton className="h-20 w-full" />
                   <Skeleton className="h-20 w-full" />
                 </>
-              ) : services.length === 0 ? (
+              ) : procedures.length === 0 ? (
                 <EmptyState
                   icon={Stethoscope}
                   title="Nenhum serviço disponível"
                   description="Não há serviços disponíveis para agendamento online no momento."
                 />
               ) : (
-                services.map((service) => (
+                procedures.map((procedure) => (
                   <Card
-                    key={service.id}
+                    key={procedure.id}
                     className="cursor-pointer hover:shadow-md hover:border-teal-200 transition-all"
-                    onClick={() => handleSelectService(service)}
+                    onClick={() => handleSelectProcedure(procedure)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium">{service.name}</h3>
-                          {service.description && (
+                          <h3 className="font-medium">{procedure.name}</h3>
+                          {procedure.description && (
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {service.description}
+                              {procedure.description}
                             </p>
                           )}
                           <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              {service.duration_minutes} min
+                              {procedure.duration_minutes} min
                             </span>
-                            {service.category && (
+                            {procedure.category && (
                               <Badge variant="secondary" className="text-[10px]">
-                                {service.category}
+                                {procedure.category}
                               </Badge>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
                           <span className="font-semibold text-teal-600">
-                            R$ {service.price.toFixed(2)}
+                            R$ {procedure.price.toFixed(2)}
                           </span>
                           <ChevronRight className="h-5 w-5 text-muted-foreground mt-2 ml-auto" />
                         </div>
@@ -425,10 +425,10 @@ export default function PatientAgendar() {
           {/* Step 2: Professional */}
           {currentStep === "professional" && (
             <div>
-              {selectedService && (
+              {selectedProcedure && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg">
                   <p className="text-xs text-muted-foreground">Serviço selecionado:</p>
-                  <p className="font-medium">{selectedService.name}</p>
+                  <p className="font-medium">{selectedProcedure.name}</p>
                 </div>
               )}
               <ProfessionalList
@@ -443,11 +443,11 @@ export default function PatientAgendar() {
           {/* Step 3: DateTime */}
           {currentStep === "datetime" && (
             <div>
-              {selectedService && selectedProfessional && (
+              {selectedProcedure && selectedProfessional && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Serviço:</span>
-                    <span className="font-medium">{selectedService.name}</span>
+                    <span className="font-medium">{selectedProcedure.name}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Profissional:</span>
@@ -468,7 +468,7 @@ export default function PatientAgendar() {
           )}
 
           {/* Step 4: Confirm */}
-          {currentStep === "confirm" && selectedService && selectedProfessional && selectedSlot && (
+          {currentStep === "confirm" && selectedProcedure && selectedProfessional && selectedSlot && (
             <div className="space-y-4">
               <div className="p-4 bg-teal-50 dark:bg-teal-950/30 rounded-lg border border-teal-200 dark:border-teal-800">
                 <h3 className="font-semibold text-teal-800 dark:text-teal-200 mb-3">
@@ -485,7 +485,7 @@ export default function PatientAgendar() {
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Serviço:</span>
-                    <span className="font-medium">{selectedService.name}</span>
+                    <span className="font-medium">{selectedProcedure.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Profissional:</span>
@@ -505,12 +505,12 @@ export default function PatientAgendar() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Duração:</span>
-                    <span className="font-medium">{selectedService.duration_minutes} minutos</span>
+                    <span className="font-medium">{selectedProcedure.duration_minutes} minutos</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
                     <span className="text-muted-foreground">Valor:</span>
                     <span className="font-semibold text-teal-600">
-                      R$ {selectedService.price.toFixed(2)}
+                      R$ {selectedProcedure.price.toFixed(2)}
                     </span>
                   </div>
                 </div>

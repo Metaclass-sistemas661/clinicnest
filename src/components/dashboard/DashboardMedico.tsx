@@ -90,7 +90,7 @@ export const DashboardMedico = memo(function DashboardMedico() {
       const [aptsRes, triagesRes, recordsRes, waitlistRes, completedRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, client:clients(name, phone), service:services(name, duration_minutes), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .gte("scheduled_at", dayStart)
@@ -98,21 +98,21 @@ export const DashboardMedico = memo(function DashboardMedico() {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("triage_records")
-          .select("id, chief_complaint, priority, triaged_at, appointment_id, client:clients(name)")
+          .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pendente")
           .order("triaged_at", { ascending: true })
           .limit(8),
         supabase
           .from("medical_records")
-          .select("id, template_type, created_at, client:clients(name)")
+          .select("id, template_type, created_at, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .order("created_at", { ascending: false })
           .limit(5),
         supabase
           .from("waitlist")
-          .select("id, priority, preferred_period, created_at, client:clients(name)")
+          .select("id, priority, preferred_period, created_at, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "waiting")
           .order("created_at", { ascending: true })
@@ -131,7 +131,7 @@ export const DashboardMedico = memo(function DashboardMedico() {
       const triagesRaw = (triagesRes.data || []) as any[];
       setPendingTriages(triagesRaw.map((t) => ({
         id: t.id,
-        client_name: t.client?.name || "Paciente",
+        client_name: t.patient?.name || "Paciente",
         priority: t.priority,
         chief_complaint: t.chief_complaint || "",
         triaged_at: t.triaged_at,
@@ -140,14 +140,14 @@ export const DashboardMedico = memo(function DashboardMedico() {
       const recordsRaw = (recordsRes.data || []) as any[];
       setRecentRecords(recordsRaw.map((r) => ({
         id: r.id,
-        client_name: r.client?.name || "Paciente",
+        client_name: r.patient?.name || "Paciente",
         template_type: r.template_type,
         created_at: r.created_at,
       })));
       const waitlistRaw = (waitlistRes.data || []) as any[];
       setWaitlistItems(waitlistRaw.map((w) => ({
         id: w.id,
-        client_name: w.client?.name || "Paciente",
+        client_name: w.patient?.name || "Paciente",
         priority: w.priority || "normal",
         preferred_period: w.preferred_period,
         created_at: w.created_at,
@@ -249,8 +249,8 @@ export const DashboardMedico = memo(function DashboardMedico() {
                 <Stethoscope className="h-7 w-7 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xl font-bold leading-tight">{nextAppointment.client?.name || "Paciente"}</p>
-                {nextAppointment.service?.name && <p className="mt-0.5 truncate text-sm text-teal-100">{nextAppointment.service.name}</p>}
+                <p className="truncate text-xl font-bold leading-tight">{nextAppointment.patient?.name || "Paciente"}</p>
+                {nextAppointment.procedure?.name && <p className="mt-0.5 truncate text-sm text-teal-100">{nextAppointment.procedure.name}</p>}
               </div>
               <div className="shrink-0 text-right">
                 <p className="tabular-nums text-3xl font-bold leading-none">{formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}</p>
@@ -263,7 +263,7 @@ export const DashboardMedico = memo(function DashboardMedico() {
               {statusBadge[nextAppointment.status]?.label}
             </Badge>
             <Button variant="ghost" size="sm" asChild className="text-xs text-teal-600 hover:bg-teal-50">
-              <Link to={`/prontuarios?new=1&client_id=${nextAppointment.client_id}&appointment_id=${nextAppointment.id}`}>
+              <Link to={`/prontuarios?new=1&patient_id=${nextAppointment.patient_id}&appointment_id=${nextAppointment.id}`}>
                 Iniciar atendimento <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
@@ -330,8 +330,8 @@ export const DashboardMedico = memo(function DashboardMedico() {
                         {formatInAppTz(apt.scheduled_at, "HH:mm")}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
-                        {apt.service?.name && <p className="text-xs text-muted-foreground truncate">{apt.service.name}</p>}
+                        <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
+                        {apt.procedure?.name && <p className="text-xs text-muted-foreground truncate">{apt.procedure.name}</p>}
                       </div>
                       <Badge variant="outline" className={sb?.className}>{sb?.label}</Badge>
                     </div>

@@ -31,7 +31,7 @@ interface EncaminhamentoDrawerProps {
 }
 
 export interface EncaminhamentoData {
-  clientId: string;
+  patientId: string;
   professionalId?: string;
   medicalRecordId?: string;
   tipo: "especialista" | "exame" | "internacao" | "urgencia" | "outro";
@@ -108,7 +108,7 @@ export function EncaminhamentoDrawer({
   }, [open, context.diagnosis, context.cid10]);
 
   const getData = (): EncaminhamentoData => ({
-    clientId: context.clientId,
+    patientId: context.patientId,
     professionalId: context.professionalId,
     medicalRecordId: context.medicalRecordId,
     tipo,

@@ -52,7 +52,7 @@ interface ToothRecord {
 
 interface Props {
   tenantId: string;
-  clientId: string;
+  patientId: string;
   professionalId: string;
   appointmentId?: string | null;
   readOnly?: boolean;
@@ -116,7 +116,7 @@ function ToothIcon({ number, condition, isSelected, onClick, disabled }: {
   );
 }
 
-export function OdontogramaEmbed({ tenantId, clientId, professionalId, appointmentId, readOnly = false }: Props) {
+export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointmentId, readOnly = false }: Props) {
   const [teeth, setTeeth] = useState<Map<number, ToothRecord>>(new Map());
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
   const [dialog, setDialog] = useState(false);
@@ -126,10 +126,10 @@ export function OdontogramaEmbed({ tenantId, clientId, professionalId, appointme
   const [currentOdontogramId, setCurrentOdontogramId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (tenantId && clientId) {
+    if (tenantId && patientId) {
       void loadLatestOdontogram();
     }
-  }, [tenantId, clientId]);
+  }, [tenantId, patientId]);
 
   const loadLatestOdontogram = async () => {
     setIsLoading(true);
@@ -137,7 +137,7 @@ export function OdontogramaEmbed({ tenantId, clientId, professionalId, appointme
       const { data: odontograms, error } = await supabase
         .rpc('get_client_odontograms', {
           p_tenant_id: tenantId,
-          p_client_id: clientId
+          p_client_id: patientId
         });
 
       if (error) throw error;
@@ -216,7 +216,7 @@ export function OdontogramaEmbed({ tenantId, clientId, professionalId, appointme
       const { error } = await supabase
         .rpc('create_odontogram_with_teeth', {
           p_tenant_id: tenantId,
-          p_client_id: clientId,
+          p_client_id: patientId,
           p_professional_id: professionalId,
           p_appointment_id: appointmentId || null,
           p_exam_date: new Date().toISOString().split('T')[0],

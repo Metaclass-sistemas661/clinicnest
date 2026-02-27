@@ -8,7 +8,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 // Database schema
-interface ClinicaFlowDB extends DBSchema {
+interface ClinicNestDB extends DBSchema {
   appointments: {
     key: string;
     value: {
@@ -70,15 +70,15 @@ interface ClinicaFlowDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'clinicaflow-offline';
+const DB_NAME = 'clinicnest-offline';
 const DB_VERSION = 1;
 
-let dbInstance: IDBPDatabase<ClinicaFlowDB> | null = null;
+let dbInstance: IDBPDatabase<ClinicNestDB> | null = null;
 
-async function getDB(): Promise<IDBPDatabase<ClinicaFlowDB>> {
+async function getDB(): Promise<IDBPDatabase<ClinicNestDB>> {
   if (dbInstance) return dbInstance;
 
-  dbInstance = await openDB<ClinicaFlowDB>(DB_NAME, DB_VERSION, {
+  dbInstance = await openDB<ClinicNestDB>(DB_NAME, DB_VERSION, {
     upgrade(db) {
       // Appointments store
       if (!db.objectStoreNames.contains('appointments')) {

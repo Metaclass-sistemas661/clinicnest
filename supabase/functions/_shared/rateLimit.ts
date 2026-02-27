@@ -1,8 +1,8 @@
 /**
  * Rate limiting para Edge Functions (Seção 4.5).
  * Usa Upstash Redis (REST API) quando UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN
- * estão definidos. Se não configurado, permite todas as requisições (graceful degradation).
- * Para habilitar: crie um banco Upstash Redis e defina os secrets nas Edge Functions.
+ * estão definidos. Quando não configurado, usa fallback in-memory (por isolate).
+ * Nunca faz "fail-open" — sem Redis = fallback local, sem fallback = bloqueia.
  */
 const UPSTASH_URL = Deno.env.get("UPSTASH_REDIS_REST_URL");
 const UPSTASH_TOKEN = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
@@ -11,6 +11,39 @@ export type RateLimitResult =
   | { allowed: true }
   | { allowed: false; retryAfter?: number };
 
+// ── Fallback in-memory (por Deno isolate) ──────────────────────
+// Cada edge function roda em isolates separados, então o Map é local,
+// mas já bloqueia abuso dentro do mesmo isolate (cold-start compartilhado).
+const memStore = new Map<string, { count: number; expiresAt: number }>();
+const MEM_CLEANUP_INTERVAL = 60_000; // limpa expirados a cada 60s
+let lastCleanup = Date.now();
+
+function memRateLimit(identifier: string, limit: number, windowSeconds: number): RateLimitResult {
+  const now = Date.now();
+
+  // Limpeza periódica de chaves expiradas
+  if (now - lastCleanup > MEM_CLEANUP_INTERVAL) {
+    for (const [k, v] of memStore) {
+      if (v.expiresAt <= now) memStore.delete(k);
+    }
+    lastCleanup = now;
+  }
+
+  const windowSlot = Math.floor(now / (windowSeconds * 1000));
+  const key = `rl:${identifier}:${windowSlot}`;
+  const entry = memStore.get(key);
+
+  if (!entry || entry.expiresAt <= now) {
+    memStore.set(key, { count: 1, expiresAt: now + windowSeconds * 1000 });
+    return { allowed: true };
+  }
+
+  entry.count += 1;
+  if (entry.count <= limit) return { allowed: true };
+  return { allowed: false, retryAfter: windowSeconds };
+}
+
+// ── Upstash Redis ──────────────────────────────────────────────
 async function upstashCommand(cmd: string[]): Promise<{ result?: unknown; error?: string }> {
   const res = await fetch(UPSTASH_URL!, {
     method: "POST",
@@ -34,8 +67,9 @@ export async function checkRateLimit(
   limit: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
+  // Sem Redis → usa fallback in-memory (NUNCA fail-open)
   if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-    return { allowed: true };
+    return memRateLimit(identifier, limit, windowSeconds);
   }
 
   const windowSlot = Math.floor(Date.now() / (windowSeconds * 1000));
@@ -46,11 +80,15 @@ export async function checkRateLimit(
       upstashCommand(["INCR", key]),
       upstashCommand(["EXPIRE", key, String(windowSeconds)]),
     ]);
-    if (incrRes.error || expireRes.error) return { allowed: true };
+    // Se Redis retornou erro, usa fallback in-memory
+    if (incrRes.error || expireRes.error) {
+      return memRateLimit(identifier, limit, windowSeconds);
+    }
 
     const count = Number(incrRes.result ?? 0);
     return count <= limit ? { allowed: true } : { allowed: false, retryAfter: windowSeconds };
   } catch {
-    return { allowed: true };
+    // Redis offline → fallback in-memory em vez de fail-open
+    return memRateLimit(identifier, limit, windowSeconds);
   }
 }

@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Conversation {
-  client_id: string;
+  patient_id: string;
   client_name: string;
   last_message: string;
   last_message_at: string;
@@ -62,7 +62,7 @@ export default function MensagensPacientes() {
 
   useEffect(() => {
     if (selectedConversation) {
-      void loadMessages(selectedConversation.client_id);
+      void loadMessages(selectedConversation.patient_id);
     }
   }, [selectedConversation]);
 
@@ -87,11 +87,11 @@ export default function MensagensPacientes() {
     }
   };
 
-  const loadMessages = async (clientId: string) => {
+  const loadMessages = async (patientId: string) => {
     setIsLoadingMessages(true);
     try {
       const { data, error } = await (supabase as any).rpc("get_messages_for_patient", {
-        p_client_id: clientId,
+        p_client_id: patientId,
         p_limit: 100,
       });
       if (error) throw error;
@@ -110,7 +110,7 @@ export default function MensagensPacientes() {
     setIsSending(true);
     try {
       const { data, error } = await (supabase as any).rpc("send_clinic_message_to_patient", {
-        p_client_id: selectedConversation.client_id,
+        p_client_id: selectedConversation.patient_id,
         p_content: newMessage.trim(),
       });
       if (error) throw error;
@@ -118,7 +118,7 @@ export default function MensagensPacientes() {
       const result = data as { success?: boolean };
       if (result?.success) {
         setNewMessage("");
-        void loadMessages(selectedConversation.client_id);
+        void loadMessages(selectedConversation.patient_id);
       }
     } catch (err: any) {
       logger.error("Error sending message:", err);
@@ -204,11 +204,11 @@ export default function MensagensPacientes() {
                     <div className="divide-y">
                       {filteredConversations.map((conv) => (
                         <button
-                          key={conv.client_id}
+                          key={conv.patient_id}
                           onClick={() => setSelectedConversation(conv)}
                           className={cn(
                             "w-full p-4 text-left hover:bg-muted/50 transition-colors",
-                            selectedConversation?.client_id === conv.client_id && "bg-muted"
+                            selectedConversation?.patient_id === conv.patient_id && "bg-muted"
                           )}
                         >
                           <div className="flex items-start gap-3">

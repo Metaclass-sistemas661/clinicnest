@@ -56,7 +56,7 @@ interface PeriogramSummary {
   professional_name: string | null;
 }
 
-interface ClientOption {
+interface PatientOption {
   id: string;
   name: string;
 }
@@ -70,9 +70,9 @@ function getDepthColor(depth: number | null): string {
 
 export default function Periograma() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [clientSearch, setClientSearch] = useState("");
-  const [selectedClient, setSelectedClient] = useState("");
+  const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -85,30 +85,30 @@ export default function Periograma() {
   const [riskClass, setRiskClass] = useState("");
 
   useEffect(() => {
-    if (profile?.tenant_id && clientSearch.length >= 2) {
-      void searchClients();
+    if (profile?.tenant_id && patientSearch.length >= 2) {
+      void searchPatients();
     }
-  }, [clientSearch, profile?.tenant_id]);
+  }, [patientSearch, profile?.tenant_id]);
 
-  const searchClients = async () => {
+  const searchPatients = async () => {
     if (!profile?.tenant_id) return;
     const { data } = await supabase
       .from("patients")
       .select("id, name")
       .eq("tenant_id", profile.tenant_id)
-      .ilike("name", `%${clientSearch}%`)
+      .ilike("name", `%${patientSearch}%`)
       .limit(20);
-    setClients((data ?? []) as ClientOption[]);
+    setPatients((data ?? []) as PatientOption[]);
   };
 
-  const handleSelectClient = async (clientId: string) => {
-    setSelectedClient(clientId);
+  const handleSelectPatient = async (patientId: string) => {
+    setSelectedPatient(patientId);
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase.rpc("get_client_periograms", {
         p_tenant_id: profile.tenant_id,
-        p_client_id: clientId,
+        p_client_id: patientId,
       });
       if (error) throw error;
       const entries = (data || []) as PeriogramSummary[];
@@ -187,7 +187,7 @@ export default function Periograma() {
   };
 
   const handleSave = async () => {
-    if (!profile?.tenant_id || !selectedClient) return;
+    if (!profile?.tenant_id || !selectedPatient) return;
     setIsSaving(true);
     try {
       const measurementsArray = Array.from(measurements.values())
@@ -208,7 +208,7 @@ export default function Periograma() {
 
       const { error } = await supabase.rpc("save_periogram_with_measurements", {
         p_tenant_id: profile.tenant_id,
-        p_client_id: selectedClient,
+        p_client_id: selectedPatient,
         p_professional_id: profile.id,
         p_appointment_id: null,
         p_exam_date: new Date().toISOString().split("T")[0],
@@ -220,7 +220,7 @@ export default function Periograma() {
 
       if (error) throw error;
       toast.success("Periograma salvo com sucesso");
-      await handleSelectClient(selectedClient);
+      await handleSelectPatient(selectedPatient);
     } catch (err: any) {
       logger.error("Erro ao salvar:", err);
       toast.error(err.message || "Erro ao salvar periograma");
@@ -244,12 +244,12 @@ export default function Periograma() {
   const isViewingOld = historyIndex > 0;
 
   const handleExportPdf = () => {
-    const clientName = clients.find(c => c.id === selectedClient)?.name || "Paciente";
+    const patientName = patients.find(c => c.id === selectedPatient)?.name || "Paciente";
     const current = historyEntries[historyIndex];
     const measurementsArray = Array.from(measurements.values()).filter(m => m.probing_depth !== null);
     
     generatePeriogramPdf({
-      client_name: clientName,
+      client_name: patientName,
       exam_date: current?.exam_date || new Date().toISOString().split("T")[0],
       professional_name: current?.professional_name || profile?.full_name || "Profissional",
       clinic_name: "Clínica",
@@ -269,11 +269,11 @@ export default function Periograma() {
   return (
     <MainLayout title="Periograma" subtitle="Registro da saúde periodontal">
       <PeriogramHeader
-        clientSearch={clientSearch}
-        setClientSearch={setClientSearch}
-        clients={clients}
-        selectedClient={selectedClient}
-        onSelectClient={handleSelectClient}
+        patientSearch={patientSearch}
+        setPatientSearch={setPatientSearch}
+        patients={patients}
+        selectedPatient={selectedPatient}
+        onSelectPatient={handleSelectPatient}
         onSave={handleSave}
         isSaving={isSaving}
         isViewingOld={isViewingOld}
@@ -290,7 +290,7 @@ export default function Periograma() {
         </Card>
       )}
 
-      {selectedClient && historyEntries.length > 0 && !isLoading && (
+      {selectedPatient && historyEntries.length > 0 && !isLoading && (
         <HistoryNav
           entries={historyEntries}
           index={historyIndex}
@@ -298,7 +298,7 @@ export default function Periograma() {
         />
       )}
 
-      {selectedClient && !isLoading && (
+      {selectedPatient && !isLoading && (
         <>
           <IndicesCard indices={indices} />
           <PeriogramChart
@@ -322,7 +322,7 @@ export default function Periograma() {
 }
 
 // Sub-componentes serão adicionados abaixo
-function PeriogramHeader({ clientSearch, setClientSearch, clients, selectedClient, onSelectClient, onSave, isSaving, isViewingOld, hasData, onExportPdf }: any) {
+function PeriogramHeader({ patientSearch, setPatientSearch, patients, selectedPatient, onSelectPatient, onSave, isSaving, isViewingOld, hasData, onExportPdf }: any) {
   return (
     <Card className="mb-6">
       <CardContent className="pt-5">
@@ -332,33 +332,33 @@ function PeriogramHeader({ clientSearch, setClientSearch, clients, selectedClien
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
                 placeholder="Digite o nome..."
                 className="pl-10"
               />
             </div>
           </div>
-          {clients.length > 0 && (
+          {patients.length > 0 && (
             <div className="space-y-1">
               <Label className="text-xs">Paciente</Label>
-              <Select value={selectedClient} onValueChange={onSelectClient}>
+              <Select value={selectedPatient} onValueChange={onSelectPatient}>
                 <SelectTrigger className="w-64"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c: ClientOption) => (
+                  {patients.map((c: PatientOption) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           )}
-          {selectedClient && !isViewingOld && (
+          {selectedPatient && !isViewingOld && (
             <Button onClick={onSave} disabled={isSaving || !hasData} className="gap-2">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Salvar Periograma
             </Button>
           )}
-          {selectedClient && hasData && onExportPdf && (
+          {selectedPatient && hasData && onExportPdf && (
             <Button variant="outline" onClick={onExportPdf} className="gap-2">
               <Download className="h-4 w-4" />
               PDF

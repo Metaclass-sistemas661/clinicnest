@@ -67,7 +67,7 @@ interface RepasseConvenio {
 }
 
 interface RepasseProcedimento {
-  service_id: string;
+  procedure_id: string;
   service_name: string;
   total_faturado: number;
   total_comissao: number;
@@ -230,8 +230,8 @@ export default function RepassesRelatorios() {
         amount,
         service_price,
         appointments!inner(
-          service_id,
-          services(name)
+          procedure_id,
+          procedure:procedures(name)
         )
       `)
       .eq("tenant_id", profile!.tenant_id)
@@ -242,21 +242,21 @@ export default function RepassesRelatorios() {
 
     const grouped = (data || []).reduce((acc, item) => {
       const apt = item.appointments as any;
-      const serviceId = apt?.service_id || "unknown";
-      const serviceName = apt?.services?.name || "Serviço não identificado";
+      const procedureId = apt?.procedure_id || "unknown";
+      const serviceName = apt?.procedure?.name || "Serviço não identificado";
       
-      if (!acc[serviceId]) {
-        acc[serviceId] = {
-          service_id: serviceId,
+      if (!acc[procedureId]) {
+        acc[procedureId] = {
+          procedure_id: procedureId,
           service_name: serviceName,
           total_faturado: 0,
           total_comissao: 0,
           atendimentos: 0,
         };
       }
-      acc[serviceId].total_faturado += Number(item.service_price) || 0;
-      acc[serviceId].total_comissao += Number(item.amount) || 0;
-      acc[serviceId].atendimentos += 1;
+      acc[procedureId].total_faturado += Number(item.service_price) || 0;
+      acc[procedureId].total_comissao += Number(item.amount) || 0;
+      acc[procedureId].atendimentos += 1;
       return acc;
     }, {} as Record<string, RepasseProcedimento>);
 
@@ -563,7 +563,7 @@ export default function RepassesRelatorios() {
                     </TableRow>
                   ) : (
                     repassesProcedimento.map((r) => (
-                      <TableRow key={r.service_id}>
+                      <TableRow key={r.procedure_id}>
                         <TableCell className="font-medium">{r.service_name}</TableCell>
                         <TableCell className="text-right">{formatCurrency(r.total_faturado)}</TableCell>
                         <TableCell className="text-right font-semibold text-primary">

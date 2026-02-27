@@ -106,7 +106,7 @@ export default function ConfigurarRegras() {
         .from("commission_rules")
         .select(`
           *,
-          service:services(name),
+          procedure:procedures(name),
           insurance:insurance_plans(name)
         `)
         .eq("tenant_id", profile.tenant_id)

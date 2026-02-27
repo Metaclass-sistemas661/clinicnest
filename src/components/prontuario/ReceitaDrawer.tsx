@@ -42,7 +42,7 @@ interface ReceitaDrawerProps {
 }
 
 export interface ReceitaData {
-  clientId: string;
+  patientId: string;
   professionalId?: string;
   medicalRecordId?: string;
   tipo: "simples" | "especial" | "controle_especial";
@@ -98,7 +98,7 @@ export function ReceitaDrawer({
   };
 
   const getData = (): ReceitaData => ({
-    clientId: context.clientId,
+    patientId: context.patientId,
     professionalId: context.professionalId,
     medicalRecordId: context.medicalRecordId,
     tipo,

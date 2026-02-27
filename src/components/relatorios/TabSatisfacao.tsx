@@ -106,11 +106,11 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
           comment,
           created_at,
           appointments!inner(
-            client_id,
-            service_id,
+            patient_id,
+            procedure_id,
             professional_id,
-            clients(full_name),
-            services(name),
+            patient:patients(full_name),
+            procedure:procedures(name),
             profiles!appointments_professional_id_fkey(full_name)
           )
         `)
@@ -127,8 +127,8 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
             rating: r.rating,
             comment: r.comment,
             created_at: r.created_at,
-            patient_name: r.appointments?.clients?.full_name ?? "—",
-            service_name: r.appointments?.services?.name ?? "—",
+            patient_name: r.appointments?.patient?.full_name ?? "—",
+            service_name: r.appointments?.procedure?.name ?? "—",
             professional_name: r.appointments?.profiles?.full_name ?? "—",
           }))
         );

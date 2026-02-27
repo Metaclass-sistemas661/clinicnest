@@ -60,7 +60,7 @@ interface Props {
   professionalName: string;
 }
 
-interface Service {
+interface ProcedureOption {
   id: string;
   name: string;
   price: number;
@@ -104,7 +104,7 @@ const CALC_TYPE_LABELS: Record<CommissionCalculationType, string> = {
 export function CommissionRulesDrawer({ open, onOpenChange, professionalId, professionalName }: Props) {
   const { profile } = useAuth();
   const [rules, setRules] = useState<CommissionRule[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
+  const [procedures, setProcedures] = useState<ProcedureOption[]>([]);
   const [insurances, setInsurances] = useState<InsurancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -114,7 +114,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
   
   const [formData, setFormData] = useState({
     rule_type: "default" as CommissionRuleType,
-    service_id: "",
+    procedure_id: "",
     insurance_id: "",
     procedure_code: "",
     calculation_type: "percentage" as CommissionCalculationType,
@@ -131,10 +131,10 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     if (!profile?.tenant_id || !professionalId) return;
     setIsLoading(true);
     try {
-      const [rulesRes, servicesRes, insurancesRes] = await Promise.all([
+      const [rulesRes, proceduresRes, insurancesRes] = await Promise.all([
         supabase
           .from("commission_rules")
-          .select("*, service:services(id, name), insurance:insurance_plans(id, name)")
+          .select("*, procedure:procedures(id, name), insurance:insurance_plans(id, name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", professionalId)
           .eq("is_active", true)
@@ -154,11 +154,11 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
       ]);
 
       if (rulesRes.error) throw rulesRes.error;
-      if (servicesRes.error) throw servicesRes.error;
+      if (proceduresRes.error) throw proceduresRes.error;
       if (insurancesRes.error) throw insurancesRes.error;
 
       setRules((rulesRes.data || []) as CommissionRule[]);
-      setServices((servicesRes.data || []) as Service[]);
+      setProcedures((proceduresRes.data || []) as ProcedureOption[]);
       setInsurances((insurancesRes.data || []) as InsurancePlan[]);
     } catch (err) {
       logger.error("CommissionRulesDrawer.fetchData", err);
@@ -176,7 +176,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     setEditingRule(null);
     setFormData({
       rule_type: ruleType,
-      service_id: "",
+      procedure_id: "",
       insurance_id: "",
       procedure_code: "",
       calculation_type: "percentage",
@@ -190,7 +190,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     setEditingRule(rule);
     setFormData({
       rule_type: rule.rule_type,
-      service_id: rule.service_id || "",
+      procedure_id: rule.procedure_id || "",
       insurance_id: rule.insurance_id || "",
       procedure_code: rule.procedure_code || "",
       calculation_type: rule.calculation_type,
@@ -209,7 +209,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
       return;
     }
 
-    if (formData.rule_type === "service" && !formData.service_id) {
+    if (formData.rule_type === "service" && !formData.procedure_id) {
       toast.error("Selecione um serviço");
       return;
     }
@@ -233,7 +233,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
         tenant_id: profile.tenant_id,
         professional_id: professionalId,
         rule_type: formData.rule_type,
-        service_id: formData.rule_type === "service" ? formData.service_id : null,
+        procedure_id: formData.rule_type === "service" ? formData.procedure_id : null,
         insurance_id: formData.rule_type === "insurance" ? formData.insurance_id : null,
         procedure_code: formData.rule_type === "procedure" ? formData.procedure_code.trim() : null,
         calculation_type: formData.calculation_type,
@@ -291,7 +291,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     if (servicePrice <= 0) return null;
 
     const applicableRule = rules.find(r => {
-      if (r.rule_type === "service" && r.service_id === simServiceId) return true;
+      if (r.rule_type === "service" && r.procedure_id === simServiceId) return true;
       if (r.rule_type === "insurance" && r.insurance_id === simInsuranceId) return true;
       if (r.rule_type === "default") return true;
       return false;
@@ -383,7 +383,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-0.5">
-                                {rule.rule_type === "service" && rule.service?.name}
+                                {rule.rule_type === "service" && rule.procedure?.name}
                                 {rule.rule_type === "insurance" && rule.insurance?.name}
                                 {rule.rule_type === "procedure" && `TUSS: ${rule.procedure_code}`}
                                 {rule.rule_type === "default" && "Aplicada quando nenhuma outra regra se aplica"}
@@ -440,10 +440,10 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
             {formData.rule_type === "service" && (
               <div className="space-y-2">
                 <Label>Serviço *</Label>
-                <Select value={formData.service_id} onValueChange={v => setFormData({...formData, service_id: v})}>
+                <Select value={formData.procedure_id} onValueChange={v => setFormData({...formData, procedure_id: v})}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
-                    {services.map(s => (
+                    {procedures.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -551,7 +551,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
                 <SelectTrigger><SelectValue placeholder="Qualquer procedimento" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__any__">Qualquer serviço</SelectItem>
-                  {services.map(s => (
+                  {procedures.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
                 </SelectContent>

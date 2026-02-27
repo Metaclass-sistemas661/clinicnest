@@ -30,7 +30,7 @@ interface LaudoDrawerProps {
 }
 
 export interface LaudoData {
-  clientId: string;
+  patientId: string;
   professionalId?: string;
   medicalRecordId?: string;
   tipo: "medico" | "pericial" | "aptidao" | "capacidade" | "outro";
@@ -76,7 +76,7 @@ export function LaudoDrawer({
   }, [open, context.diagnosis, context.cid10]);
 
   const getData = (): LaudoData => ({
-    clientId: context.clientId,
+    patientId: context.patientId,
     professionalId: context.professionalId,
     medicalRecordId: context.medicalRecordId,
     tipo,

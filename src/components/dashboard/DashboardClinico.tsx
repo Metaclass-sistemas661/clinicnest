@@ -52,7 +52,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
       const [aptsRes, completedRes, completedAptsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, client:clients(name, phone), service:services(name, duration_minutes), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .gte("scheduled_at", dayStart)
@@ -68,7 +68,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
           .lte("scheduled_at", monthEnd),
         supabase
           .from("appointments")
-          .select("id, scheduled_at, client:clients(name), service:services(name)")
+          .select("id, scheduled_at, patient:patients(name), procedure:procedures(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .eq("status", "completed")
@@ -94,9 +94,9 @@ export const DashboardClinico = memo(function DashboardClinico() {
           .filter((a: any) => !evolAppIds.has(a.id))
           .map((a: any) => ({
             id: a.id,
-            client_name: a.client?.name || "Paciente",
+            client_name: a.patient?.name || "Paciente",
             scheduled_at: a.scheduled_at,
-            service_name: a.service?.name || null,
+            service_name: a.procedure?.name || null,
           }));
         setPendingEvolutions(pending);
       }
@@ -219,8 +219,8 @@ export const DashboardClinico = memo(function DashboardClinico() {
                 <Stethoscope className="h-7 w-7 text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xl font-bold leading-tight">{nextAppointment.client?.name || "Paciente"}</p>
-                {nextAppointment.service?.name && <p className="mt-0.5 truncate text-sm text-teal-100">{nextAppointment.service.name}</p>}
+                <p className="truncate text-xl font-bold leading-tight">{nextAppointment.patient?.name || "Paciente"}</p>
+                {nextAppointment.procedure?.name && <p className="mt-0.5 truncate text-sm text-teal-100">{nextAppointment.procedure.name}</p>}
               </div>
               <div className="shrink-0 text-right">
                 <p className="tabular-nums text-3xl font-bold leading-none">{formatInAppTz(nextAppointment.scheduled_at, "HH:mm")}</p>
@@ -270,8 +270,8 @@ export const DashboardClinico = memo(function DashboardClinico() {
                         {formatInAppTz(apt.scheduled_at, "HH:mm")}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
-                        {apt.service?.name && <p className="text-xs text-muted-foreground truncate">{apt.service.name}</p>}
+                        <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
+                        {apt.procedure?.name && <p className="text-xs text-muted-foreground truncate">{apt.procedure.name}</p>}
                       </div>
                       <Badge variant="outline" className={sb?.className}>{sb?.label}</Badge>
                     </div>

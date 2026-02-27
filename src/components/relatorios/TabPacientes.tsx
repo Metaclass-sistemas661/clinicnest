@@ -22,7 +22,7 @@ import { ptBR } from "date-fns/locale";
 interface ApptRow {
   id: string;
   scheduled_at: string;
-  client_id: string | null;
+  patient_id: string | null;
   status: string;
   clients: { id: string; name: string | null; created_at?: string; referral_source?: string | null } | null;
 }
@@ -61,31 +61,31 @@ function downloadCsv(rows: Record<string, string | number>[], filename: string) 
 export function TabPacientes({ appts, allAppts, isLoading, periodStart }: Props) {
   const analysis = useMemo(() => {
     const periodStartDate = parseISO(periodStart);
-    const clientsInPeriod = new Map<string, { isNew: boolean; visits: number; source: string | null }>();
-    const clientFirstVisit = new Map<string, string>();
+    const patientsInPeriod = new Map<string, { isNew: boolean; visits: number; source: string | null }>();
+    const patientFirstVisit = new Map<string, string>();
 
     allAppts
-      .filter((a) => a.status === "completed" && a.client_id)
+      .filter((a) => a.status === "completed" && a.patient_id)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
       .forEach((a) => {
-        if (!clientFirstVisit.has(a.client_id!)) {
-          clientFirstVisit.set(a.client_id!, a.scheduled_at);
+        if (!patientFirstVisit.has(a.patient_id!)) {
+          patientFirstVisit.set(a.patient_id!, a.scheduled_at);
         }
       });
 
     appts
-      .filter((a) => a.status === "completed" && a.client_id)
+      .filter((a) => a.status === "completed" && a.patient_id)
       .forEach((a) => {
-        const clientId = a.client_id!;
-        const firstVisit = clientFirstVisit.get(clientId);
+        const patientId = a.patient_id!;
+        const firstVisit = patientFirstVisit.get(patientId);
         const isNew = firstVisit ? parseISO(firstVisit) >= periodStartDate : false;
-        const source = a.clients?.referral_source || "Não informado";
+        const source = a.patient?.referral_source || "Não informado";
 
-        const prev = clientsInPeriod.get(clientId);
+        const prev = patientsInPeriod.get(patientId);
         if (prev) {
           prev.visits += 1;
         } else {
-          clientsInPeriod.set(clientId, { isNew, visits: 1, source });
+          patientsInPeriod.set(patientId, { isNew, visits: 1, source });
         }
       });
 
@@ -93,7 +93,7 @@ export function TabPacientes({ appts, allAppts, isLoading, periodStart }: Props)
     let retornos = 0;
     const sourceCount = new Map<string, number>();
 
-    clientsInPeriod.forEach((data) => {
+    patientsInPeriod.forEach((data) => {
       if (data.isNew) {
         novos += 1;
         const src = data.source || "Não informado";
@@ -125,22 +125,22 @@ export function TabPacientes({ appts, allAppts, isLoading, periodStart }: Props)
 
   const monthlyTrend = useMemo(() => {
     const monthMap = new Map<string, { novos: number; retornos: number }>();
-    const clientFirstVisit = new Map<string, string>();
+    const patientFirstVisit = new Map<string, string>();
 
     allAppts
-      .filter((a) => a.status === "completed" && a.client_id)
+      .filter((a) => a.status === "completed" && a.patient_id)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
       .forEach((a) => {
-        if (!clientFirstVisit.has(a.client_id!)) {
-          clientFirstVisit.set(a.client_id!, a.scheduled_at);
+        if (!patientFirstVisit.has(a.patient_id!)) {
+          patientFirstVisit.set(a.patient_id!, a.scheduled_at);
         }
       });
 
     appts
-      .filter((a) => a.status === "completed" && a.client_id)
+      .filter((a) => a.status === "completed" && a.patient_id)
       .forEach((a) => {
         const monthKey = format(startOfMonth(parseISO(a.scheduled_at)), "MMM/yy", { locale: ptBR });
-        const firstVisit = clientFirstVisit.get(a.client_id!);
+        const firstVisit = patientFirstVisit.get(a.patient_id!);
         const apptMonth = startOfMonth(parseISO(a.scheduled_at));
         const isNew = firstVisit ? startOfMonth(parseISO(firstVisit)).getTime() === apptMonth.getTime() : false;
 

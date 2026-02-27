@@ -26,7 +26,7 @@ Ou: https://github.com/supabase/cli/releases
 
 ```bash
 supabase login
-cd ClinicaFlow
+cd ClinicNest
 supabase link --project-ref pijjuhtyxcidqceukogv
 ```
 

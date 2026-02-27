@@ -38,7 +38,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { AiTriageChatbot } from "@/components/ai";
 
-interface Client {
+interface Patient {
   id: string;
   name: string;
   phone?: string;
@@ -46,7 +46,7 @@ interface Client {
 
 interface Appointment {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   scheduled_at: string;
   service_name: string;
@@ -57,7 +57,7 @@ type TriageStatus = "pendente" | "em_atendimento" | "concluida";
 
 interface Triagem {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   performed_by: string;
   triaged_at: string;
@@ -95,7 +95,7 @@ const statusConfig: Record<TriageStatus, { label: string; color: string }> = {
 };
 
 const emptyForm = {
-  client_id: "",
+  patient_id: "",
   appointment_id: "",
   priority: "nao_urgente" as Priority,
   blood_pressure_systolic: "",
@@ -116,7 +116,7 @@ const emptyForm = {
 
 export default function Triagem() {
   const { profile } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [triagens, setTriagens] = useState<Triagem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,13 +128,13 @@ export default function Triagem() {
 
   useEffect(() => {
     if (profile?.tenant_id) {
-      fetchClients();
+      fetchPatients();
       fetchTriagens();
       fetchTodayAppointments();
     }
   }, [profile?.tenant_id]);
 
-  const fetchClients = async () => {
+  const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
@@ -143,9 +143,9 @@ export default function Triagem() {
         .eq("tenant_id", profile.tenant_id)
         .order("name");
       if (error) throw error;
-      setClients((data as Client[]) || []);
+      setPatients((data as Patient[]) || []);
     } catch (err) {
-      logger.error("Error fetching clients:", err);
+      logger.error("Error fetching patients:", err);
     }
   };
 
@@ -155,14 +155,14 @@ export default function Triagem() {
     try {
       const { data, error } = await supabase
         .from("triage_records")
-        .select(`*, clients(name), profiles(full_name)`)
+        .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
         .order("triaged_at", { ascending: false });
       if (error) throw error;
       const mapped: Triagem[] = (data || []).map((r: any) => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
         performed_by: r.profiles?.full_name ?? "—",
         triaged_at: r.triaged_at,
         priority: r.priority as Priority,
@@ -197,7 +197,7 @@ export default function Triagem() {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("appointments")
-        .select("id, client_id, scheduled_at, clients(name), services(name)")
+        .select("id, patient_id, scheduled_at, patient:patients(name), procedure:procedures(name)")
         .eq("tenant_id", profile.tenant_id)
         .gte("scheduled_at", `${today}T00:00:00`)
         .lte("scheduled_at", `${today}T23:59:59`)
@@ -206,10 +206,10 @@ export default function Triagem() {
       setAppointments(
         (data || []).map((a: any) => ({
           id: a.id,
-          client_id: a.client_id,
-          client_name: a.clients?.name ?? "—",
+          patient_id: a.patient_id,
+          client_name: a.patient?.name ?? "—",
           scheduled_at: a.scheduled_at,
-          service_name: a.services?.name ?? "Consulta",
+          service_name: a.procedure?.name ?? "Consulta",
         }))
       );
     } catch (err) {
@@ -218,14 +218,14 @@ export default function Triagem() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.chief_complaint.trim()) { toast.error("Queixa principal é obrigatória"); return; }
 
     setIsSaving(true);
     try {
       const { error } = await supabase.from("triage_records").insert({
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
+        patient_id: formData.patient_id,
         appointment_id: formData.appointment_id && formData.appointment_id !== "none" ? formData.appointment_id : null,
         performed_by: profile!.id,
         priority: formData.priority,
@@ -454,8 +454,8 @@ export default function Triagem() {
         isSubmitting={isSaving}
         submitLabel="Salvar Triagem"
       >
-        <Tabs defaultValue="identificacao" className="mt-2">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="identificacao" className="mt-2 flex flex-col h-full">
+          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
             <TabsTrigger value="identificacao">Identificação</TabsTrigger>
             <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
             <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
@@ -466,23 +466,23 @@ export default function Triagem() {
           <TabsContent value="identificacao" className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Paciente *</Label>
-              <Select value={formData.client_id} onValueChange={(v) => setFormData({ ...formData, client_id: v, appointment_id: "" })}>
+              <Select value={formData.patient_id} onValueChange={(v) => setFormData({ ...formData, patient_id: v, appointment_id: "" })}>
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((c) => (
+                  {patients.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            {formData.client_id && appointments.filter((a) => a.client_id === formData.client_id).length > 0 && (
+            {formData.patient_id && appointments.filter((a) => a.patient_id === formData.patient_id).length > 0 && (
               <div className="space-y-2">
                 <Label>Agendamento do Dia (opcional)</Label>
                 <Select value={formData.appointment_id} onValueChange={(v) => setFormData({ ...formData, appointment_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Vincular a um agendamento" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem vínculo</SelectItem>
-                    {appointments.filter((a) => a.client_id === formData.client_id).map((a) => (
+                    {appointments.filter((a) => a.patient_id === formData.patient_id).map((a) => (
                       <SelectItem key={a.id} value={a.id}>
                         {new Date(a.scheduled_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} — {a.service_name}
                       </SelectItem>
@@ -650,7 +650,7 @@ export default function Triagem() {
           </TabsContent>
 
           {/* Tab 4: Triagem IA */}
-          <TabsContent value="ia-triage" className="mt-4">
+          <TabsContent value="ia-triage" className="mt-4 flex-1 flex flex-col min-h-0">
             <AiTriageChatbot
               onComplete={(result) => {
                 if (result.urgency) {
@@ -667,7 +667,7 @@ export default function Triagem() {
                   toast.success(`Triagem IA: ${result.specialty} — ${result.urgency}`);
                 }
               }}
-              className="h-[400px]"
+              className="flex-1"
             />
           </TabsContent>
         </Tabs>

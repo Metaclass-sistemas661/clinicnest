@@ -82,9 +82,9 @@ export default function Teleconsulta() {
         .from("appointments")
         .select(`
           id, scheduled_at, duration_minutes, status, telemedicine_url,
-          clients(name),
+          patient:patients(name),
           profiles!appointments_professional_id_fkey(full_name),
-          services(name)
+          procedure:procedures(name)
         `)
         .eq("tenant_id", profile.tenant_id)
         .eq("telemedicine", true)
@@ -101,9 +101,9 @@ export default function Teleconsulta() {
         duration_minutes: r.duration_minutes,
         status: r.status,
         telemedicine_url: r.telemedicine_url,
-        client_name: r.clients?.name ?? "Paciente não informado",
+        client_name: r.patient?.name ?? "Paciente não informado",
         professional_name: r.profiles?.full_name ?? "—",
-        service_name: r.services?.name ?? "—",
+        service_name: r.procedure?.name ?? "—",
       }));
 
       setAppointments(mapped);

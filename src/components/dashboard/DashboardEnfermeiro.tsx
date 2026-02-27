@@ -70,7 +70,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
       const [triagesRes, roomsRes, arrivedRes, triagedTodayRes] = await Promise.all([
         supabase
           .from("triage_records")
-          .select("id, chief_complaint, priority, triaged_at, appointment_id, client:clients(name)")
+          .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pendente")
           .order("triaged_at", { ascending: true })
@@ -82,7 +82,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
           .eq("is_active", true),
         supabase
           .from("appointments")
-          .select("*, client:clients(name, phone), service:services(name), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "arrived")
           .gte("scheduled_at", dayStart)
@@ -99,7 +99,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
       const triagesRaw = (triagesRes.data || []) as any[];
       const triagesMapped = triagesRaw.map((t) => ({
         id: t.id,
-        client_name: t.client?.name || "Paciente",
+        client_name: t.patient?.name || "Paciente",
         priority: t.priority,
         chief_complaint: t.chief_complaint || "",
         triaged_at: t.triaged_at,
@@ -339,7 +339,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
                       {formatInAppTz(apt.scheduled_at, "HH:mm")}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{apt.client?.name || "Paciente"}</p>
+                      <p className="text-sm font-medium truncate">{apt.patient?.name || "Paciente"}</p>
                       {apt.professional?.full_name && <p className="text-xs text-muted-foreground truncate">{apt.professional.full_name}</p>}
                     </div>
                   </div>

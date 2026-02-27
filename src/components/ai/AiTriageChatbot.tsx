@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 
 const NEST_AVATAR = "/nest-avatar.png";
 
@@ -126,14 +127,15 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
   };
 
   return (
-    <Card className={cn("flex flex-col h-[500px] overflow-hidden", className)}>
+    <FeatureGate feature="aiTriage" className={className}>
+    <Card className={cn("flex flex-col h-full overflow-hidden", className)}>
       <CardHeader className="flex-shrink-0 pb-3 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2.5 text-lg">
             <img
               src={NEST_AVATAR}
               alt="Nest IA"
-              className="h-7 w-7 rounded-full object-cover ring-2 ring-primary/20"
+              className="h-7 w-7 rounded-full object-cover ring-2 ring-teal-400/40 bg-teal-600"
             />
             <span>Triagem Virtual</span>
           </CardTitle>
@@ -160,7 +162,7 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
               <img
                 src={NEST_AVATAR}
                 alt="Nest IA"
-                className="h-16 w-16 rounded-full object-cover ring-2 ring-primary/20 mb-4"
+                className="h-16 w-16 rounded-full object-cover ring-2 ring-teal-400/40 bg-teal-600 mb-4"
               />
               <p className="font-medium text-foreground">
                 Olá! Sou a Nest, assistente de triagem virtual.
@@ -183,7 +185,7 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
                     <img
                       src={NEST_AVATAR}
                       alt="Nest"
-                      className="flex-shrink-0 w-7 h-7 rounded-full object-cover ring-1 ring-primary/20 mt-0.5"
+                      className="flex-shrink-0 w-7 h-7 rounded-full object-cover ring-1 ring-teal-400/40 bg-teal-600 mt-0.5"
                     />
                   )}
                   <div
@@ -208,7 +210,7 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
                   <img
                     src={NEST_AVATAR}
                     alt="Nest"
-                    className="flex-shrink-0 w-7 h-7 rounded-full object-cover ring-1 ring-primary/20 mt-0.5"
+                    className="flex-shrink-0 w-7 h-7 rounded-full object-cover ring-1 ring-teal-400/40 bg-teal-600 mt-0.5"
                   />
                   <div className="bg-muted/70 border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -257,5 +259,6 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
         </div>
       </CardContent>
     </Card>
+    </FeatureGate>
   );
 }

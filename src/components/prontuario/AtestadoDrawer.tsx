@@ -32,7 +32,7 @@ interface AtestadoDrawerProps {
 }
 
 export interface AtestadoData {
-  clientId: string;
+  patientId: string;
   professionalId?: string;
   medicalRecordId?: string;
   tipo: "medico" | "comparecimento" | "acompanhante";
@@ -78,7 +78,7 @@ export function AtestadoDrawer({
   const dataFim = format(addDays(new Date(dataInicio), diasAfastamento - 1), "yyyy-MM-dd");
 
   const getData = (): AtestadoData => ({
-    clientId: context.clientId,
+    patientId: context.patientId,
     professionalId: context.professionalId,
     medicalRecordId: context.medicalRecordId,
     tipo,

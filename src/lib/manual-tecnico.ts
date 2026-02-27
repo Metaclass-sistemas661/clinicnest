@@ -1,7 +1,9 @@
 /**
- * Manual Técnico — ClinicaFlow
+ * Manual Técnico — ClinicNest
  * Documentação técnica para certificação SBIS NGS1/NGS2
  */
+
+import { APP_VERSION } from "@/lib/version";
 
 export interface TechnicalSection {
   id: string;
@@ -20,7 +22,7 @@ export const MANUAL_TECNICO: TechnicalSection[] = [
   {
     id: "arquitetura",
     title: "1. Arquitetura do Sistema",
-    content: `O ClinicaFlow utiliza arquitetura moderna baseada em cloud computing, garantindo escalabilidade, disponibilidade e segurança.`,
+    content: `O ClinicNest utiliza arquitetura moderna baseada em cloud computing, garantindo escalabilidade, disponibilidade e segurança.`,
     subsections: [
       {
         id: "stack",
@@ -95,7 +97,7 @@ CREATE POLICY "tenant_isolation" ON tabela
   {
     id: "seguranca",
     title: "2. Segurança",
-    content: `O ClinicaFlow implementa múltiplas camadas de segurança para proteção dos dados de saúde.`,
+    content: `O ClinicNest implementa múltiplas camadas de segurança para proteção dos dados de saúde.`,
     subsections: [
       {
         id: "autenticacao",
@@ -170,7 +172,7 @@ CREATE POLICY "tenant_isolation" ON tabela
   {
     id: "banco-dados",
     title: "3. Banco de Dados",
-    content: `O ClinicaFlow utiliza PostgreSQL 15 com extensões específicas para saúde.`,
+    content: `O ClinicNest utiliza PostgreSQL 15 com extensões específicas para saúde.`,
     subsections: [
       {
         id: "modelo",
@@ -294,7 +296,7 @@ CREATE POLICY "tenant_isolation" ON tabela
   {
     id: "conformidade",
     title: "5. Conformidade",
-    content: `O ClinicaFlow atende às principais normas e regulamentações do setor de saúde.`,
+    content: `O ClinicNest atende às principais normas e regulamentações do setor de saúde.`,
     subsections: [
       {
         id: "sbis",
@@ -379,7 +381,7 @@ CREATE POLICY "tenant_isolation" ON tabela
 • N3: Desenvolvimento (correções, melhorias)
 
 **Canais:**
-• E-mail: suporte@clinicaflow.com.br
+• E-mail: suporte@ClinicNest.com.br
 • Chat: Dentro do sistema
 • WhatsApp: Planos Pro/Premium`,
       },
@@ -388,10 +390,10 @@ CREATE POLICY "tenant_isolation" ON tabela
 ];
 
 export const MANUAL_TECNICO_INFO = {
-  titulo: "Manual Técnico — ClinicaFlow",
-  versao: "1.0.0",
+  titulo: "Manual Técnico — ClinicNest",
+  versao: APP_VERSION,
   dataAtualizacao: "2026-02-23",
-  empresa: "ClinicaFlow Sistemas de Saúde",
+  empresa: "ClinicNest Sistemas de Saúde",
   classificacao: "Confidencial — Uso interno e auditoria",
   certificacao: "Em conformidade com SBIS NGS1/NGS2",
 };

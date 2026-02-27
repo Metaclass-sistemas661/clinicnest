@@ -24,7 +24,7 @@ interface ReturnData {
   valid: boolean;
   return_id: string | null;
   tenant_id: string | null;
-  client_id: string | null;
+  patient_id: string | null;
   client_name: string | null;
   professional_name: string | null;
   return_date: string | null;

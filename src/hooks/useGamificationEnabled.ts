@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 /**
  * Hook para verificar se os pop-ups de gamificação devem ser exibidos.
  * 
- * NOTA: Gamificação está desabilitada por padrão no ClinicaFlow (sistema clínico).
+ * NOTA: Gamificação está desabilitada por padrão no ClinicNest (sistema clínico).
  * Retorna true apenas se explicitamente habilitado pelo tenant E pelo usuário.
  * 
  * @returns boolean - true se pop-ups devem ser exibidos

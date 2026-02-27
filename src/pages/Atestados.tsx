@@ -34,7 +34,7 @@ import { generateCertificatePdf } from "@/utils/patientDocumentPdf";
 import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { generateRecordHash } from "@/lib/digital-signature";
 
-interface Client {
+interface Patient {
   id: string;
   name: string;
   phone?: string;
@@ -50,7 +50,7 @@ interface RecentAppointment {
 
 interface Certificate {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   professional_name: string;
   certificate_type: string;
@@ -79,7 +79,7 @@ interface AppointmentRow {
 
 interface CertificateRow {
   id: string;
-  client_id: string;
+  patient_id: string;
   clients: { name: string } | null;
   profiles: { full_name: string } | null;
   certificate_type: string;
@@ -162,7 +162,7 @@ const contentTemplates: Record<string, { label: string; content: string }[]> = {
 };
 
 const emptyForm = {
-  client_id: "",
+  patient_id: "",
   appointment_id: "",
   certificate_type: "atestado",
   days_off: "",
@@ -175,7 +175,7 @@ const emptyForm = {
 
 export default function Atestados() {
   const { profile, tenant, isAdmin } = useAuth();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -197,12 +197,12 @@ export default function Atestados() {
 
   useEffect(() => {
     if (profile?.tenant_id) {
-      fetchClients();
+      fetchPatients();
       fetchCertificates();
     }
   }, [profile?.tenant_id]);
 
-  const fetchClients = async () => {
+  const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
@@ -211,34 +211,34 @@ export default function Atestados() {
         .eq("tenant_id", profile.tenant_id)
         .order("name");
       if (error) throw error;
-      setClients((data as Client[]) || []);
+      setPatients((data as Patient[]) || []);
     } catch (err) {
       logger.error("Error fetching patients:", err);
     }
   };
 
-  const fetchRecentAppointments = async (clientId: string) => {
-    if (!profile?.tenant_id || !clientId) { setRecentAppointments([]); return; }
+  const fetchRecentAppointments = async (patientId: string) => {
+    if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
       const { data } = await supabase
         .from("appointments")
-        .select("id, scheduled_at, services(name), medical_records(id)")
+        .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
-        .eq("client_id", clientId)
+        .eq("patient_id", patientId)
         .order("scheduled_at", { ascending: false })
         .limit(10);
       setRecentAppointments((data ?? []).map((a: AppointmentRow) => ({
         id: a.id,
         scheduled_at: a.scheduled_at,
-        service_name: a.services?.name ?? "Consulta",
+        service_name: a.procedure?.name ?? "Consulta",
         medical_record_id: Array.isArray(a.medical_records) ? a.medical_records[0]?.id ?? null : a.medical_records?.id ?? null,
       })));
     } catch { setRecentAppointments([]); }
   };
 
-  const handleClientChange = (clientId: string) => {
-    setFormData(f => ({ ...f, client_id: clientId, appointment_id: "" }));
-    void fetchRecentAppointments(clientId);
+  const handlePatientChange = (patientId: string) => {
+    setFormData(f => ({ ...f, patient_id: patientId, appointment_id: "" }));
+    void fetchRecentAppointments(patientId);
   };
 
   const fetchCertificates = async () => {
@@ -247,14 +247,14 @@ export default function Atestados() {
     try {
       const { data, error } = await supabase
         .from("medical_certificates")
-        .select(`*, clients(name), profiles(full_name)`)
+        .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
         .order("issued_at", { ascending: false });
       if (error) throw error;
       const mapped: Certificate[] = (data || []).map((r: CertificateRow) => ({
         id: r.id,
-        client_id: r.client_id,
-        client_name: r.clients?.name ?? "—",
+        patient_id: r.patient_id,
+        client_name: r.patient?.name ?? "—",
         professional_name: r.profiles?.full_name ?? "—",
         certificate_type: r.certificate_type,
         issued_at: r.issued_at,
@@ -289,7 +289,7 @@ export default function Atestados() {
   const openEdit = (c: Certificate) => {
     setEditingId(c.id);
     setFormData({
-      client_id: c.client_id,
+      patient_id: c.patient_id,
       certificate_type: c.certificate_type,
       days_off: c.days_off?.toString() ?? "",
       start_date: c.start_date ?? "",
@@ -302,7 +302,7 @@ export default function Atestados() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.client_id) { toast.error("Selecione um paciente"); return; }
+    if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     if (!formData.content.trim()) { toast.error("Preencha o conteúdo do atestado"); return; }
 
     setIsSaving(true);
@@ -310,7 +310,7 @@ export default function Atestados() {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
       const payload = {
         tenant_id: profile!.tenant_id,
-        client_id: formData.client_id,
+        patient_id: formData.patient_id,
         professional_id: profile!.id,
         appointment_id: formData.appointment_id || null,
         medical_record_id: selectedAppt?.medical_record_id || null,
@@ -406,7 +406,7 @@ export default function Atestados() {
           end_date: signingCertificate.end_date,
           cid_code: signingCertificate.cid_code,
           notes: signingCertificate.notes,
-          client_id: signingCertificate.client_id,
+          patient_id: signingCertificate.patient_id,
           issued_at: signingCertificate.issued_at,
         });
 
@@ -495,7 +495,7 @@ export default function Atestados() {
     const cnpj = tenantAny?.cnpj || "";
     const responsibleDoctor = tenantAny?.responsible_doctor || "";
     const responsibleCrm = tenantAny?.responsible_crm || "";
-    const client = clients.find((cl) => cl.id === c.client_id);
+    const patient = patients.find((cl) => cl.id === c.patient_id);
 
     const borderColor = c.certificate_type === "atestado" ? "#2563eb"
       : c.certificate_type === "declaracao_comparecimento" ? "#059669"
@@ -562,7 +562,7 @@ export default function Atestados() {
   <div class="type-banner">${title.toUpperCase()}</div>
   <div class="patient-section">
     <div class="row"><span class="label">Paciente:</span><span class="value">${c.client_name}</span></div>
-    ${client?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${client.cpf}</span></div>` : ""}
+    ${patient?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${client.cpf}</span></div>` : ""}
     <div class="row"><span class="label">Data de Emissão:</span><span class="value">${issuedDate}</span></div>
     ${c.days_off ? `<div class="row"><span class="label">Dias de Afastamento:</span><span class="value">${c.days_off} dia(s)${c.start_date && c.end_date ? ` — de ${new Date(c.start_date + "T12:00:00").toLocaleDateString("pt-BR")} a ${new Date(c.end_date + "T12:00:00").toLocaleDateString("pt-BR")}` : ""}</span></div>` : ""}
     ${c.cid_code ? `<div class="row"><span class="label">CID-10:</span><span class="value">${c.cid_code}</span></div>` : ""}
@@ -594,7 +594,7 @@ export default function Atestados() {
 
   const handleDownloadPdf = (c: Certificate) => {
     const tenantData = tenant as TenantWithLogo | null;
-    const client = clients.find((cl) => cl.id === c.client_id);
+    const patient = patients.find((cl) => cl.id === c.patient_id);
     
     generateCertificatePdf({
       certificate_type: c.certificate_type,
@@ -804,12 +804,12 @@ export default function Atestados() {
             <div className="space-y-2">
               <Label>Paciente *</Label>
               <Select
-                value={formData.client_id || undefined}
-                onValueChange={handleClientChange}
+                value={formData.patient_id || undefined}
+                onValueChange={handlePatientChange}
               >
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
-                  {clients.map((cl) => (
+                  {patients.map((cl) => (
                     <SelectItem key={cl.id} value={cl.id}>{cl.name}</SelectItem>
                   ))}
                 </SelectContent>

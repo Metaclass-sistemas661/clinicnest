@@ -5,6 +5,8 @@
  * para ambiente de homologação da certificação SBIS.
  */
 
+import { APP_VERSION } from "@/lib/version";
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CERTIFICADO DE TESTE (HOMOLOGAÇÃO)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -47,14 +49,14 @@ export const CERTIFICADO_HOMOLOGACAO: CertificadoTeste = {
 
 export const DADOS_AUDITORIA_SBIS = {
   sistema: {
-    nome: 'ClinicaFlow',
-    versao: '1.0.0',
-    fabricante: 'ClinicaFlow Sistemas de Saúde Ltda',
+    nome: 'ClinicNest',
+    versao: APP_VERSION,
+    fabricante: 'ClinicNest Sistemas de Saúde Ltda',
     cnpj: '00.000.000/0001-00',
     endereco: 'Av. Paulista, 1000 - São Paulo/SP',
     telefone: '(11) 3000-0000',
-    email: 'contato@clinicaflow.com.br',
-    site: 'https://clinicaflow.com.br',
+    email: 'contato@clinicnest.com.br',
+    site: 'https://clinicnest.com.br',
   },
   
   certificacao: {
@@ -232,7 +234,7 @@ export function gerarRelatorioChecklist(): string {
   
   let relatorio = `# Relatório de Conformidade SBIS\n\n`;
   relatorio += `**Data:** ${new Date().toLocaleDateString('pt-BR')}\n`;
-  relatorio += `**Sistema:** ClinicaFlow v1.0.0\n`;
+  relatorio += `**Sistema:** ClinicNest v${APP_VERSION}\n`;
   relatorio += `**Nível pretendido:** NGS2\n\n`;
   relatorio += `## Resumo\n\n`;
   relatorio += `- **Requisitos atendidos:** ${atendidos}/${total} (${percentual}%)\n\n`;

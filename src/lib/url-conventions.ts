@@ -2,7 +2,7 @@
  * URL Routing Conventions — Padrão de URLs para entidades
  * 
  * Este arquivo documenta as convenções de roteamento para páginas de entidades
- * no ClinicaFlow, seguindo as melhores práticas de UX enterprise.
+ * no ClinicNest, seguindo as melhores práticas de UX enterprise.
  * 
  * ## Padrão de URLs
  * 
@@ -75,7 +75,7 @@
  * // App.tsx
  * <Route path="/clientes" element={<Clientes />} />
  * <Route path="/clientes/novo" element={<ClienteNovo />} />
- * <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+ * <Route path="/clientes/:id" element={<PacienteDetalhe />} />
  * <Route path="/clientes/:id/edit" element={<ClienteEdit />} />
  * ```
  * 

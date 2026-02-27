@@ -42,11 +42,11 @@ export function ClientesPreview() {
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { name: "Maria Silva", phone: "(11) 98765-4321", services: 12, products: 5, total: "R$ 2.450,00" },
-                  { name: "João Santos", phone: "(21) 97654-3210", services: 8, products: 3, total: "R$ 1.890,00" },
-                  { name: "Ana Costa", phone: "(31) 96543-2109", services: 15, products: 7, total: "R$ 3.120,00" },
-                  { name: "Pedro Lima", phone: "(11) 95432-1098", services: 6, products: 2, total: "R$ 980,00" },
-                ].map((client, idx) => (
+                  { name: "Maria Silva", phone: "(11) 98765-4321", procedures: 12, products: 5, total: "R$ 2.450,00" },
+                  { name: "João Santos", phone: "(21) 97654-3210", procedures: 8, products: 3, total: "R$ 1.890,00" },
+                  { name: "Ana Costa", phone: "(31) 96543-2109", procedures: 15, products: 7, total: "R$ 3.120,00" },
+                  { name: "Pedro Lima", phone: "(11) 95432-1098", procedures: 6, products: 2, total: "R$ 980,00" },
+                ].map((patient, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
@@ -54,23 +54,23 @@ export function ClientesPreview() {
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                        {client.name.split(" ").map(n => n[0]).join("")}
+                        {patient.name.split(" ").map(n => n[0]).join("")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-foreground">{client.name}</p>
-                        <p className="text-xs text-muted-foreground">{client.phone}</p>
+                        <p className="font-medium text-sm text-foreground">{patient.name}</p>
+                        <p className="text-xs text-muted-foreground">{patient.phone}</p>
                         <div className="flex items-center gap-3 mt-2">
                           <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-400 border-blue-500/30">
-                            {client.services} consultas
+                            {patient.procedures} consultas
                           </Badge>
                           <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/30">
-                            {client.products} retornos
+                            {patient.products} retornos
                           </Badge>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-foreground">{client.total}</p>
+                      <p className="text-sm font-semibold text-foreground">{patient.total}</p>
                       <p className="text-xs text-muted-foreground">Total gasto</p>
                     </div>
                   </div>

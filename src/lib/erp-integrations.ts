@@ -359,7 +359,7 @@ function mapBlingContaReceber(c: any): ERPContaReceber {
 export interface ContaAzulConfig {
   accessToken: string;
   refreshToken?: string;
-  clientId?: string;
+  patientId?: string;
   clientSecret?: string;
 }
 

@@ -43,10 +43,10 @@ interface TreatmentPlan {
 export default function PlanosTratamento() {
   const { profile } = useAuth();
   const [plans, setPlans] = useState<TreatmentPlan[]>([]);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [clientSearch, setClientSearch] = useState("");
-  const [selectedClient, setSelectedClient] = useState("");
+  const [patientSearch, setPatientSearch] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -54,17 +54,17 @@ export default function PlanosTratamento() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ title: "Plano de Tratamento", description: "", valid_until: "", payment_conditions: "", discount_percent: "0" });
 
-  useEffect(() => { if (profile?.tenant_id && clientSearch.length >= 2) searchClients(); }, [clientSearch]);
-  useEffect(() => { if (selectedClient) fetchPlans(); }, [selectedClient, statusFilter]);
+  useEffect(() => { if (profile?.tenant_id && patientSearch.length >= 2) searchPatients(); }, [patientSearch]);
+  useEffect(() => { if (selectedPatient) fetchPlans(); }, [selectedPatient, statusFilter]);
 
-  const searchClients = async () => {
-    const { data } = await supabase.from("patients").select("id, name").eq("tenant_id", profile!.tenant_id).ilike("name", `%${clientSearch}%`).limit(20);
-    setClients(data || []);
+  const searchPatients = async () => {
+    const { data } = await supabase.from("patients").select("id, name").eq("tenant_id", profile!.tenant_id).ilike("name", `%${patientSearch}%`).limit(20);
+    setPatients(data || []);
   };
 
   const fetchPlans = async () => {
     setIsLoading(true);
-    const { data } = await supabase.rpc("get_client_treatment_plans", { p_tenant_id: profile!.tenant_id, p_client_id: selectedClient });
+    const { data } = await supabase.rpc("get_client_treatment_plans", { p_tenant_id: profile!.tenant_id, p_client_id: selectedPatient });
     let filtered = (data || []) as TreatmentPlan[];
     if (statusFilter !== "all") filtered = filtered.filter(p => p.status === statusFilter);
     setPlans(filtered);
@@ -73,7 +73,7 @@ export default function PlanosTratamento() {
 
   const handleCreatePlan = async () => {
     setIsSaving(true);
-    const { data, error } = await supabase.from("treatment_plans").insert({ tenant_id: profile!.tenant_id, client_id: selectedClient, professional_id: profile!.id, title: formData.title, description: formData.description || null, valid_until: formData.valid_until || null, payment_conditions: formData.payment_conditions || null, discount_percent: parseFloat(formData.discount_percent) || 0 }).select().single();
+    const { data, error } = await supabase.from("treatment_plans").insert({ tenant_id: profile!.tenant_id, patient_id: selectedPatient, professional_id: profile!.id, title: formData.title, description: formData.description || null, valid_until: formData.valid_until || null, payment_conditions: formData.payment_conditions || null, discount_percent: parseFloat(formData.discount_percent) || 0 }).select().single();
     setIsSaving(false);
     if (error) { toast.error("Erro ao criar plano"); return; }
     toast.success("Plano criado!");
@@ -109,15 +109,15 @@ export default function PlanosTratamento() {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1 flex-1 min-w-[200px]">
             <Label className="text-xs">Buscar Paciente</Label>
-            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input value={clientSearch} onChange={e => setClientSearch(e.target.value)} placeholder="Nome do paciente..." className="pl-10" /></div>
+            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input value={patientSearch} onChange={e => setPatientSearch(e.target.value)} placeholder="Nome do paciente..." className="pl-10" /></div>
           </div>
-          {clients.length > 0 && <div className="space-y-1"><Label className="text-xs">Paciente</Label><Select value={selectedClient} onValueChange={setSelectedClient}><SelectTrigger className="w-64"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>}
-          {selectedClient && <><div className="space-y-1"><Label className="text-xs">Status</Label><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{Object.entries(STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div><Button onClick={() => setIsNewPlanOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Novo Plano</Button></>}
+          {patients.length > 0 && <div className="space-y-1"><Label className="text-xs">Paciente</Label><Select value={selectedPatient} onValueChange={setSelectedPatient}><SelectTrigger className="w-64"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{patients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>}
+          {selectedPatient && <><div className="space-y-1"><Label className="text-xs">Status</Label><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{Object.entries(STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div><Button onClick={() => setIsNewPlanOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Novo Plano</Button></>}
         </div>
       </CardContent></Card>
 
       {isLoading ? <Card><CardContent className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
-      : !selectedClient ? <Card><CardContent className="py-12 text-center"><ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" /><h3 className="text-lg font-medium">Selecione um paciente</h3></CardContent></Card>
+      : !selectedPatient ? <Card><CardContent className="py-12 text-center"><ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" /><h3 className="text-lg font-medium">Selecione um paciente</h3></CardContent></Card>
       : plans.length === 0 ? <Card><CardContent className="py-12 text-center"><ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" /><h3 className="text-lg font-medium mb-4">Nenhum plano encontrado</h3><Button onClick={() => setIsNewPlanOpen(true)}><Plus className="h-4 w-4 mr-2" />Criar Plano</Button></CardContent></Card>
       : <div className="grid gap-4">{plans.map(plan => {
           const status = STATUS_CONFIG[plan.status];

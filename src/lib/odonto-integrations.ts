@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 export interface PedidoLaboratorio {
   id?: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   professional_id: string;
   treatment_plan_id?: string;
   laboratorio: LaboratorioInfo;
@@ -232,7 +232,7 @@ export function buildWadoUrl(
 export interface ModeloIntraoral {
   id?: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   professional_id: string;
   scanner_tipo: TipoScannerIntraoral;
   data_escaneamento: string;

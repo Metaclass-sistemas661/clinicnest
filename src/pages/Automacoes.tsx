@@ -110,7 +110,7 @@ export default function Automacoes() {
       date: "10/04",
       time: "14:00",
       professional_name: "Dr. Mariana",
-      clinic_name: tenant?.name || "ClinicaFlow",
+      clinic_name: tenant?.name || "ClinicNest",
       nps_link: `${window.location.origin}/nps/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
     }),
     [tenant?.name],

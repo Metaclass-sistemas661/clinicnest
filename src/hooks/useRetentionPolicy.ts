@@ -12,8 +12,8 @@ export interface RetentionStatistics {
   deletion_attempts_blocked: number;
 }
 
-export interface ClientNearExpiry {
-  client_id: string;
+export interface PatientNearExpiry {
+  patient_id: string;
   client_name: string;
   cpf: string | null;
   last_appointment: string;
@@ -33,7 +33,7 @@ export interface DeletionAttempt {
   reason: string;
 }
 
-export interface ArchivedClient {
+export interface ArchivedPatient {
   archive_id: string;
   client_name: string;
   client_cpf: string | null;
@@ -62,11 +62,11 @@ export function useRetentionStatistics() {
   });
 }
 
-export function useClientsNearExpiry(monthsAhead: number = 12) {
+export function usePatientsNearExpiry(monthsAhead: number = 12) {
   const { tenantId } = useAuth();
 
   return useQuery({
-    queryKey: ["clients-near-expiry", tenantId, monthsAhead],
+    queryKey: ["patients-near-expiry", tenantId, monthsAhead],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_clients_near_retention_expiry", {
         p_tenant_id: tenantId,
@@ -74,7 +74,7 @@ export function useClientsNearExpiry(monthsAhead: number = 12) {
       });
 
       if (error) throw error;
-      return data as ClientNearExpiry[];
+      return data as PatientNearExpiry[];
     },
     enabled: !!tenantId,
   });
@@ -99,11 +99,11 @@ export function useDeletionAttempts(startDate?: string, endDate?: string) {
   });
 }
 
-export function useArchivedClients(cpf?: string, name?: string) {
+export function useArchivedPatients(cpf?: string, name?: string) {
   const { tenantId } = useAuth();
 
   return useQuery({
-    queryKey: ["archived-clients", tenantId, cpf, name],
+    queryKey: ["archived-patients", tenantId, cpf, name],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_archived_client_data", {
         p_tenant_id: tenantId,
@@ -112,27 +112,27 @@ export function useArchivedClients(cpf?: string, name?: string) {
       });
 
       if (error) throw error;
-      return data as ArchivedClient[];
+      return data as ArchivedPatient[];
     },
     enabled: !!tenantId,
   });
 }
 
-export function useArchiveClient() {
+export function useArchivePatient() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
-      clientId,
+      patientId,
       pdfUrl,
       xmlUrl,
     }: {
-      clientId: string;
+      patientId: string;
       pdfUrl?: string;
       xmlUrl?: string;
     }) => {
       const { data, error } = await supabase.rpc("archive_client_clinical_data", {
-        p_client_id: clientId,
+        p_client_id: patientId,
         p_export_pdf_url: pdfUrl || null,
         p_export_xml_url: xmlUrl || null,
       });
@@ -142,8 +142,8 @@ export function useArchiveClient() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["retention-statistics"] });
-      queryClient.invalidateQueries({ queryKey: ["clients-near-expiry"] });
-      queryClient.invalidateQueries({ queryKey: ["archived-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["patients-near-expiry"] });
+      queryClient.invalidateQueries({ queryKey: ["archived-patients"] });
       toast.success("Dados arquivados com sucesso");
     },
     onError: (error) => {

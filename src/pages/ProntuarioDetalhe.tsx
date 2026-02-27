@@ -26,7 +26,7 @@ import { NotebookPen } from "lucide-react";
 import { AiPatientSummary } from "@/components/ai";
 
 interface RecordDetail {
-  id: string; client_id: string; client_name: string; record_date: string;
+  id: string; patient_id: string; client_name: string; record_date: string;
   professional_name: string; chief_complaint: string; anamnesis: string;
   physical_exam: string; diagnosis: string; cid_code: string;
   treatment_plan: string; prescriptions: string; notes: string;
@@ -97,14 +97,14 @@ export default function ProntuarioDetalhe() {
     try {
       const { data, error } = await supabase
         .from("medical_records")
-        .select("*, clients(name), profiles(full_name)")
+        .select("*, patient:patients(name), profiles(full_name)")
         .eq("id", id)
         .eq("tenant_id", profile.tenant_id)
         .single();
       if (error) throw error;
       const r = data as any;
       const rec: RecordDetail = {
-        id: r.id, client_id: r.client_id, client_name: r.clients?.name ?? "—",
+        id: r.id, patient_id: r.patient_id, client_name: r.patient?.name ?? "—",
         record_date: r.record_date, professional_name: r.profiles?.full_name ?? "—",
         chief_complaint: r.chief_complaint ?? "", anamnesis: r.anamnesis ?? "",
         physical_exam: r.physical_exam ?? "", diagnosis: r.diagnosis ?? "",
@@ -123,13 +123,13 @@ export default function ProntuarioDetalhe() {
       };
       setRecord(rec);
 
-      logAccess("medical_records", id, rec.client_id);
+      logAccess("medical_records", id, rec.patient_id);
 
       const [histRes, verRes] = await Promise.all([
         supabase.from("medical_records")
           .select("id, record_date, chief_complaint, diagnosis, cid_code, blood_pressure_systolic, blood_pressure_diastolic, heart_rate, temperature, oxygen_saturation, weight_kg, respiratory_rate, profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
-          .eq("client_id", r.client_id)
+          .eq("patient_id", r.patient_id)
           .order("record_date", { ascending: false })
           .limit(20),
         supabase.from("medical_record_versions")
@@ -160,19 +160,19 @@ export default function ProntuarioDetalhe() {
       const [rxRes, certRes, examRes, refRes] = await Promise.all([
         supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(client_id.eq.${r.client_id},appointment_id.eq.${r.appointment_id})`)
+          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
           .order("issued_at", { ascending: false }),
         supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(client_id.eq.${r.client_id},appointment_id.eq.${r.appointment_id})`)
+          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
           .order("issued_at", { ascending: false }),
         supabase.from("exam_results").select("id, created_at, exam_name, status")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(client_id.eq.${r.client_id},appointment_id.eq.${r.appointment_id})`)
+          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
           .order("created_at", { ascending: false }),
         supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(client_id.eq.${r.client_id},appointment_id.eq.${r.appointment_id})`)
+          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
           .order("created_at", { ascending: false }),
       ]);
 
@@ -206,9 +206,9 @@ export default function ProntuarioDetalhe() {
 
       // Fetch linked evolutions
       const evoQuery = (supabase as any).from("clinical_evolutions")
-        .select("*, clients(name), profiles(full_name)")
+        .select("*, patient:patients(name), profiles(full_name)")
         .eq("tenant_id", profile.tenant_id)
-        .eq("client_id", r.client_id)
+        .eq("patient_id", r.patient_id)
         .order("evolution_date", { ascending: false })
         .limit(50);
       const { data: evoData } = r.appointment_id
@@ -425,13 +425,13 @@ export default function ProntuarioDetalhe() {
             <TabsContent value="odontograma" className="mt-4 space-y-6">
               <OdontogramaEmbed
                 tenantId={profile?.tenant_id || ""}
-                clientId={record.client_id}
+                patientId={record.patient_id}
                 professionalId={profile?.id || ""}
                 readOnly={record.is_locked}
               />
               <DentalImagesGallery
                 tenantId={profile?.tenant_id || ""}
-                clientId={record.client_id}
+                patientId={record.patient_id}
                 professionalId={profile?.id || ""}
                 medicalRecordId={record.id}
                 readOnly={record.is_locked}
@@ -590,8 +590,8 @@ export default function ProntuarioDetalhe() {
 
           <TabsContent value="ia" className="mt-4">
             <AiPatientSummary
-              clientId={record.client_id}
-              clientName={record.client_name}
+              patientId={record.patient_id}
+              patientName={record.client_name}
             />
           </TabsContent>
         </Tabs>

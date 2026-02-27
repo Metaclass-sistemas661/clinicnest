@@ -68,7 +68,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
       // Agendamentos do dia
       const { data: appts } = await supabase
         .from("appointments")
-        .select("id, scheduled_at, status, clients(name), services(name)")
+        .select("id, scheduled_at, status, patient:patients(name), procedure:procedures(name)")
         .eq("tenant_id", profile.tenant_id)
         .eq("professional_id", profile.id)
         .gte("scheduled_at", dayStart)
@@ -79,8 +79,8 @@ export const DashboardDentista = memo(function DashboardDentista() {
         (appts || []).map((a: any) => ({
           id: a.id,
           scheduled_at: a.scheduled_at,
-          client_name: a.clients?.name || "—",
-          service_name: a.services?.name || "—",
+          client_name: a.patient?.name || "—",
+          service_name: a.procedure?.name || "—",
           status: a.status,
         }))
       );
@@ -88,7 +88,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
       // Planos pendentes de aprovação
       const { data: plans } = await supabase
         .from("treatment_plans")
-        .select("id, plan_number, title, final_value, created_at, clients(name), treatment_plan_items(id)")
+        .select("id, plan_number, title, final_value, created_at, patient:patients(name), treatment_plan_items(id)")
         .eq("tenant_id", profile.tenant_id)
         .eq("professional_id", profile.id)
         .in("status", ["pendente", "apresentado"])
@@ -100,7 +100,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
           id: p.id,
           plan_number: p.plan_number,
           title: p.title,
-          client_name: p.clients?.name || "—",
+          client_name: p.patient?.name || "—",
           final_value: p.final_value,
           items_count: p.treatment_plan_items?.length || 0,
           created_at: p.created_at,

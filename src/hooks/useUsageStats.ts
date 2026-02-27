@@ -55,7 +55,7 @@ export function useUsageStats() {
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId),
         supabase
-          .from('clients')
+          .from("patients")
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId),
         supabase

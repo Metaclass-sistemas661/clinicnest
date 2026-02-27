@@ -20,10 +20,10 @@ interface ApptRow {
   scheduled_at: string;
   started_at?: string | null;
   completed_at?: string | null;
-  client_id: string | null;
+  patient_id: string | null;
   professional_id: string | null;
   status: string;
-  services: { id: string; name: string; price: number; duration_minutes?: number } | null;
+  procedure: { id: string; name: string; price: number; duration_minutes?: number } | null;
   profiles: { full_name: string | null } | null;
 }
 
@@ -92,8 +92,8 @@ export function TabProdutividade({ appts, isLoading }: Props) {
       if (a.status === "completed") {
         prev.completed += 1;
         prev.used_slots += 1;
-        if (a.services?.duration_minutes) {
-          prev.avg_duration_minutes += a.services.duration_minutes;
+        if (a.procedure?.duration_minutes) {
+          prev.avg_duration_minutes += a.procedure.duration_minutes;
         }
       } else if (a.status === "cancelled") {
         prev.cancelled += 1;

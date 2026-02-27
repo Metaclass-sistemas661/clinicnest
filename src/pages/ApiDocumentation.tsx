@@ -64,7 +64,7 @@ const { data: { session } } = await supabase.auth.signInWithPassword({
 
 // Listar pacientes
 const { data: patients } = await supabase
-  .from('clients')
+  .from("patients")
   .select('id, name, cpf, phone')
   .limit(10)
 
@@ -93,7 +93,7 @@ const { data } = await supabase.rpc('create_appointment_v2', {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Code2 className="h-5 w-5" />
-            ClinicaFlow API v{spec.info.version}
+            ClinicNest API v{spec.info.version}
           </CardTitle>
           <CardDescription>{spec.info.description}</CardDescription>
         </CardHeader>

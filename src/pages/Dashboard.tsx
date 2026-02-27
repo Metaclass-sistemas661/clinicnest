@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
@@ -23,7 +23,7 @@ import {
   getDashboardSalaryTotals,
   getDashboardCommissionTotals,
   getDashboardProductLossTotal,
-  getDashboardClientsCount,
+  getDashboardPatientsCount,
   getOpenCashSessionSummaryV1,
   getProfessionalsWithSalary,
   getSalaryPayments,
@@ -119,14 +119,14 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [dailyBalance, setDailyBalance] = useState(0);
   const [productLossTotal, setProductLossTotal] = useState(0);
-  const [clientsCount, setClientsCount] = useState(0);
-  const [staffMyClientsCount, setStaffMyClientsCount] = useState<number | null>(null);
+  const [patientsCount, setPatientsCount] = useState(0);
+  const [staffMyPatientsCount, setStaffMyPatientsCount] = useState<number | null>(null);
   const [commissionsPending, setCommissionsPending] = useState(0);
   const [commissionsPaid, setCommissionsPaid] = useState(0);
   const [professionalCommissionsToReceive, setProfessionalCommissionsToReceive] = useState(0);
   const [professionalCommissionsReceived, setProfessionalCommissionsReceived] = useState(0);
   const [clientRanking, setClientRanking] = useState<
-    { client_id: string; client_name: string; today_total: number; month_total: number }[]
+    { patient_id: string; client_name: string; today_total: number; month_total: number }[]
   >([]);
   const [staffCompletedThisMonth, setStaffCompletedThisMonth] = useState(0);
   const [staffValueGeneratedThisMonth, setStaffValueGeneratedThisMonth] = useState(0);
@@ -151,7 +151,7 @@ export default function Dashboard() {
 
   // Auto-advance promotional banner carousel
   useEffect(() => {
-    const t = setInterval(() => setBannerSlide((p) => (p + 1) % 4), 5000);
+    const t = setInterval(() => setBannerSlide((p) => (p + 1) % 5), 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -458,10 +458,10 @@ export default function Dashboard() {
         productsResult,
         commissionsResult,
         productLossesResult,
-        clientsResult,
+        patientsResult,
         salaryTotalsResult,
         staffPerformanceResult,
-        staffMyClientsResult,
+        staffMypatientsResult,
         _professionalsWithSalaryResult,
         _salariesPaidResult,
         mySalaryConfigResult,
@@ -492,8 +492,8 @@ export default function Dashboard() {
           .from("appointments")
           .select(`
             *,
-            client:clients(name, phone),
-            service:services(name, duration_minutes),
+            patient:patients(name, phone),
+            procedure:procedures(name, duration_minutes),
             professional:profiles(full_name)
           `)
           .eq("tenant_id", profile.tenant_id)
@@ -562,7 +562,7 @@ export default function Dashboard() {
         // 8. Total de pacientes - usar processNumericRpc (Seção 2.3)
         (async (): Promise<{ data: number; error: any }> => {
           const val = await processNumericRpc(
-            await getDashboardClientsCount({ p_tenant_id: profile.tenant_id }),
+            await getDashboardPatientsCount({ p_tenant_id: profile.tenant_id }),
             async () => {
               const { count } = await supabase
                 .from("patients")
@@ -597,10 +597,10 @@ export default function Dashboard() {
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
-              .select("client_id")
+              .select("patient_id")
               .eq("tenant_id", profile.tenant_id)
               .eq("professional_id", profile.id)
-              .not("client_id", "is", null)
+              .not("patient_id", "is", null)
           : Promise.resolve({ data: null }),
         // 12. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
         isAdmin
@@ -645,7 +645,7 @@ export default function Dashboard() {
         // 16. Triagens pendentes (admin: todas; staff: todas — exibir no dashboard)
         supabase
           .from("triage_records")
-          .select("id, chief_complaint, priority, triaged_at, appointment_id, client:clients(name)")
+          .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pendente")
           .order("triaged_at", { ascending: true })
@@ -661,10 +661,10 @@ export default function Dashboard() {
       const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
       // Perdas de produtos e pacientes: processNumericRpc já aplica fallback (Seção 2.3)
       const productLossTotalValue = productLossesResult?.data ?? 0;
-      const clientsCountResult = clientsResult?.data ?? 0;
+      const patientsCountResult = patientsResult?.data ?? 0;
       
       const staffPerformanceData = (staffPerformanceResult?.data || []) as { id: string; price: number }[];
-      const staffMyClientsData = (staffMyClientsResult?.data || []) as { client_id: string }[];
+      const staffMyClientsData = (staffMypatientsResult?.data || []) as { patient_id: string }[];
       const mySalaryConfigData = mySalaryConfigResult?.data as { salary_amount: number } | null;
       const mySalaryPaymentsData = (mySalaryPaymentsResult?.data || []) as Array<{
         id: string;
@@ -721,17 +721,17 @@ export default function Dashboard() {
         setProfessionalCommissionsReceived(paidCommissions);
       }
 
-      // Garantir que clientsCount seja um número válido e positivo
-      const validClientsCount = isNaN(clientsCountResult) || clientsCountResult < 0 ? 0 : Math.floor(clientsCountResult);
-      setClientsCount(validClientsCount);
+      // Garantir que patientsCount seja um número válido e positivo
+      const validPatientsCount = isNaN(patientsCountResult) || patientsCountResult < 0 ? 0 : Math.floor(patientsCountResult);
+      setPatientsCount(validPatientsCount);
 
       if (!isAdmin && staffMyClientsData.length > 0) {
-        const uniqueClients = new Set(staffMyClientsData.map((r) => r.client_id).filter(Boolean));
-        setStaffMyClientsCount(uniqueClients.size);
+        const uniquePatients = new Set(staffMyClientsData.map((r) => r.patient_id).filter(Boolean));
+        setStaffMyPatientsCount(uniquePatients.size);
       } else if (!isAdmin) {
-        setStaffMyClientsCount(0);
+        setStaffMyPatientsCount(0);
       } else {
-        setStaffMyClientsCount(null);
+        setStaffMyPatientsCount(null);
       }
 
       // Salários: usar RPC similar ao de comissões (mais confiável)
@@ -802,7 +802,7 @@ export default function Dashboard() {
       }>;
       setPendingTriages(triagesRaw.map((t) => ({
         id: t.id,
-        client_name: t.client?.name || "Paciente",
+        client_name: t.patient?.name || "Paciente",
         priority: t.priority,
         chief_complaint: t.chief_complaint || "",
         triaged_at: t.triaged_at,
@@ -822,7 +822,7 @@ export default function Dashboard() {
       if (isAdmin) {
         try {
           const rawRanking = await fetchPatientSpendingByPeriod(profile.tenant_id);
-          setClientRanking(rawRanking.map(r => ({ client_id: r.patient_id, client_name: r.patient_name, today_total: r.today_total, month_total: r.month_total })));
+          setClientRanking(rawRanking.map(r => ({ patient_id: r.patient_id, client_name: r.patient_name, today_total: r.today_total, month_total: r.month_total })));
           // Goals functionality disabled - table doesn't exist
           setProfessionalGoalsRanking([]);
         } catch (err) {
@@ -912,7 +912,53 @@ export default function Dashboard() {
                 className="flex transition-transform duration-700 ease-in-out"
                 style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
               >
-                {/* SLIDE 0 — Indique e Ganhe */}
+                {/* SLIDE 0 — Nest IA (NOVIDADE) */}
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-800 via-teal-700 to-emerald-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                  <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
+                  <div className="pointer-events-none absolute right-40 top-6 h-20 w-20 rounded-full bg-emerald-400/10" />
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="inline-flex items-center gap-2 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4 animate-pulse">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Novidade
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-2">
+                        Conheça a <span className="text-emerald-300">Nest</span> — sua IA clínica
+                      </h2>
+                      <p className="text-sm sm:text-base text-teal-100 max-w-md leading-relaxed">
+                        Triagem inteligente, sugestão de CID-10, resumo de prontuários, predição de faltas e muito mais. A Nest é sua assistente de IA integrada ao ClinicNest.
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs">
+                          <Brain className="h-3 w-3" /> Triagem por IA
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs">
+                          <MessageSquare className="h-3 w-3" /> Chat inteligente
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs">
+                          <Shield className="h-3 w-3" /> Dados protegidos
+                        </span>
+                      </div>
+                      <Link
+                        to="/triagem"
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-teal-700 shadow-md transition-all hover:bg-emerald-200 hover:text-teal-900"
+                      >
+                        Experimentar a Nest
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                    <div className="hidden sm:flex shrink-0 items-center justify-center">
+                      <img
+                        src="/nest-avatar.png"
+                        alt="Nest IA"
+                        className="h-32 w-32 rounded-3xl object-cover ring-4 ring-white/20 shadow-2xl"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SLIDE 1 — Indique e Ganhe */}
                 <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
@@ -943,7 +989,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* SLIDE 1 — Teleconsulta */}
+                {/* SLIDE 2 — Teleconsulta */}
                 <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
@@ -1004,7 +1050,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* SLIDE 2 — Prontuário Digital */}
+                {/* SLIDE 3 — Prontuário Digital */}
                 <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
@@ -1034,7 +1080,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* SLIDE 3 — ClinicNest Premium */}
+                {/* SLIDE 4 — ClinicNest Premium */}
                 <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-6">
@@ -1098,7 +1144,7 @@ export default function Dashboard() {
 
               {/* Navigation dots — inside overflow-hidden, sit above slides */}
               <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 z-10">
-                {[0, 1, 2, 3].map((i) => (
+                {[0, 1, 2, 3, 4].map((i) => (
                   <button
                     key={i}
                     onClick={() => setBannerSlide(i)}
@@ -1111,7 +1157,7 @@ export default function Dashboard() {
 
             {/* Prev arrow — on outer wrapper, never clipped by overflow-hidden */}
             <button
-              onClick={() => setBannerSlide((p) => (p - 1 + 4) % 4)}
+              onClick={() => setBannerSlide((p) => (p - 1 + 5) % 5)}
               className="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
               aria-label="Banner anterior"
             >
@@ -1120,7 +1166,7 @@ export default function Dashboard() {
 
             {/* Next arrow — on outer wrapper, never clipped by overflow-hidden */}
             <button
-              onClick={() => setBannerSlide((p) => (p + 1) % 4)}
+              onClick={() => setBannerSlide((p) => (p + 1) % 5)}
               className="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-all hover:bg-black/45"
               aria-label="Próximo banner"
             >
@@ -1201,7 +1247,7 @@ export default function Dashboard() {
                     </div>
                     <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Total</span>
                   </div>
-                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : clientsCount}</p>
+                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : patientsCount}</p>
                   <p className="mt-1.5 text-sm text-muted-foreground">Pacientes cadastrados</p>
                 </div>
               </Link>
@@ -1213,7 +1259,7 @@ export default function Dashboard() {
                   </div>
                   <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Meus</span>
                 </div>
-                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyClientsCount ?? 0)}</p>
+                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyPatientsCount ?? 0)}</p>
                 <p className="mt-1.5 text-sm text-muted-foreground">Pacientes atendidos</p>
               </div>
             )}

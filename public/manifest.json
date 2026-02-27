@@ -1,6 +1,7 @@
 {
   "name": "ClinicNest",
   "short_name": "ClinicNest",
+  "version": "2.6.0",
   "description": "Gestão Completa para Clínicas e Consultórios",
   "start_url": "/",
   "display": "standalone",

@@ -125,15 +125,18 @@ export async function getDashboardProductLossTotal(params: {
 }
 
 /**
- * Conta total de clientes ativos do tenant.
+ * Conta total de pacientes ativos do tenant.
  * @param params.p_tenant_id - UUID do tenant
- * @returns Contagem de clientes
+ * @returns Contagem de pacientes
  */
-export async function getDashboardClientsCount(params: {
+export async function getDashboardPatientsCount(params: {
   p_tenant_id: string;
 }): Promise<{ data: number | null; error: unknown }> {
   return rpc<number>("get_dashboard_clients_count", params);
 }
+
+/** @deprecated Use getDashboardPatientsCount instead */
+export const getDashboardClientsCount = getDashboardPatientsCount;
 
 /**
  * Retorna totais de comissões (a pagar, pagas, a receber).

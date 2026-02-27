@@ -138,7 +138,7 @@ export function MeuFinanceiroResumo() {
 
       const { data: futureAppointments } = await supabase
         .from("appointments")
-        .select("id, service:services(price)")
+        .select("id, procedure:procedures(price)")
         .eq("tenant_id", profile.tenant_id)
         .eq("professional_id", profile.user_id)
         .in("status", ["pending", "confirmed"])
@@ -159,7 +159,7 @@ export function MeuFinanceiroResumo() {
 
       const commissionPct = commissionRule?.percentage || 0;
       const projected = (futureAppointments || []).reduce((sum, apt) => {
-        const price = Number((apt.service as any)?.price || 0);
+        const price = Number((apt.procedure as any)?.price || 0);
         return sum + price * (commissionPct / 100);
       }, 0);
       setProjectedNext30(projected);

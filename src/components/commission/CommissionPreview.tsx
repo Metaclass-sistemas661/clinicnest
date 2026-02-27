@@ -33,9 +33,9 @@ interface CommissionRule {
 interface CommissionPreviewProps {
   tenantId: string;
   professionalId: string;
-  serviceId?: string | null;
+  procedureId?: string | null;
   insuranceId?: string | null;
-  serviceValue?: number;
+  procedureValue?: number;
   children: React.ReactNode;
 }
 
@@ -50,9 +50,9 @@ const ruleTypeLabels: Record<string, string> = {
 export function CommissionPreview({
   tenantId,
   professionalId,
-  serviceId,
+  procedureId,
   insuranceId,
-  serviceValue,
+  procedureValue,
   children,
 }: CommissionPreviewProps) {
   const [rule, setRule] = useState<CommissionRule | null>(null);
@@ -75,11 +75,11 @@ export function CommissionPreview({
             value,
             tier_config,
             is_inverted,
-            service_id,
+            procedure_id,
             insurance_id,
             procedure_code,
             priority,
-            service:services(name),
+            procedure:procedures(name),
             insurance:insurance_plans(name)
           `)
           .eq("tenant_id", tenantId)
@@ -99,7 +99,7 @@ export function CommissionPreview({
 
         for (const r of rules) {
           // Service-specific rule
-          if (r.rule_type === "service" && r.service_id === serviceId) {
+          if (r.rule_type === "service" && r.procedure_id === procedureId) {
             applicableRule = r as CommissionRule;
             break;
           }
@@ -119,17 +119,17 @@ export function CommissionPreview({
         setRule(applicableRule);
 
         // Calculate commission value if service value is provided
-        if (applicableRule && serviceValue && serviceValue > 0) {
+        if (applicableRule && procedureValue && procedureValue > 0) {
           let commission = 0;
 
           if (applicableRule.calculation_type === "percentage") {
-            commission = (serviceValue * applicableRule.value) / 100;
+            commission = (procedureValue * applicableRule.value) / 100;
           } else if (applicableRule.calculation_type === "fixed") {
             commission = applicableRule.value;
           } else if (applicableRule.calculation_type === "tiered" && applicableRule.tier_config) {
             // For tiered, use the first tier as preview (actual calculation needs monthly revenue)
             const firstTier = applicableRule.tier_config[0];
-            commission = (serviceValue * firstTier.value) / 100;
+            commission = (procedureValue * firstTier.value) / 100;
           }
 
           setCalculatedValue(commission);
@@ -145,7 +145,7 @@ export function CommissionPreview({
     };
 
     fetchApplicableRule();
-  }, [tenantId, professionalId, serviceId, insuranceId, serviceValue]);
+  }, [tenantId, professionalId, procedureId, insuranceId, procedureValue]);
 
   const getValueDisplay = () => {
     if (!rule) return null;
@@ -220,9 +220,9 @@ export function CommissionPreview({
                 </div>
               )}
 
-              {rule.rule_type === "service" && rule.service?.name && (
+              {rule.rule_type === "service" && rule.procedure?.name && (
                 <p className="text-xs text-muted-foreground">
-                  Serviço: {rule.service.name}
+                  Serviço: {rule.procedure.name}
                 </p>
               )}
 

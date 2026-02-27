@@ -133,11 +133,11 @@ export function RegisterPaymentDialog({
             <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm space-y-1">
               <p>
                 <span className="font-medium text-foreground">Paciente:</span>{" "}
-                {appointment.client?.name ?? "Não informado"}
+                {appointment.patient?.name ?? "Não informado"}
               </p>
               <p>
                 <span className="font-medium text-foreground">Procedimento:</span>{" "}
-                {appointment.service?.name ?? "Não informado"}
+                {appointment.procedure?.name ?? "Não informado"}
               </p>
               <p>
                 <span className="font-medium text-foreground">Valor do serviço:</span>{" "}

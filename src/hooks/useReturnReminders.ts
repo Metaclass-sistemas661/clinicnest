@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 export interface ReturnReminder {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   client_phone: string | null;
   client_email: string | null;
@@ -44,7 +44,7 @@ export interface CreateReturnReminderInput {
   notifyDaysBefore?: number;
   preferredContact?: "whatsapp" | "email" | "sms" | "phone";
   preSchedule?: boolean;
-  serviceId?: string;
+  procedureId?: string;
 }
 
 export const RETURN_DAYS_OPTIONS = [
@@ -124,7 +124,7 @@ export function useCreateReturnReminder() {
         p_notify_days_before: input.notifyDaysBefore ?? 3,
         p_preferred_contact: input.preferredContact || "whatsapp",
         p_pre_schedule: input.preSchedule ?? false,
-        p_service_id: input.serviceId || null,
+        p_service_id: input.procedureId || null,
       });
 
       if (error) throw error;

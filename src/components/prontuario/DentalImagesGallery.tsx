@@ -63,7 +63,7 @@ interface DentalImage {
 
 interface Props {
   tenantId: string;
-  clientId: string;
+  patientId: string;
   professionalId: string;
   medicalRecordId?: string | null;
   appointmentId?: string | null;
@@ -81,7 +81,7 @@ function isRadiografia(type: string): boolean {
 
 export function DentalImagesGallery({ 
   tenantId, 
-  clientId, 
+  patientId, 
   professionalId, 
   medicalRecordId,
   appointmentId,
@@ -107,12 +107,12 @@ export function DentalImagesGallery({
   });
 
   const fetchImages = useCallback(async () => {
-    if (!tenantId || !clientId) return;
+    if (!tenantId || !patientId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_client_dental_images', {
         p_tenant_id: tenantId,
-        p_client_id: clientId,
+        p_client_id: patientId,
       });
       if (error) throw error;
       setImages((data || []) as DentalImage[]);
@@ -121,7 +121,7 @@ export function DentalImagesGallery({
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId, clientId]);
+  }, [tenantId, patientId]);
 
   useEffect(() => {
     void fetchImages();
@@ -148,7 +148,7 @@ export function DentalImagesGallery({
     try {
       const fileExt = uploadForm.file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `${tenantId}/${clientId}/${fileName}`;
+      const filePath = `${tenantId}/${patientId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('dental-images')
@@ -164,7 +164,7 @@ export function DentalImagesGallery({
         .from('dental_images')
         .insert({
           tenant_id: tenantId,
-          client_id: clientId,
+          patient_id: patientId,
           professional_id: professionalId,
           medical_record_id: medicalRecordId || null,
           appointment_id: appointmentId || null,

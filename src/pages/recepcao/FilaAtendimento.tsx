@@ -29,7 +29,7 @@ import { useWaitingQueue, useCurrentCall, useQueueStatistics } from "@/hooks/use
 
 interface QueueItem {
   call_id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   call_number: number;
   priority: number;

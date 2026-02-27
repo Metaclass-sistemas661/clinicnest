@@ -38,7 +38,7 @@ function generateLabOrder(
   lines.push([
     'MSH',
     '^~\\&',
-    connection.sendingApplication || 'CLINICAFLOW',
+    connection.sendingApplication || 'ClinicNest',
     connection.sendingFacility || clinic.cnes || clinic.name,
     connection.receivingApplication || 'LAB',
     connection.receivingFacility || '',
@@ -245,7 +245,7 @@ serve(async (req) => {
         name: profile.full_name,
       },
       {
-        name: tenant?.name || 'ClinicaFlow',
+        name: tenant?.name || 'ClinicNest',
         cnes: tenant?.cnes,
       },
       {

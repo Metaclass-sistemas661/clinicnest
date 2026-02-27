@@ -100,7 +100,7 @@ export const INVENTARIO_ATIVOS: Ativo[] = [
   // ─── Ativos de Software ─────────────────────────────────────────────────────
   {
     id: "SW-001",
-    nome: "ClinicaFlow Frontend",
+    nome: "ClinicNest Frontend",
     tipo: "SOFTWARE",
     descricao: "Aplicação web React para interface do usuário",
     proprietario: "CTO",

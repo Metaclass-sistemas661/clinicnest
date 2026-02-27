@@ -47,7 +47,7 @@ export interface CRMOportunidade {
 export interface RDStationConfig {
   accessToken: string;
   refreshToken?: string;
-  clientId?: string;
+  patientId?: string;
   clientSecret?: string;
 }
 

@@ -38,11 +38,11 @@ import {
   VITAL_SIGNS_LOINC, type PatientData, type FHIRImportResult,
 } from "@/lib/fhir";
 
-interface Client { id: string; name: string; phone?: string; email?: string; }
+interface PatientOption { id: string; name: string; phone?: string; email?: string; }
 interface Template { id: string; name: string; specialty_id: string | null; fields: TemplateField[]; is_default: boolean; }
 
 interface MedicalRecord {
-  id: string; client_id: string; client_name: string; appointment_date: string;
+  id: string; patient_id: string; client_name: string; appointment_date: string;
   professional_name: string; chief_complaint: string; anamnesis: string;
   physical_exam: string; diagnosis: string; cid_code: string;
   treatment_plan: string; prescriptions: string; notes: string; created_at: string;
@@ -70,7 +70,7 @@ interface RecordVersion {
 }
 
 interface PendingTriage {
-  id: string; client_id: string; client_name: string; priority: string;
+  id: string; patient_id: string; client_name: string; priority: string;
   chief_complaint: string; triaged_at: string; appointment_id: string | null;
   raw: TriageData;
 }
@@ -194,18 +194,18 @@ export default function Prontuarios() {
   const { logAccess } = useClinicalAudit();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [patients, setPatients] = useState<PatientOption[]>([]);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [pendingTriages, setPendingTriages] = useState<PendingTriage[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClientId, setSelectedClientId] = useState("all");
+  const [selectedPatientId, setSelectedPatientId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
 
   // Panel state: null = list view, object = form open
   const [formState, setFormState] = useState<{
-    clientId?: string; appointmentId?: string; triage?: TriageData | null;
+    patientId?: string; appointmentId?: string; triage?: TriageData | null;
     builtInFields?: TemplateField[];
     editRecord?: EditableRecord | null;
   } | null>(null);
@@ -213,7 +213,7 @@ export default function Prontuarios() {
   // Selector modal
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectorContext, setSelectorContext] = useState<{
-    clientId?: string; appointmentId?: string; triage?: TriageData | null;
+    patientId?: string; appointmentId?: string; triage?: TriageData | null;
   } | null>(null);
 
   // Version history
@@ -228,7 +228,7 @@ export default function Prontuarios() {
 
   useEffect(() => {
     if (profile?.tenant_id) {
-      fetchClients();
+      fetchPatients();
       fetchRecords();
       fetchTemplates();
       fetchPendingTriages();
@@ -237,22 +237,22 @@ export default function Prontuarios() {
 
   useEffect(() => {
     if (searchParams.get("new") === "1" && profile?.tenant_id) {
-      const clientId = searchParams.get("client_id") || undefined;
+      const patientId = searchParams.get("patient_id") || undefined;
       const appointmentId = searchParams.get("appointment_id") || undefined;
-      setSelectorContext({ clientId, appointmentId, triage: null });
+      setSelectorContext({ patientId, appointmentId, triage: null });
       setSelectorOpen(true);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, profile?.tenant_id]);
 
-  const fetchClients = async () => {
+  const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase.from("patients")
         .select("id, name, phone, email").eq("tenant_id", profile.tenant_id).order("name");
       if (error) throw error;
-      setClients((data as Client[]) || []);
-    } catch (err) { logger.error("Fetch clients:", err); }
+      setPatients((data as PatientOption[]) || []);
+    } catch (err) { logger.error("Fetch patients:", err); }
   };
 
   const fetchRecords = async () => {
@@ -260,11 +260,11 @@ export default function Prontuarios() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.from("medical_records")
-        .select("*, clients(name), profiles(full_name)")
+        .select("*, patient:patients(name), profiles(full_name)")
         .eq("tenant_id", profile.tenant_id).order("record_date", { ascending: false });
       if (error) throw error;
       setRecords((data || []).map((r: any) => ({
-        id: r.id, client_id: r.client_id, client_name: r.clients?.name ?? "—",
+        id: r.id, patient_id: r.patient_id, client_name: r.patient?.name ?? "—",
         appointment_date: r.record_date, professional_name: r.profiles?.full_name ?? "—",
         chief_complaint: r.chief_complaint ?? "", anamnesis: r.anamnesis ?? "",
         physical_exam: r.physical_exam ?? "", diagnosis: r.diagnosis ?? "",
@@ -309,13 +309,13 @@ export default function Prontuarios() {
     try {
       const today = new Date().toISOString().split("T")[0];
       const { data, error } = await supabase.from("triage_records")
-        .select("*, clients(name)")
+        .select("*, patient:patients(name)")
         .eq("tenant_id", profile.tenant_id).eq("status", "pendente")
         .gte("triaged_at", `${today}T00:00:00`)
         .order("triaged_at", { ascending: true });
       if (error) throw error;
       setPendingTriages((data || []).map((r: any) => ({
-        id: r.id, client_id: r.client_id, client_name: r.clients?.name ?? "—",
+        id: r.id, patient_id: r.patient_id, client_name: r.patient?.name ?? "—",
         priority: r.priority, chief_complaint: r.chief_complaint,
         triaged_at: r.triaged_at, appointment_id: r.appointment_id ?? null,
         raw: {
@@ -334,7 +334,7 @@ export default function Prontuarios() {
   };
 
   const openFormFromTriage = (t: PendingTriage) => {
-    setSelectorContext({ clientId: t.client_id, appointmentId: t.appointment_id ?? undefined, triage: t.raw });
+    setSelectorContext({ patientId: t.patient_id, appointmentId: t.appointment_id ?? undefined, triage: t.raw });
     setSelectorOpen(true);
   };
 
@@ -361,7 +361,7 @@ export default function Prontuarios() {
   const openEditRecord = (record: MedicalRecord) => {
     const editableRecord: EditableRecord = {
       id: record.id,
-      client_id: record.client_id,
+      patient_id: record.patient_id,
       appointment_id: record.appointment_id,
       triage_id: record.triage_id,
       template_id: record.template_id,
@@ -395,7 +395,7 @@ export default function Prontuarios() {
       created_at: record.created_at,
       custom_fields: record.custom_fields,
     };
-    setFormState({ clientId: record.client_id, editRecord: editableRecord });
+    setFormState({ patientId: record.patient_id, editRecord: editableRecord });
   };
 
   const isRecordEditable = (record: MedicalRecord) => {
@@ -431,19 +431,19 @@ export default function Prontuarios() {
   };
 
   const handleExportFHIR = () => {
-    if (selectedClientId === "all") {
+    if (selectedPatientId === "all") {
       toast.error("Filtre por um paciente para exportar FHIR");
       return;
     }
-    const client = clients.find(c => c.id === selectedClientId);
-    if (!client) return;
+    const patient = patients.find(c => c.id === selectedPatientId);
+    if (!patient) return;
 
     const patientData: PatientData = {
       id: client.id, name: client.name, phone: client.phone, email: client.email,
     };
     const resources = [buildFHIRPatient(patientData)];
 
-    for (const rec of clientRecords) {
+    for (const rec of patientRecords) {
       resources.push(buildFHIREncounter({
         id: rec.id, patientId: client.id, date: rec.appointment_date,
         status: "finished", type: rec.chief_complaint,
@@ -516,8 +516,8 @@ export default function Prontuarios() {
     r.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.cid_code.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const clientRecords = selectedClientId !== "all"
-    ? filteredRecords.filter((r) => r.client_id === selectedClientId) : filteredRecords;
+  const patientRecords = selectedPatientId !== "all"
+    ? filteredRecords.filter((r) => r.patient_id === selectedPatientId) : filteredRecords;
 
   // ── FORM VIEW ──
   if (formState) {
@@ -529,9 +529,9 @@ export default function Prontuarios() {
             professionalId={profile!.id}
             professionalName={profile!.full_name || undefined}
             professionalCrm={(profile as any)?.crm || undefined}
-            clients={clients}
+            clients={patients}
             templates={templates}
-            initialClientId={formState.clientId}
+            initialPatientId={formState.patientId}
             initialAppointmentId={formState.appointmentId}
             initialTriage={formState.triage}
             builtInFields={formState.builtInFields}
@@ -554,7 +554,7 @@ export default function Prontuarios() {
           <Button variant="outline" size="sm" onClick={() => setFhirImportOpen(true)} title="Importar Bundle FHIR">
             <Upload className="mr-2 h-4 w-4" />Importar FHIR
           </Button>
-          {selectedClientId !== "all" && (
+          {selectedPatientId !== "all" && (
             <Button variant="outline" size="sm" onClick={handleExportFHIR} title="Exportar paciente e prontuários como FHIR Bundle">
               <FileJson className="mr-2 h-4 w-4" />Exportar FHIR
             </Button>
@@ -572,11 +572,11 @@ export default function Prontuarios() {
           <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por paciente, diagnóstico ou CID..." className="pl-10" />
         </div>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+        <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
           <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Filtrar por paciente" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os pacientes</SelectItem>
-            {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -622,7 +622,7 @@ export default function Prontuarios() {
       )}
 
       {/* Gráfico de Sinais Vitais (quando paciente filtrado) */}
-      {selectedClientId !== "all" && clientRecords.length >= 2 && (
+      {selectedPatientId !== "all" && patientRecords.length >= 2 && (
         <VitalSignsChart
           records={clientRecords.map((r) => ({
             record_date: r.appointment_date,
@@ -643,7 +643,7 @@ export default function Prontuarios() {
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
         </div>
-      ) : clientRecords.length === 0 ? (
+      ) : patientRecords.length === 0 ? (
         <EmptyState icon={ClipboardList} title="Nenhum prontuário encontrado"
           description="Crie o primeiro prontuário clínico ou atenda uma triagem pendente."
           action={
@@ -750,7 +750,7 @@ export default function Prontuarios() {
                     <Button variant="ghost" size="sm"
                       onClick={() => {
                         const next = expandedRecord === record.id ? null : record.id;
-                        if (next) logAccess("medical_records", record.id, record.client_id);
+                        if (next) logAccess("medical_records", record.id, record.patient_id);
                         setExpandedRecord(next);
                       }}>
                       {expandedRecord === record.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

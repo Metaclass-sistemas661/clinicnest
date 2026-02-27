@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 
 interface CidSuggestion {
   code: string;
@@ -101,6 +102,7 @@ export function AiCidSuggest({ onSelect, specialty, className }: AiCidSuggestPro
   };
 
   return (
+    <FeatureGate feature="aiCidSuggest" className={className}>
     <Card className={cn("", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
@@ -194,5 +196,6 @@ export function AiCidSuggest({ onSelect, specialty, className }: AiCidSuggestPro
         </p>
       </CardContent>
     </Card>
+    </FeatureGate>
   );
 }

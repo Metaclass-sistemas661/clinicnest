@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { LandingChatWidget } from "./LandingChatWidget";
+import { WhatsAppButton } from "./WhatsAppButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -474,6 +476,8 @@ export function LandingLayout({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       <Footer />
+      <LandingChatWidget />
+      <WhatsAppButton />
     </div>
   );
 }

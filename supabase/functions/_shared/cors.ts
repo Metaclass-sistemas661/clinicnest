@@ -30,9 +30,14 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-/** Headers CORS com "*" (comportamento anterior para compatibilidade) */
+/** Headers CORS padrão (usa CORS_ALLOWED_ORIGINS ou fallback p/ produção) */
+const CORS_DEFAULT_ORIGIN =
+  allowedOrigins.length > 0
+    ? allowedOrigins[0]
+    : "https://clinicnest.metaclass.com.br";
+
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": CORS_DEFAULT_ORIGIN,
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };

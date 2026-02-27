@@ -46,7 +46,7 @@ interface PatientAppointment {
   telemedicine: boolean;
   client_name: string;
   service_name: string;
-  service_id: string;
+  procedure_id: string;
   professional_name: string;
   professional_id: string;
   clinic_name: string;
@@ -114,13 +114,13 @@ export default function PatientConsultas() {
 
         const { data: link } = await supabasePatient
           .from("patient_profiles")
-          .select("client_id")
+          .select("patient_id")
           .eq("user_id", user.id)
           .eq("is_active", true)
           .limit(1)
           .single();
 
-        if (!link?.client_id) return;
+        if (!link?.patient_id) return;
 
         channel = supabasePatient
           .channel("patient-appointments-realtime")
@@ -130,7 +130,7 @@ export default function PatientConsultas() {
               event: "*",
               schema: "public",
               table: "appointments",
-              filter: `client_id=eq.${link.client_id}`,
+              filter: `patient_id=eq.${link.patient_id}`,
             },
             () => {
               // Qualquer alteração nos agendamentos — recarregar
@@ -223,7 +223,7 @@ export default function PatientConsultas() {
         const { data, error } = await (supabasePatient as any).rpc(
           "get_available_slots_for_patient",
           {
-            p_service_id: rescheduleTarget.service_id,
+            p_service_id: rescheduleTarget.procedure_id,
             p_professional_id: rescheduleTarget.professional_id,
             p_date_from: format(startDate, "yyyy-MM-dd"),
             p_date_to: format(endDate, "yyyy-MM-dd"),

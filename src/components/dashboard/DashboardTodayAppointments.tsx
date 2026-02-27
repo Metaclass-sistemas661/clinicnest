@@ -82,16 +82,16 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
                             {formatInAppTz(appointment.scheduled_at, "HH:mm")}
                           </span>
                           <p className="truncate text-sm font-semibold text-foreground">
-                            {appointment.client?.name || "Paciente não informado"}
+                            {appointment.patient?.name || "Paciente não informado"}
                           </p>
                         </div>
 
                         {/* Serviço + profissional */}
                         <div className="mt-1 flex items-center gap-2 flex-wrap">
-                          {appointment.service?.name && (
+                          {appointment.procedure?.name && (
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Stethoscope className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{appointment.service.name}</span>
+                              <span className="truncate">{appointment.procedure.name}</span>
                             </span>
                           )}
                           {isAdmin && appointment.professional?.full_name && (

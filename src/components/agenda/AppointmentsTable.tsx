@@ -49,7 +49,7 @@ import {
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
-import type { Appointment, AppointmentStatus, Client, Service, Profile, Product } from "@/types/database";
+import type { Appointment, AppointmentStatus, Patient, Procedure, Profile, Product } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
@@ -63,7 +63,7 @@ import { AiNoShowBadge } from "@/components/ai";
 interface AppointmentsTableProps {
   appointments: Appointment[];
   clients: Client[];
-  services: Service[];
+  procedures: Procedure[];
   professionals: Profile[];
   allAppointments: Appointment[];
   onStatusChange: (id: string, status: AppointmentStatus) => Promise<void>;
@@ -85,8 +85,8 @@ interface AppointmentsTableProps {
 }
 
 export interface EditAppointmentData {
-  client_id: string | null;
-  service_id: string | null;
+  patient_id: string | null;
+  procedure_id: string | null;
   professional_id: string | null;
   scheduled_at: string;
   notes: string | null;
@@ -124,7 +124,7 @@ const statusConfig = {
 export function AppointmentsTable({
   appointments,
   clients,
-  services,
+  procedures,
   professionals,
   allAppointments,
   onStatusChange,
@@ -144,8 +144,8 @@ export function AppointmentsTable({
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [appointmentToEdit, setAppointmentToEdit] = useState<Appointment | null>(null);
   const [editFormData, setEditFormData] = useState({
-    client_id: "",
-    service_id: "",
+    patient_id: "",
+    procedure_id: "",
     professional_id: "",
     scheduled_at: "",
     scheduled_time: "",
@@ -234,8 +234,8 @@ export function AppointmentsTable({
     setAppointmentToEdit(appointment);
     const scheduledDate = new Date(appointment.scheduled_at);
     setEditFormData({
-      client_id: appointment.client_id || "",
-      service_id: appointment.service_id || "",
+      patient_id: appointment.patient_id || "",
+      procedure_id: appointment.procedure_id || "",
       professional_id: !isAdmin && currentProfileId ? currentProfileId : (appointment.professional_id || ""),
       scheduled_at: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: format(scheduledDate, "HH:mm"),
@@ -255,8 +255,8 @@ export function AppointmentsTable({
       
       const professionalId = !isAdmin ? (currentProfileId ?? null) : (editFormData.professional_id || null);
       await onEdit(appointmentToEdit.id, {
-        client_id: editFormData.client_id || null,
-        service_id: editFormData.service_id || null,
+        patient_id: editFormData.patient_id || null,
+        procedure_id: editFormData.procedure_id || null,
         professional_id: professionalId,
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
@@ -379,10 +379,10 @@ export function AppointmentsTable({
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {appointment.client?.name || "Paciente não informado"}
+                      {appointment.patient?.name || "Paciente não informado"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {appointment.service?.name || "Procedimento não informado"}
+                      {appointment.procedure?.name || "Procedimento não informado"}
                     </p>
                   </div>
                 </div>
@@ -544,14 +544,14 @@ export function AppointmentsTable({
                   </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
-                      <span>{appointment.client?.name || "Paciente não informado"}</span>
-                      {appointment.client?.phone && (
+                      <span>{appointment.patient?.name || "Paciente não informado"}</span>
+                      {appointment.patient?.phone && (
                         <a
-                          href={`tel:${appointment.client.phone}`}
+                          href={`tel:${appointment.patient.phone}`}
                           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
                         >
                           <Phone className="h-3 w-3" />
-                          {appointment.client.phone}
+                          {appointment.patient.phone}
                         </a>
                       )}
                     </div>
@@ -559,7 +559,7 @@ export function AppointmentsTable({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-foreground">{appointment.service?.name || "Não informado"}</span>
+                      <span className="text-foreground">{appointment.procedure?.name || "Não informado"}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -772,11 +772,11 @@ export function AppointmentsTable({
               <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground space-y-1">
                 <p>
                   <span className="font-medium text-foreground">Paciente:</span>{" "}
-                  {appointmentToComplete?.client?.name ?? "Não informado"}
+                  {appointmentToComplete?.patient?.name ?? "Não informado"}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Procedimento:</span>{" "}
-                  {appointmentToComplete?.service?.name ?? "Não informado"}
+                  {appointmentToComplete?.procedure?.name ?? "Não informado"}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Valor do procedimento:</span>{" "}
@@ -890,7 +890,7 @@ export function AppointmentsTable({
         open={deleteDialogOpen}
         onConfirm={handleDelete}
         onCancel={() => setDeleteDialogOpen(false)}
-        itemName={appointmentToDelete?.client?.name || "Paciente"}
+        itemName={appointmentToDelete?.patient?.name || "Paciente"}
         itemType="agendamento"
         warningText={appointmentToDelete ? `Agendamento para ${formatInAppTz(appointmentToDelete.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}` : undefined}
         isDeleting={!!updatingId}
@@ -910,8 +910,8 @@ export function AppointmentsTable({
               <div className="space-y-2">
                 <Label>Paciente</Label>
                 <Select
-                  value={editFormData.client_id}
-                  onValueChange={(v) => setEditFormData({ ...editFormData, client_id: v })}
+                  value={editFormData.patient_id}
+                  onValueChange={(v) => setEditFormData({ ...editFormData, patient_id: v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o paciente" />
@@ -928,14 +928,14 @@ export function AppointmentsTable({
               <div className="space-y-2">
                 <Label>Procedimento</Label>
                 <Select
-                  value={editFormData.service_id}
-                  onValueChange={(v) => setEditFormData({ ...editFormData, service_id: v })}
+                  value={editFormData.procedure_id}
+                  onValueChange={(v) => setEditFormData({ ...editFormData, procedure_id: v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o procedimento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((service) => (
+                    {procedures.map((service) => (
                       <SelectItem key={service.id} value={service.id}>
                         {service.name} - {formatCurrency(service.price)}
                       </SelectItem>

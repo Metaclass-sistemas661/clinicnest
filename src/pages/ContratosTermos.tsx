@@ -47,7 +47,7 @@ import { ptBR } from "date-fns/locale";
 
 interface SignedConsent {
   id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   template_id: string;
   template_title: string;
@@ -75,7 +75,7 @@ export default function ContratosTermos() {
     try {
       const { data, error } = await supabase
         .from("patient_consents")
-        .select("*, clients(name), consent_templates(title, slug)")
+        .select("*, patient:patients(name), consent_templates(title, slug)")
         .eq("tenant_id", profile.tenant_id)
         .order("signed_at", { ascending: false });
 
@@ -84,8 +84,8 @@ export default function ContratosTermos() {
       setConsents(
         (data ?? []).map((row: any) => ({
           id: row.id,
-          client_id: row.client_id,
-          client_name: row.clients?.name ?? "Paciente removido",
+          patient_id: row.patient_id,
+          client_name: row.patient?.name ?? "Paciente removido",
           template_id: row.template_id,
           template_title: row.consent_templates?.title ?? "Termo removido",
           template_slug: row.consent_templates?.slug ?? "",
@@ -250,7 +250,7 @@ export default function ContratosTermos() {
               {templateFilter !== "all" || debouncedSearch ? " (filtrado)" : " no total"}
             </Badge>
             <Badge variant="outline" className="text-sm">
-              {new Set(consents.map((c) => c.client_id)).size} paciente{new Set(consents.map((c) => c.client_id)).size !== 1 ? "s" : ""}
+              {new Set(consents.map((c) => c.patient_id)).size} paciente{new Set(consents.map((c) => c.patient_id)).size !== 1 ? "s" : ""}
             </Badge>
             <Badge variant="outline" className="text-sm">
               {templateOptions.length} tipo{templateOptions.length !== 1 ? "s" : ""} de documento

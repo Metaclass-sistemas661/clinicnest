@@ -18,7 +18,7 @@ A Edge Function `send-custom-auth-email` envia emails customizados via **Resend*
 ## 🚀 Deploy da Edge Function
 
 ```bash
-cd ClinicaFlow
+cd ClinicNest
 supabase functions deploy send-custom-auth-email
 ```
 

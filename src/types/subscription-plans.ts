@@ -2,7 +2,7 @@
  * Sistema de Planos e Monetização — Fase 27
  * 
  * Define a estrutura de planos, limites e funcionalidades disponíveis
- * para cada tier de assinatura do ClinicaFlow.
+ * para cada tier de assinatura do ClinicNest.
  */
 
 export type SubscriptionTier = 'starter' | 'solo' | 'clinica' | 'premium';
@@ -69,7 +69,15 @@ export type FeatureKey =
   | 'dataRetention'
   | 'onaDashboard'
   // Financeiro Profissional
-  | 'commissions';
+  | 'commissions'
+  // Inteligência Artificial
+  | 'aiTriage'
+  | 'aiCidSuggest'
+  | 'aiSummary'
+  | 'aiTranscribe'
+  | 'aiSentiment'
+  | 'aiAgentChat'
+  | 'aiPatientChat';
 
 export type LimitKey =
   | 'professionals'
@@ -82,7 +90,9 @@ export type LimitKey =
   | 'automations'
   | 'webhooks'
   | 'units'
-  | 'customReports';
+  | 'customReports'
+  | 'aiRequestsPerDay'
+  | 'aiTranscribeMinutesPerMonth';
 
 export interface PlanLimits {
   professionals: number;
@@ -96,6 +106,8 @@ export interface PlanLimits {
   webhooks: number;
   units: number;
   customReports: number;
+  aiRequestsPerDay: number;
+  aiTranscribeMinutesPerMonth: number;
 }
 
 export interface PlanFeatures {
@@ -137,6 +149,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       webhooks: 0,
       units: 1,
       customReports: 0,
+      aiRequestsPerDay: 10,
+      aiTranscribeMinutesPerMonth: 0,
     },
     features: {
       // Recepção
@@ -200,6 +214,14 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onaDashboard: false,
       // Financeiro Profissional
       commissions: false,
+      // Inteligência Artificial
+      aiTriage: true,
+      aiCidSuggest: true,
+      aiSummary: false,
+      aiTranscribe: false,
+      aiSentiment: false,
+      aiAgentChat: true,
+      aiPatientChat: true,
     },
   },
 
@@ -223,6 +245,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       webhooks: 0,
       units: 1,
       customReports: 0,
+      aiRequestsPerDay: 25,
+      aiTranscribeMinutesPerMonth: 0,
     },
     features: {
       // Recepção
@@ -286,6 +310,14 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onaDashboard: false,
       // Financeiro Profissional
       commissions: false,
+      // Inteligência Artificial
+      aiTriage: true,
+      aiCidSuggest: true,
+      aiSummary: true,
+      aiTranscribe: false,
+      aiSentiment: true,
+      aiAgentChat: true,
+      aiPatientChat: true,
     },
   },
 
@@ -309,6 +341,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       webhooks: 5,
       units: 1,
       customReports: 5,
+      aiRequestsPerDay: 60,
+      aiTranscribeMinutesPerMonth: 60,
     },
     features: {
       // Recepção
@@ -372,6 +406,14 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onaDashboard: false,
       // Financeiro Profissional
       commissions: true,
+      // Inteligência Artificial
+      aiTriage: true,
+      aiCidSuggest: true,
+      aiSummary: true,
+      aiTranscribe: true,
+      aiSentiment: true,
+      aiAgentChat: true,
+      aiPatientChat: true,
     },
   },
 
@@ -395,6 +437,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       webhooks: UNLIMITED,
       units: UNLIMITED,
       customReports: UNLIMITED,
+      aiRequestsPerDay: UNLIMITED,
+      aiTranscribeMinutesPerMonth: UNLIMITED,
     },
     features: {
       // Recepção
@@ -458,6 +502,14 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onaDashboard: true,
       // Financeiro Profissional
       commissions: true,
+      // Inteligência Artificial
+      aiTriage: true,
+      aiCidSuggest: true,
+      aiSummary: true,
+      aiTranscribe: true,
+      aiSentiment: true,
+      aiAgentChat: true,
+      aiPatientChat: true,
     },
   },
 };
@@ -551,6 +603,14 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   onaDashboard: 'Dashboard ONA',
   // Financeiro Profissional
   commissions: 'Comissões',
+  // Inteligência Artificial
+  aiTriage: 'Triagem IA',
+  aiCidSuggest: 'Sugestão CID por IA',
+  aiSummary: 'Resumo Clínico IA',
+  aiTranscribe: 'Transcrição de Consultas',
+  aiSentiment: 'Análise de Sentimento',
+  aiAgentChat: 'Assistente IA',
+  aiPatientChat: 'Chat IA do Paciente',
 };
 
 export const LIMIT_LABELS: Record<LimitKey, string> = {
@@ -565,6 +625,8 @@ export const LIMIT_LABELS: Record<LimitKey, string> = {
   webhooks: 'Webhooks',
   units: 'Unidades',
   customReports: 'Relatórios customizados',
+  aiRequestsPerDay: 'Requisições IA/dia',
+  aiTranscribeMinutesPerMonth: 'Minutos transcrição/mês',
 };
 
 export function formatLimit(value: number, key?: LimitKey): string {
@@ -576,6 +638,12 @@ export function formatLimit(value: number, key?: LimitKey): string {
   }
   if (key === 'historyMonths') {
     return value === 1 ? '1 mês' : `${value} meses`;
+  }
+  if (key === 'aiTranscribeMinutesPerMonth') {
+    return `${value} min`;
+  }
+  if (key === 'aiRequestsPerDay') {
+    return `${value}/dia`;
   }
   return value.toLocaleString('pt-BR');
 }

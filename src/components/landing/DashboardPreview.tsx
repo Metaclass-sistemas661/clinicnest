@@ -76,9 +76,9 @@ export function DashboardPreview() {
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { time: "09:00", client: "Maria Silva", service: "Consulta Clínica", status: "confirmed" },
-                  { time: "10:30", client: "João Santos", service: "Retorno Cardiologia", status: "confirmed" },
-                  { time: "14:00", client: "Ana Costa", service: "Avaliação Dermatológica", status: "pending" },
+                  { time: "09:00", patient: "Maria Silva", procedure: "Consulta Clínica", status: "confirmed" },
+                  { time: "10:30", patient: "João Santos", procedure: "Retorno Cardiologia", status: "confirmed" },
+                  { time: "14:00", patient: "Ana Costa", procedure: "Avaliação Dermatológica", status: "pending" },
                 ].map((apt, idx) => (
                   <div
                     key={idx}
@@ -90,8 +90,8 @@ export function DashboardPreview() {
                         {apt.time}
                       </div>
                       <div>
-                        <p className="font-medium text-sm text-foreground">{apt.client}</p>
-                        <p className="text-xs text-muted-foreground">{apt.service}</p>
+                        <p className="font-medium text-sm text-foreground">{apt.patient}</p>
+                        <p className="text-xs text-muted-foreground">{apt.procedure}</p>
                       </div>
                     </div>
                     <Badge

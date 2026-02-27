@@ -61,7 +61,7 @@ const priorityLabels: Record<number, string> = {
 
 interface QueueItem {
   call_id: string;
-  client_id: string;
+  patient_id: string;
   client_name: string;
   call_number: number;
   priority: number;
@@ -77,11 +77,11 @@ interface QueueItem {
 
 interface ReturnReminder {
   id: string;
-  client_id: string;
+  patient_id: string;
   return_date: string;
   reason: string | null;
   status: string;
-  client?: { name: string; phone: string | null };
+  patient?: { name: string; phone: string | null };
   professional?: { full_name: string | null };
 }
 
@@ -112,7 +112,7 @@ export default function DashboardRecepcao() {
       const [aptsRes, returnsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, client:clients(name, phone), service:services(name), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
@@ -120,7 +120,7 @@ export default function DashboardRecepcao() {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("return_reminders")
-          .select("*, client:clients(name, phone), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), professional:profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("return_date", todayStr)
           .in("status", ["pending", "notified", "scheduled"])
@@ -375,9 +375,9 @@ export default function DashboardRecepcao() {
                               {formatInAppTz(apt.scheduled_at, "HH:mm")}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{apt.client?.name}</p>
+                              <p className="text-sm font-medium truncate">{apt.patient?.name}</p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {apt.service?.name}
+                                {apt.procedure?.name}
                                 {apt.professional?.full_name && ` - ${apt.professional.full_name}`}
                               </p>
                             </div>
@@ -628,7 +628,7 @@ export default function DashboardRecepcao() {
                       {returns.map((ret) => (
                         <div key={ret.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{ret.client?.name}</p>
+                            <p className="text-sm font-medium truncate">{ret.patient?.name}</p>
                             <p className="text-xs text-muted-foreground truncate">
                               {ret.reason || "Retorno"}
                               {ret.professional?.full_name && ` - ${ret.professional.full_name}`}

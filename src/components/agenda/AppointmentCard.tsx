@@ -107,12 +107,12 @@ export function AppointmentCard({
 
         {/* Client name */}
         <p className="font-medium text-sm truncate mb-1">
-          {appointment.client?.name || "Paciente não informado"}
+          {appointment.patient?.name || "Paciente não informado"}
         </p>
 
         {/* Service */}
         <p className="text-xs text-muted-foreground truncate mb-2">
-          {appointment.service?.name || "Serviço não informado"}
+          {appointment.procedure?.name || "Serviço não informado"}
         </p>
 
         {/* Quick actions */}
@@ -164,15 +164,15 @@ export function AppointmentCard({
                   <div className="flex items-center gap-2 mb-1">
                     <User className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-semibold truncate">
-                      {appointment.client?.name || "Paciente não informado"}
+                      {appointment.patient?.name || "Paciente não informado"}
                     </span>
-                    {appointment.client?.phone && (
+                    {appointment.patient?.phone && (
                       <a
-                        href={`tel:${appointment.client.phone}`}
+                        href={`tel:${appointment.patient.phone}`}
                         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
                       >
                         <Phone className="h-3 w-3" />
-                        {appointment.client.phone}
+                        {appointment.patient.phone}
                       </a>
                     )}
                 </div>
@@ -181,7 +181,7 @@ export function AppointmentCard({
                 <div className="flex items-center gap-2 mb-1">
                   <Stethoscope className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground truncate">
-                    {appointment.service?.name || "Procedimento não informado"}
+                    {appointment.procedure?.name || "Procedimento não informado"}
                   </span>
                 </div>
 
@@ -328,7 +328,7 @@ export function AppointmentCard({
             <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja cancelar o agendamento de{" "}
-              <strong>{appointment.client?.name}</strong> para{" "}
+              <strong>{appointment.patient?.name}</strong> para{" "}
               <strong>
                 {formatInAppTz(appointment.scheduled_at, "dd/MM/yyyy 'às' HH:mm")}
               </strong>

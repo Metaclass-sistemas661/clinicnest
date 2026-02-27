@@ -11,7 +11,7 @@ interface DocumentQRCodeProps {
 export function getVerificationUrl(hash: string): string {
   const baseUrl = typeof window !== "undefined" 
     ? window.location.origin 
-    : "https://clinicaflow.com.br";
+    : "https://clinicnest.com.br";
   return `${baseUrl}/verificar/${hash}`;
 }
 

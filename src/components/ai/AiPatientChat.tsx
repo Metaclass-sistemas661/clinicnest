@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 
 // Patient uses a separate supabase client if available
 let patientClient: typeof import("@/integrations/supabase/client").supabase | undefined;
@@ -37,6 +38,7 @@ interface AiPatientChatProps {
 }
 
 export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps) {
+  const { hasFeature } = usePlanFeatures();
   const { messages, isLoading, error, sendMessage, clearChat } = useAIAgentChat({
     functionName: "ai-patient-chat",
     client: supabaseClient ?? patientClient,
@@ -75,6 +77,9 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
       handleSend();
     }
   };
+
+  // Feature gate: hide if plan doesn't include AI patient chat
+  if (!hasFeature('aiPatientChat')) return null;
 
   // Floating button
   if (!isOpen) {

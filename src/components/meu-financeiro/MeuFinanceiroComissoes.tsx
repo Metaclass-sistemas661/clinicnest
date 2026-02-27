@@ -56,8 +56,8 @@ type CommissionPayment = {
   appointment?: {
     id: string;
     scheduled_at: string;
-    client?: { name: string } | null;
-    service?: { name: string } | null;
+    patient?: { name: string } | null;
+    procedure?: { name: string } | null;
   } | null;
   rule?: {
     name: string;
@@ -107,8 +107,8 @@ export function MeuFinanceiroComissoes() {
           appointment:appointments(
             id,
             scheduled_at,
-            client:clients(name),
-            service:services(name)
+            patient:patients(name),
+            procedure:procedures(name)
           )
         `)
         .eq("tenant_id", profile.tenant_id)
@@ -134,8 +134,8 @@ export function MeuFinanceiroComissoes() {
   const filteredCommissions = commissions.filter((c) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    const clientName = (c.appointment?.client as any)?.name?.toLowerCase() || "";
-    const serviceName = (c.appointment?.service as any)?.name?.toLowerCase() || "";
+    const clientName = (c.appointment?.patient as any)?.name?.toLowerCase() || "";
+    const serviceName = (c.appointment?.procedure as any)?.name?.toLowerCase() || "";
     return clientName.includes(search) || serviceName.includes(search);
   });
 
@@ -160,8 +160,8 @@ export function MeuFinanceiroComissoes() {
     const headers = ["Data", "Paciente", "Serviço", "Valor Serviço", "Comissão", "Status", "Pagamento"];
     const rows = filteredCommissions.map((c) => [
       formatInAppTz(c.created_at, "dd/MM/yyyy HH:mm"),
-      (c.appointment?.client as any)?.name || "—",
-      (c.appointment?.service as any)?.name || "—",
+      (c.appointment?.patient as any)?.name || "—",
+      (c.appointment?.procedure as any)?.name || "—",
       Number(c.service_price || 0).toFixed(2).replace(".", ","),
       Number(c.amount || 0).toFixed(2).replace(".", ","),
       c.status === "paid" ? "Pago" : "Pendente",
@@ -331,10 +331,10 @@ export function MeuFinanceiroComissoes() {
                           {formatInAppTz(c.created_at, "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell>
-                          {(c.appointment?.client as any)?.name || "—"}
+                          {(c.appointment?.patient as any)?.name || "—"}
                         </TableCell>
                         <TableCell>
-                          {(c.appointment?.service as any)?.name || "—"}
+                          {(c.appointment?.procedure as any)?.name || "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(Number(c.service_price || 0))}

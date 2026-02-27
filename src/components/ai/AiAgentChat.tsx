@@ -15,6 +15,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 
 const TOOL_LABELS: Record<string, string> = {
   buscar_pacientes: "Buscando pacientes",
@@ -35,6 +36,7 @@ const QUICK_ACTIONS = [
 ];
 
 export function AiAgentChat() {
+  const { hasFeature } = usePlanFeatures();
   const { messages, isLoading, error, sendMessage, clearChat } = useAIAgentChat({
     functionName: "ai-agent-chat",
   });
@@ -81,6 +83,9 @@ export function AiAgentChat() {
   const handleNewChat = () => {
     clearChat();
   };
+
+  // Feature gate: hide if plan doesn't include AI agent chat
+  if (!hasFeature('aiAgentChat')) return null;
 
   // Floating button when closed
   if (!isOpen) {

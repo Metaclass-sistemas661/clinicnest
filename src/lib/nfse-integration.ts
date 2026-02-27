@@ -501,7 +501,7 @@ export const CODIGOS_SERVICO_CLINICA = {
 } as const;
 
 /**
- * Monta objeto de NFS-e a partir de dados do ClinicaFlow
+ * Monta objeto de NFS-e a partir de dados do ClinicNest
  */
 export function montarNFSeClinica(params: {
   paciente: {

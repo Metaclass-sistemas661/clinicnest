@@ -1,7 +1,9 @@
 /**
- * Políticas de Segurança — ClinicaFlow
+ * Políticas de Segurança — ClinicNest
  * Documentação para certificação SBIS e ISO 27001
  */
+
+import { APP_VERSION } from "@/lib/version";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // POLÍTICA DE BACKUP
@@ -9,14 +11,14 @@
 
 export const POLITICA_BACKUP = {
   titulo: "Política de Backup e Recuperação de Dados",
-  versao: "1.0.0",
+  versao: APP_VERSION,
   dataVigencia: "2026-02-23",
   proximaRevisao: "2027-02-23",
   responsavel: "Equipe de Infraestrutura",
   
-  objetivo: `Esta política estabelece as diretrizes para backup, armazenamento e recuperação de dados do sistema ClinicaFlow, garantindo a disponibilidade, integridade e confidencialidade das informações de saúde.`,
+  objetivo: `Esta política estabelece as diretrizes para backup, armazenamento e recuperação de dados do sistema ClinicNest, garantindo a disponibilidade, integridade e confidencialidade das informações de saúde.`,
   
-  escopo: `Aplica-se a todos os dados armazenados no sistema ClinicaFlow, incluindo:
+  escopo: `Aplica-se a todos os dados armazenados no sistema ClinicNest, incluindo:
 • Dados de pacientes e prontuários eletrônicos
 • Dados financeiros e administrativos
 • Configurações do sistema
@@ -111,12 +113,12 @@ export const POLITICA_BACKUP = {
 
 export const POLITICA_SENHAS = {
   titulo: "Política de Senhas e Autenticação",
-  versao: "1.0.0",
+  versao: APP_VERSION,
   dataVigencia: "2026-02-23",
   proximaRevisao: "2027-02-23",
   responsavel: "Equipe de Segurança",
   
-  objetivo: `Esta política estabelece os requisitos para criação, uso e gerenciamento de senhas no sistema ClinicaFlow, visando proteger o acesso aos dados de saúde.`,
+  objetivo: `Esta política estabelece os requisitos para criação, uso e gerenciamento de senhas no sistema ClinicNest, visando proteger o acesso aos dados de saúde.`,
   
   requisitosComplexidade: {
     comprimentoMinimo: 8,

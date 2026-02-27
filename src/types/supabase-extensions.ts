@@ -224,7 +224,7 @@ export interface CampaignDeliveryRow {
   id: string;
   tenant_id: string;
   campaign_id: string;
-  client_id: string;
+  patient_id: string;
   to_email: string;
   status: string;
   provider_message_id: string | null;

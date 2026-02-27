@@ -108,8 +108,8 @@ export function MeuFinanceiroMobile() {
           created_at,
           payment_date,
           appointment:appointments(
-            service:services(name),
-            client:clients(name)
+            procedure:procedures(name),
+            patient:patients(name)
           )
         `)
         .eq("tenant_id", profile.tenant_id)
@@ -128,7 +128,7 @@ export function MeuFinanceiroMobile() {
       const payments: RecentPayment[] = [];
 
       (recentComm || []).forEach((c) => {
-        const serviceName = (c.appointment?.service as any)?.name || "Serviço";
+        const serviceName = (c.appointment?.procedure as any)?.name || "Serviço";
         payments.push({
           id: c.id,
           type: "commission",

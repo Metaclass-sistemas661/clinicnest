@@ -1,9 +1,11 @@
 /**
- * ClinicaFlow Public API — OpenAPI 3.0 specification
+ * ClinicNest Public API — OpenAPI 3.0 specification
  *
  * This module generates the OpenAPI spec dynamically and provides
  * endpoint documentation for third-party integrations.
  */
+
+import { APP_VERSION } from "@/lib/version";
 
 export interface OpenAPISpec {
   openapi: string;
@@ -18,20 +20,20 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
   return {
     openapi: "3.0.3",
     info: {
-      title: "ClinicaFlow Public API",
+      title: "ClinicNest Public API",
       description:
-        "API REST para integração com o ClinicaFlow. " +
+        "API REST para integração com o ClinicNest. " +
         "Permite consultar pacientes, agendamentos, prontuários e realizar operações " +
         "de faturamento. Autenticação via API Key (Bearer token).",
-      version: "1.0.0",
-      contact: { email: "api@clinicaflow.com.br" },
+      version: APP_VERSION,
+      contact: { email: "api@ClinicNest.com.br" },
     },
     servers: [
       { url: `${supabaseUrl}/rest/v1`, description: "Supabase REST (PostgREST)" },
       { url: `${supabaseUrl}/functions/v1`, description: "Supabase Edge Functions" },
     ],
     paths: {
-      "/clients": {
+      "/patients": {
         get: {
           summary: "Listar pacientes",
           description: "Retorna a lista de pacientes do tenant autenticado.",
@@ -44,7 +46,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
             { name: "offset", in: "query", schema: { type: "integer" }, description: "Offset para paginação" },
           ],
           responses: {
-            "200": { description: "Lista de pacientes", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Client" } } } } },
+            "200": { description: "Lista de pacientes", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Patient" } } } } },
             "401": { description: "Não autenticado" },
           },
         },
@@ -52,7 +54,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
           summary: "Criar paciente",
           description: "Cria um novo paciente no tenant autenticado.",
           tags: ["Pacientes"],
-          requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/ClientCreate" } } } },
+          requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/PatientCreate" } } } },
           responses: {
             "201": { description: "Paciente criado" },
             "409": { description: "CPF já cadastrado" },
@@ -81,7 +83,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
           description: "Retorna prontuários médicos do tenant.",
           tags: ["Prontuários"],
           parameters: [
-            { name: "client_id", in: "query", schema: { type: "string", format: "uuid" } },
+            { name: "patient_id", in: "query", schema: { type: "string", format: "uuid" } },
             { name: "select", in: "query", schema: { type: "string" } },
           ],
           responses: {
@@ -89,12 +91,12 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
           },
         },
       },
-      "/services": {
+      "/procedures": {
         get: {
-          summary: "Listar procedimentos/serviços",
-          description: "Retorna os serviços cadastrados no tenant.",
-          tags: ["Serviços"],
-          responses: { "200": { description: "Lista de serviços" } },
+          summary: "Listar procedimentos",
+          description: "Retorna os procedimentos cadastrados no tenant.",
+          tags: ["Procedimentos"],
+          responses: { "200": { description: "Lista de procedimentos" } },
         },
       },
       "/insurance_plans": {
@@ -127,10 +129,10 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["p_client_id", "p_service_id", "p_professional_id", "p_scheduled_at"],
+                  required: ["p_client_id", "p_service_id", "p_professional_profile_id", "p_scheduled_at"],
                   properties: {
-                    p_client_id: { type: "string", format: "uuid" },
-                    p_service_id: { type: "string", format: "uuid" },
+                    p_client_id: { type: "string", format: "uuid", description: "ID do paciente" },
+                    p_service_id: { type: "string", format: "uuid", description: "ID do procedimento" },
                     p_professional_id: { type: "string", format: "uuid" },
                     p_scheduled_at: { type: "string", format: "date-time" },
                     p_duration: { type: "integer", default: 30 },
@@ -165,7 +167,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
         },
       },
       schemas: {
-        Client: {
+        Patient: {
           type: "object",
           properties: {
             id: { type: "string", format: "uuid" },
@@ -178,7 +180,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
             created_at: { type: "string", format: "date-time" },
           },
         },
-        ClientCreate: {
+        PatientCreate: {
           type: "object",
           required: ["name"],
           properties: {
@@ -197,8 +199,8 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
             scheduled_at: { type: "string", format: "date-time" },
             duration_minutes: { type: "integer" },
             status: { type: "string", enum: ["pending", "confirmed", "completed", "cancelled"] },
-            client_id: { type: "string", format: "uuid" },
-            service_id: { type: "string", format: "uuid" },
+            patient_id: { type: "string", format: "uuid" },
+            procedure_id: { type: "string", format: "uuid" },
             professional_id: { type: "string", format: "uuid" },
           },
         },
@@ -220,7 +222,7 @@ export function downloadOpenAPISpec(spec: OpenAPISpec) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "clinicaflow-api-spec.json";
+  a.download = "ClinicNest-api-spec.json";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
