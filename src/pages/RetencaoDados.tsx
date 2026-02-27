@@ -52,7 +52,7 @@ import {
   useRetentionStatistics,
   usePatientsNearExpiry,
   useDeletionAttempts,
-  usearchivedPatients,
+  useArchivedPatients,
   useArchivePatient,
 } from "@/hooks/useRetentionPolicy";
 
@@ -111,7 +111,7 @@ export default function RetencaoDados() {
     parseInt(monthsFilter)
   );
   const { data: deletionAttempts } = useDeletionAttempts();
-  const { data: archivedPatients } = usearchivedPatients(
+  const { data: archivedPatients } = useArchivedPatients(
     undefined,
     searchArchived || undefined
   );
