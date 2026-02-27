@@ -515,7 +515,7 @@ export default function PacienteDetalhe() {
         <GenerateContractsDialog
           open={contractsDialogOpen}
           onOpenChange={setContractsDialogOpen}
-          client={client}
+          patient={client}
         />
       )}
     </MainLayout>

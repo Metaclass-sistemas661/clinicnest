@@ -112,7 +112,7 @@ export default function DashboardRecepcao() {
       const [aptsRes, returnsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
@@ -120,7 +120,7 @@ export default function DashboardRecepcao() {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("return_reminders")
-          .select("*, patient:patients(name, phone), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("return_date", todayStr)
           .in("status", ["pending", "notified", "scheduled"])

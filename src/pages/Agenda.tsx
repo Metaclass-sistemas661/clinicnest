@@ -157,7 +157,7 @@ export default function Agenda() {
             *,
             patient:patients(id, name, phone),
             procedure:procedures(id, name, duration_minutes, price),
-            professional:profiles(id, full_name)
+            professional:profiles!professional_id(id, full_name)
           `)
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", start.toISOString())
@@ -214,7 +214,7 @@ export default function Agenda() {
       .from("appointments")
       .select(`
         *,
-        professional:profiles(id, full_name)
+        professional:profiles!professional_id(id, full_name)
       `)
       .eq("tenant_id", profile.tenant_id)
       .gte("scheduled_at", dayStart.toISOString())

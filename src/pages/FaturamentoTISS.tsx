@@ -277,7 +277,7 @@ export default function FaturamentoTISS() {
           id, scheduled_at, status, cid_code, insurance_authorization, insurance_plan_id,
           patient:patients(name, cpf, insurance_card_number),
           procedure:procedures(name, tuss_code, insurance_price),
-          profiles(full_name),
+          profiles!professional_id(full_name),
           insurance_plans(name)
         `)
         .eq("tenant_id", profile.tenant_id)

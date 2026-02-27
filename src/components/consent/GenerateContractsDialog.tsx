@@ -29,12 +29,12 @@ import {
   ShieldCheck,
   Printer,
 } from "lucide-react";
-import type { ConsentTemplate, Client } from "@/types/database";
+import type { ConsentTemplate, Patient } from "@/types/database";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  client: Client;
+  patient: Patient;
   onGenerated?: () => void;
 }
 
@@ -43,7 +43,7 @@ interface GeneratedDoc {
   html: string;
 }
 
-export function GenerateContractsDialog({ open, onOpenChange, client, onGenerated }: Props) {
+export function GenerateContractsDialog({ open, onOpenChange, patient, onGenerated }: Props) {
   const { tenant } = useAuth();
   const [templates, setTemplates] = useState<ConsentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,13 +52,13 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
   const [previewDoc, setPreviewDoc] = useState<GeneratedDoc | null>(null);
 
   const fetchTemplates = useCallback(async () => {
-    if (!client.tenant_id) return;
+    if (!patient?.tenant_id) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("consent_templates")
         .select("*")
-        .eq("tenant_id", client.tenant_id)
+        .eq("tenant_id", patient.tenant_id)
         .eq("is_active", true)
         .order("sort_order")
         .order("created_at");
@@ -70,7 +70,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
     } finally {
       setIsLoading(false);
     }
-  }, [client.tenant_id]);
+  }, [patient?.tenant_id]);
 
   useEffect(() => {
     if (open) {
@@ -83,7 +83,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
   const handleGenerate = () => {
     setIsGenerating(true);
     try {
-      const vars = buildVariablesFromClientAndTenant(client, tenant);
+      const vars = buildVariablesFromClientAndTenant(patient, tenant);
       const docs: GeneratedDoc[] = templates.map((t) => ({
         template: t,
         html: replaceVariables(t.body_html, vars),
@@ -105,7 +105,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>${doc.template.title} - ${client.name}</title>
+  <title>${doc.template.title} - ${patient.name}</title>
   <style>
     body { font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #333; line-height: 1.6; }
     h2 { text-align: center; margin-bottom: 30px; }
@@ -135,7 +135,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>${doc.template.title} - ${client.name}</title>
+  <title>${doc.template.title} - ${patient.name}</title>
   <style>
     body { font-family: 'Times New Roman', serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #333; line-height: 1.6; }
     h2 { text-align: center; margin-bottom: 30px; }
@@ -151,7 +151,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${doc.template.slug}-${client.name.replace(/\s+/g, "_")}.html`;
+    a.download = `${doc.template.slug}-${patient.name.replace(/\s+/g, "_")}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -166,7 +166,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
               Gerar Contrato e Termos
             </DialogTitle>
             <DialogDescription>
-              Gerar todos os documentos (contratos e termos de consentimento) para <strong>{client.name}</strong> com os dados preenchidos automaticamente.
+              Gerar todos os documentos (contratos e termos de consentimento) para <strong>{patient.name}</strong> com os dados preenchidos automaticamente.
             </DialogDescription>
           </DialogHeader>
 
@@ -185,7 +185,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
           ) : generated.length === 0 ? (
             <div className="space-y-4 py-4">
               <div className="text-sm text-muted-foreground">
-                Serão gerados <strong>{templates.length}</strong> documento(s) com os dados de <strong>{client.name}</strong>:
+                Serão gerados <strong>{templates.length}</strong> documento(s) com os dados de <strong>{patient.name}</strong>:
               </div>
               <div className="space-y-2">
                 {templates.map((t) => (
@@ -278,7 +278,7 @@ export function GenerateContractsDialog({ open, onOpenChange, client, onGenerate
               {previewDoc?.template.title}
             </DialogTitle>
             <DialogDescription>
-              Documento gerado para {client.name}
+              Documento gerado para {patient.name}
             </DialogDescription>
           </DialogHeader>
           {previewDoc && (

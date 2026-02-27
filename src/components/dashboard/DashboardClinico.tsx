@@ -52,7 +52,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
       const [aptsRes, completedRes, completedAptsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .gte("scheduled_at", dayStart)

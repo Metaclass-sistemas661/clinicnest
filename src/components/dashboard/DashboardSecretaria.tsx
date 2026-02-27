@@ -39,7 +39,7 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
       const [aptsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)

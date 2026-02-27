@@ -126,7 +126,7 @@ export default function Disponibilidade() {
           .order("full_name"),
         supabase
           .from("schedule_blocks")
-          .select("*, professional:profiles(id, full_name)")
+          .select("*, professional:profiles!professional_id(id, full_name)")
           .eq("tenant_id", profile.tenant_id)
           .order("start_at", { ascending: true })
           .limit(200),

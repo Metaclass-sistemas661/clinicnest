@@ -82,7 +82,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
           .eq("is_active", true),
         supabase
           .from("appointments")
-          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles(full_name)")
+          .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "arrived")
           .gte("scheduled_at", dayStart)
