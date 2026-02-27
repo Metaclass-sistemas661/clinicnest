@@ -239,9 +239,43 @@ export default function Prontuarios() {
     if (searchParams.get("new") === "1" && profile?.tenant_id) {
       const patientId = searchParams.get("patient_id") || undefined;
       const appointmentId = searchParams.get("appointment_id") || undefined;
-      setSelectorContext({ patientId, appointmentId, triage: null });
-      setSelectorOpen(true);
+      const triageId = searchParams.get("triage_id") || undefined;
       setSearchParams({}, { replace: true });
+
+      if (triageId) {
+        // Buscar dados da triagem e abrir form com eles pré-preenchidos
+        supabase.from("triage_records").select("*").eq("id", triageId).single().then(({ data: tr }) => {
+          if (tr) {
+            const triageData: TriageData = {
+              id: tr.id,
+              priority: tr.priority,
+              triaged_at: tr.triaged_at,
+              performed_by: "",
+              blood_pressure_systolic: tr.blood_pressure_systolic,
+              blood_pressure_diastolic: tr.blood_pressure_diastolic,
+              heart_rate: tr.heart_rate,
+              respiratory_rate: tr.respiratory_rate,
+              temperature: tr.temperature,
+              oxygen_saturation: tr.oxygen_saturation,
+              weight_kg: tr.weight_kg,
+              height_cm: tr.height_cm,
+              chief_complaint: tr.chief_complaint,
+              pain_scale: tr.pain_scale,
+              allergies: tr.allergies,
+              current_medications: tr.current_medications,
+              medical_history: tr.medical_history,
+              notes: tr.notes,
+            };
+            setSelectorContext({ patientId, appointmentId, triage: triageData });
+          } else {
+            setSelectorContext({ patientId, appointmentId, triage: null });
+          }
+          setSelectorOpen(true);
+        });
+      } else {
+        setSelectorContext({ patientId, appointmentId, triage: null });
+        setSelectorOpen(true);
+      }
     }
   }, [searchParams, profile?.tenant_id]);
 
@@ -624,7 +658,7 @@ export default function Prontuarios() {
       {/* Gráfico de Sinais Vitais (quando paciente filtrado) */}
       {selectedPatientId !== "all" && patientRecords.length >= 2 && (
         <VitalSignsChart
-          records={clientRecords.map((r) => ({
+          records={patientRecords.map((r) => ({
             record_date: r.appointment_date,
             blood_pressure_systolic: r.blood_pressure_systolic,
             blood_pressure_diastolic: r.blood_pressure_diastolic,
@@ -653,7 +687,7 @@ export default function Prontuarios() {
           } />
       ) : (
         <div className="space-y-3">
-          {clientRecords.map((record) => (
+          {patientRecords.map((record) => (
             <Card key={record.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate(`/prontuarios/${record.id}`)}>
               <CardHeader className="pb-3">
@@ -817,7 +851,9 @@ export default function Prontuarios() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className="text-2xl flex-shrink-0 mt-0.5">{tmpl.icon}</div>
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg flex-shrink-0 mt-0.5 ${tmpl.color}`}>
+                      <tmpl.icon className="h-5 w-5" />
+                    </div>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm">{tmpl.name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{tmpl.description}</p>

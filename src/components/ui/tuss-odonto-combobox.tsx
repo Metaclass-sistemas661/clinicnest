@@ -138,14 +138,17 @@ export function TussOdontoCombobox({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as categorias</SelectItem>
-              {ODONTO_CATEGORIES.map((cat) => (
+              {ODONTO_CATEGORIES.map((cat) => {
+                const CatIcon = cat.icon;
+                return (
                 <SelectItem key={cat.key} value={cat.key}>
                   <span className="flex items-center gap-2">
-                    <span>{cat.icon}</span>
+                    <CatIcon className="h-3.5 w-3.5" />
                     <span>{cat.name}</span>
                   </span>
                 </SelectItem>
-              ))}
+                );
+              })}
             </SelectContent>
           </Select>
         </div>

@@ -92,10 +92,10 @@ export function AiAgentChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 overflow-hidden ring-2 ring-primary/30"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-teal-600 shadow-lg transition-all hover:scale-105 hover:bg-teal-700 active:scale-95 overflow-hidden ring-2 ring-teal-400/40"
         title="Assistente IA — Nest"
       >
-        <NestAvatar size={56} />
+        <NestAvatar size={44} className="rounded-full" />
       </button>
     );
   }

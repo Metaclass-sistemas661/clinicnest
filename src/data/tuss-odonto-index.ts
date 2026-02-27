@@ -1,6 +1,26 @@
 // TUSS Odontologia - Índice Consolidado
 // Total: 3.000+ procedimentos odontológicos organizados por categoria
 
+import type { LucideIcon } from "lucide-react";
+import {
+  CircleDot,
+  Microscope,
+  Stethoscope,
+  Scissors,
+  Cog,
+  Ruler,
+  PinIcon,
+  Baby,
+  Search,
+  Scan,
+  Frown,
+  UserRound,
+  Hospital,
+  HardHat,
+  Scale,
+  Timer,
+  Leaf,
+} from "lucide-react";
 import { TUSS_ODONTO_DENTISTICA, type TussOdontoEntry } from "./tuss-odonto-dentistica";
 import { TUSS_ODONTO_DENTISTICA_ADV } from "./tuss-odonto-dentistica-adv";
 import { TUSS_ODONTO_ENDODONTIA_EXP } from "./tuss-odonto-endodontia";
@@ -40,24 +60,24 @@ import { TUSS_ODONTO_EXTRA_9 } from "./tuss-odonto-extra-9";
 export type { TussOdontoEntry };
 
 // Categorias odontológicas
-export const ODONTO_CATEGORIES = [
-  { key: "dentistica", name: "Dentística", icon: "🦷", color: "bg-blue-500" },
-  { key: "endodontia", name: "Endodontia", icon: "🔬", color: "bg-red-500" },
-  { key: "periodontia", name: "Periodontia", icon: "🩺", color: "bg-pink-500" },
-  { key: "cirurgia", name: "Cirurgia", icon: "✂️", color: "bg-orange-500" },
-  { key: "protese", name: "Prótese", icon: "🦿", color: "bg-purple-500" },
-  { key: "ortodontia", name: "Ortodontia", icon: "📐", color: "bg-green-500" },
-  { key: "implantodontia", name: "Implantodontia", icon: "🔩", color: "bg-cyan-500" },
-  { key: "odontopediatria", name: "Odontopediatria", icon: "👶", color: "bg-yellow-500" },
-  { key: "prevencao", name: "Prevenção e Diagnóstico", icon: "🔍", color: "bg-teal-500" },
-  { key: "estomatologia", name: "Estomatologia", icon: "👄", color: "bg-rose-500" },
-  { key: "dtm", name: "DTM/Dor Orofacial", icon: "😣", color: "bg-amber-500" },
-  { key: "odontogeriatria", name: "Odontogeriatria", icon: "👴", color: "bg-slate-500" },
-  { key: "hospitalar", name: "Odontologia Hospitalar", icon: "🏥", color: "bg-indigo-500" },
-  { key: "trabalho", name: "Odontologia do Trabalho", icon: "👷", color: "bg-lime-500" },
-  { key: "legal", name: "Odontologia Legal", icon: "⚖️", color: "bg-gray-500" },
-  { key: "desportiva", name: "Odontologia Desportiva", icon: "🏃", color: "bg-emerald-500" },
-  { key: "complementar", name: "Terapias Complementares", icon: "🌿", color: "bg-violet-500" },
+export const ODONTO_CATEGORIES: readonly { key: string; name: string; icon: LucideIcon; color: string }[] = [
+  { key: "dentistica", name: "Dentística", icon: CircleDot, color: "bg-blue-500" },
+  { key: "endodontia", name: "Endodontia", icon: Microscope, color: "bg-red-500" },
+  { key: "periodontia", name: "Periodontia", icon: Stethoscope, color: "bg-pink-500" },
+  { key: "cirurgia", name: "Cirurgia", icon: Scissors, color: "bg-orange-500" },
+  { key: "protese", name: "Prótese", icon: Cog, color: "bg-purple-500" },
+  { key: "ortodontia", name: "Ortodontia", icon: Ruler, color: "bg-green-500" },
+  { key: "implantodontia", name: "Implantodontia", icon: PinIcon, color: "bg-cyan-500" },
+  { key: "odontopediatria", name: "Odontopediatria", icon: Baby, color: "bg-yellow-500" },
+  { key: "prevencao", name: "Prevenção e Diagnóstico", icon: Search, color: "bg-teal-500" },
+  { key: "estomatologia", name: "Estomatologia", icon: Scan, color: "bg-rose-500" },
+  { key: "dtm", name: "DTM/Dor Orofacial", icon: Frown, color: "bg-amber-500" },
+  { key: "odontogeriatria", name: "Odontogeriatria", icon: UserRound, color: "bg-slate-500" },
+  { key: "hospitalar", name: "Odontologia Hospitalar", icon: Hospital, color: "bg-indigo-500" },
+  { key: "trabalho", name: "Odontologia do Trabalho", icon: HardHat, color: "bg-lime-500" },
+  { key: "legal", name: "Odontologia Legal", icon: Scale, color: "bg-gray-500" },
+  { key: "desportiva", name: "Odontologia Desportiva", icon: Timer, color: "bg-emerald-500" },
+  { key: "complementar", name: "Terapias Complementares", icon: Leaf, color: "bg-violet-500" },
 ] as const;
 
 export type OdontoCategory = typeof ODONTO_CATEGORIES[number]["key"];

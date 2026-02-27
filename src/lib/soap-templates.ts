@@ -1,9 +1,19 @@
 import type { ClinicalEvolutionType } from "@/types/database";
+import type { LucideIcon } from "lucide-react";
+import {
+  Stethoscope,
+  Dumbbell,
+  AudioLines,
+  Apple,
+  Brain,
+  Syringe,
+  ClipboardList,
+} from "lucide-react";
 
 export interface SoapTemplate {
   key: ClinicalEvolutionType;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   color: string;
   subjective: string;
   objective: string;
@@ -15,7 +25,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "medica",
     label: "Evolução Médica",
-    icon: "🩺",
+    icon: Stethoscope,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
     subjective:
       "Paciente refere... Nega febre, náuseas, vômitos. Sono e apetite preservados.",
@@ -29,7 +39,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "fisioterapia",
     label: "Evolução Fisioterapia",
-    icon: "🏃",
+    icon: Dumbbell,
     color: "bg-orange-500/10 text-orange-600 border-orange-500/20",
     subjective:
       "Paciente refere melhora/piora da dor em... EVA: _/10. Relata dificuldade para...",
@@ -43,7 +53,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "fonoaudiologia",
     label: "Evolução Fonoaudiologia",
-    icon: "🗣️",
+    icon: AudioLines,
     color: "bg-violet-500/10 text-violet-600 border-violet-500/20",
     subjective:
       "Paciente/responsável refere... Queixas de voz, fala, linguagem ou deglutição.",
@@ -57,7 +67,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "nutricao",
     label: "Evolução Nutrição",
-    icon: "🥗",
+    icon: Apple,
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
     subjective:
       "Paciente refere... Adesão ao plano alimentar: ... Apetite: ... Intolerâncias: ... Hábito intestinal: ...",
@@ -71,7 +81,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "psicologia",
     label: "Evolução Psicologia",
-    icon: "🧠",
+    icon: Brain,
     color: "bg-teal-500/10 text-teal-600 border-teal-500/20",
     subjective:
       "Paciente relata... Humor: ... Sono: ... Apetite: ... Relações interpessoais: ... Eventos significativos desde última sessão: ...",
@@ -85,7 +95,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "enfermagem",
     label: "Evolução Enfermagem",
-    icon: "💉",
+    icon: Syringe,
     color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
     subjective:
       "Paciente refere... Queixas: ... Adesão ao tratamento: ...",
@@ -99,7 +109,7 @@ export const SOAP_TEMPLATES: SoapTemplate[] = [
   {
     key: "outro",
     label: "Outro Profissional",
-    icon: "📋",
+    icon: ClipboardList,
     color: "bg-gray-500/10 text-gray-600 border-gray-500/20",
     subjective: "",
     objective: "",

@@ -383,6 +383,11 @@ export const DashboardMedico = memo(function DashboardMedico() {
                         {priorityLabels[t.priority] || t.priority}
                       </Badge>
                       <span className="text-xs text-muted-foreground tabular-nums">{formatInAppTz(new Date(t.triaged_at), "HH:mm")}</span>
+                      <Button variant="ghost" size="sm" asChild className="text-xs text-teal-600 hover:bg-teal-50 h-7 px-2">
+                        <Link to={`/prontuarios?new=1&patient_id=${t.patient_id}&triage_id=${t.id}${t.appointment_id ? `&appointment_id=${t.appointment_id}` : ""}`}>
+                          Atender <ArrowRight className="ml-1 h-3 w-3" />
+                        </Link>
+                      </Button>
                     </div>
                   </div>
                 ))}

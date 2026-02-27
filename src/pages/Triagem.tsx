@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -33,6 +34,8 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Stethoscope,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -116,6 +119,7 @@ const emptyForm = {
 
 export default function Triagem() {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [triagens, setTriagens] = useState<Triagem[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -266,6 +270,43 @@ export default function Triagem() {
       return matchSearch && matchStatus;
     }
   );
+
+  const handleStartAtendimento = async (t: Triagem) => {
+    try {
+      // Marcar triagem como em_atendimento
+      await supabase
+        .from("triage_records")
+        .update({ status: "em_atendimento" })
+        .eq("id", t.id);
+      
+      // Navegar para prontuário com dados da triagem
+      const params = new URLSearchParams({
+        patient_id: t.patient_id,
+        triage_id: t.id,
+        new: "1",
+      });
+      if (t.appointment_id) params.set("appointment_id", t.appointment_id);
+      navigate(`/prontuarios?${params.toString()}`);
+    } catch (err) {
+      logger.error("Error starting atendimento:", err);
+      toast.error("Erro ao iniciar atendimento");
+    }
+  };
+
+  const handleMarkConcluida = async (triageId: string) => {
+    try {
+      const { error } = await supabase
+        .from("triage_records")
+        .update({ status: "concluida" })
+        .eq("id", triageId);
+      if (error) throw error;
+      toast.success("Triagem marcada como concluída");
+      fetchTriagens();
+    } catch (err) {
+      logger.error("Error marking triage as concluida:", err);
+      toast.error("Erro ao atualizar triagem");
+    }
+  };
 
   const imc = (t: Triagem) => {
     const w = parseFloat(t.weight);
@@ -433,6 +474,52 @@ export default function Triagem() {
                           <p className="font-medium text-xs mb-0.5">Histórico</p>
                           <p className="text-muted-foreground">{t.medical_history}</p>
                         </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Ações da Triagem */}
+                  {t.status !== "concluida" && (
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                      {t.status === "pendente" && (
+                        <Button
+                          size="sm"
+                          className="gradient-primary text-primary-foreground"
+                          onClick={() => handleStartAtendimento(t)}
+                        >
+                          <Stethoscope className="mr-2 h-4 w-4" />
+                          Iniciar Atendimento
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      )}
+                      {t.status === "em_atendimento" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkConcluida(t.id)}
+                          >
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Marcar Concluída
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const params = new URLSearchParams({
+                                patient_id: t.patient_id,
+                                triage_id: t.id,
+                                new: "1",
+                              });
+                              if (t.appointment_id) params.set("appointment_id", t.appointment_id);
+                              navigate(`/prontuarios?${params.toString()}`);
+                            }}
+                          >
+                            <Stethoscope className="mr-2 h-4 w-4" />
+                            Continuar Atendimento
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}

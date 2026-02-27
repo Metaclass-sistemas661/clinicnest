@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, X, Send, Loader2 } from "lucide-react";
+import { X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -117,7 +117,15 @@ export function LandingChatWidget() {
         )}
         aria-label={open ? "Fechar chat" : "Abrir chat com Nest IA"}
       >
-        {open ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+        {open ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <img
+            src="/nest-avatar.png"
+            alt="Nest IA"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        )}
       </button>
 
       {/* Notification dot when closed */}
