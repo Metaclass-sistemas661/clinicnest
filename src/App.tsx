@@ -140,7 +140,7 @@ const DashboardONA = lazyWithRetry(() => import("@/pages/DashboardONA"));
 const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
 const RetornosPendentes = lazyWithRetry(() => import("@/pages/RetornosPendentes"));
 const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
-const FilaAtendimento = lazyWithRetry(() => import("@/pages/recepcao/FilaAtendimento"));
+// FilaAtendimento merged into DashboardRecepcao (tabs)
 const DashboardRecepcao = lazyWithRetry(() => import("@/pages/recepcao/DashboardRecepcao"));
 const ConfirmarRetornoPublico = lazyWithRetry(() => import("@/pages/ConfirmarRetornoPublico"));
 const VerificarDocumento = lazyWithRetry(() => import("@/pages/VerificarDocumento"));
@@ -776,11 +776,7 @@ const App = () => (
                 />
                 <Route
                   path="/recepcao/fila"
-                  element={
-                    <ProtectedRoute resource="agenda">
-                      <FilaAtendimento />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/recepcao?tab=fila" replace />}
                 />
                 <Route
                   path="/recepcao"

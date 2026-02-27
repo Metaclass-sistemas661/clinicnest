@@ -491,7 +491,7 @@ export default function CertificateManager() {
             )}
 
             {parseError && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              <div className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   {parseError}
@@ -500,35 +500,35 @@ export default function CertificateManager() {
             )}
 
             {certInfo && (
-              <div className="rounded-lg bg-green-50 border border-green-200 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-green-700">
+              <div className="rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                   <CheckCircle2 className="h-5 w-5" />
                   <span className="font-medium">Certificado válido</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-muted-foreground text-xs">Titular</p>
-                    <p className="font-medium">{certInfo.commonName}</p>
+                    <p className="text-green-800/60 dark:text-green-300/60 text-xs">Titular</p>
+                    <p className="font-medium text-green-900 dark:text-green-100">{certInfo.commonName}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">CPF/CNPJ</p>
-                    <p>{certInfo.cpfCnpj || "Não identificado"}</p>
+                    <p className="text-green-800/60 dark:text-green-300/60 text-xs">CPF/CNPJ</p>
+                    <p className="text-green-900 dark:text-green-100">{certInfo.cpfCnpj || "Não identificado"}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Emissor</p>
-                    <p>{certInfo.issuer}</p>
+                    <p className="text-green-800/60 dark:text-green-300/60 text-xs">Emissor</p>
+                    <p className="text-green-900 dark:text-green-100">{certInfo.issuer}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-xs">Validade</p>
-                    <p className={certInfo.daysUntilExpiry < 30 ? "text-yellow-600" : ""}>
+                    <p className="text-green-800/60 dark:text-green-300/60 text-xs">Validade</p>
+                    <p className={certInfo.daysUntilExpiry < 30 ? "text-yellow-600 dark:text-yellow-400" : "text-green-900 dark:text-green-100"}>
                       {certInfo.daysUntilExpiry} dias restantes
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t space-y-3">
+                <div className="pt-2 border-t border-green-200 dark:border-green-800 space-y-3">
                   <div className="space-y-2">
-                    <Label>Apelido (opcional)</Label>
+                    <Label className="text-green-900 dark:text-green-100">Apelido (opcional)</Label>
                     <Input
                       value={certNickname}
                       onChange={(e) => setCertNickname(e.target.value)}
@@ -543,7 +543,7 @@ export default function CertificateManager() {
                       onChange={(e) => setSetAsDefault(e.target.checked)}
                       className="rounded"
                     />
-                    <Label htmlFor="setAsDefault" className="text-sm font-normal cursor-pointer">
+                    <Label htmlFor="setAsDefault" className="text-sm font-normal cursor-pointer text-green-900 dark:text-green-100">
                       Definir como certificado padrão para assinaturas
                     </Label>
                   </div>

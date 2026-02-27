@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Volume2, VolumeX, Maximize, Users, Clock, CheckCircle, History, Sun, Moon } from "lucide-react";
+import { Volume2, VolumeX, Maximize, Users, Clock, CheckCircle, History, Sun, Moon, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CallNextButton } from "@/components/queue/CallNextButton";
 import {
   useWaitingQueue,
   useCurrentCall,
@@ -21,6 +23,7 @@ interface RecentCall {
 }
 
 export default function PainelChamada() {
+  const navigate = useNavigate();
   const { tenant } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -117,6 +120,17 @@ export default function PainelChamada() {
       {/* Header */}
       <header className={cn("flex items-center justify-between px-8 py-4 border-b", headerBorderClass)}>
         <div className="flex items-center gap-4">
+          {/* Botão Voltar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/recepcao")}
+            className={cn(mutedTextClass, "hover:text-current")}
+            title="Voltar para Recepcao"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
           {/* Logo da Clínica */}
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt={tenant.name || "Logo"} className="h-10 w-auto" />
@@ -138,6 +152,9 @@ export default function PainelChamada() {
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Botão Chamar Próximo */}
+          <CallNextButton variant="default" size="default" />
+
           <div className="text-3xl font-mono tabular-nums">
             {format(currentTime, "HH:mm:ss")}
           </div>

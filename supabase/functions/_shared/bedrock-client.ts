@@ -52,7 +52,11 @@ async function signRequest(
 
   const parsedUrl = new URL(url);
   const host = parsedUrl.host;
-  const canonicalUri = parsedUrl.pathname;
+  // AWS SigV4 requires URI-encoded path (except '/') for canonical URI
+  const canonicalUri = parsedUrl.pathname
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
 
   // Create canonical request
   const payloadHash = await crypto.subtle.digest("SHA-256", encoder.encode(body));
