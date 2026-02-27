@@ -111,48 +111,61 @@ async function loadWebPkiScript(): Promise<void> {
   });
 }
 
+/**
+ * Inicializa o WebPKI com singleton seguro.
+ *
+ * Padrão: async singleton com garantia de que:
+ *  1. Apenas uma inicialização ocorre (dedup via initPromise)
+ *  2. Erros nunca deixam o singleton em estado rejeitado
+ *  3. Callbacks do SDK (ready/notInstalled/defaultFail) são
+ *     corretamente bridged para Promise sem async executor
+ */
 export async function initWebPki(license?: string): Promise<WebPkiStatus> {
   if (initPromise) {
     await initPromise;
     return webPkiStatus;
   }
 
-  initPromise = new Promise(async (resolve) => {
+  async function doInit(): Promise<void> {
     try {
       await loadWebPkiScript();
 
       if (!window.LacunaWebPKI) {
         webPkiStatus = "not_installed";
-        resolve();
         return;
       }
 
       webPkiInstance = new window.LacunaWebPKI();
 
-      webPkiInstance.init({
-        ready: () => {
-          webPkiStatus = "ready";
-          resolve();
-        },
-        notInstalled: (status, message) => {
-          console.warn("WebPKI not installed:", message);
-          webPkiStatus = status === 2 ? "outdated" : "not_installed";
-          resolve();
-        },
-        defaultFail: (ex) => {
-          logger.error("WebPKI init failed:", ex);
-          webPkiStatus = "not_installed";
-          resolve();
-        },
-        license: license,
+      // Bridge callback → Promise (sem async executor)
+      await new Promise<void>((resolve) => {
+        webPkiInstance!.init({
+          ready: () => {
+            webPkiStatus = "ready";
+            resolve();
+          },
+          notInstalled: (status, message) => {
+            console.warn("WebPKI not installed:", message);
+            webPkiStatus = status === 2 ? "outdated" : "not_installed";
+            resolve();
+          },
+          defaultFail: (ex) => {
+            logger.error("WebPKI init failed:", ex);
+            webPkiStatus = "not_installed";
+            resolve();
+          },
+          license,
+        });
       });
     } catch (error) {
       logger.error("WebPKI load error:", error);
       webPkiStatus = "not_installed";
-      resolve();
+      // Não re-lança: garante que initPromise NUNCA fica rejeitada.
+      // Callers verificam webPkiStatus em vez de lidar com rejeição.
     }
-  });
+  }
 
+  initPromise = doInit();
   await initPromise;
   return webPkiStatus;
 }
