@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { encrypt } from '@/lib/crypto';
 
 export interface SNGPCCredenciais {
   id: string;
@@ -88,11 +89,19 @@ export function useSNGPC() {
   }, [profile?.tenant_id]);
 
   // Salvar credenciais
-  const saveCredenciais = useCallback(async (dados: Partial<SNGPCCredenciais>) => {
+  const saveCredenciais = useCallback(async (dados: Partial<SNGPCCredenciais> & { username?: string; password?: string }) => {
     if (!profile?.tenant_id) return false;
     setIsLoading(true);
     try {
-      const payload = {
+      // Criptografar username e password com AES-256-GCM
+      const usernameEnc = dados.username
+        ? await encrypt(dados.username, profile.tenant_id)
+        : undefined;
+      const passwordEnc = dados.password
+        ? await encrypt(dados.password, profile.tenant_id)
+        : undefined;
+
+      const payload: Record<string, unknown> = {
         tenant_id: profile.tenant_id,
         cnpj: dados.cnpj,
         razao_social: dados.razao_social,
@@ -100,10 +109,12 @@ export function useSNGPC() {
         nome_responsavel: dados.nome_responsavel,
         crf_responsavel: dados.crf_responsavel,
         email_notificacao: dados.email_notificacao,
-        username_encrypted: 'encrypted', // TODO: implementar criptografia
-        password_encrypted: 'encrypted',
         ativo: true,
       };
+
+      // Só atualiza campos criptografados se novos valores foram fornecidos
+      if (usernameEnc) payload.username_encrypted = usernameEnc;
+      if (passwordEnc) payload.password_encrypted = passwordEnc;
 
       if (credenciais?.id) {
         const { error } = await supabase

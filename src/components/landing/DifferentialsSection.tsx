@@ -7,6 +7,7 @@ import {
   Globe,
   CheckCircle,
   ArrowRight,
+  Brain,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,27 @@ const differentials = [
     subtitle: "Proteção de Dados",
     description: "Sistema desenvolvido com foco em segurança e conformidade com a LGPD. Seus dados e de seus pacientes protegidos com as melhores práticas do mercado.",
     highlights: [
-      "Suporte a assinatura digital",
+      "Assinatura digital A1, A3 e Nuvem (BirdID)",
       "Retenção CFM 20 anos automática",
       "SNGPC para medicamentos controlados",
       "Gestão de consentimentos LGPD",
     ],
     color: "blue",
     badge: "Seguro",
+  },
+  {
+    icon: Brain,
+    title: "Inteligência Artificial",
+    subtitle: "IA Integrada na Plataforma",
+    description: "Assistente IA que busca pacientes, consulta prontuários e agenda consultas via chat. Triagem inteligente, sugestão de CID-10, transcrição de áudio e predição de faltas.",
+    highlights: [
+      "Agente IA (Nest) para a equipe clínica",
+      "Chat IA 24/7 no portal do paciente",
+      "Triagem com classificação de urgência",
+      "Sugestão de CID-10 e resumo clínico",
+    ],
+    color: "amber",
+    badge: "Inovação",
   },
   {
     icon: Zap,
@@ -105,6 +120,7 @@ const colorClasses: Record<string, { bg: string; text: string; border: string; g
   blue: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200", gradient: "from-blue-500 to-indigo-500", badgeBg: "bg-blue-500" },
   cyan: { bg: "bg-cyan-100", text: "text-cyan-600", border: "border-cyan-200", gradient: "from-cyan-500 to-teal-500", badgeBg: "bg-cyan-500" },
   emerald: { bg: "bg-emerald-100", text: "text-emerald-600", border: "border-emerald-200", gradient: "from-emerald-500 to-green-500", badgeBg: "bg-emerald-500" },
+  amber: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200", gradient: "from-amber-500 to-orange-500", badgeBg: "bg-amber-500" },
   pink: { bg: "bg-pink-100", text: "text-pink-600", border: "border-pink-200", gradient: "from-pink-500 to-rose-500", badgeBg: "bg-pink-500" },
 };
 

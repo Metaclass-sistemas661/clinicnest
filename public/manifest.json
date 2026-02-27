@@ -97,7 +97,7 @@
       "name": "Pacientes",
       "short_name": "Pacientes",
       "description": "Lista de pacientes",
-      "url": "/clientes",
+      "url": "/pacientes",
       "icons": [{ "src": "/icons/shortcut-patients.png", "sizes": "96x96" }]
     }
   ],

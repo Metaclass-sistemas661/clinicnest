@@ -60,7 +60,7 @@ export interface Tenant {
   phone: string | null;
   email: string | null;
   address: string | null;
-  product?: 'salon' | 'clinic';
+  product?: 'clinic';
   billing_cpf_cnpj?: string | null;
   online_booking_enabled?: boolean;
   online_booking_slug?: string | null;
@@ -84,7 +84,7 @@ export interface Profile {
   email: string | null;
   phone: string | null;
   avatar_url: string | null;
-  allowed_product?: 'salon' | 'clinic';
+  allowed_product?: 'clinic';
   show_goals_progress_in_header?: boolean;
   show_gamification_popups?: boolean;
   professional_type: ProfessionalType;
@@ -103,7 +103,7 @@ export interface UserRole {
   created_at: string;
 }
 
-export interface Client {
+export interface Patient {
   id: string;
   tenant_id: string;
   name: string;
@@ -126,6 +126,9 @@ export interface Client {
   updated_at: string;
 }
 
+/** @deprecated Use Patient instead */
+export type Client = Patient;
+
 export interface ConsentTemplate {
   id: string;
   tenant_id: string;
@@ -146,7 +149,7 @@ export interface ConsentTemplate {
 export interface PatientConsent {
   id: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   template_id: string;
   patient_user_id: string;
   signed_at: string;
@@ -156,7 +159,7 @@ export interface PatientConsent {
   template_snapshot_html: string | null;
 }
 
-export interface Service {
+export interface Procedure {
   id: string;
   tenant_id: string;
   name: string;
@@ -167,6 +170,9 @@ export interface Service {
   created_at: string;
   updated_at: string;
 }
+
+/** @deprecated Use Procedure instead */
+export type Service = Procedure;
 
 
 export interface Product {
@@ -185,8 +191,8 @@ export interface Product {
 export interface Appointment {
   id: string;
   tenant_id: string;
-  client_id: string | null;
-  service_id: string | null;
+  patient_id: string | null;
+  procedure_id: string | null;
   professional_id: string | null;
   scheduled_at: string;
   duration_minutes: number;
@@ -199,8 +205,12 @@ export interface Appointment {
   created_at: string;
   updated_at: string;
   // Joined fields
-  client?: Client;
-  service?: Service;
+  patient?: Patient;
+  /** @deprecated Use patient instead */
+  client?: Patient;
+  procedure?: Procedure;
+  /** @deprecated Use procedure instead */
+  service?: Procedure;
   professional?: Profile;
 }
 
@@ -247,7 +257,7 @@ export type TriagePriority = 'emergencia' | 'urgente' | 'pouco_urgente' | 'nao_u
 export interface TriageRecord {
   id: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   appointment_id: string | null;
   performed_by: string | null;
   triaged_at: string;
@@ -269,6 +279,8 @@ export interface TriageRecord {
   notes: string | null;
   created_at: string;
   // Joined
+  patients?: { name: string };
+  /** @deprecated Use patients instead */
   clients?: { name: string };
   profiles?: { full_name: string };
 }
@@ -278,7 +290,7 @@ export interface TriageRecord {
 export interface MedicalRecord {
   id: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   appointment_id: string | null;
   professional_id: string | null;
   specialty_id: string | null;
@@ -298,6 +310,8 @@ export interface MedicalRecord {
   created_at: string;
   updated_at: string;
   // Joined
+  patients?: { name: string };
+  /** @deprecated Use patients instead */
   clients?: { name: string };
   profiles?: { full_name: string };
   triage_records?: TriageRecord;
@@ -340,7 +354,7 @@ export interface Order {
   id: string;
   tenant_id: string;
   appointment_id: string;
-  client_id: string | null;
+  patient_id: string | null;
   professional_id: string | null;
   status: OrderStatus;
   subtotal_amount: number;
@@ -353,7 +367,9 @@ export interface Order {
   // Joined
   items?: OrderItem[];
   payments?: Payment[];
-  client?: Client;
+  patient?: Patient;
+  /** @deprecated Use patient instead */
+  client?: Patient;
   professional?: Profile;
   appointment?: Appointment;
 }
@@ -363,7 +379,7 @@ export interface OrderItem {
   tenant_id: string;
   order_id: string;
   kind: OrderItemKind;
-  service_id: string | null;
+  procedure_id: string | null;
   product_id: string | null;
   professional_id: string | null;
   quantity: number;
@@ -371,7 +387,9 @@ export interface OrderItem {
   total_price: number;
   created_at: string;
   // Joined
-  service?: Service;
+  procedure?: Procedure;
+  /** @deprecated Use procedure instead */
+  service?: Procedure;
   product?: Product;
 }
 
@@ -425,7 +443,7 @@ export interface CommissionRule {
   tenant_id: string;
   professional_id: string;
   rule_type: CommissionRuleType;
-  service_id: string | null;
+  procedure_id: string | null;
   insurance_id: string | null;
   procedure_code: string | null;
   calculation_type: CommissionCalculationType;
@@ -438,6 +456,8 @@ export interface CommissionRule {
   created_at: string;
   updated_at: string;
   // Joined
+  procedure?: { id: string; name: string };
+  /** @deprecated Use procedure instead */
   service?: { id: string; name: string };
   insurance?: { id: string; name: string };
 }
@@ -483,7 +503,7 @@ export interface BillPayable {
 export interface BillReceivable {
   id: string;
   tenant_id: string;
-  client_id: string | null;
+  patient_id: string | null;
   description: string;
   amount: number;
   due_date: string;
@@ -497,6 +517,8 @@ export interface BillReceivable {
   created_at: string;
   updated_at: string;
   // Joined
+  patient?: { id: string; name: string };
+  /** @deprecated Use patient instead */
   client?: { id: string; name: string };
 }
 
@@ -505,7 +527,7 @@ export type ClinicalEvolutionType = 'medica' | 'fisioterapia' | 'fonoaudiologia'
 export interface ClinicalEvolution {
   id: string;
   tenant_id: string;
-  client_id: string;
+  patient_id: string;
   professional_id: string;
   appointment_id: string | null;
   medical_record_id: string | null;
@@ -525,6 +547,8 @@ export interface ClinicalEvolution {
   created_at: string;
   updated_at: string;
   // Joined
+  patients?: { name: string };
+  /** @deprecated Use patients instead */
   clients?: { name: string };
   profiles?: { full_name: string };
 }

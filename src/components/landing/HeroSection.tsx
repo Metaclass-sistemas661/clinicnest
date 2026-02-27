@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { NestAvatar } from "@/components/patient/NestAvatar";
 import {
   Calendar,
   Users,
@@ -23,6 +24,10 @@ import {
   Lock,
   Zap,
   Globe,
+  Brain,
+  Mic,
+  MessageSquare,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -124,6 +129,30 @@ const VARIANTS = [
     imageAlt: "Equipe médica multiprofissional em reunião",
   },
   {
+    id: "ai",
+    bg: "linear-gradient(135deg, #1a1a2e 0%, #16213e 38%, #0f3460 62%, #533483 100%)",
+    badgeIcon: Brain,
+    badge: "IA Clínica Integrada",
+    headlinePlain: "Inteligência Artificial que",
+    headlineHighlight: "entende medicina",
+    headlineHighlightClass: "bg-gradient-to-r from-purple-300 via-pink-200 to-orange-200 bg-clip-text text-transparent",
+    headlineSuffix: "",
+    sub: "Agente IA com 8 ferramentas clínicas, transcrição médica por voz, triagem inteligente, sugestão de CID, predição de faltas e análise de sentimento. Tudo nativo na plataforma.",
+    bullets: [
+      "Agente IA com acesso a prontuários, agenda e financeiro",
+      "Transcrição médica por voz (Amazon Transcribe Medical)",
+      "Triagem por chatbot, sugestão de CID e predição de no-show",
+    ],
+    trustChips: [
+      { icon: Brain, label: "Claude AI" },
+      { icon: Mic, label: "Transcrição" },
+      { icon: MessageSquare, label: "Chat IA" },
+      { icon: Bot, label: "8 Ferramentas" },
+    ],
+    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80&fit=crop",
+    imageAlt: "Inteligência artificial aplicada à saúde",
+  },
+  {
     id: "compliance",
     bg: "linear-gradient(135deg, #1e3a5f 0%, #1e4976 38%, #1d5a8a 62%, #1a6b9e 100%)",
     badgeIcon: Award,
@@ -132,16 +161,16 @@ const VARIANTS = [
     headlineHighlight: "pronto para crescer",
     headlineHighlightClass: "bg-gradient-to-r from-sky-300 via-blue-200 to-indigo-200 bg-clip-text text-transparent",
     headlineSuffix: "",
-    sub: "Assinatura digital, interoperabilidade, SNGPC para controlados, retenção CFM 20 anos. Tudo que você precisa para escalar com segurança.",
+    sub: "Assinatura digital com certificados A1, A3 e em Nuvem (BirdID), interoperabilidade HL7 FHIR, SNGPC, RNDS e retenção CFM 20 anos.",
     bullets: [
-      "Suporte a assinatura digital (A1/A3)",
-      "Interoperabilidade HL7 FHIR",
+      "Assinatura digital A1, A3 e Nuvem (ICP-Brasil/BirdID)",
+      "Interoperabilidade HL7 FHIR R4 + RNDS",
       "SNGPC para controlados, retenção CFM 20 anos",
     ],
     trustChips: [
-      { icon: Shield, label: "Assinatura Digital" },
+      { icon: Shield, label: "A1/A3/Nuvem" },
       { icon: Zap, label: "FHIR R4" },
-      { icon: Award, label: "Backup Automático" },
+      { icon: Award, label: "RNDS" },
       { icon: FileText, label: "CFM 20 anos" },
     ],
     image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&q=80&fit=crop",
@@ -313,6 +342,41 @@ function HeroVisual({ variant }: { variant: typeof VARIANTS[0] }) {
         </>
       )}
 
+      {variant.id === "ai" && (
+        <>
+          <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                <Brain className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Agente IA</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">8 Ferramentas</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="-top-5 -right-8 p-3.5" delay={1.8}>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Mic className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Transcrição</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">Voz → Texto</p>
+              </div>
+            </div>
+          </FloatingCard>
+
+          <FloatingCard className="top-1/2 -right-10 -translate-y-1/2 px-3.5 py-2.5" delay={3.2}>
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-purple-600" />
+              <span className="text-xs font-semibold text-gray-800">Claude AI</span>
+            </div>
+          </FloatingCard>
+        </>
+      )}
+
       {variant.id === "compliance" && (
         <>
           <FloatingCard className="-top-5 -left-8 p-3.5 min-w-[168px]" delay={0}>
@@ -321,8 +385,8 @@ function HeroVisual({ variant }: { variant: typeof VARIANTS[0] }) {
                 <Shield className="h-4 w-4 text-sky-600" />
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Assinatura</p>
-                <p className="font-bold text-gray-900 text-sm leading-none">A1 / A3</p>
+                <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Certificados</p>
+                <p className="font-bold text-gray-900 text-sm leading-none">A1/A3/Nuvem</p>
               </div>
             </div>
           </FloatingCard>
@@ -476,6 +540,19 @@ export function HeroSection() {
                   <span className="text-xs font-medium text-white/90">{label}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Nest AI Introduction */}
+            <div className="flex items-center gap-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-4 py-3 mb-8 max-w-md transition-all hover:bg-white/15">
+              <NestAvatar size={52} className="flex-shrink-0 drop-shadow-lg" />
+              <div>
+                <p className="text-sm font-semibold text-white leading-snug">
+                  Oi, eu sou a <span className="text-teal-300">Nest</span>! 🤖
+                </p>
+                <p className="text-xs text-white/70 leading-relaxed mt-0.5">
+                  A inteligência artificial do ClinicNest. Ajudo pacientes e profissionais com respostas rápidas e inteligentes.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

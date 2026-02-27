@@ -41,6 +41,58 @@ export default function PatientMensagens() {
     void loadMessages();
   }, []);
 
+  // ── Supabase Realtime: escutar novas mensagens em tempo real ──
+  useEffect(() => {
+    let channel: ReturnType<typeof supabasePatient.channel> | null = null;
+
+    const setupRealtime = async () => {
+      try {
+        const { data: { user } } = await supabasePatient.auth.getUser();
+        if (!user) return;
+
+        // Buscar patient_profile para obter client_id e tenant_id
+        const { data: link } = await supabasePatient
+          .from("patient_profiles")
+          .select("client_id, tenant_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1)
+          .single();
+
+        if (!link?.client_id) return;
+
+        channel = supabasePatient
+          .channel("patient-messages-realtime")
+          .on(
+            "postgres_changes" as any,
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "patient_messages",
+              filter: `client_id=eq.${link.client_id}`,
+            },
+            (payload: any) => {
+              // Nova mensagem recebida — recarregar lista completa
+              if (payload.new?.sender_type === "clinic") {
+                void loadMessages();
+              }
+            }
+          )
+          .subscribe();
+      } catch {
+        // Falha no realtime não deve impedir o uso da página
+      }
+    };
+
+    void setupRealtime();
+
+    return () => {
+      if (channel) {
+        void supabasePatient.removeChannel(channel);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);

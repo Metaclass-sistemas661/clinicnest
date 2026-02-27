@@ -17,9 +17,13 @@ import {
   Save,
   ShieldCheck,
   Moon,
+  BellRing,
+  BellOff,
+  Send,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePatientPushNotifications } from "@/hooks/usePatientPushNotifications";
 
 interface NotificationPreferences {
   email_certificates: boolean;
@@ -98,6 +102,7 @@ export default function PatientSettings() {
   const [savedPrefs, setSavedPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const push = usePatientPushNotifications();
 
   const hasChanges = JSON.stringify(prefs) !== JSON.stringify(savedPrefs);
 
@@ -291,6 +296,75 @@ export default function PatientSettings() {
               Salvar preferências
             </Button>
           </div>
+        )}
+
+        {/* Push Notifications */}
+        {push.isSupported && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BellRing className="h-4 w-4 text-muted-foreground" />
+                Notificações Push
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Receba alertas mesmo quando o navegador estiver fechado
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {push.isEnabled ? (
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                    <BellRing className="h-4 w-4" />
+                    <span>Notificações push ativadas</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => push.sendTestNotification()}
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                      Testar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-muted-foreground"
+                      onClick={() => void push.disableNotifications()}
+                    >
+                      <BellOff className="h-3.5 w-3.5" />
+                      Desativar
+                    </Button>
+                  </div>
+                </div>
+              ) : push.canRequest ? (
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm text-muted-foreground">
+                    Ative para receber notificações de consultas, exames e mensagens no seu dispositivo.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-teal-600 hover:bg-teal-700 whitespace-nowrap"
+                    disabled={push.isLoading}
+                    onClick={() => void push.enableNotifications()}
+                  >
+                    {push.isLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Bell className="h-3.5 w-3.5" />
+                    )}
+                    Ativar
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Notificações push foram bloqueadas no seu navegador.
+                  Acesse as configurações do navegador para permitir notificações deste site.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {/* Privacy info */}

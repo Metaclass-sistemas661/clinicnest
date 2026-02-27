@@ -29,8 +29,7 @@ export default function Login() {
   const prefetchMainRoutes = () => {
     void import("@/pages/Dashboard");
     void import("@/pages/Agenda");
-    void import("@/pages/Clientes");
-    void import("@/pages/Servicos");
+    void import("@/pages/Pacientes");
     void import("@/pages/Produtos");
     void import("@/pages/Notificacoes");
     void import("@/pages/MinhasConfiguracoes");
@@ -38,10 +37,8 @@ export default function Login() {
     void import("@/pages/Assinatura");
     void import("@/pages/Equipe");
     void import("@/pages/Configuracoes");
-    void import("@/pages/Metas");
     void import("@/pages/MinhasComissoes");
     void import("@/pages/MeusSalarios");
-    void import("@/pages/MinhasMetas");
   };
 
   const normalizeAuthError = (message: string) => {

@@ -67,7 +67,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
       try {
         const [servicesRes, insurancesRes] = await Promise.all([
           supabase
-            .from("services")
+            .from("procedures")
             .select("id, name, price")
             .eq("tenant_id", profile.tenant_id)
             .eq("is_active", true)
@@ -216,7 +216,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
             <Label>Serviço</Label>
             <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um serviço" />
+                <SelectValue placeholder="Selecione um procedimento" />
               </SelectTrigger>
               <SelectContent>
                 {services.map((svc) => (

@@ -38,6 +38,7 @@ import { toastRpcError } from "@/lib/rpc-error";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
+import { CallNextButton } from "@/components/queue/CallNextButton";
 import type { Appointment, Client, Service, Profile, AppointmentStatus, Product } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
@@ -163,12 +164,12 @@ export default function Agenda() {
           .lte("scheduled_at", end.toISOString())
           .order("scheduled_at", { ascending: true }),
         supabase
-          .from("clients")
+          .from("patients")
           .select("id,tenant_id,name,phone,email,notes,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("name"),
         supabase
-          .from("services")
+          .from("procedures")
           .select("id,tenant_id,name,description,duration_minutes,price,is_active,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
@@ -666,11 +667,18 @@ export default function Agenda() {
               Semana
             </Button>
           </div>
-                    <Button className="gradient-primary text-primary-foreground text-sm" onClick={() => setIsDialogOpen(true)} data-tour="agenda-new-appointment">
+                    <div className="flex items-center gap-2">
+                      <CallNextButton 
+                        professionalId={!isAdmin ? profile?.id : undefined}
+                        variant="outline"
+                        size="sm"
+                      />
+                      <Button className="gradient-primary text-primary-foreground text-sm" onClick={() => setIsDialogOpen(true)} data-tour="agenda-new-appointment">
                 <Plus className="mr-1 md:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo agendamento</span>
                 <span className="sm:hidden">Novo</span>
               </Button>
+                    </div>
           <FormDrawer
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
@@ -864,7 +872,7 @@ export default function Agenda() {
             <Input
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Ex.: cliente pediu para remarcar"
+              placeholder="Ex.: paciente pediu para remarcar"
             />
           </div>
           <DialogFooter>

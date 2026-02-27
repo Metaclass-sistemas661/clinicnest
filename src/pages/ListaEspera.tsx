@@ -89,8 +89,8 @@ export default function ListaEspera() {
     setIsLoading(true);
     try {
       const [cRes, sRes, pRes, wRes] = await Promise.all([
-        supabase.from("clients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name"),
-        supabase.from("services").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
+        supabase.from("patients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name"),
+        supabase.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
         supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
         supabase.from("waitlist")
           .select("*, clients(name, phone), services(name), profiles(full_name)")

@@ -52,10 +52,12 @@ interface MedicalRecord {
   weight_kg: number | null; height_cm: number | null; pain_scale: number | null;
   allergies: string; current_medications: string; medical_history: string;
   digital_hash: string | null; signed_at: string | null;
-  signed_by_name: string | null; signed_by_crm: string | null;
+  signed_by_name: string | null; signed_by_crm: string | null; signed_by_uf: string | null;
   is_locked: boolean; lock_reason: string | null;
   appointment_id: string | null; triage_id: string | null;
   template_id: string | null; custom_fields: Record<string, unknown>;
+  attendance_number: number | null; attendance_type: string | null;
+  server_timestamp: string | null;
 }
 
 interface RecordVersion {
@@ -78,6 +80,21 @@ const priorityConfig: Record<string, { label: string; color: string; icon: React
   urgente: { label: "Urgente", color: "bg-orange-500/20 text-orange-600 border-orange-500/30", icon: AlertTriangle },
   pouco_urgente: { label: "Pouco Urgente", color: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30", icon: Clock },
   nao_urgente: { label: "Não Urgente", color: "bg-success/20 text-success border-success/30", icon: CheckCircle2 },
+};
+
+const attendanceTypeLabels: Record<string, string> = {
+  consulta: "Consulta",
+  retorno: "Retorno",
+  urgencia: "Urgência",
+  emergencia: "Emergência",
+  procedimento: "Procedimento",
+  exame: "Exame",
+  teleconsulta: "Teleconsulta",
+  domiciliar: "Domiciliar",
+  preventivo: "Preventivo",
+  pre_operatorio: "Pré-operatório",
+  pos_operatorio: "Pós-operatório",
+  outro: "Outro",
 };
 
 function VitalsDisplay({ record }: { record: MedicalRecord }) {
@@ -231,7 +248,7 @@ export default function Prontuarios() {
   const fetchClients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase.from("clients")
+      const { data, error } = await supabase.from("patients")
         .select("id, name, phone, email").eq("tenant_id", profile.tenant_id).order("name");
       if (error) throw error;
       setClients((data as Client[]) || []);
@@ -262,9 +279,12 @@ export default function Prontuarios() {
         medical_history: r.medical_history ?? "",
         digital_hash: r.digital_hash ?? null, signed_at: r.signed_at ?? null,
         signed_by_name: r.signed_by_name ?? null, signed_by_crm: r.signed_by_crm ?? null,
+        signed_by_uf: r.signed_by_uf ?? null,
         is_locked: r.is_locked ?? false, lock_reason: r.lock_reason ?? null,
         appointment_id: r.appointment_id ?? null, triage_id: r.triage_id ?? null,
         template_id: r.template_id ?? null, custom_fields: r.custom_fields ?? {},
+        attendance_number: r.attendance_number ?? null, attendance_type: r.attendance_type ?? null,
+        server_timestamp: r.server_timestamp ?? null,
       })));
     } catch (err) { logger.error("Fetch records:", err); }
     finally { setIsLoading(false); }
@@ -345,6 +365,7 @@ export default function Prontuarios() {
       appointment_id: record.appointment_id,
       triage_id: record.triage_id,
       template_id: record.template_id,
+      attendance_type: record.attendance_type,
       chief_complaint: record.chief_complaint,
       anamnesis: record.anamnesis,
       physical_exam: record.physical_exam,
@@ -642,15 +663,33 @@ export default function Prontuarios() {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{record.client_name}</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        {record.client_name}
+                        {record.attendance_number && (
+                          <span className="text-xs font-mono text-muted-foreground">
+                            #{record.attendance_number.toString().padStart(6, '0')}
+                          </span>
+                        )}
+                      </CardTitle>
                       <CardDescription className="flex items-center gap-2 mt-0.5">
                         <Calendar className="h-3.5 w-3.5" />
                         {new Date(record.appointment_date).toLocaleDateString("pt-BR")}
-                        <span>·</span>{record.professional_name}
+                        <span>·</span>
+                        {record.professional_name}
+                        {record.signed_by_crm && (
+                          <span className="text-xs">
+                            ({record.signed_by_crm}{record.signed_by_uf ? `/${record.signed_by_uf}` : ''})
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
+                    {record.attendance_type && (
+                      <Badge variant="secondary" className="text-xs">
+                        {attendanceTypeLabels[record.attendance_type] || record.attendance_type}
+                      </Badge>
+                    )}
                     {record.cid_code && (
                       <Badge variant="outline" className="text-xs font-mono">CID: {record.cid_code}</Badge>
                     )}

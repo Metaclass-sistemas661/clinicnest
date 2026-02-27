@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { PatientSubscriptionGuard } from "@/components/subscription/PatientSubscriptionGuard";
 
 interface PatientProtectedRouteProps {
   children: ReactNode;
@@ -66,5 +67,5 @@ export function PatientProtectedRoute({ children }: PatientProtectedRouteProps) 
     return <Navigate to="/paciente/login" replace />;
   }
 
-  return <>{children}</>;
+  return <PatientSubscriptionGuard>{children}</PatientSubscriptionGuard>;
 }

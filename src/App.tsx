@@ -5,14 +5,13 @@ import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PatientProtectedRoute } from "@/components/auth/PatientProtectedRoute";
 import { ConsentGate } from "@/components/consent/ConsentGate";
-import { NewOnlineBookingListener } from "@/components/admin/NewOnlineBookingListener";
 import { TriageRealtimeListener } from "@/components/admin/TriageRealtimeListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -38,7 +37,6 @@ const PoliticaPrivacidade = lazyWithRetry(() => import("@/pages/PoliticaPrivacid
 const Contato = lazyWithRetry(() => import("@/pages/Contato"));
 const CanalLgpd = lazyWithRetry(() => import("@/pages/CanalLgpd"));
 
-const AgendarOnline = lazyWithRetry(() => import("@/pages/AgendarOnline"));
 const ConfirmarAgendamento = lazyWithRetry(() => import("@/pages/ConfirmarAgendamento"));
 const TeleconsultaPublica = lazyWithRetry(() => import("@/pages/TeleconsultaPublica"));
 const AssinarTermosPublico = lazyWithRetry(() => import("@/pages/AssinarTermosPublico"));
@@ -55,8 +53,8 @@ const ConfigurarRegras = lazyWithRetry(() => import("@/pages/repasses/Configurar
 const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
 const Compras = lazyWithRetry(() => import("@/pages/Compras"));
 const Fornecedores = lazyWithRetry(() => import("@/pages/Fornecedores"));
-const Servicos = lazyWithRetry(() => import("@/pages/Servicos"));
-const Clientes = lazyWithRetry(() => import("@/pages/Clientes"));
+const Procedimentos = lazyWithRetry(() => import("@/pages/Procedimentos"));
+const Pacientes = lazyWithRetry(() => import("@/pages/Pacientes"));
 const Teleconsulta = lazyWithRetry(() => import("@/pages/Teleconsulta"));
 const ModelosProntuario = lazyWithRetry(() => import("@/pages/ModelosProntuario"));
 const FaturamentoTISS = lazyWithRetry(() => import("@/pages/FaturamentoTISS"));
@@ -71,8 +69,6 @@ const GerenciarAssinatura = lazyWithRetry(() => import("@/pages/GerenciarAssinat
 const MinhasComissoes = lazyWithRetry(() => import("@/pages/MinhasComissoes"));
 const MeusSalarios = lazyWithRetry(() => import("@/pages/MeusSalarios"));
 const MeuFinanceiro = lazyWithRetry(() => import("@/pages/MeuFinanceiro"));
-const Metas = lazyWithRetry(() => import("@/pages/Metas"));
-const MinhasMetas = lazyWithRetry(() => import("@/pages/MinhasMetas"));
 const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
 const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfiguracoes"));
 const Suporte = lazyWithRetry(() => import("@/pages/Suporte"));
@@ -111,11 +107,6 @@ const MensagensPacientes = lazyWithRetry(() => import("@/pages/MensagensPaciente
 const TermosConsentimento = lazyWithRetry(() => import("@/pages/TermosConsentimento"));
 const ContratosTermos = lazyWithRetry(() => import("@/pages/ContratosTermos"));
 
-const AgendamentoOnlineAdmin = lazyWithRetry(() => import("@/pages/AgendamentoOnlineAdmin"));
-const FidelidadeCashbackAdmin = lazyWithRetry(() => import("@/pages/FidelidadeCashbackAdmin"));
-const Vouchers = lazyWithRetry(() => import("@/pages/Vouchers"));
-const Cupons = lazyWithRetry(() => import("@/pages/Cupons"));
-
 // Páginas médicas (novas)
 const Prontuarios = lazyWithRetry(() => import("@/pages/Prontuarios"));
 const ProntuarioDetalhe = lazyWithRetry(() => import("@/pages/ProntuarioDetalhe"));
@@ -149,6 +140,10 @@ const DashboardONA = lazyWithRetry(() => import("@/pages/DashboardONA"));
 const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
 const RetornosPendentes = lazyWithRetry(() => import("@/pages/RetornosPendentes"));
 const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
+const FilaAtendimento = lazyWithRetry(() => import("@/pages/recepcao/FilaAtendimento"));
+const DashboardRecepcao = lazyWithRetry(() => import("@/pages/recepcao/DashboardRecepcao"));
+const ConfirmarRetornoPublico = lazyWithRetry(() => import("@/pages/ConfirmarRetornoPublico"));
+const VerificarDocumento = lazyWithRetry(() => import("@/pages/VerificarDocumento"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -160,9 +155,13 @@ const queryClient = new QueryClient({
 });
 
 function GlobalAdminListeners() {
-  const auth = useAuth();
-  if (!auth?.user || !auth?.isAdmin) return null;
-  return <NewOnlineBookingListener />;
+  return null;
+}
+
+/** Redirect /clientes/:id → /pacientes/:id interpolando o parâmetro */
+function ClienteRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/pacientes/${id}`} replace />;
 }
 
 function GlobalStaffListeners() {
@@ -202,11 +201,12 @@ const App = () => (
                 <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
                 <Route path="/contato" element={<Contato />} />
                 <Route path="/canal-lgpd" element={<CanalLgpd />} />
-                <Route path="/agendar/:slug" element={<AgendarOnline />} />
                 <Route path="/confirmar/:token" element={<ConfirmarAgendamento />} />
                 <Route path="/nps/:token" element={<NpsPublico />} />
                 <Route path="/teleconsulta-publica/:token" element={<TeleconsultaPublica />} />
                 <Route path="/assinar-termos/:token" element={<AssinarTermosPublico />} />
+                <Route path="/confirmar-retorno/:token" element={<ConfirmarRetornoPublico />} />
+                <Route path="/verificar/:hash" element={<VerificarDocumento />} />
                 <Route path="/painel-chamada" element={<PainelChamada />} />
 
                 {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}
@@ -242,21 +242,24 @@ const App = () => (
                   }
                 />
                 <Route
-                  path="/clientes"
+                  path="/pacientes"
                   element={
-                    <ProtectedRoute resource="clientes">
-                      <Clientes />
+                    <ProtectedRoute resource="pacientes">
+                      <Pacientes />
                     </ProtectedRoute>
                   }
                 />
                 <Route
-                  path="/clientes/:id"
+                  path="/pacientes/:id"
                   element={
-                    <ProtectedRoute resource="clientes">
+                    <ProtectedRoute resource="pacientes">
                       <ClienteDetalhe />
                     </ProtectedRoute>
                   }
                 />
+                {/* Redirect de compatibilidade */}
+                <Route path="/clientes" element={<Navigate to="/pacientes" replace />} />
+                <Route path="/clientes/:id" element={<ClienteRedirect />} />
                 <Route
                   path="/mensagens-pacientes"
                   element={
@@ -572,22 +575,6 @@ const App = () => (
 
                 {/* Operacional */}
                 <Route
-                  path="/metas"
-                  element={
-                    <ProtectedRoute resource="metas">
-                      <Metas />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/minhas-metas"
-                  element={
-                    <ProtectedRoute>
-                      <MinhasMetas />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
                   path="/equipe"
                   element={
                     <ProtectedRoute resource="equipe">
@@ -622,13 +609,15 @@ const App = () => (
 
                 {/* Cadastros & Modelos */}
                 <Route
-                  path="/servicos"
+                  path="/procedimentos"
                   element={
                     <ProtectedRoute resource="procedimentos">
-                      <Servicos />
+                      <Procedimentos />
                     </ProtectedRoute>
                   }
                 />
+                {/* Redirect de compatibilidade */}
+                <Route path="/servicos" element={<Navigate to="/procedimentos" replace />} />
                 <Route
                   path="/especialidades"
                   element={
@@ -688,14 +677,6 @@ const App = () => (
 
                 {/* Marketing & CRM */}
                 <Route
-                  path="/agendamento-online"
-                  element={
-                    <ProtectedRoute resource="agendamento_online">
-                      <AgendamentoOnlineAdmin />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
                   path="/campanhas"
                   element={
                     <ProtectedRoute resource="campanhas">
@@ -716,30 +697,6 @@ const App = () => (
                   element={
                     <ProtectedRoute resource="automacoes">
                       <Automacoes />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/fidelidade-cashback"
-                  element={
-                    <ProtectedRoute resource="fidelidade">
-                      <FidelidadeCashbackAdmin />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/vouchers"
-                  element={
-                    <ProtectedRoute resource="vouchers">
-                      <Vouchers />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/cupons"
-                  element={
-                    <ProtectedRoute resource="cupons">
-                      <Cupons />
                     </ProtectedRoute>
                   }
                 />
@@ -814,6 +771,22 @@ const App = () => (
                   element={
                     <ProtectedRoute resource="agenda">
                       <RetornosPendentes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/recepcao/fila"
+                  element={
+                    <ProtectedRoute resource="agenda">
+                      <FilaAtendimento />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/recepcao"
+                  element={
+                    <ProtectedRoute resource="agenda">
+                      <DashboardRecepcao />
                     </ProtectedRoute>
                   }
                 />

@@ -16,9 +16,9 @@ type TourStep = {
   staffOnly?: boolean;
 };
 
-type TourKey = "beautygest_core";
+type TourKey = "clinicnest_core";
 
-const TOUR_KEY: TourKey = "beautygest_core";
+const TOUR_KEY: TourKey = "clinicnest_core";
 
 const STEPS: TourStep[] = [
   {
@@ -46,18 +46,18 @@ const STEPS: TourStep[] = [
     placement: "bottom",
   },
   {
-    id: "nav-clientes",
+    id: "nav-pacientes",
     route: "/agenda",
-    target: "sidebar-clientes",
+    target: "sidebar-pacientes",
     title: "Pacientes",
     description: "Mantenha histórico, observações e dados de contato centralizados.",
     placement: "right",
   },
   {
-    id: "nav-servicos",
+    id: "nav-procedimentos",
     route: "/agenda",
-    target: "sidebar-servicos",
-    title: "Serviços",
+    target: "sidebar-procedimentos",
+    title: "Procedimentos",
     description: "Catálogo com preços e duração — ajuda a padronizar e acelerar o agendamento.",
     placement: "right",
   },

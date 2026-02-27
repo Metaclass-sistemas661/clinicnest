@@ -52,8 +52,6 @@ export type FeatureKey =
   | 'onlineBooking'
   | 'campaigns'
   | 'automations'
-  | 'loyalty'
-  | 'coupons'
   // Administração
   | 'team'
   | 'basicRbac'
@@ -70,10 +68,8 @@ export type FeatureKey =
   | 'audit'
   | 'dataRetention'
   | 'onaDashboard'
-  // Gamificação
-  | 'gamification'
-  | 'commissions'
-  | 'goals';
+  // Financeiro Profissional
+  | 'commissions';
 
 export type LimitKey =
   | 'professionals'
@@ -186,8 +182,6 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onlineBooking: true,
       campaigns: false,
       automations: false,
-      loyalty: false,
-      coupons: false,
       // Administração
       team: false,
       basicRbac: false,
@@ -204,10 +198,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       audit: false,
       dataRetention: false,
       onaDashboard: false,
-      // Gamificação
-      gamification: false,
+      // Financeiro Profissional
       commissions: false,
-      goals: false,
     },
   },
 
@@ -276,8 +268,6 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onlineBooking: true,
       campaigns: true,
       automations: true,
-      loyalty: true,
-      coupons: true,
       // Administração
       team: true,
       basicRbac: true,
@@ -294,10 +284,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       audit: false,
       dataRetention: false,
       onaDashboard: false,
-      // Gamificação
-      gamification: false,
+      // Financeiro Profissional
       commissions: false,
-      goals: false,
     },
   },
 
@@ -366,8 +354,6 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onlineBooking: true,
       campaigns: true,
       automations: true,
-      loyalty: true,
-      coupons: true,
       // Administração
       team: true,
       basicRbac: true,
@@ -384,10 +370,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       audit: true,
       dataRetention: true,
       onaDashboard: false,
-      // Gamificação
-      gamification: true,
+      // Financeiro Profissional
       commissions: true,
-      goals: true,
     },
   },
 
@@ -456,8 +440,6 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       onlineBooking: true,
       campaigns: true,
       automations: true,
-      loyalty: true,
-      coupons: true,
       // Administração
       team: true,
       basicRbac: true,
@@ -474,10 +456,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       audit: true,
       dataRetention: true,
       onaDashboard: true,
-      // Gamificação
-      gamification: true,
+      // Financeiro Profissional
       commissions: true,
-      goals: true,
     },
   },
 };
@@ -553,8 +533,6 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   onlineBooking: 'Agendamento Online',
   campaigns: 'Campanhas',
   automations: 'Automações',
-  loyalty: 'Fidelidade e Cashback',
-  coupons: 'Cupons',
   // Administração
   team: 'Equipe',
   basicRbac: 'Permissões Básicas',
@@ -571,10 +549,8 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   audit: 'Auditoria',
   dataRetention: 'Retenção de Dados',
   onaDashboard: 'Dashboard ONA',
-  // Gamificação
-  gamification: 'Gamificação',
+  // Financeiro Profissional
   commissions: 'Comissões',
-  goals: 'Metas',
 };
 
 export const LIMIT_LABELS: Record<LimitKey, string> = {

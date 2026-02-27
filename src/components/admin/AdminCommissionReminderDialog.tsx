@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
 const INTERVAL_MS = 45 * 60 * 1000; // 45 minutos
-const STORAGE_KEY = "beautygest_admin_commission_reminder_last";
+const STORAGE_KEY = "clinicnest_admin_commission_reminder_last";
 
 interface StaffWithoutCommission {
   user_id: string;

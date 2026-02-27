@@ -63,8 +63,8 @@ export function ProductFormDialog({
     <FormDrawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Novo Produto"
-      description="Cadastre um novo produto no estoque"
+      title="Novo Insumo"
+      description="Cadastre um novo insumo no estoque"
       width="lg"
       onSubmit={handleSubmit}
       isSubmitting={isSaving}
@@ -81,7 +81,7 @@ export function ProductFormDialog({
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex: Shampoo Profissional"
+                placeholder="Ex: Soro Fisiológico 500ml"
                 data-tour="products-form-name"
               />
             </div>

@@ -494,7 +494,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     <div class="hero">
       <div class="heroTop">
         <div>
-          <div class="brand">BeautyGest</div>
+          <div class="brand">ClinicNest</div>
           <div class="reportTitle">Relatório Financeiro</div>
         </div>
         <div class="heroMeta">
@@ -880,7 +880,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             color: #334155;
           ">
             <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
-              <div style="font-weight: 800; letter-spacing: .2px;">BeautyGest</div>
+              <div style="font-weight: 800; letter-spacing: .2px;">ClinicNest</div>
               <div style="text-align:right;">
                 <span style="font-weight: 700;">Relatório Financeiro</span>
                 <span style="color:#64748b; margin-left: 8px;">${escapeHtml(formatDateBR(start))} a ${escapeHtml(

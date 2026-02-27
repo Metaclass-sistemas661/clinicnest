@@ -21,8 +21,13 @@ if (sentryDsn) {
     dsn: sentryDsn,
     environment: (buildInfo.env ?? "unknown") as string,
     release: (buildInfo.commit ?? "dev") as string,
-    integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: 0,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+    ],
+    tracesSampleRate: buildInfo.env === "production" ? 0.1 : 1.0,
+    replaysSessionSampleRate: 0.05,
+    replaysOnErrorSampleRate: 1.0,
   });
   Sentry.setTag("build_ref", buildInfo.ref);
   Sentry.setTag("build_time", buildInfo.time);

@@ -182,7 +182,7 @@ export interface CreateClientPackageResult {
   package_id: string;
 }
 
-export interface ClientTimelineEventRow {
+export interface PatientTimelineEventRow {
   event_at: string;
   kind: string;
   title: string;
@@ -190,34 +190,15 @@ export interface ClientTimelineEventRow {
   meta: Record<string, unknown>;
 }
 
+/** @deprecated Use PatientTimelineEventRow instead */
+export type ClientTimelineEventRow = PatientTimelineEventRow;
+
 export interface RevertPackageConsumptionResult {
   success: boolean;
   reverted: boolean;
   reason?: string;
   package_id?: string;
   appointment_id?: string;
-}
-
-// ─── Cashback / Fidelidade (Milestone 6) ───────────────────
-
-export interface CashbackWalletRow {
-  tenant_id: string;
-  client_id: string;
-  balance: number;
-  updated_at: string;
-}
-
-export interface CashbackLedgerRow {
-  id: string;
-  tenant_id: string;
-  client_id: string;
-  appointment_id: string | null;
-  order_id: string | null;
-  delta_amount: number;
-  reason: "earn" | "redeem" | "adjust" | "revert";
-  notes: string | null;
-  actor_user_id: string | null;
-  created_at: string;
 }
 
 // ─── Campanhas (Milestone 6) ──────────────────────────────

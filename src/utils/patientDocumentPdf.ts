@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { generateQRCodeDataUrl, getVerificationUrl } from "@/components/signature/DocumentQRCode";
+import { logger } from "@/lib/logger";
 
 const MARGIN = 20;
 const PAGE_W = 210;
@@ -68,7 +70,18 @@ interface CertificateData {
   content: string;
   notes: string | null;
   professional_name: string;
+  professional_crm?: string | null;
+  professional_uf?: string | null;
+  professional_specialty?: string | null;
   clinic_name: string;
+  clinic_address?: string | null;
+  clinic_phone?: string | null;
+  clinic_cnpj?: string | null;
+  patient_name?: string | null;
+  patient_cpf?: string | null;
+  patient_birth_date?: string | null;
+  digital_signature?: string | null;
+  signed_at?: string | null;
 }
 
 function certTypeLabel(t: string): string {
@@ -81,9 +94,10 @@ function certTypeLabel(t: string): string {
   }
 }
 
-export function generateCertificatePdf(cert: CertificateData) {
+export async function generateCertificatePdf(cert: CertificateData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const title = certTypeLabel(cert.certificate_type);
+  const pageH = doc.internal.pageSize.getHeight();
 
   addHeader(doc, cert.clinic_name, cert.professional_name);
 
@@ -95,10 +109,50 @@ export function generateCertificatePdf(cert: CertificateData) {
   doc.text(title, MARGIN, y);
   y += 10;
 
+  // Dados do estabelecimento (CFM recomenda)
+  if (cert.clinic_address || cert.clinic_phone || cert.clinic_cnpj) {
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    const clinicInfo: string[] = [];
+    if (cert.clinic_address) clinicInfo.push(cert.clinic_address);
+    if (cert.clinic_phone) clinicInfo.push(`Tel: ${cert.clinic_phone}`);
+    if (cert.clinic_cnpj) clinicInfo.push(`CNPJ: ${cert.clinic_cnpj}`);
+    doc.text(clinicInfo.join(" · "), MARGIN, y);
+    y += 6;
+  }
+
+  // Dados do paciente (obrigatório CFM)
+  if (cert.patient_name) {
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(MARGIN, y - 2, CONTENT_W, cert.patient_cpf || cert.patient_birth_date ? 16 : 10, 2, 2, "F");
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(71, 85, 105);
+    doc.text("PACIENTE", MARGIN + 3, y + 3);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30, 41, 59);
+    doc.text(cert.patient_name, MARGIN + 25, y + 3);
+    
+    if (cert.patient_cpf || cert.patient_birth_date) {
+      y += 6;
+      const patientDetails: string[] = [];
+      if (cert.patient_cpf) patientDetails.push(`CPF: ${cert.patient_cpf}`);
+      if (cert.patient_birth_date) {
+        patientDetails.push(`Nascimento: ${format(new Date(cert.patient_birth_date), "dd/MM/yyyy")}`);
+      }
+      doc.setFontSize(8);
+      doc.text(patientDetails.join("   "), MARGIN + 25, y + 3);
+    }
+    y += 12;
+  }
+
   y = addField(doc, "Data de Emissão",
     format(new Date(cert.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y);
 
-  if (cert.days_off != null) {
+  if (cert.days_off != null && cert.days_off > 0) {
     let afastamento = `${cert.days_off} dia(s)`;
     if (cert.start_date && cert.end_date) {
       afastamento += ` — de ${format(new Date(cert.start_date), "dd/MM/yyyy")} a ${format(new Date(cert.end_date), "dd/MM/yyyy")}`;
@@ -107,7 +161,7 @@ export function generateCertificatePdf(cert: CertificateData) {
   }
 
   if (cert.cid_code) {
-    y = addField(doc, "CID-10", cert.cid_code, y);
+    y = addField(doc, "CID-10", cert.cid_code + " (com autorização do paciente)", y);
   }
 
   y += 2;
@@ -119,6 +173,70 @@ export function generateCertificatePdf(cert: CertificateData) {
 
   if (cert.notes) {
     y = addField(doc, "Observações", cert.notes, y);
+  }
+
+  // Área de assinatura do profissional (CFM obrigatório)
+  y = Math.max(y, pageH - 70);
+  y += 5;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 8;
+
+  // Assinatura centralizada
+  const sigX = PAGE_W / 2;
+  doc.setDrawColor(100, 100, 100);
+  doc.line(sigX - 40, y + 15, sigX + 40, y + 15);
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(30, 30, 30);
+  doc.text(cert.professional_name, sigX, y + 21, { align: "center" });
+  
+  if (cert.professional_crm) {
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const crmText = cert.professional_uf 
+      ? `${cert.professional_crm}/${cert.professional_uf}` 
+      : cert.professional_crm;
+    doc.text(crmText, sigX, y + 26, { align: "center" });
+  }
+  
+  if (cert.professional_specialty) {
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(cert.professional_specialty, sigX, y + 31, { align: "center" });
+  }
+
+  // Assinatura digital com QR Code (se disponível)
+  if (cert.digital_signature && cert.signed_at) {
+    y += 40;
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
+    
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(22, 163, 74);
+    doc.text("DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 3);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Assinado em: ${format(new Date(cert.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN + 3, y + 8);
+    
+    doc.setFontSize(5);
+    doc.text(`Hash: ${cert.digital_signature}`, MARGIN + 3, y + 11);
+    
+    doc.setFontSize(6);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Verifique a autenticidade:", MARGIN + 3, y + 16);
+    doc.setTextColor(13, 148, 136);
+    doc.text(getVerificationUrl(cert.digital_signature), MARGIN + 3, y + 20);
+    
+    try {
+      const qrDataUrl = await generateQRCodeDataUrl(cert.digital_signature, 60);
+      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y - 1, 20, 20);
+    } catch (e) {
+      logger.error("Error generating QR code for PDF:", e);
+    }
   }
 
   addFooter(doc);
@@ -137,7 +255,13 @@ interface PrescriptionData {
   medications: string;
   instructions: string;
   professional_name: string;
+  professional_crm?: string | null;
+  professional_uf?: string | null;
   clinic_name: string;
+  patient_name?: string;
+  patient_cpf?: string | null;
+  digital_hash?: string | null;
+  signed_at?: string | null;
 }
 
 function rxTypeLabel(t: string): string {
@@ -150,7 +274,7 @@ function rxTypeLabel(t: string): string {
   }
 }
 
-export function generatePrescriptionPdf(rx: PrescriptionData) {
+export async function generatePrescriptionPdf(rx: PrescriptionData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const title = rxTypeLabel(rx.prescription_type);
 
@@ -175,6 +299,10 @@ export function generatePrescriptionPdf(rx: PrescriptionData) {
     y = addField(doc, "Validade", validade, y);
   }
 
+  if (rx.patient_name) {
+    y = addField(doc, "Paciente", rx.patient_name + (rx.patient_cpf ? ` (CPF: ${rx.patient_cpf})` : ""), y);
+  }
+
   y += 2;
   doc.setDrawColor(220, 220, 220);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
@@ -184,6 +312,57 @@ export function generatePrescriptionPdf(rx: PrescriptionData) {
 
   if (rx.instructions) {
     y = addField(doc, "Instruções de Uso", rx.instructions, y);
+  }
+
+  y += 10;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 8;
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(60, 60, 60);
+  doc.text(rx.professional_name, PAGE_W / 2, y, { align: "center" });
+  y += 5;
+
+  if (rx.professional_crm) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const crmText = rx.professional_uf 
+      ? `CRM: ${rx.professional_crm}/${rx.professional_uf}` 
+      : `CRM: ${rx.professional_crm}`;
+    doc.text(crmText, PAGE_W / 2, y, { align: "center" });
+    y += 5;
+  }
+
+  if (rx.signed_at && rx.digital_hash) {
+    y += 5;
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(MARGIN, y, PAGE_W - 2 * MARGIN, 28, 2, 2, "F");
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(22, 163, 74);
+    doc.text("DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Assinado em: ${format(new Date(rx.signed_at), "dd/MM/yyyy 'às' HH:mm")}`, MARGIN + 3, y + 10);
+    doc.setFontSize(5);
+    doc.text(`Hash: ${rx.digital_hash.substring(0, 48)}...`, MARGIN + 3, y + 14);
+    
+    doc.setFontSize(6);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Verifique a autenticidade:", MARGIN + 3, y + 19);
+    doc.setTextColor(13, 148, 136);
+    doc.text(getVerificationUrl(rx.digital_hash), MARGIN + 3, y + 23);
+    
+    try {
+      const qrDataUrl = await generateQRCodeDataUrl(rx.digital_hash, 60);
+      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y + 2, 20, 20);
+    } catch (e) {
+      logger.error("Error generating QR code for PDF:", e);
+    }
   }
 
   addFooter(doc);
@@ -290,6 +469,7 @@ interface MedicalRecordPdfData {
   signed_at: string | null;
   signed_by_name: string | null;
   signed_by_crm: string | null;
+  signed_by_uf?: string | null;
 }
 
 function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
@@ -301,7 +481,7 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
   return y;
 }
 
-export function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
+export async function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageH = doc.internal.pageSize.getHeight();
 
@@ -365,29 +545,46 @@ export function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
   if (r.prescriptions) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Prescrições", r.prescriptions, y); }
   if (r.notes) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Observações", r.notes, y); }
 
-  // Assinatura digital
+  // Assinatura digital com QR Code
   if (r.digital_hash && r.signed_at) {
-    y = checkPageBreak(doc, y, 25);
+    y = checkPageBreak(doc, y, 35);
     y += 5;
     doc.setDrawColor(200, 200, 200);
     doc.line(MARGIN, y, PAGE_W - MARGIN, y);
     y += 6;
 
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(13, 148, 136);
-    doc.text("ASSINATURA DIGITAL", MARGIN, y);
-    y += 5;
+    doc.text("ASSINATURA DIGITAL", MARGIN + 3, y + 3);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80, 80, 80);
-    if (r.signed_by_name) doc.text(`Profissional: ${r.signed_by_name}${r.signed_by_crm ? ` — ${r.signed_by_crm}` : ""}`, MARGIN, y);
-    y += 4;
-    doc.text(`Assinado em: ${format(new Date(r.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN, y);
-    y += 4;
-    doc.setFontSize(6);
+    const crmText = r.signed_by_crm 
+      ? (r.signed_by_uf ? `${r.signed_by_crm}/${r.signed_by_uf}` : r.signed_by_crm)
+      : "";
+    if (r.signed_by_name) doc.text(`Profissional: ${r.signed_by_name}${crmText ? ` — ${crmText}` : ""}`, MARGIN + 3, y + 8);
+    doc.text(`Assinado em: ${format(new Date(r.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN + 3, y + 12);
+    
+    doc.setFontSize(5);
     doc.setTextColor(140, 140, 140);
-    doc.text(`SHA-256: ${r.digital_hash}`, MARGIN, y);
+    doc.text(`SHA-256: ${r.digital_hash}`, MARGIN + 3, y + 16);
+    
+    doc.setFontSize(6);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Verifique:", MARGIN + 3, y + 21);
+    doc.setTextColor(13, 148, 136);
+    doc.text(getVerificationUrl(r.digital_hash), MARGIN + 18, y + 21);
+    
+    try {
+      const qrDataUrl = await generateQRCodeDataUrl(r.digital_hash, 60);
+      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y, 20, 20);
+    } catch (e) {
+      logger.error("Error generating QR code for PDF:", e);
+    }
   }
 
   addFooter(doc);
@@ -412,11 +609,12 @@ interface EvolutionPdfData {
   notes: string | null;
   signedByName: string | null;
   signedByCrm: string | null;
+  signedByUf?: string | null;
   signedAt: string | null;
   digitalHash: string | null;
 }
 
-export function generateEvolutionPdf(e: EvolutionPdfData) {
+export async function generateEvolutionPdf(e: EvolutionPdfData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageH = doc.internal.pageSize.getHeight();
 
@@ -486,7 +684,7 @@ export function generateEvolutionPdf(e: EvolutionPdfData) {
   }
 
   if (e.signedByName) {
-    if (y > pageH - 35) { doc.addPage(); y = 20; }
+    if (y > pageH - 45) { doc.addPage(); y = 20; }
     y += 5;
     doc.setDrawColor(200, 200, 200);
     doc.line(MARGIN, y, MARGIN + 70, y);
@@ -497,7 +695,8 @@ export function generateEvolutionPdf(e: EvolutionPdfData) {
     if (e.signedByCrm) {
       y += 4;
       doc.setFont("helvetica", "normal");
-      doc.text(`CRM: ${e.signedByCrm}`, MARGIN, y);
+      const crmText = e.signedByUf ? `CRM: ${e.signedByCrm}/${e.signedByUf}` : `CRM: ${e.signedByCrm}`;
+      doc.text(crmText, MARGIN, y);
     }
     if (e.signedAt) {
       y += 4;
@@ -506,10 +705,26 @@ export function generateEvolutionPdf(e: EvolutionPdfData) {
       doc.text(`Assinado em: ${format(new Date(e.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN, y);
     }
     if (e.digitalHash) {
-      y += 4;
+      y += 6;
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(MARGIN, y - 2, CONTENT_W, 22, 2, 2, "F");
+      
       doc.setFontSize(6);
       doc.setTextColor(140, 140, 140);
-      doc.text(`SHA-256: ${e.digitalHash}`, MARGIN, y);
+      doc.text(`SHA-256: ${e.digitalHash}`, MARGIN + 3, y + 3);
+      
+      doc.setFontSize(6);
+      doc.setTextColor(80, 80, 80);
+      doc.text("Verifique a autenticidade:", MARGIN + 3, y + 8);
+      doc.setTextColor(13, 148, 136);
+      doc.text(getVerificationUrl(e.digitalHash), MARGIN + 3, y + 12);
+      
+      try {
+        const qrDataUrl = await generateQRCodeDataUrl(e.digitalHash, 50);
+        doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 18, y - 1, 16, 16);
+      } catch (err) {
+        logger.error("Error generating QR code for PDF:", err);
+      }
     }
   }
 

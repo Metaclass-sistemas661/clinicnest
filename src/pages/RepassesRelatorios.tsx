@@ -140,7 +140,7 @@ export default function RepassesRelatorios() {
       .select(`
         professional_id,
         amount,
-        service_value,
+        service_price,
         profiles!commission_payments_professional_id_fkey(full_name)
       `)
       .eq("tenant_id", profile!.tenant_id)
@@ -160,7 +160,7 @@ export default function RepassesRelatorios() {
           atendimentos: 0,
         };
       }
-      acc[profId].total_faturado += Number(item.service_value) || 0;
+      acc[profId].total_faturado += Number(item.service_price) || 0;
       acc[profId].total_comissao += Number(item.amount) || 0;
       acc[profId].atendimentos += 1;
       return acc;
@@ -181,7 +181,7 @@ export default function RepassesRelatorios() {
       .from("commission_payments")
       .select(`
         amount,
-        service_value,
+        service_price,
         appointments!inner(
           insurance_plan_id,
           insurance_plans(name)
@@ -207,7 +207,7 @@ export default function RepassesRelatorios() {
           atendimentos: 0,
         };
       }
-      acc[insuranceId].total_faturado += Number(item.service_value) || 0;
+      acc[insuranceId].total_faturado += Number(item.service_price) || 0;
       acc[insuranceId].total_comissao += Number(item.amount) || 0;
       acc[insuranceId].atendimentos += 1;
       return acc;
@@ -228,7 +228,7 @@ export default function RepassesRelatorios() {
       .from("commission_payments")
       .select(`
         amount,
-        service_value,
+        service_price,
         appointments!inner(
           service_id,
           services(name)
@@ -254,7 +254,7 @@ export default function RepassesRelatorios() {
           atendimentos: 0,
         };
       }
-      acc[serviceId].total_faturado += Number(item.service_value) || 0;
+      acc[serviceId].total_faturado += Number(item.service_price) || 0;
       acc[serviceId].total_comissao += Number(item.amount) || 0;
       acc[serviceId].atendimentos += 1;
       return acc;
@@ -276,7 +276,7 @@ export default function RepassesRelatorios() {
 
       const { data, error } = await supabase
         .from("commission_payments")
-        .select("amount, service_value")
+        .select("amount, service_price")
         .eq("tenant_id", profile!.tenant_id)
         .gte("created_at", `${monthStart}T00:00:00`)
         .lte("created_at", `${monthEnd}T23:59:59`);
@@ -286,7 +286,7 @@ export default function RepassesRelatorios() {
       const totals = (data || []).reduce(
         (acc, item) => ({
           total_comissao: acc.total_comissao + (Number(item.amount) || 0),
-          total_faturado: acc.total_faturado + (Number(item.service_value) || 0),
+          total_faturado: acc.total_faturado + (Number(item.service_price) || 0),
         }),
         { total_comissao: 0, total_faturado: 0 }
       );

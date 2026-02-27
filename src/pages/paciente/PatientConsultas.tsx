@@ -103,6 +103,55 @@ export default function PatientConsultas() {
     void fetchAppointments();
   }, [filter]);
 
+  // ── Supabase Realtime: escutar alterações de consultas em tempo real ──
+  useEffect(() => {
+    let channel: ReturnType<typeof supabasePatient.channel> | null = null;
+
+    const setupRealtime = async () => {
+      try {
+        const { data: { user } } = await supabasePatient.auth.getUser();
+        if (!user) return;
+
+        const { data: link } = await supabasePatient
+          .from("patient_profiles")
+          .select("client_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .limit(1)
+          .single();
+
+        if (!link?.client_id) return;
+
+        channel = supabasePatient
+          .channel("patient-appointments-realtime")
+          .on(
+            "postgres_changes" as any,
+            {
+              event: "*",
+              schema: "public",
+              table: "appointments",
+              filter: `client_id=eq.${link.client_id}`,
+            },
+            () => {
+              // Qualquer alteração nos agendamentos — recarregar
+              void fetchAppointments();
+            }
+          )
+          .subscribe();
+      } catch {
+        // Falha no realtime não deve impedir o uso
+      }
+    };
+
+    void setupRealtime();
+
+    return () => {
+      if (channel) {
+        void supabasePatient.removeChannel(channel);
+      }
+    };
+  }, [filter]);
+
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {

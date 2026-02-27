@@ -13,7 +13,8 @@ type TriggerType =
   | "appointment_reminder_2h"
   | "appointment_completed"
   | "birthday"
-  | "client_inactive_days";
+  | "client_inactive_days"
+  | "return_reminder";
 
 type Channel = "whatsapp" | "email";
 
@@ -143,7 +144,7 @@ async function sendWhatsapp(
 
 // ─── Email via Resend ──────────────────────────────────────────────────────────
 
-function buildEmailHtml(message: string, salonName: string): string {
+function buildEmailHtml(message: string, clinicName: string): string {
   const escaped = message
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -154,7 +155,7 @@ function buildEmailHtml(message: string, salonName: string): string {
 <body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:24px">
   <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
     <div style="background:linear-gradient(135deg,#7c3aed,#ec4899);padding:24px 32px">
-      <h1 style="color:#fff;margin:0;font-size:20px">${salonName || "Sua Clínica"}</h1>
+      <h1 style="color:#fff;margin:0;font-size:20px">${clinicName || "Sua Clínica"}</h1>
     </div>
     <div style="padding:24px 32px;color:#333;font-size:14px;line-height:1.6">
       ${lines}
@@ -254,9 +255,9 @@ async function dispatch(
       });
       return "skipped";
     }
-    const salonName = tenant.name ?? "";
-    const subject = salonName ? `Mensagem de ${salonName}` : "Mensagem da sua clínica";
-    const html = buildEmailHtml(message, salonName);
+    const clinicName = tenant.name ?? "";
+    const subject = clinicName ? `Mensagem de ${clinicName}` : "Mensagem da sua clínica";
+    const html = buildEmailHtml(message, clinicName);
     result = await sendEmail(resendKey, email, clientName, subject, html);
   }
 
@@ -398,7 +399,7 @@ async function processAppointmentTrigger(
         date: formatDateBR(appt.scheduled_at ?? ""),
         time: formatTimeBR(appt.scheduled_at ?? ""),
         professional_name: profName,
-        salon_name: tenant.name ?? "",
+        clinic_name: tenant.name ?? "",
         nps_link: npsLink,
       };
 
@@ -479,7 +480,7 @@ async function processBirthdayTrigger(
         date: "",
         time: "",
         professional_name: "",
-        salon_name: tenant.name ?? "",
+        clinic_name: tenant.name ?? "",
         nps_link: "",
       };
 
@@ -502,6 +503,152 @@ async function processBirthdayTrigger(
 }
 
 // ─── Trigger: client_inactive_days ────────────────────────────────────────────
+
+type ReturnReminderRow = {
+  id: string;
+  client_id: string;
+  professional_id: string | null;
+  return_date: string;
+  reason: string | null;
+  status: string;
+  tenant_id: string;
+};
+
+async function processReturnReminderTrigger(
+  supabase: SupabaseClient,
+  rules: AutomationRule[],
+  publicUrl: string,
+  resendKey: string,
+): Promise<DispatchResult> {
+  const totals: DispatchResult = { sent: 0, skipped: 0, failed: 0 };
+  if (!rules.length) return totals;
+
+  const byTenant = new Map<string, AutomationRule[]>();
+  for (const r of rules) {
+    const list = byTenant.get(r.tenant_id) ?? [];
+    list.push(r);
+    byTenant.set(r.tenant_id, list);
+  }
+
+  for (const [tenantId, tenantRules] of byTenant) {
+    const { data: tenant } = (await supabase
+      .from("tenants")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+      .eq("id", tenantId)
+      .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
+
+    if (!tenant) {
+      totals.skipped += tenantRules.length;
+      continue;
+    }
+
+    for (const rule of tenantRules) {
+      // Get days_before from trigger_config (default 3 days)
+      const daysBefore = Math.max(1, Number(rule.trigger_config?.days_before ?? 3));
+      
+      // Calculate target date range (returns scheduled for X days from now)
+      const now = new Date();
+      const targetDate = new Date(now.getTime() + daysBefore * 86_400_000);
+      const targetDateStr = targetDate.toISOString().split("T")[0];
+      
+      // Get return reminders that need notification
+      const { data: returns, error: returnErr } = (await supabase
+        .from("return_reminders")
+        .select("id, client_id, professional_id, return_date, reason, status, tenant_id")
+        .eq("tenant_id", tenantId)
+        .eq("status", "pending")
+        .eq("return_date", targetDateStr)
+        .limit(200)) as unknown as SelectResult<ReturnReminderRow[] | null>;
+
+      if (returnErr) {
+        log("return reminder query error", { tenant: tenantId, error: getErrorMessage(returnErr) });
+        continue;
+      }
+
+      if (!returns?.length) continue;
+
+      // Batch-fetch client and professional data
+      const clientIds = [...new Set(returns.map((r) => r.client_id))];
+      const profIds = [...new Set(returns.map((r) => r.professional_id).filter((v): v is string => Boolean(v)))];
+
+      const [clientsRes, profsRes] = await Promise.all([
+        (supabase.from("clients").select("id, name, phone, email").in("id", clientIds)) as unknown as SelectResult<ClientRow[] | null>,
+        profIds.length
+          ? ((supabase.from("profiles").select("id, full_name").in("id", profIds)) as unknown as SelectResult<ProfileRow[] | null>)
+          : Promise.resolve({ data: [] as ProfileRow[] }),
+      ]);
+
+      const clientMap = new Map<string, ClientRow>(
+        (clientsRes.data ?? []).map((c) => [String(c.id), c]),
+      );
+      const profMap = new Map<string, string>(
+        (profsRes.data ?? []).map((p) => [String(p.id), String(p.full_name ?? "")]),
+      );
+
+      for (const returnItem of returns) {
+        const client = clientMap.get(returnItem.client_id);
+        if (!client) {
+          totals.skipped++;
+          continue;
+        }
+
+        const profName = returnItem.professional_id ? (profMap.get(returnItem.professional_id) ?? "") : "";
+        
+        // Generate confirmation link if available
+        let confirmLink = "";
+        try {
+          const { data: tokenData } = await supabase.rpc("create_return_confirmation_link", {
+            p_tenant_id: tenantId,
+            p_return_id: returnItem.id,
+            p_expires_hours: 72,
+          });
+          if (tokenData && publicUrl) {
+            confirmLink = `${publicUrl}/confirmar-retorno/${tokenData}`;
+          }
+        } catch {
+          // Token creation failed, continue without link
+        }
+
+        const vars: Record<string, string> = {
+          client_name: client.name ?? "",
+          service_name: "",
+          date: formatDateBR(returnItem.return_date),
+          time: "",
+          professional_name: profName,
+          clinic_name: tenant.name ?? "",
+          nps_link: "",
+          return_reason: returnItem.reason ?? "",
+          confirm_link: confirmLink,
+        };
+
+        const message = interpolate(rule.message_template, vars);
+        const r = await dispatch(
+          supabase, rule, tenant,
+          "client", returnItem.id, `return-${returnItem.id}`,
+          client.phone ?? "", client.email ?? "", client.name ?? "",
+          message, resendKey,
+        );
+
+        if (r === "sent") {
+          totals.sent++;
+          // Update return reminder status to notified
+          await supabase
+            .from("return_reminders")
+            .update({ status: "notified", notified_at: new Date().toISOString() })
+            .eq("id", returnItem.id);
+        } else if (r === "failed") {
+          totals.failed++;
+        } else {
+          totals.skipped++;
+        }
+      }
+    }
+  }
+
+  return totals;
+}
+
+// ─── Trigger: client_inactive_days (original) ─────────────────────────────────
 
 async function processInactiveTrigger(
   supabase: SupabaseClient,
@@ -593,7 +740,7 @@ async function processInactiveTrigger(
             date: "",
             time: "",
             professional_name: "",
-            salon_name: tenant.name ?? "",
+            clinic_name: tenant.name ?? "",
             nps_link: "",
           };
 
@@ -677,19 +824,20 @@ serve(async (req: Request) => {
     log("Worker started", { total_rules: rules.length, since_minutes: sinceMinutes });
 
     // Process all trigger types in parallel
-    const [created, r24h, r2h, completed, birthday, inactive] = await Promise.allSettled([
+    const [created, r24h, r2h, completed, birthday, inactive, returnReminder] = await Promise.allSettled([
       processAppointmentTrigger(supabase, byType("appointment_created"), "appointment_created", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_24h"), "appointment_reminder_24h", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_2h"), "appointment_reminder_2h", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_completed"), "appointment_completed", sinceMinutes, publicUrl, resendKey),
       processBirthdayTrigger(supabase, byType("birthday"), resendKey),
       processInactiveTrigger(supabase, byType("client_inactive_days"), resendKey),
+      processReturnReminderTrigger(supabase, byType("return_reminder"), publicUrl, resendKey),
     ]);
 
     const extract = (r: PromiseSettledResult<DispatchResult>): DispatchResult =>
       r.status === "fulfilled" ? r.value : { sent: 0, skipped: 0, failed: 0 };
 
-    const totals = [created, r24h, r2h, completed, birthday, inactive].reduce(
+    const totals = [created, r24h, r2h, completed, birthday, inactive, returnReminder].reduce(
       (acc, r) => {
         const v = extract(r);
         return { sent: acc.sent + v.sent, skipped: acc.skipped + v.skipped, failed: acc.failed + v.failed };

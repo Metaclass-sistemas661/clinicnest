@@ -44,7 +44,7 @@ export default function NovaCampanha() {
     setIsLoadingClients(true);
     try {
       const { data } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, name, email")
         .eq("tenant_id", profile.tenant_id)
         .not("email", "is", null)
@@ -119,7 +119,7 @@ export default function NovaCampanha() {
     }
   };
 
-  const defaultSalonName = tenant?.name ?? profile?.full_name ?? "Minha Clínica";
+  const defaultClinicName = tenant?.name ?? profile?.full_name ?? "Minha Clínica";
 
   return (
     <MainLayout
@@ -291,7 +291,7 @@ export default function NovaCampanha() {
                   <iframe
                     title="preview"
                     className="w-full h-96 rounded-lg"
-                    srcDoc={html.replace(/\{\{nome_clinica\}\}/g, defaultSalonName).replace(/\{\{nome_paciente\}\}/g, "João da Silva")}
+                    srcDoc={html.replace(/\{\{nome_clinica\}\}/g, defaultClinicName).replace(/\{\{nome_paciente\}\}/g, "João da Silva")}
                     sandbox="allow-same-origin"
                   />
                 </div>

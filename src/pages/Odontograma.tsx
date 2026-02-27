@@ -27,6 +27,7 @@ import { Smile, Trash2, Search, Loader2, History, ChevronLeft, ChevronRight, Ale
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 // ─── Tooth data ──────────────────────────────────────────────────────────────
 
@@ -152,7 +153,7 @@ export default function Odontograma() {
   const searchClients = async () => {
     if (!profile?.tenant_id) return;
     const { data } = await supabase
-      .from("clients")
+      .from("patients")
       .select("id, name")
       .eq("tenant_id", profile.tenant_id)
       .ilike("name", `%${clientSearch}%`)
@@ -196,7 +197,7 @@ export default function Odontograma() {
         setTeeth(new Map());
       }
     } catch (err) {
-      console.error('Erro ao carregar odontogramas:', err);
+      logger.error('Erro ao carregar odontogramas:', err);
       toast.error("Erro ao carregar histórico de odontogramas");
     } finally {
       setIsLoading(false);
@@ -208,7 +209,7 @@ export default function Odontograma() {
       .rpc('get_odontogram_teeth', { p_odontogram_id: odontogramId });
 
     if (error) {
-      console.error('Erro ao carregar dentes:', error);
+      logger.error('Erro ao carregar dentes:', error);
       return;
     }
 
@@ -296,7 +297,7 @@ export default function Odontograma() {
       // Recarrega o histórico
       await handleSelectClient(selectedClient);
     } catch (err: any) {
-      console.error('Erro ao salvar odontograma:', err);
+      logger.error('Erro ao salvar odontograma:', err);
       toast.error(err.message || "Erro ao salvar odontograma");
     } finally {
       setIsSaving(false);

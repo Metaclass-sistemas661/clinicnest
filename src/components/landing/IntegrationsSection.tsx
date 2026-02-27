@@ -9,6 +9,8 @@ import {
   CheckCircle,
   Clock,
   Database,
+  Brain,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +51,15 @@ const integrations = [
       { name: "SMS", description: "Lembretes", icon: Globe },
     ],
   },
+  {
+    category: "Inteligência Artificial",
+    items: [
+      { name: "Agente IA (Nest)", description: "Assistente da equipe", icon: Bot },
+      { name: "Chat IA Paciente", description: "Atendimento 24/7", icon: Brain },
+      { name: "Triagem IA", description: "Classificação de urgência", icon: Activity },
+      { name: "IA Clínica", description: "CID-10, resumos, transcrição", icon: Zap },
+    ],
+  },
 ];
 
 const complianceFeatures = [
@@ -75,10 +86,10 @@ const complianceFeatures = [
   },
   {
     name: "Assinatura Digital",
-    description: "Certificados digitais",
+    description: "Certificados A1, A3 e Nuvem",
     icon: Lock,
     status: "Implementado",
-    details: ["Suporte a certificados", "Assinatura de documentos", "Validação", "Histórico"],
+    details: ["Certificado A1 (arquivo .pfx)", "Certificado A3 (token/cartão)", "Certificado Nuvem (BirdID)", "Histórico de assinaturas"],
   },
   {
     name: "SNGPC",
@@ -132,7 +143,7 @@ export function IntegrationsSection() {
 
         <div className="mb-20">
           <h3 className="font-display text-2xl font-bold text-center mb-10">Integrações Disponíveis</h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {integrations.map((group) => (
               <div key={group.category} className="p-6 rounded-2xl border bg-card">
                 <h4 className="font-semibold text-lg mb-4 text-center">{group.category}</h4>

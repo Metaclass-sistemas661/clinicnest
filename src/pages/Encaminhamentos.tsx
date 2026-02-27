@@ -119,7 +119,7 @@ export default function Encaminhamentos() {
     setIsLoading(true);
     try {
       const [cRes, pRes, sRes, rRes] = await Promise.all([
-        supabase.from("clients").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
+        supabase.from("patients").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
         supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
         supabase.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
         supabase.from("referrals")

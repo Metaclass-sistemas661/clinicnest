@@ -32,9 +32,11 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { AiTriageChatbot } from "@/components/ai";
 
 interface Client {
   id: string;
@@ -136,7 +138,7 @@ export default function Triagem() {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, name, phone")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
@@ -453,10 +455,11 @@ export default function Triagem() {
         submitLabel="Salvar Triagem"
       >
         <Tabs defaultValue="identificacao" className="mt-2">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="identificacao">Identificação</TabsTrigger>
             <TabsTrigger value="sinais">Sinais Vitais</TabsTrigger>
             <TabsTrigger value="anamnese">Anamnese</TabsTrigger>
+            <TabsTrigger value="ia-triage" className="gap-1"><Sparkles className="h-3 w-3" />IA</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Identificação */}
@@ -644,6 +647,28 @@ export default function Triagem() {
                 rows={2}
               />
             </div>
+          </TabsContent>
+
+          {/* Tab 4: Triagem IA */}
+          <TabsContent value="ia-triage" className="mt-4">
+            <AiTriageChatbot
+              onComplete={(result) => {
+                if (result.urgency) {
+                  const urgencyMap: Record<string, string> = {
+                    EMERGENCIA: "emergencia",
+                    URGENTE: "urgente",
+                    ROTINA: "nao_urgente",
+                  };
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    priority: urgencyMap[result.urgency!] || prev.priority,
+                    chief_complaint: prev.chief_complaint || result.messages.filter((m: any) => m.role === "user").map((m: any) => m.content).join(". "),
+                  }));
+                  toast.success(`Triagem IA: ${result.specialty} — ${result.urgency}`);
+                }
+              }}
+              className="h-[400px]"
+            />
           </TabsContent>
         </Tabs>
       </FormDrawer>

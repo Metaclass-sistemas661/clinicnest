@@ -33,8 +33,8 @@ interface RoleTemplate {
 const RESOURCE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   agenda: "Agenda",
-  clientes: "Pacientes (cadastro)",
-  clientes_clinico: "Pacientes (clínico)",
+  pacientes: "Pacientes (cadastro)",
+  pacientes_clinico: "Pacientes (clínico)",
   prontuarios: "Prontuários",
   receituarios: "Receituários",
   laudos: "Laudos & Exames",

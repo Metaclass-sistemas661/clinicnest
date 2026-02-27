@@ -186,6 +186,3 @@ export const TUSS_STATS = {
   get ambulatorial() { return TUSS_AMBULATORIAL_COMPLETO.length; },
   get complementares() { return TUSS_COMPLEMENTARES.length; },
 };
-
-// Log do total ao importar (para debug)
-console.log(`[TUSS] Total de procedimentos carregados: ${TUSS_DATA.length}`);

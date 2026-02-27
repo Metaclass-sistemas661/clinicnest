@@ -28,6 +28,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-salon-flow/
-salon-flow_BACKUP_*/

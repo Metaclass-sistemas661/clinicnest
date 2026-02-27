@@ -27,7 +27,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: "2.6.0",
     date: "2026-02-23",
     changes: [
-      { type: "feature", title: "Página de detalhes do paciente", description: "Nova página /clientes/:id com todas as informações do paciente em um só lugar" },
+      { type: "feature", title: "Página de detalhes do paciente", description: "Nova página /pacientes/:id com todas as informações do paciente em um só lugar" },
       { type: "feature", title: "Atalhos de teclado", description: "Pressione ? para ver todos os atalhos disponíveis" },
       { type: "improvement", title: "Modais padronizados", description: "Todos os modais agora têm tamanhos e animações consistentes" },
       { type: "fix", title: "Correção de focus trap", description: "Tab agora navega corretamente dentro dos modais" },

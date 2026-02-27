@@ -25,6 +25,7 @@ import {
   Lock,
   Video,
   Activity,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -124,6 +125,7 @@ const TIERS: Array<{
       { type: "include", icon: DollarSign, label: "Financeiro avançado" },
       { type: "include", icon: Target,     label: "Comissões e metas" },
       { type: "include", icon: Globe,      label: "Portal paciente + Teleconsulta" },
+      { type: "include", icon: Brain,      label: "IA Clínica (triagem + CID)" },
       { type: "include", icon: Lock,       label: "RBAC (5 perfis)" },
       { type: "include", icon: Headphones, label: "Suporte via chat (Seg–Sáb)" },
     ],
@@ -143,7 +145,8 @@ const TIERS: Array<{
       { type: "include", icon: Award,      label: "TISS + Recurso de glosas" },
       { type: "include", icon: Activity,   label: "SNGPC para controlados" },
       { type: "include", icon: Lock,       label: "RBAC (11 perfis) + Auditoria" },
-      { type: "include", icon: Shield,     label: "Assinatura Digital" },
+      { type: "include", icon: Shield,     label: "Assinatura Digital (A1/A3/Nuvem)" },
+      { type: "include", icon: Brain,      label: "IA Completa (Agente + Transcrição)" },
       { type: "include", icon: Zap,        label: "API REST + Webhooks" },
       { type: "include", icon: Download,   label: "FHIR R4 + Relatórios custom" },
       { type: "include", icon: Headphones, label: "Suporte prioritário WhatsApp" },

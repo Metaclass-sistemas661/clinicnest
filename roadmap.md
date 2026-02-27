@@ -1,7 +1,7 @@
-# ClinicaFlow — Roadmap de Evolução para Nível Enterprise
+# ClinicNest — Roadmap de Evolução para Nível Enterprise
 
 > Comparativo com Tasy, MV Soul, iClinic e Ninsaúde.
-> Última atualização: 24/02/2026 (Fase 29 concluída — Portal do Paciente: Evolução Competitiva)
+> Última atualização: 25/02/2026 (Fases 48-51 adicionadas — Assinatura Digital ICP-Brasil e Conformidade CFM)
 
 ---
 
@@ -2756,3 +2756,1796 @@ MENU LATERAL:
 | Relatórios financeiros pessoais | 0 | > 2/mês/profissional |
 | Adoção do portal financeiro | 0% | > 70% dos profissionais |
 | Split automático | 0% | > 50% dos pagamentos (se gateway integrado)
+
+---
+
+## FASE 33 — Fluxo de Recepção & Fila de Atendimento (Auditoria 24/02/2026)
+
+> **Contexto:** O sistema possui módulos de fila de chamada (`patient_calls`) e retornos (`return_reminders`) implementados no banco, mas **não estão integrados ao fluxo principal**. O botão "Chamar Próximo" existe mas não está em nenhuma tela. O check-in não adiciona à fila automaticamente. Notificações de retorno são manuais.
+>
+> **Problema identificado:** Fluxo fragmentado e confuso. Secretária não tem visão unificada. Paciente não recebe lembretes automáticos de retorno.
+>
+> **Benchmark:** Doctoralia (check-in → fila automática), iClinic (painel de espera integrado), Amplimed (totem + painel TV + notificações), Clínica nas Nuvens (dashboard recepção unificado).
+>
+> **PRÉ-REQUISITO:** Nenhum — pode ser implementado independentemente.
+>
+> ⚠️ **CRITÉRIO RIGOROSO:** Implementar TODAS as sub-fases para fluxo coerente e profissional.
+
+### Auditoria Pré-Implementação — Fase 33
+
+| Item | Localização | Status | Ação |
+|------|-------------|--------|------|
+| Tabela `patient_calls` (fila) | `20260324900000_patient_call_queue_v1.sql` | ⏭️ Existe | Usar |
+| RPCs de fila (`add_patient_to_queue`, `call_next_patient`, etc) | Mesma migration | ⏭️ Existe | Usar |
+| Hook `usePatientQueue` | `src/hooks/usePatientQueue.ts` | ⏭️ Existe | Usar |
+| Componente `CallNextButton` | `src/components/queue/CallNextButton.tsx` | ⏭️ Existe | Integrar |
+| Página `PainelChamada` | `src/pages/PainelChamada.tsx` | ⏭️ Existe | Funciona |
+| Tabela `return_reminders` | `20260324800000_return_automation_v1.sql` | ⏭️ Existe | Usar |
+| RPCs de retorno (`create_return_reminder`, `get_pending_returns`, etc) | Mesma migration | ⏭️ Existe | Usar |
+| Hook `useReturnReminders` | `src/hooks/useReturnReminders.ts` | ⏭️ Existe | Usar |
+| Página `RetornosPendentes` | `src/pages/RetornosPendentes.tsx` | ⏭️ Existe | Melhorar |
+| Edge Function `automation-worker` | `supabase/functions/automation-worker/` | ⏭️ Existe | Estender |
+| Edge Function `whatsapp-sender` | `supabase/functions/whatsapp-sender/` | ⏭️ Existe | Usar |
+| Status `arrived` no agendamento | `AppointmentsTable.tsx` | ⏭️ Existe | Integrar com fila |
+| Trigger auto-fila na triagem | Migration (comentado) | ⏭️ Existe | Ativar opcionalmente |
+
+### Diagnóstico de Lacunas
+
+| Lacuna | Impacto | Solução |
+|--------|---------|---------|
+| Check-in não adiciona à fila | Fila sempre vazia | Trigger ou ação no frontend |
+| `CallNextButton` não está em nenhuma tela | Botão inútil | Adicionar na Agenda e Dashboard |
+| Sem menu "Recepção" no sidebar | Secretária não encontra | Criar seção dedicada |
+| Notificação de retorno é manual | Pacientes esquecem | Estender `automation-worker` |
+| Sem link de confirmação de retorno | Paciente não pode reagendar | Criar página pública |
+| Dashboard da recepção fragmentado | Múltiplas abas | Criar visão unificada |
+
+---
+
+### Sub-fase 33A — Integração Check-in → Fila ⬚
+
+> Quando paciente faz check-in (status `arrived`), adicionar automaticamente à fila de espera.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33A.1 | Trigger `trg_auto_queue_on_checkin` | ALTA | ⬚ | Quando `appointments.status` muda para `arrived`, chamar `add_patient_to_queue()`. Verificar se já não está na fila. |
+| 33A.2 | Configuração por tenant (auto-fila) | MÉDIA | ⬚ | Campo `auto_queue_on_checkin` em `tenant_settings`. Permite desativar para clínicas que não usam fila. |
+| 33A.3 | Prioridade baseada em perfil do paciente | MÉDIA | ⬚ | Idoso (>60), gestante, PCD → prioridade 3. Verificar campos do cliente. |
+| 33A.4 | Notificação para profissional | MÉDIA | ⬚ | Quando paciente entra na fila, notificar profissional responsável (se definido no agendamento). |
+
+---
+
+### Sub-fase 33B — Botão "Chamar" na Interface ⬚
+
+> Integrar `CallNextButton` nas telas onde faz sentido.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33B.1 | Botão "Chamar" na página Agenda | ALTA | ⬚ | Adicionar `CallNextButton` no header da Agenda, ao lado dos filtros. Visível para todos. |
+| 33B.2 | Botão "Chamar" no Dashboard da Secretária | ALTA | ⬚ | Seção "Fila de Espera" com `CallNextButton` e lista dos próximos 5. |
+| 33B.3 | Botão "Chamar" no Dashboard do Médico | MÉDIA | ⬚ | Card "Próximo Paciente" com botão de chamar (filtra por profissional logado). |
+| 33B.4 | Atalho de teclado (Ctrl+Shift+C) | BAIXA | ⬚ | Atalho global para chamar próximo paciente. |
+
+---
+
+### Sub-fase 33C — Menu "Recepção" no Sidebar ⬚
+
+> Criar seção dedicada para fluxo de recepção.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33C.1 | Seção "Recepção" no sidebar | ALTA | ⬚ | Nova seção com ícone `UserCheck`. Itens: Fila de Espera, Painel TV, Retornos do Dia. |
+| 33C.2 | Página `/recepcao/fila` — Fila de Espera | ALTA | ⬚ | Lista completa da fila com ações (chamar, rechamar, não veio). Estatísticas do dia. |
+| 33C.3 | Link "Painel TV" abre em nova aba | MÉDIA | ⬚ | `/painel-chamada` já existe. Adicionar link no menu. |
+| 33C.4 | Página `/recepcao/retornos-hoje` | MÉDIA | ⬚ | Filtro automático de retornos do dia. Ações rápidas (WhatsApp, agendar). |
+
+---
+
+### Sub-fase 33D — Notificação Automática de Retorno ⬚
+
+> Estender `automation-worker` para enviar lembretes de retorno automaticamente.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33D.1 | Novo trigger type `return_reminder` | ALTA | ⬚ | Adicionar em `automations.trigger_type`. Configurável: X dias antes do retorno. |
+| 33D.2 | Função `processReturnReminderTrigger` | ALTA | ⬚ | Buscar `return_reminders` com `notify_patient=true` e `return_date - notify_days_before <= hoje`. |
+| 33D.3 | Template de mensagem de retorno | ALTA | ⬚ | Variáveis: `{{client_name}}`, `{{return_date}}`, `{{professional_name}}`, `{{reason}}`, `{{confirm_link}}`. |
+| 33D.4 | Atualizar status para `notified` | MÉDIA | ⬚ | Após enviar, chamar `mark_return_notified()`. |
+| 33D.5 | Configuração de automação na UI | MÉDIA | ⬚ | Adicionar opção "Lembrete de Retorno" na página `/automacoes`. |
+
+---
+
+### Sub-fase 33E — Link de Confirmação de Retorno ⬚
+
+> Paciente recebe link para confirmar/reagendar retorno.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33E.1 | Tabela `return_confirmation_tokens` | ALTA | ⬚ | Token único, `reminder_id`, `expires_at`, `confirmed_at`, `rescheduled_appointment_id`. |
+| 33E.2 | RPC `create_return_confirmation_link` | ALTA | ⬚ | Gera token, retorna URL. Chamado pelo automation-worker. |
+| 33E.3 | Página pública `/confirmar-retorno/:token` | ALTA | ⬚ | Exibe dados do retorno. Botões: "Confirmar" (agenda automático), "Reagendar" (abre calendário), "Não preciso mais". |
+| 33E.4 | RPC `confirm_return_via_token` | ALTA | ⬚ | Cria agendamento, atualiza `return_reminders.status = 'scheduled'`. |
+| 33E.5 | RPC `cancel_return_via_token` | MÉDIA | ⬚ | Atualiza `return_reminders.status = 'cancelled'`. |
+| 33E.6 | Integração com variável `{{confirm_link}}` | ALTA | ⬚ | Automation-worker gera link e inclui na mensagem. |
+
+---
+
+### Sub-fase 33F — Dashboard Unificado da Recepção ⬚
+
+> Visão consolidada para secretária: agenda do dia + fila + retornos + check-ins.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33F.1 | Página `/recepcao` — Dashboard unificado | ALTA | ⬚ | Layout em grid: Agenda do dia (esquerda), Fila de espera (centro), Retornos/Alertas (direita). |
+| 33F.2 | Seção "Agenda do Dia" | ALTA | ⬚ | Lista de agendamentos de hoje com status colorido. Ação rápida: "Check-in" (muda para `arrived`). |
+| 33F.3 | Seção "Fila de Espera" | ALTA | ⬚ | Lista da fila com tempo de espera. Botão "Chamar Próximo" destacado. |
+| 33F.4 | Seção "Retornos do Dia" | MÉDIA | ⬚ | Pacientes com retorno agendado para hoje. Alerta se não fez check-in. |
+| 33F.5 | Seção "Alertas" | MÉDIA | ⬚ | Retornos atrasados, pacientes sem confirmação, tempo de espera > 30min. |
+| 33F.6 | Atualização em tempo real | ALTA | ⬚ | Supabase Realtime para fila e agendamentos. |
+| 33F.7 | Atalhos de teclado | BAIXA | ⬚ | `C` = Chamar, `Enter` = Check-in do selecionado. |
+
+---
+
+### Sub-fase 33G — Melhorias no Painel de Chamada TV ⬚
+
+> Aprimorar experiência do painel para TV da recepção.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 33G.1 | Histórico de chamadas recentes | MÉDIA | ⬚ | Mostrar últimas 3 chamadas (além da atual) para pacientes que perderam. |
+| 33G.2 | Mensagens personalizáveis | BAIXA | ⬚ | Tenant pode configurar mensagem de boas-vindas no painel. |
+| 33G.3 | Logo da clínica no painel | BAIXA | ⬚ | Exibir logo do tenant no header do painel. |
+| 33G.4 | Modo escuro/claro automático | BAIXA | ⬚ | Baseado em horário ou preferência do tenant. |
+
+---
+
+### Cronograma sugerido — Fase 33
+
+| Ordem | Sub-fase | Prazo | Dependência | Prioridade |
+|:-----:|----------|:-----:|:-----------:|:----------:|
+| 1 | **33A — Check-in → Fila** | 2-3 dias | Nenhuma | 🔴 Crítica |
+| 2 | **33B — Botão Chamar** | 1-2 dias | 33A | 🔴 Crítica |
+| 3 | **33C — Menu Recepção** | 2-3 dias | 33A, 33B | 🔴 Alta |
+| 4 | **33D — Notificação Automática** | 3-4 dias | Nenhuma | 🟠 Alta |
+| 5 | **33E — Link Confirmação** | 3-4 dias | 33D | 🟠 Alta |
+| 6 | **33F — Dashboard Recepção** | 4-5 dias | 33A, 33B, 33C | 🟠 Alta |
+| 7 | **33G — Melhorias Painel TV** | 1-2 dias | Nenhuma | 🟢 Baixa |
+
+### Estimativa total: 2-3 semanas (1 dev full-time)
+
+---
+
+### Fluxo Completo Após Fase 33
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FLUXO DE ATENDIMENTO                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. AGENDAMENTO
+   ├── Paciente agenda (online, WhatsApp, recepção)
+   ├── Status: PENDENTE
+   └── Se retorno: vincula a return_reminder
+
+2. CONFIRMAÇÃO (24h antes)
+   ├── automation-worker envia WhatsApp/Email
+   ├── Paciente confirma via link
+   └── Status: CONFIRMADO
+
+3. DIA DA CONSULTA
+   │
+   ├── [RETORNO] automation-worker envia lembrete X dias antes
+   │   └── Paciente clica link → confirma/reagenda
+   │
+   ├── [CHECK-IN] Paciente chega
+   │   ├── Recepção clica "Chegou" na agenda
+   │   ├── Status: ARRIVED
+   │   └── ⚡ TRIGGER: Adiciona automaticamente à FILA DE ESPERA
+   │
+   ├── [FILA] Paciente aguarda
+   │   ├── Painel TV mostra posição
+   │   └── Tempo de espera calculado
+   │
+   ├── [CHAMADA] Profissional clica "Chamar Próximo"
+   │   ├── Painel TV exibe nome + sala
+   │   ├── Áudio TTS chama paciente
+   │   └── Status fila: CALLING
+   │
+   ├── [ATENDIMENTO] Profissional clica "Iniciar"
+   │   ├── Status fila: IN_SERVICE
+   │   └── Abre prontuário
+   │
+   └── [FINALIZAÇÃO] Profissional finaliza
+       ├── Status agendamento: COMPLETED
+       ├── Status fila: COMPLETED
+       ├── Se marcou retorno: cria return_reminder
+       └── automation-worker envia NPS
+
+4. PÓS-CONSULTA
+   ├── [RETORNO] X dias depois
+   │   ├── automation-worker envia lembrete
+   │   ├── Paciente confirma via link
+   │   └── Ciclo reinicia no passo 1
+   │
+   └── [INATIVO] Se não retornou em Y dias
+       └── automation-worker envia mensagem de reativação
+```
+
+---
+
+### Comparativo com concorrentes (Fluxo de Recepção)
+
+| Funcionalidade | ClinicaFlow (atual) | Doctoralia | iClinic | Amplimed | Após Fase 33 |
+|----------------|:-------------------:|:----------:|:-------:|:--------:|:------------:|
+| Check-in manual | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Check-in → Fila automático** | ❌ | ✅ | ❌ | ✅ | ✅ |
+| Painel de chamada TV | ✅ | ❌ | ⚠️ | ✅ | ✅ |
+| Áudio TTS na chamada | ✅ | ❌ | ❌ | ✅ | ✅ |
+| **Botão "Chamar" na agenda** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Menu "Recepção" dedicado** | ❌ | ❌ | ❌ | ✅ | ✅ |
+| **Dashboard unificado recepção** | ❌ | ❌ | ⚠️ | ✅ | ✅ |
+| Retornos pendentes | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Notificação automática retorno** | ❌ | ✅ | ✅ | ✅ | ✅ |
+| **Link confirmação retorno** | ❌ | ✅ | ❌ | ✅ | ✅ |
+| Prioridade na fila | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Tempo de espera visível | ✅ | ❌ | ✅ | ✅ | ✅ |
+
+> **Resultado esperado:** Após Fase 33, fluxo de recepção será **superior** a iClinic e Doctoralia, e **equivalente** a Amplimed (líder em UX de recepção).
+
+---
+
+### Arquivos a criar/modificar — Fase 33
+
+| Sub-fase | Arquivos |
+|----------|----------|
+| **33A** | `supabase/migrations/33A_auto_queue_on_checkin.sql` |
+| **33B** | `src/pages/Agenda.tsx`, `src/components/dashboard/DashboardSecretaria.tsx`, `src/components/dashboard/DashboardMedico.tsx` |
+| **33C** | `src/components/layout/Sidebar.tsx`, `src/pages/recepcao/FilaEspera.tsx`, `src/pages/recepcao/RetornosHoje.tsx` |
+| **33D** | `supabase/functions/automation-worker/index.ts` (estender), `src/pages/Automacoes.tsx` |
+| **33E** | `supabase/migrations/33E_return_confirmation_tokens.sql`, `src/pages/ConfirmarRetornoPublico.tsx`, `src/App.tsx` |
+| **33F** | `src/pages/recepcao/DashboardRecepcao.tsx` |
+| **33G** | `src/pages/PainelChamada.tsx` |
+
+---
+
+### Métricas de sucesso — Fase 33
+
+| Métrica | Atual | Meta pós-Fase 33 |
+|---------|:-----:|:----------------:|
+| Pacientes na fila (uso do sistema) | 0% | > 80% dos check-ins |
+| Tempo médio de espera visível | Não medido | < 15 min |
+| Taxa de retorno (pacientes que voltam) | ~50% | > 70% |
+| Notificações de retorno automáticas | 0 | > 90% dos retornos |
+| Confirmação de retorno via link | 0% | > 40% |
+| Uso do dashboard de recepção | 0% | > 80% das secretárias |
+| Satisfação da recepção (NPS interno) | Não medido | > 60 |
+
+---
+
+## FASE 34 — Integração eSUS/RNDS (Auditoria 24/02/2026)
+
+> **Prioridade:** 🔴 CRÍTICA  
+> **Justificativa:** Clínicas do SUS e UBS não podem usar o sistema sem envio para a RNDS. Obrigatório para atender o setor público.  
+> **Benchmark:** Tasy e MV Soul têm integração completa. iClinic e Ninsaúde não têm.
+
+### Auditoria Pré-Implementação — Fase 34
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Profiles FHIR RNDS | ⏭️ Existe | `src/lib/fhir.ts` já tem BRIndividuo, BRContatoAssistencial |
+| Certificado digital | ⏭️ Existe | `src/lib/icp-brasil-signature.ts` |
+| Export FHIR | ⏭️ Existe | `buildFHIRPatient()`, `buildFHIREncounter()` |
+
+### Itens a Implementar — Fase 34
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 34.1 | Configuração RNDS por tenant | ALTA | ✅ | Campos: `rnds_enabled`, `cnes`, `uf`, `certificado_path`. Página em Configurações. |
+| 34.2 | Autenticação gov.br (OAuth2) | ALTA | ✅ | Fluxo OAuth2 com certificado ICP-Brasil. Token JWT para API RNDS. |
+| 34.3 | Envio de Atendimento Individual | ALTA | ✅ | POST `/api/fhir/r4/Bundle` com BRContatoAssistencial após consulta concluída. |
+| 34.4 | Envio de Vacinação (SIPNI) | MÉDIA | ⬚ | POST para RNDS quando vacina registrada. Integrar com módulo SIPNI existente. |
+| 34.5 | Consulta de CNS do paciente | MÉDIA | ✅ | GET `/api/fhir/r4/Patient?identifier=CPF` para obter CNS. |
+| 34.6 | Histórico de envios RNDS | MÉDIA | ✅ | Tabela `rnds_submissions` com status, erros, retry. Aba em Configurações. |
+| 34.7 | Retry automático de falhas | BAIXA | ✅ | Edge Function `rnds-submit` com backoff exponencial. |
+| 34.8 | Dashboard de conformidade RNDS | BAIXA | ✅ | KPIs: enviados, pendentes, erros. Alertas de inconsistência. |
+
+### Arquivos a criar/modificar — Fase 34
+
+| Arquivo | Ação |
+|---------|------|
+| `src/lib/rnds-client.ts` | Criar — Cliente HTTP para API RNDS |
+| `src/lib/rnds-auth.ts` | Criar — Autenticação OAuth2 gov.br |
+| `supabase/migrations/20260329100000_rnds_integration_v1.sql` | Criar — Tabelas e campos |
+| `supabase/functions/rnds-submit/index.ts` | Criar — Edge Function de envio |
+| `src/pages/Configuracoes.tsx` | Modificar — Aba RNDS |
+
+---
+
+## FASE 35 — App Mobile (Auditoria 24/02/2026)
+
+> **Prioridade:** 🔴 ALTA  
+> **Justificativa:** Profissionais de saúde usam muito o celular. Sistema responsivo não oferece a mesma UX de app nativo.  
+> **Benchmark:** iClinic e Ninsaúde têm apps. Tasy e MV não têm (são desktop-first).
+
+### Análise de Opções — Fase 35
+
+| Opção | Prós | Contras | Recomendação |
+|-------|------|---------|--------------|
+| **React Native** | Reutiliza conhecimento React, código compartilhado | Duas codebases | ✅ Recomendado |
+| **Flutter** | Performance nativa, UI consistente | Nova linguagem (Dart) | Alternativa |
+| **PWA** | Sem app store, código único | UX inferior, sem push nativo | Curto prazo |
+
+### Sub-fase 35A — PWA (Progressive Web App) ⬚
+
+> Solução de curto prazo enquanto app nativo não está pronto.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 35A.1 | Manifest.json completo | ALTA | ⬚ | Nome, ícones, cores, orientação, display standalone. |
+| 35A.2 | Service Worker para cache | ALTA | ⬚ | Cache de assets estáticos, estratégia network-first para API. |
+| 35A.3 | Ícone "Instalar App" | MÉDIA | ⬚ | Prompt de instalação no primeiro acesso mobile. |
+| 35A.4 | Splash screen | BAIXA | ⬚ | Tela de loading com logo ao abrir PWA. |
+
+### Sub-fase 35B — React Native App ⬚
+
+> App nativo para iOS e Android.
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 35B.1 | Setup projeto React Native | ALTA | ⬚ | Expo ou bare workflow. Configurar navegação, auth. |
+| 35B.2 | Tela de Login | ALTA | ⬚ | Autenticação via Supabase Auth. Biometria opcional. |
+| 35B.3 | Dashboard do profissional | ALTA | ⬚ | Agenda do dia, próximos pacientes, KPIs. |
+| 35B.4 | Agenda com ações rápidas | ALTA | ⬚ | Check-in, chamar, iniciar atendimento. |
+| 35B.5 | Push notifications nativas | ALTA | ⬚ | FCM (Android) + APNs (iOS). Triagem, chamada, mensagens. |
+| 35B.6 | Prontuário simplificado | MÉDIA | ⬚ | Visualização e edição básica. SOAP. |
+| 35B.7 | Modo offline com sync | MÉDIA | ⬚ | SQLite local, sync quando online. |
+| 35B.8 | Publicação nas stores | MÉDIA | ⬚ | App Store + Google Play. |
+
+### Arquivos a criar — Fase 35
+
+| Arquivo | Ação |
+|---------|------|
+| `mobile/` | Criar — Novo diretório para app React Native |
+| `mobile/package.json` | Criar — Dependências do app |
+| `mobile/src/screens/` | Criar — Telas do app |
+| `mobile/src/services/supabase.ts` | Criar — Cliente Supabase mobile |
+
+---
+
+## FASE 36 — Business Intelligence (Auditoria 24/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Justificativa:** Relatórios atuais são básicos. Clínicas precisam de análises avançadas para tomada de decisão.  
+> **Benchmark:** Tasy e MV têm BI robusto. iClinic e Ninsaúde têm relatórios básicos.
+>
+> ✅ **CONCLUÍDA (25/02/2026):** Implementado sem criar duplicações. Melhorado `Relatorios.tsx` existente.
+
+### Auditoria Pré-Implementação — Fase 36
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Relatórios básicos | ⏭️ Existe | `src/pages/Relatorios.tsx`, `RelatorioFinanceiro.tsx` |
+| Relatórios customizáveis | ⏭️ Existe | `src/pages/RelatoriosCustomizaveis.tsx` |
+| Exportação PDF | ⏭️ Existe | `src/utils/financialPdfExport.ts` |
+
+### Itens a Implementar — Fase 36
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 36.1 | Dashboard analítico principal | ALTA | ✅ | Melhorado `Relatorios.tsx` com novas abas: Produtividade, Pacientes, No-Show. Filtros por período. |
+| 36.2 | Relatório de produtividade | ALTA | ✅ | `TabProdutividade.tsx` — Taxa de ocupação, tempo médio, atendimentos por profissional, gráficos. |
+| 36.3 | Relatório de faturamento detalhado | ALTA | ⏭️ | **PULADO** — Já existe em `RepassesRelatorios.tsx` (por convênio, procedimento, profissional). |
+| 36.4 | Relatório de pacientes | MÉDIA | ✅ | `TabPacientes.tsx` — Novos vs retornos, taxa de retenção, origem dos pacientes, tendência mensal. |
+| 36.5 | Relatório de no-show | MÉDIA | ✅ | `TabNoShow.tsx` — Taxa por dia/horário/profissional, identificação de padrões, dicas de redução. |
+| 36.6 | Construtor de relatórios drag-and-drop | MÉDIA | ⏭️ | **PULADO** — `RelatoriosCustomizaveis.tsx` já tem sistema de templates. |
+| 36.7 | Exportação Excel/PDF avançada | MÉDIA | ⏭️ | Já existe CSV em todas as abas. PDF via `financialPdfExport.ts`. |
+| 36.8 | Agendamento de relatórios | BAIXA | ⬚ | Pendente — Requer Edge Function para envio de emails. |
+| 36.9 | Comparativo com período anterior | BAIXA | ✅ | KPIs na Visão Geral mostram variação % vs período anterior com setas coloridas. |
+
+### Arquivos criados/modificados — Fase 36
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/Relatorios.tsx` | Modificado — Adicionadas 3 novas abas, comparativo com período anterior |
+| `src/components/relatorios/TabProdutividade.tsx` | Criado — Relatório de produtividade por profissional |
+| `src/components/relatorios/TabPacientes.tsx` | Criado — Análise de novos vs retornos, retenção |
+| `src/components/relatorios/TabNoShow.tsx` | Criado — Análise de no-shows por dia/horário/profissional |
+| `src/components/relatorios/index.ts` | Criado — Barrel export dos componentes |
+
+### Decisão de Arquitetura
+
+**NÃO foi criada** nova página `BusinessIntelligence.tsx` para evitar duplicação e confusão.
+Em vez disso, o `Relatorios.tsx` existente foi melhorado com:
+- 3 novas abas (Produtividade, Pacientes, No-Show)
+- Comparativo com período anterior em todos os KPIs
+- Gráficos interativos com Recharts
+- Exportação CSV em todas as abas
+
+---
+
+## FASE 37 — Inteligência Artificial (Auditoria 24/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Justificativa:** IA pode automatizar tarefas repetitivas e melhorar a experiência do paciente.  
+> **Benchmark:** Nenhum concorrente brasileiro tem IA integrada. Oportunidade de diferenciação.
+>
+> ✅ **CONCLUÍDA (25/02/2026):** Implementado com AWS Bedrock (Claude 3 Haiku) + Amazon Transcribe Medical.
+
+### Decisão Arquitetural — Fase 37
+
+**Modelo de IA escolhido:** AWS Bedrock com Claude 3 Haiku
+- **Custo:** ~$0.25/1M tokens input, ~$1.25/1M tokens output
+- **Justificativa:** Melhor custo-benefício para uso médico. Qualidade próxima ao GPT-4 por ~10x menos.
+
+**Transcrição de áudio:** Amazon Transcribe Medical
+- **Custo:** ~$0.0125/minuto
+- **Justificativa:** Vocabulário médico especializado em PT-BR. Melhor precisão que Whisper para termos médicos.
+
+**Configuração necessária (Supabase Secrets):**
+```
+AWS_ACCESS_KEY_ID=<sua_key>
+AWS_SECRET_ACCESS_KEY=<sua_secret>
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=<bucket_para_audio>
+```
+
+### Itens Implementados — Fase 37
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 37.1 | Chatbot para triagem inicial | ALTA | ✅ | `ai-triage/index.ts` — Claude 3 Haiku. Coleta sintomas, sugere especialidade e urgência (EMERGÊNCIA/URGENTE/ROTINA). |
+| 37.2 | Sugestão de CID baseada em sintomas | ALTA | ✅ | `ai-cid-suggest/index.ts` — Sugere 1-5 CIDs com confiança (alta/média/baixa). Apenas para roles médicos. |
+| 37.3 | Análise preditiva de no-show | MÉDIA | ✅ | `no-show-predictor.ts` — ML local (sem API). Analisa histórico, dia/hora, profissional. Retorna probabilidade e recomendações. |
+| 37.4 | Resumo automático de prontuário | MÉDIA | ✅ | `ai-summary/index.ts` — Gera resumo Markdown com histórico, consultas, medicamentos, exames. |
+| 37.5 | Transcrição de áudio para texto | MÉDIA | ✅ | `ai-transcribe/index.ts` — Amazon Transcribe Medical. Suporta gravação e upload. Especialidades: PRIMARYCARE, CARDIOLOGY, etc. |
+| 37.6 | Sugestão de retorno baseada em diagnóstico | BAIXA | ✅ | `cid-return-suggestion.ts` — Tabela de intervalos por CID. Ex: J06.9 (IVAS) = 7-14 dias, E11 (DM2) = 30-90 dias. |
+| 37.7 | Análise de sentimento em feedbacks | BAIXA | ✅ | `ai-sentiment/index.ts` — Classifica positivo/neutro/negativo, identifica aspectos (atendimento, espera, etc), sugere ações. |
+
+### Arquivos Criados — Fase 37
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/functions/_shared/bedrock-client.ts` | Cliente AWS Bedrock com assinatura SigV4 |
+| `supabase/functions/_shared/transcribe-client.ts` | Cliente Amazon Transcribe Medical |
+| `supabase/functions/ai-triage/index.ts` | Edge Function — Chatbot de triagem |
+| `supabase/functions/ai-cid-suggest/index.ts` | Edge Function — Sugestão de CID |
+| `supabase/functions/ai-summary/index.ts` | Edge Function — Resumo de prontuário |
+| `supabase/functions/ai-transcribe/index.ts` | Edge Function — Transcrição de áudio |
+| `supabase/functions/ai-sentiment/index.ts` | Edge Function — Análise de sentimento |
+| `src/lib/no-show-predictor.ts` | Modelo de predição de no-show (ML local) |
+| `src/lib/cid-return-suggestion.ts` | Sugestão de retorno baseada em CID |
+| `src/components/ai/AiTriageChatbot.tsx` | Componente — Chat de triagem |
+| `src/components/ai/AiCidSuggest.tsx` | Componente — Sugestão de CID |
+| `src/components/ai/AiPatientSummary.tsx` | Componente — Resumo de prontuário |
+| `src/components/ai/AiTranscribe.tsx` | Componente — Transcrição de áudio |
+| `src/components/ai/AiNoShowPrediction.tsx` | Componente — Predição de no-show |
+| `src/components/ai/index.ts` | Barrel file para componentes de IA |
+| `supabase/migrations/20260329200000_ai_integration_v1.sql` | Tabelas: transcription_jobs, feedback_analysis, ai_usage_log |
+
+### Feature Flags — Fase 37
+
+Todas as funcionalidades de IA são controladas por feature flags (desabilitadas por padrão):
+- `ai_triage` — Triagem com IA
+- `ai_cid_suggest` — Sugestão de CID
+- `ai_summary` — Resumo de Prontuário
+- `ai_transcribe` — Transcrição Médica
+- `ai_sentiment` — Análise de Sentimento
+- `ai_no_show_prediction` — Previsão de No-Show
+
+---
+
+## FASE 38 — Integração Hospitalar HL7 ✅ CONCLUÍDA (25/02/2026)
+
+> **Prioridade:** 🟢 BAIXA  
+> **Justificativa:** Para clínicas que fazem parte de redes hospitalares ou precisam trocar dados com laboratórios.  
+> **Benchmark:** Tasy e MV são líderes. iClinic e Ninsaúde não têm.
+
+### Auditoria Pré-Implementação — Fase 38
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Parser HL7 2.x básico | ⏭️ Existe | `src/lib/hl7-v2-parser.ts` |
+| FHIR R4 | ⏭️ Existe | `src/lib/fhir.ts` |
+| Tabela exam_results | ⏭️ Existe | Já existia para armazenar resultados |
+
+### Itens Implementados — Fase 38
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 38.1 | Parser HL7 2.x completo | ALTA | ✅ | Já existia completo com ORU^R01, ORM^O01, ACK |
+| 38.2 | Interface de configuração HL7 | ALTA | ✅ | Aba HL7 em Integrações com CRUD de conexões |
+| 38.3 | Webhook HTTP para HL7 | MÉDIA | ✅ | Edge Function `hl7-receiver` (HTTP em vez de TCP) |
+| 38.4 | Mapeamento de resultados para prontuário | MÉDIA | ✅ | RPC `process_hl7_lab_result` + tabela `hl7_patient_mapping` |
+| 38.5 | Envio de pedidos para laboratório | MÉDIA | ✅ | Edge Function `hl7-sender` gera ORM^O01 |
+| 38.6 | Integração ADT (Admissão/Alta) | BAIXA | ✅ | Parser expandido com `parseADTMessage` e `generateADTMessage` |
+| 38.7 | Dashboard de integrações | BAIXA | ✅ | Stats, log de mensagens, gestão de conexões |
+
+### Arquivos Criados/Modificados — Fase 38
+
+| Arquivo | Ação |
+|---------|------|
+| `src/lib/hl7-v2-parser.ts` | Modificado — Adicionado suporte ADT (A01-A40) |
+| `supabase/functions/hl7-receiver/index.ts` | Criado — Webhook HTTP para receber HL7 |
+| `supabase/functions/hl7-sender/index.ts` | Criado — Envio de pedidos ORM^O01 |
+| `src/components/settings/HL7ConfigTab.tsx` | Criado — UI de configuração HL7 |
+| `src/pages/Integracoes.tsx` | Modificado — Adicionada aba HL7 |
+| `supabase/migrations/20260329300000_hl7_integration_v1.sql` | Criado — Tabelas e RPCs |
+
+### Tabelas Criadas — Fase 38
+
+- `hl7_connections` — Configurações de conexão por tenant
+- `hl7_field_mappings` — Mapeamentos customizados de campos
+- `hl7_message_log` — Log de todas as mensagens HL7
+- `hl7_patient_mapping` — Mapeamento de IDs externos para clientes
+
+### Funcionalidades
+
+1. **Recebimento de Resultados (ORU^R01)**
+   - Webhook HTTP para laboratórios enviarem resultados
+   - Autenticação via header `X-HL7-Secret`
+   - Matching automático de pacientes por CPF ou nome
+   - Criação automática de `exam_results`
+   - Geração de ACK (AA/AE/AR)
+
+2. **Envio de Pedidos (ORM^O01)**
+   - Geração de mensagens HL7 para solicitar exames
+   - Envio via HTTP POST para laboratórios
+   - Log de todas as mensagens enviadas
+
+3. **Suporte ADT**
+   - Parser para mensagens ADT (A01, A03, A08, etc.)
+   - Gerador de mensagens ADT
+   - Suporte a admissão, alta, transferência
+
+4. **Dashboard**
+   - Estatísticas de mensagens (30 dias)
+   - Log das últimas 50 mensagens
+   - Status de conexões ativas
+   - Gestão de conexões (criar, ativar/desativar, excluir)
+
+---
+
+## FASE 39 — Melhorias de UX ✅ CONCLUÍDA (25/02/2026)
+
+> **Prioridade:** 🟢 BAIXA  
+> **Justificativa:** Pequenas melhorias que aumentam a satisfação do usuário.
+
+### Auditoria Pré-Implementação — Fase 39
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Sistema de temas light/dark | ⏭️ Existe | `ThemeContext.tsx` |
+| Atalhos de teclado básicos | ⏭️ Existe | `KeyboardShortcutsDialog.tsx` |
+| Tour/Onboarding | ⏭️ Existe | `TourContext.tsx` + `OnboardingTour.tsx` |
+| Detecção online/offline | ⏭️ Existe | `AppStatusContext.tsx` |
+
+### Itens Implementados — Fase 39
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 39.1 | Temas de cores personalizáveis | BAIXA | ✅ | 7 presets + customização HSL por tenant |
+| 39.2 | Tutoriais em vídeo integrados | BAIXA | ✅ | Player embed com progresso por usuário |
+| 39.3 | Modo offline básico | MÉDIA | ✅ | Cache IndexedDB + sync automático |
+| 39.4 | Biometria para check-in | BAIXA | ⏭️ | Já existe FacialCapture.tsx |
+| 39.5 | Integração com farmácias | BAIXA | ⬚ | Não implementado (baixa prioridade) |
+| 39.6 | Atalhos de teclado globais | BAIXA | ✅ | 30+ atalhos com busca e categorias |
+
+### Arquivos Criados — Fase 39
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260329400000_ux_improvements_v1.sql` | Tabelas de tema, vídeos, cache, shortcuts |
+| `src/components/settings/ThemeCustomizer.tsx` | UI de personalização de cores |
+| `src/components/help/VideoTutorials.tsx` | Player de tutoriais em vídeo |
+| `src/lib/offline-cache.ts` | Gerenciador de cache IndexedDB |
+| `src/hooks/useOfflineSync.ts` | Hook de sincronização offline |
+| `src/components/settings/OfflineSettings.tsx` | UI de configuração offline |
+
+### Arquivos Modificados — Fase 39
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/components/help/KeyboardShortcutsDialog.tsx` | Expandido de 14 para 30+ atalhos com busca |
+
+### Tabelas Criadas — Fase 39
+
+- `tenant_theme_settings` — Cores e branding customizados por tenant
+- `video_tutorials` — Catálogo de tutoriais em vídeo
+- `user_video_progress` — Progresso de vídeos por usuário
+- `offline_cache_metadata` — Metadados do cache offline
+- `user_keyboard_shortcuts` — Atalhos customizados por usuário
+
+### Funcionalidades
+
+1. **Temas Personalizáveis**
+   - 7 presets de cores (Teal, Blue, Purple, Green, Orange, Rose, Slate)
+   - Customização HSL completa (matiz, saturação, luminosidade)
+   - Ajuste de border-radius e fonte
+   - Preview em tempo real
+
+2. **Tutoriais em Vídeo**
+   - Player embed responsivo
+   - Progresso salvo por usuário
+   - Categorização por funcionalidade
+   - Botão contextual `<VideoTutorialButton featureKey="..." />`
+
+3. **Modo Offline**
+   - Cache de agendamentos, pacientes, serviços, profissionais
+   - Sincronização automática ao reconectar
+   - Fila de alterações pendentes
+   - Indicador visual de status online/offline
+
+4. **Atalhos de Teclado**
+   - 30+ atalhos organizados em 6 categorias
+   - Busca por descrição ou tecla
+   - Suporte a Mac (⌘) e Windows (Ctrl)
+   - Atalhos para navegação, agenda, prontuário, tabelas
+
+---
+
+## Cronograma Geral — Fases 34-39
+
+| Fase | Descrição | Prioridade | Estimativa | Dependências |
+|:----:|-----------|:----------:|:----------:|:------------:|
+| **34** | eSUS/RNDS | 🔴 Crítica | 3-4 semanas | Nenhuma |
+| **35A** | PWA | 🔴 Alta | 1 semana | Nenhuma |
+| **35B** | App React Native | 🔴 Alta | 6-8 semanas | 35A |
+| **36** | Business Intelligence | 🟠 Média | 3-4 semanas | Nenhuma |
+| **37** | Inteligência Artificial | 🟠 Média | 4-6 semanas | Nenhuma |
+| **38** | Integração Hospitalar HL7 | 🟢 Baixa | 4-6 semanas | Nenhuma |
+| **39** | Melhorias UX | 🟢 Baixa | 2-3 semanas | Nenhuma |
+
+---
+
+## Comparativo Final — Após Todas as Fases
+
+| Funcionalidade | ClinicNest Atual | Após Fase 39 | Tasy | MV Soul | iClinic | Ninsaúde |
+|----------------|:-----------------:|:------------:|:----:|:-------:|:-------:|:--------:|
+| Prontuário SOAP | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| TISS Completo | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Portal Paciente | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| WhatsApp Nativo | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Fidelidade/Cashback | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Gamificação | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Split Pagamento | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **eSUS/RNDS** | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **App Mobile** | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| **BI Avançado** | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **IA Integrada** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **HL7 2.x Labs** | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
+
+> **Resultado esperado:** Após Fase 39, ClinicNest será o sistema **mais completo** do mercado brasileiro para clínicas pequenas e médias, com funcionalidades de nível Tasy/MV a preço acessível, **mais** diferenciais únicos (IA, fidelidade, gamificação).
+
+---
+
+## Métricas de Sucesso — Fases 34-39
+
+| Métrica | Atual | Meta pós-Fase 39 |
+|---------|:-----:|:----------------:|
+| Clínicas SUS atendidas | 0% | > 30% |
+| Usuários mobile (app) | 0% | > 50% |
+| Uso de relatórios BI | ~20% | > 70% |
+| Interações com IA | 0 | > 1000/mês |
+| Integrações HL7 ativas | 0 | > 10 laboratórios |
+| NPS geral do sistema | ~60 | > 75 |
+
+---
+
+## FASE 40 — Refatoração do Sistema Financeiro ✅ CONCLUÍDA (25/02/2026)
+
+> **Prioridade:** 🔴 CRÍTICA  
+> **Justificativa:** O sistema atual foi originalmente desenvolvido para **salões de beleza** (BeautyGest/ProBeleza) e possui lógicas inadequadas para clínicas médicas. A geração automática de receita e comissão ao concluir agendamento é típica de salões (onde o cliente paga na hora) mas **fundamentalmente errada** para clínicas onde pacientes podem ter convênio, pagamentos parcelados, ou médicos com salário fixo.  
+> **Benchmark:** Feegow, Amplimed, iClinic e Clínica nas Nuvens **não** geram receita automaticamente ao concluir atendimento — todos vinculam receita ao **pagamento efetivo**.
+>
+> **Problema identificado:**
+> ```
+> FLUXO ANTIGO (ERRADO para clínicas):
+> Agendamento Concluído → Gera Receita (income) → Gera Comissão → Gera Despesa ao pagar comissão
+>
+> FLUXO NOVO (padrão de mercado):
+> Agendamento Concluído → Registrar Pagamento → Gera Receita → Calcula Repasse sobre recebimentos
+> ```
+
+### Auditoria Pré-Implementação — Fase 40
+
+| Item | Status | Problema |
+|------|--------|----------|
+| `complete_appointment_with_sale()` | ⚠️ Problemático | Cria `financial_transaction` tipo `income` automaticamente |
+| `trigger_calculate_commission_on_completed` | ⚠️ Problemático | Gera comissão independente de pagamento |
+| `create_expense_on_commission_paid()` | ✅ OK | Lógica correta, mas baseada em premissa errada |
+| Tabela `commission_payments` | ⚠️ Problemático | Vinculada a agendamento, não a recebimento |
+| Página `RepassesComissoes.tsx` | ⚠️ Problemático | Mostra comissões por atendimento, não por recebimento |
+
+### Critérios de Aceite — Fase 40
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 40.C1 | Concluir agendamento **NÃO** gera `financial_transaction` automaticamente | Query: `SELECT * FROM financial_transactions WHERE appointment_id = X` deve retornar vazio após concluir |
+| 40.C2 | Concluir agendamento **NÃO** gera `commission_payments` automaticamente | Query: `SELECT * FROM commission_payments WHERE appointment_id = X` deve retornar vazio após concluir |
+| 40.C3 | Receita só é criada quando pagamento é registrado | Fluxo: Concluir → Registrar Pagamento → Verificar `financial_transaction` |
+| 40.C4 | Comissão é calculada sobre valor **recebido**, não atendido | Profissional com 10 atendimentos e 5 pagos deve ter comissão sobre 5 |
+| 40.C5 | Profissionais com salário fixo não geram comissão por atendimento | Configuração `payment_type = 'salary'` não cria `commission_payments` |
+| 40.C6 | Convênios geram conta a receber vinculada à guia TISS | Atendimento convênio → Guia TISS → Conta a receber com status pendente |
+| 40.C7 | Dados históricos são preservados | Comissões e receitas existentes não são deletadas |
+
+### Itens a Implementar — Fase 40
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 40.1 | Desativar trigger de comissão automática | CRÍTICA | ✅ | `DROP TRIGGER trigger_calculate_commission_on_completed` |
+| 40.2 | Refatorar `complete_appointment_with_sale()` | CRÍTICA | ✅ | Removida criação de `income` e `commission_payments`. Mantém: atualizar status, registrar venda de produto, criar `appointment_completion_summaries`. |
+| 40.3 | Criar tabela `accounts_receivable` (contas a receber) | ALTA | ✅ | Campos: `appointment_id`, `client_id`, `amount_due`, `amount_paid`, `status`, `payment_method`, `payment_source`, `tiss_guide_id`. |
+| 40.4 | Criar RPC `register_appointment_payment()` | ALTA | ✅ | Recebe: `appointment_id`, `amount`, `payment_method`, `payment_source`. Cria `accounts_receivable` + `financial_transaction` (income). |
+| 40.5 | Criar RPC `calculate_professional_commission_on_receivables()` | ALTA | ✅ | Calcula comissão sobre **receitas recebidas** no período, não sobre atendimentos. |
+| 40.6 | Atualizar página `Financeiro.tsx` | ALTA | ✅ | Atualizado card informativo sobre fluxo de pagamentos. |
+| 40.7 | Aba "Contas a Receber" no Financeiro | ALTA | ⏭️ | Já existia `FinanceiroBillsReceivableTab.tsx` com funcionalidade completa. |
+| 40.8 | Atualizar `RepassesComissoes.tsx` | MÉDIA | ✅ | Adicionado banner informativo sobre nova lógica de comissões. |
+| 40.9 | Vincular guia TISS a conta a receber | MÉDIA | ✅ | Trigger `create_receivable_on_tiss_approval` cria conta a receber quando guia é aprovada. |
+| 40.10 | Migração de dados históricos | MÉDIA | ✅ | Script SQL cria `accounts_receivable` retroativos para atendimentos com receita já gerada. |
+
+### Arquivos Criados — Fase 40
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260330100000_financial_refactor_v1.sql` | Migration completa: desativa triggers, cria tabela, RPCs, migração de dados |
+| `src/components/agenda/RegisterPaymentDialog.tsx` | Dialog para registrar pagamento de atendimento concluído |
+
+### Arquivos Modificados — Fase 40
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/components/agenda/AppointmentsTable.tsx` | Adicionado botão "Registrar Pagamento" no dropdown e cards mobile para atendimentos concluídos |
+| `src/pages/Financeiro.tsx` | Atualizado card informativo sobre fluxo de pagamentos |
+| `src/pages/RepassesComissoes.tsx` | Adicionado banner informativo sobre nova lógica de comissões |
+
+### Fluxo Proposto — Fase 40
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    NOVO FLUXO FINANCEIRO                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. AGENDAMENTO                                                              │
+│     └─► Cria appointment (status: pending)                                  │
+│                                                                              │
+│  2. ATENDIMENTO                                                              │
+│     └─► Atualiza appointment (status: completed)                            │
+│     └─► Cria/atualiza prontuário                                            │
+│     └─► NÃO gera receita nem comissão                                       │
+│                                                                              │
+│  3. COBRANÇA                                                                 │
+│     ├─► Particular:                                                          │
+│     │   └─► Botão "Registrar Pagamento" na agenda                           │
+│     │   └─► Cria accounts_receivable + financial_transaction                │
+│     │                                                                        │
+│     └─► Convênio:                                                            │
+│         └─► Gera guia TISS (já existe)                                      │
+│         └─► Quando aprovada → cria accounts_receivable                      │
+│         └─► Quando recebida → cria financial_transaction                    │
+│                                                                              │
+│  4. REPASSES (fim do mês)                                                    │
+│     ├─► Profissional com SALÁRIO:                                           │
+│     │   └─► Folha de pagamento mensal (já existe)                           │
+│     │                                                                        │
+│     └─► Profissional com COMISSÃO:                                          │
+│         └─► RPC calculate_professional_commission()                         │
+│         └─► Calcula sobre RECEITAS RECEBIDAS do período                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## FASE 41 — ✅ CONCLUÍDA — Limpeza de Legado BeautyGest (25/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Justificativa:** O sistema continha dezenas de referências ao nome antigo (BeautyGest, ProBeleza, salon-flow, salonName) que causavam confusão e prejudicavam a identidade da marca ClinicNest.  
+> **Impacto:** Nomenclatura inconsistente em código, storage keys, emails, sitemap e documentação.
+
+### Auditoria de Resquícios — Fase 41
+
+| Categoria | Arquivos Afetados | Exemplos |
+|-----------|-------------------|----------|
+| Variáveis `salonName` | 8 arquivos | `AuthContext.tsx`, `Register.tsx`, `automation-worker/index.ts` |
+| Storage keys `beautygest_*` | 5 arquivos | `TourContext.tsx`, `WelcomeModal.tsx`, `AdminCommissionReminderDialog.tsx` |
+| Referências `salon-flow` | 12 arquivos | `.gitignore`, `docs/*.md`, `api/*.ts` |
+| URLs `beautygest.metaclass.com.br` | 2 arquivos | `sitemap.xml`, `robots.txt` |
+| Brand "BeautyGest" em PDFs | 1 arquivo | `api/finance-report-pdf.ts` |
+| Tipo `'salon' \| 'clinic'` | 1 arquivo | `src/types/database.ts` |
+| Migrations com `salon_name` | 3 arquivos | `20260202210000_*.sql`, `20260202220000_*.sql`, `20260323600000_*.sql` |
+
+### Critérios de Aceite — Fase 41
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 41.C1 | Nenhuma referência a `salonName` no código TypeScript | ✅ `grep -r "salonName" src/` retorna vazio |
+| 41.C2 | Nenhuma referência a `beautygest` em storage keys | ✅ `grep -r "beautygest" src/` retorna vazio |
+| 41.C3 | Sitemap e robots.txt apontam para domínio correto | ✅ URLs atualizadas para ClinicNest |
+| 41.C4 | PDFs gerados mostram "ClinicNest" como brand | ✅ Verificado `finance-report-pdf.ts` |
+| 41.C5 | Documentação atualizada | ✅ Nenhuma referência a ProBeleza, BeautyGest, salon-flow |
+
+### Itens Implementados — Fase 41
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 41.1 | Renomear `salonName` → `clinicName` | ALTA | ✅ | Em `AuthContext.tsx`, `Register.tsx`, `automation-worker/index.ts`, `emailHtml.ts`, `EmailBuilder.tsx`, `SocialCreativePanel.tsx` |
+| 41.2 | Atualizar storage keys | MÉDIA | ✅ | `beautygest_*` → `clinicnest_*` em todos os arquivos |
+| 41.3 | Atualizar `sitemap.xml` e `robots.txt` | MÉDIA | ✅ | URLs para domínio ClinicNest |
+| 41.4 | Atualizar brand em PDFs | MÉDIA | ✅ | "BeautyGest" → "ClinicNest" em `finance-report-pdf.ts` |
+| 41.5 | Remover tipo `'salon'` do enum | BAIXA | ✅ | `database.ts` — mantido apenas `'clinic'` |
+| 41.6 | Atualizar documentação | BAIXA | ✅ | Removidas referências a ProBeleza, salon-flow |
+| 41.7 | Limpar `.gitignore` | BAIXA | ✅ | Removido `salon-flow/` |
+| 41.8 | Migration para renomear `salon_name` → `clinic_name` | BAIXA | ✅ | `20260330200000_legacy_cleanup_v1.sql` |
+
+### Arquivos Modificados — Fase 41
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/contexts/AuthContext.tsx` | ✅ `salonName` → `clinicName`, `salon_name` → `clinic_name` |
+| `src/pages/auth/Register.tsx` | ✅ `salonName` → `clinicName` |
+| `supabase/functions/automation-worker/index.ts` | ✅ `salonName` → `clinicName`, `salon_name` → `clinic_name` |
+| `src/components/campanhas/emailHtml.ts` | ✅ `salonName` → `clinicName` |
+| `src/components/campanhas/EmailBuilder.tsx` | ✅ `defaultSalonName` → `defaultClinicName` |
+| `src/components/campanhas/SocialCreativePanel.tsx` | ✅ `salonName` → `clinicName` |
+| `src/contexts/TourContext.tsx` | ✅ `beautygest_core` → `clinicnest_core` |
+| `src/components/onboarding/WelcomeModal.tsx` | ✅ `beautygest_onboarding_seen` → `clinicnest_onboarding_seen` |
+| `src/components/admin/AdminCommissionReminderDialog.tsx` | ✅ `beautygest_admin_commission_reminder_last` → `clinicnest_*` |
+| `src/contexts/AppStatusContext.tsx` | ✅ `beautygest:last_refresh` → `clinicnest:last_refresh` |
+| `src/lib/dashboard-preferences.ts` | ✅ `beautygest:dashboard_prefs` → `clinicnest:dashboard_prefs` |
+| `src/lib/simple-mode.ts` | ✅ `beautygest:simple_mode` → `clinicnest:simple_mode` |
+| `public/sitemap.xml` | ✅ URLs atualizadas para clinicnest.metaclass.com.br |
+| `public/robots.txt` | ✅ URLs atualizadas para clinicnest.metaclass.com.br |
+| `api/finance-report-pdf.ts` | ✅ "BeautyGest" → "ClinicNest" |
+| `src/types/database.ts` | ✅ Removido `'salon'` do tipo |
+| `.gitignore` | ✅ Removido `salon-flow/` |
+| `docs/VERCEL_DOMAIN_REDIRECT.md` | ✅ Atualizado para ClinicNest |
+| `docs/DEPLOY_UPDATE_PASSWORD.md` | ✅ Atualizado caminho |
+| `docs/CUSTOM_AUTH_EMAILS.md` | ✅ Atualizado URLs |
+| `docs/WEBHOOK_STRIPE_DEPLOY.md` | ✅ Atualizado projeto e CORS |
+| `docs/TESTE_LINK_EMAIL.md` | ✅ Atualizado URLs |
+| `docs/SUPABASE_SITE_URL_FIX.md` | ✅ Atualizado URLs |
+| `docs/LINK_EMAIL_VERCEL.md` | ✅ Atualizado URLs |
+
+### Migration Criada — Fase 41
+
+**Arquivo:** `supabase/migrations/20260330200000_legacy_cleanup_v1.sql`
+
+**Conteúdo:**
+- Atualiza função `handle_new_user()` para usar `clinic_name` (com fallback para `salon_name` legado)
+- Migra registros de `user_tour_progress` de `beautygest_core` para `clinicnest_core`
+- Atualiza `tenants.product` de `'salon'` para `'clinic'`
+- Atualiza `profiles.allowed_product` de `'salon'` para `'clinic'`
+
+---
+
+## FASE 42 — Melhorias no Chat Interno (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** O chat interno atual é funcional mas muito básico comparado com sistemas de mercado. Falta canais customizados, menções, anexos e notificações.  
+> **Benchmark:** Feegow e Amplimed têm chat com canais e menções. ClinicNest tem apenas canal "Geral" + DMs.
+
+### Auditoria Pré-Implementação — Fase 42
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Chat interno básico | ⏭️ Existe | `src/pages/Chat.tsx` + tabela `internal_messages` |
+| Canal "Geral" | ⏭️ Existe | Hardcoded no frontend |
+| DMs | ⏭️ Existe | Formato `dm:{profile_id}` |
+| Realtime | ⏭️ Existe | Supabase Realtime habilitado |
+| Chat com pacientes | ⏭️ Existe | `patient_messages` separado (correto) |
+
+### Critérios de Aceite — Fase 42
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 42.C1 | Admin pode criar canais customizados | ✅ CRUD de canais funcional |
+| 42.C2 | Menções (@usuario) geram notificação | ✅ Notificação in-app ao ser mencionado |
+| 42.C3 | Anexos podem ser enviados | ✅ Upload de imagens/arquivos funcional |
+| 42.C4 | Badge de não lidas no Sidebar | ✅ Contador atualiza em tempo real |
+| 42.C5 | Busca no histórico funciona | ✅ Busca por texto retorna mensagens |
+
+### Itens a Implementar — Fase 42
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 42.1 | Tabela `chat_channels` | ALTA | ✅ | Migration `20260330500000_chat_improvements_v1.sql` |
+| 42.2 | Tabela `chat_channel_members` | ALTA | ✅ | Membros de canais privados |
+| 42.3 | CRUD de canais na UI | ALTA | ✅ | `ChannelManager.tsx` criado |
+| 42.4 | Menções com `@usuario` | ALTA | ✅ | `MentionInput.tsx` com autocomplete |
+| 42.5 | Notificação ao ser mencionado | ALTA | ✅ | Trigger na RPC `send_chat_message` |
+| 42.6 | Suporte a anexos | MÉDIA | ✅ | `AttachmentUpload.tsx` criado |
+| 42.7 | Badge de não lidas no Sidebar | MÉDIA | ✅ | Hook `useUnreadChatCount.ts` |
+| 42.8 | Busca no histórico | MÉDIA | ✅ | Full-text search com `search_chat_messages` |
+| 42.9 | Indicador "digitando..." | BAIXA | ⬚ | Adiado para próxima iteração |
+| 42.10 | Edição/exclusão de mensagens | BAIXA | ✅ | RPCs `edit_chat_message`, `delete_chat_message` |
+
+### Arquivos Criados — Fase 42 (Concluída 25/02/2026)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260330500000_chat_improvements_v1.sql` | ✅ Tabelas, RPCs, triggers, FTS |
+| `src/components/chat/ChannelManager.tsx` | ✅ CRUD de canais |
+| `src/components/chat/MentionInput.tsx` | ✅ Input com autocomplete de menções |
+| `src/components/chat/AttachmentUpload.tsx` | ✅ Upload de anexos |
+| `src/hooks/useUnreadChatCount.ts` | ✅ Hook para contagem de não lidas |
+
+### Arquivos Modificados — Fase 42 (Concluída 25/02/2026)
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/pages/Chat.tsx` | ✅ Reescrito com canais dinâmicos, menções, anexos, busca, edição/exclusão |
+| `src/components/layout/Sidebar.tsx` | ✅ Badge de não lidas no item Chat |
+
+### Arquivos a Criar — Fase 42 (Original)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260330200000_chat_improvements_v1.sql` | Tabelas de canais, membros, índices FTS |
+| `src/components/chat/ChannelManager.tsx` | CRUD de canais |
+| `src/components/chat/MentionInput.tsx` | Input com autocomplete de menções |
+| `src/components/chat/AttachmentUpload.tsx` | Upload de anexos |
+
+### Arquivos a Modificar — Fase 42
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/pages/Chat.tsx` | Integrar canais dinâmicos, menções, anexos |
+| `src/components/layout/Sidebar.tsx` | Badge de não lidas |
+| `supabase/migrations/20260320120000_internal_chat.sql` | Adicionar campos (nova migration) |
+
+### Estrutura de Dados Proposta — Fase 42
+
+```sql
+-- Canais customizados
+CREATE TABLE chat_channels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_private BOOLEAN DEFAULT false,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Membros de canais privados
+CREATE TABLE chat_channel_members (
+  channel_id UUID REFERENCES chat_channels(id) ON DELETE CASCADE,
+  profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT DEFAULT 'member', -- 'admin', 'member'
+  joined_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (channel_id, profile_id)
+);
+
+-- Campos adicionais em internal_messages
+ALTER TABLE internal_messages ADD COLUMN
+  channel_id UUID REFERENCES chat_channels(id), -- null = canal "geral" legado
+  parent_id UUID REFERENCES internal_messages(id), -- threads
+  attachments JSONB, -- [{url, name, type, size}]
+  mentions UUID[], -- array de profile_ids mencionados
+  edited_at TIMESTAMPTZ,
+  deleted_at TIMESTAMPTZ;
+```
+
+---
+
+## Cronograma Geral — Fases 40-47
+
+| Fase | Descrição | Prioridade | Estimativa | Dependências | Status |
+|:----:|-----------|:----------:|:----------:|:------------:|:------:|
+| **40** | Refatoração Financeira | 🔴 Crítica | 2-3 semanas | Nenhuma | ⬚ Pendente |
+| **41** | Limpeza de Legado BeautyGest | 🟠 Média | 1 semana | Nenhuma | ⬚ Pendente |
+| **42** | Melhorias Chat | 🟠 Média | 1-2 semanas | Nenhuma | ✅ Concluída |
+| **43** | Remoção de Lógicas de Salão | 🔴 Crítica | 1 semana | Nenhuma | ✅ Concluída |
+| **44** | Migração clients → patients | 🟠 Alta | 2-3 semanas | Nenhuma | ✅ Concluída |
+| **45** | Migração services → procedures | 🟠 Alta | 1-2 semanas | Fase 44 | ✅ Concluída |
+| **46** | Renomear "Comanda" | 🟠 Média | 2-3 dias | Nenhuma | ✅ Concluída |
+| **47** | Reorganização do Menu | 🟢 Baixa | 1 dia | Fase 43 | ✅ Concluída |
+
+---
+
+## Comparativo Final — Após Fase 47
+
+| Funcionalidade | ClinicNest Atual | Após Fase 47 | Feegow | Amplimed | iClinic |
+|----------------|:----------------:|:------------:|:------:|:--------:|:-------:|
+| Receita ao concluir | ✅ (errado) | ❌ (correto) | ❌ | ❌ | ❌ |
+| Receita ao receber | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Comissão sobre recebido | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Contas a receber | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Chat com canais | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Chat com menções | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Chat com anexos | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Nomenclatura consistente | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Nomenclatura `patients` | ❌ (`clients`) | ✅ | ✅ | ✅ | ✅ |
+| Nomenclatura `procedures` | ❌ (`services`) | ✅ | ✅ | ✅ | ✅ |
+| Sem funcionalidades de varejo | ❌ | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+## Métricas de Sucesso — Fases 40-47
+
+| Métrica | Atual | Meta pós-Fase 47 |
+|---------|:-----:|:----------------:|
+| Receitas incorretas (sem pagamento) | ~30% | 0% |
+| Comissões sobre não-recebidos | ~30% | 0% |
+| Referências a "BeautyGest" | 50+ | 0 |
+| Referências a `clients` no código | ~200 | 0 |
+| Referências a `services` no código | ~150 | 0 |
+| Funcionalidades de salão visíveis | 5 | 0 (ou flag estética) |
+| Uso do chat interno | ~10% | > 40% |
+| Consistência de nomenclatura | ~60% | 100% |
+| Satisfação com módulo financeiro | ~50 NPS | > 70 NPS |
+
+---
+
+## Ordem de Execução Recomendada
+
+1. **FASE 40** (Crítica) — Refatoração Financeira
+   - Impacto: Alto (corrige dados financeiros incorretos)
+   - Risco: Médio (requer migração de dados)
+   - Deve ser feita **antes** de qualquer nova funcionalidade financeira
+
+2. **FASE 41** (Média) — Limpeza de Legado
+   - Impacto: Baixo (apenas nomenclatura)
+   - Risco: Baixo (não afeta lógica)
+   - Pode ser feita em paralelo com Fase 42
+
+3. **FASE 42** (Média) — Melhorias Chat
+   - Impacto: Médio (melhora comunicação interna)
+   - Risco: Baixo (funcionalidade nova, não altera existente)
+   - Independente das outras fases
+
+---
+
+## FASE 43 — Remoção de Lógicas de Salão de Beleza ✅ CONCLUÍDA (25/02/2026)
+
+> **Prioridade:** 🔴 CRÍTICA  
+> **Status:** ✅ CONCLUÍDA em 25/02/2026  
+> **Justificativa:** O sistema foi originalmente desenvolvido como "BeautySalon SaaS" (conforme migration inicial `20260201191658_*.sql`). Funcionalidades típicas de salão de beleza (fidelidade, cashback, cupons, gamificação) **não fazem sentido** para software médico e podem violar regulamentações do CFM.  
+> **Benchmark:** Nenhum sistema de referência (Tasy, MV Soul, iClinic, Ninsaúde, Feegow) possui programa de fidelidade, cashback ou cupons de desconto.  
+> **Impacto:** Remoção de funcionalidades inadequadas melhora credibilidade e compliance.
+
+### Auditoria Pré-Implementação — Fase 43
+
+| Item | Localização | Problema |
+|------|-------------|----------|
+| Programa de Fidelidade | `src/pages/FidelidadeCashbackAdmin.tsx` | Tiers de pontos são conceito de varejo |
+| Cashback | `cashback_wallets`, `cashback_ledger` | Pacientes não acumulam cashback em consultas |
+| Cupons de Desconto | `src/pages/Cupons.tsx`, `discount_coupons` | Pode violar CFM sobre publicidade médica |
+| Vouchers | `src/pages/Vouchers.tsx` | Prática de varejo, não de clínica |
+| Gamificação | `gamification_enabled`, `DailyGamificationSummary` | Metas de "vendas" inadequadas para médicos |
+| Ranking por Receita | `buildServiceRanking()` em `Relatorios.tsx` | Foco em lucro pode incentivar procedimentos desnecessários |
+
+### Critérios de Aceite — Fase 43
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 43.C1 | Módulo Fidelidade/Cashback oculto ou removido | Feature flag `loyalty` desabilitada por padrão |
+| 43.C2 | Módulo Cupons/Vouchers oculto ou removido | Feature flag `coupons` desabilitada por padrão |
+| 43.C3 | Gamificação desabilitada por padrão | `gamification_enabled` default `false` |
+| 43.C4 | Ranking por receita renomeado | "Ranking por Receita" → "Procedimentos Mais Realizados" |
+| 43.C5 | Sidebar não exibe itens de salão para novos tenants | Itens ocultos quando features desabilitadas |
+| 43.C6 | Documentação atualizada | Remover menções a fidelidade/cashback como diferencial |
+
+### Itens a Implementar — Fase 43
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 43.1 | Desabilitar feature `loyalty` por padrão | 🔴 CRÍTICA | ✅ | Em `subscription-plans.ts`, removido `loyalty` dos planos. |
+| 43.2 | Desabilitar feature `coupons` por padrão | 🔴 CRÍTICA | ✅ | Em `subscription-plans.ts`, removido `coupons` dos planos. |
+| 43.3 | Alterar `gamification_enabled` default para `false` | 🔴 CRÍTICA | ✅ | Hook `useGamificationEnabled` alterado para default `false`. |
+| 43.4 | Renomear "Ranking por Receita" → "Procedimentos Mais Realizados" | 🟠 ALTA | ✅ | Em `Relatorios.tsx`, título alterado. |
+| 43.5 | Remover gamificação do Dashboard clínico | 🟠 ALTA | ✅ | Removidos `DailyGamificationSummary`, `DashboardClientRanking`, `DashboardGoalsCard`. |
+| 43.6 | Remover páginas de Fidelidade, Cupons, Vouchers, Metas | 🟠 ALTA | ✅ | Arquivos deletados: `FidelidadeCashbackAdmin.tsx`, `Cupons.tsx`, `Vouchers.tsx`, `Metas.tsx`, `MinhasMetas.tsx`. |
+| 43.7 | Limpar referências de salão no código | 🟠 MÉDIA | ✅ | Renomeados `salon_name` → `clinic_name`, `data-tour="settings-salon-*"` → `settings-clinic-*`. |
+| 43.8 | Remover features de salão do FeatureKey | 🟢 BAIXA | ✅ | Removidos `loyalty`, `coupons`, `gamification`, `goals` do tipo `FeatureKey`. |
+
+### Arquivos Modificados — Fase 43 (Concluída 25/02/2026)
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/types/subscription-plans.ts` | Removidos `loyalty`, `coupons`, `gamification`, `goals` do FeatureKey e dos planos |
+| `src/pages/Relatorios.tsx` | Renomeado "Ranking por Receita" → "Procedimentos Mais Realizados" |
+| `src/hooks/useGamificationEnabled.ts` | Default alterado para `false` |
+| `src/components/dashboard/index.ts` | Removidos exports de componentes de gamificação |
+| `src/components/layout/Sidebar.tsx` | Removidos itens de Fidelidade, Cupons, Metas |
+| `src/App.tsx` | Removidas rotas de Fidelidade, Cupons, Vouchers, Metas |
+| `src/pages/Dashboard.tsx` | Removido `DailyGamificationSummary` |
+| `src/pages/Configuracoes.tsx` | Renomeados data-tour de salon para clinic |
+| `src/pages/Automacoes.tsx` | Renomeado `salon_name` → `clinic_name` |
+| `src/pages/AgendamentoOnlineAdmin.tsx` | Placeholder alterado de "meu-salao" para "minha-clinica" |
+
+**Arquivos Deletados:**
+- `src/pages/FidelidadeCashbackAdmin.tsx`
+- `src/pages/Cupons.tsx`
+- `src/pages/Vouchers.tsx`
+- `src/pages/Metas.tsx`
+- `src/pages/MinhasMetas.tsx`
+- `src/components/dashboard/DashboardClientRanking.tsx`
+- `src/components/dashboard/DashboardGoalsCard.tsx`
+- `src/components/dashboard/DailyGamificationSummary.tsx`
+
+### Justificativa Regulatória — Fase 43
+
+| Funcionalidade | Por que é inadequada para clínica médica |
+|----------------|------------------------------------------|
+| **Fidelidade/Pontos** | CFM não permite "programas de fidelidade" que incentivem retorno desnecessário |
+| **Cashback** | Pode configurar "captação de clientela" vedada pelo Código de Ética Médica |
+| **Cupons de Desconto** | Resolução CFM 1974/2011 proíbe "promoções" e "descontos" em publicidade médica |
+| **Gamificação de Vendas** | Metas financeiras para médicos podem configurar conflito de interesse |
+
+---
+
+## FASE 44 — Migração de Nomenclatura: Clients → Patients (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 ALTA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** O sistema usa `clients` no banco de dados (termo de salão/varejo) mas exibe "Pacientes" na interface. Essa inconsistência causa confusão para desenvolvedores e prejudica a API pública.  
+> **Benchmark:** Todos os sistemas de referência (Tasy, MV, iClinic, Ninsaúde) usam `paciente` ou `patient`.  
+> **Impacto:** Alto — requer migration de dados e refatoração de código.  
+> **Risco:** Médio — breaking change na API pública.
+
+### Auditoria Pré-Implementação — Fase 44
+
+| Camada | Termo Atual | Termo Correto |
+|--------|-------------|---------------|
+| Tabela principal | `clients` | `patients` |
+| Chave estrangeira | `client_id` | `patient_id` |
+| Tipos TypeScript | `Client` | `Patient` |
+| Interface | "Pacientes" ✅ | — |
+| URLs | `/clientes` | `/pacientes` |
+| API pública | `/api/clients` | `/api/patients` |
+
+### Critérios de Aceite — Fase 44
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 44.C1 | Tabela `patients` existe com todos os dados migrados | `SELECT count(*) FROM patients` = count anterior de `clients` |
+| 44.C2 | Todas as FKs apontam para `patients` | Nenhuma referência a `client_id` no schema |
+| 44.C3 | Tipos TypeScript atualizados | `grep -r "Client" src/types/` retorna apenas `Patient` |
+| 44.C4 | URLs atualizadas com redirect | `/clientes` redireciona para `/pacientes` |
+| 44.C5 | API pública atualizada | Endpoint `/api/patients` funcional |
+| 44.C6 | Testes passando | Nenhum teste quebrado por nomenclatura |
+
+### Itens a Implementar — Fase 44
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 44.1 | Migration: renomear tabela `clients` → `patients` | 🔴 CRÍTICA | ✅ | `20260330300000_rename_clients_to_patients_v1.sql` |
+| 44.2 | Migration: renomear coluna `client_id` → `patient_id` em todas as tabelas | 🔴 CRÍTICA | ✅ | ~30 tabelas afetadas na migration |
+| 44.3 | Atualizar tipos TypeScript | 🔴 CRÍTICA | ✅ | `Patient` interface criada, `Client` como alias deprecated |
+| 44.4 | Atualizar todas as queries Supabase | 🔴 CRÍTICA | ✅ | `from("patients")` em ~30 arquivos |
+| 44.5 | Atualizar rotas | 🟠 ALTA | ✅ | `/pacientes` com redirect de `/clientes` |
+| 44.6 | Atualizar API pública | 🟠 ALTA | ✅ | View `clients` como alias para compatibilidade |
+| 44.7 | Atualizar RPCs | 🟠 ALTA | ✅ | `upsertPatientV2`, `getPatientTimelineV1`, etc. |
+| 44.8 | Atualizar componentes | 🟠 MÉDIA | ✅ | Props `patientId`, `patient` em componentes |
+| 44.9 | Atualizar documentação | 🟢 BAIXA | ✅ | Comentários @deprecated adicionados |
+
+### Arquivos Modificados — Fase 44 (Concluída 25/02/2026)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/migrations/20260330300000_rename_clients_to_patients_v1.sql` | ✅ CRIADO — Migration completa |
+| `src/types/database.ts` | ✅ `Patient` interface, `Client` deprecated |
+| `src/types/supabase-extensions.ts` | ✅ `PatientTimelineEventRow`, `patient_id` |
+| `src/lib/patientSpending.ts` | ✅ CRIADO — Substitui `clientSpending.ts` |
+| `src/lib/clientSpending.ts` | ❌ DELETADO |
+| `src/lib/supabase-typed-rpc.ts` | ✅ `upsertPatientV2`, `getPatientTimelineV1` |
+| `src/pages/Pacientes.tsx` | ✅ CRIADO — Substitui `Clientes.tsx` |
+| `src/pages/Clientes.tsx` | ❌ DELETADO |
+| `src/App.tsx` | ✅ Rotas `/pacientes`, redirect `/clientes` |
+| `src/components/layout/Sidebar.tsx` | ✅ Navegação para `/pacientes` |
+| `src/pages/Agenda.tsx` | ✅ `.from("patients")` |
+| `src/pages/Dashboard.tsx` | ✅ `.from("patients")` |
+| `src/pages/Relatorios.tsx` | ✅ `.from("patients")` |
+| `src/pages/Triagem.tsx` | ✅ `.from("patients")` |
+| `src/pages/Evolucoes.tsx` | ✅ `.from("patients")` |
+| `src/pages/Prontuarios.tsx` | ✅ `.from("patients")` |
+| `src/pages/Receituarios.tsx` | ✅ `.from("patients")` |
+| `src/pages/Laudos.tsx` | ✅ `.from("patients")` |
+| `src/pages/Encaminhamentos.tsx` | ✅ `.from("patients")` |
+| `src/pages/Atestados.tsx` | ✅ `.from("patients")` |
+| `src/pages/ListaEspera.tsx` | ✅ `.from("patients")` |
+| `src/pages/EvolucaoEnfermagem.tsx` | ✅ `.from("patients")` |
+| `src/pages/NovaGuiaTISS.tsx` | ✅ `.from("patients")` |
+| `src/pages/Odontograma.tsx` | ✅ `.from("patients")` |
+| `src/pages/Periograma.tsx` | ✅ `.from("patients")` |
+| `src/pages/PlanosTratamento.tsx` | ✅ `.from("patients")` |
+| `src/pages/ClienteDetalhe.tsx` | ✅ `.from("patients")` |
+| `src/pages/Campanhas.tsx` | ✅ `.from("patients")` |
+| `src/pages/NovaCampanha.tsx` | ✅ `.from("patients")` |
+| `src/pages/paciente/PatientProfile.tsx` | ✅ `.from("patients")` |
+| `src/pages/paciente/PatientConsentSigning.tsx` | ✅ `.from("patients")` |
+| `src/components/header/GlobalSearch.tsx` | ✅ `.from("patients")` |
+| `src/components/consent/ConsentGate.tsx` | ✅ `.from("patients")` |
+| `src/components/financeiro/tabs/FinanceiroBillsReceivableTab.tsx` | ✅ `.from("patients")` |
+| `src/hooks/useOfflineSync.ts` | ✅ `.from("patients")` |
+
+### Tabelas Afetadas — Fase 44
+
+| Tabela | Coluna a Renomear |
+|--------|-------------------|
+| `appointments` | `client_id` → `patient_id` |
+| `medical_records` | `client_id` → `patient_id` |
+| `triages` | `client_id` → `patient_id` |
+| `prescriptions` | `client_id` → `patient_id` |
+| `medical_certificates` | `client_id` → `patient_id` |
+| `exam_results` | `client_id` → `patient_id` |
+| `referrals` | `client_id` → `patient_id` |
+| `clinical_evolutions` | `client_id` → `patient_id` |
+| `nursing_evolutions` | `client_id` → `patient_id` |
+| `patient_consents` | `client_id` → `patient_id` |
+| `odontograms` | `client_id` → `patient_id` |
+| `periograms` | `client_id` → `patient_id` |
+| `treatment_plans` | `client_id` → `patient_id` |
+| `bills_receivable` | `client_id` → `patient_id` |
+| `orders` | `client_id` → `patient_id` |
+| `cashback_wallets` | `client_id` → `patient_id` |
+| `client_packages` | `client_id` → `patient_id` |
+| `waitlist` | `client_id` → `patient_id` |
+| `return_reminders` | `client_id` → `patient_id` |
+| `patient_calls` | `client_id` → `patient_id` |
+| `tiss_guias` | `client_id` → `patient_id` |
+| ... | (~30 tabelas total) |
+
+### Estratégia de Migração — Fase 44
+
+```sql
+-- 1. Criar view de compatibilidade (zero downtime)
+CREATE VIEW clients AS SELECT * FROM patients;
+
+-- 2. Renomear tabela
+ALTER TABLE clients RENAME TO patients;
+
+-- 3. Renomear colunas (em transação)
+BEGIN;
+ALTER TABLE appointments RENAME COLUMN client_id TO patient_id;
+ALTER TABLE medical_records RENAME COLUMN client_id TO patient_id;
+-- ... (todas as tabelas)
+COMMIT;
+
+-- 4. Atualizar índices
+ALTER INDEX idx_appointments_client_id RENAME TO idx_appointments_patient_id;
+
+-- 5. Atualizar RPCs (criar novas, manter antigas como alias)
+CREATE OR REPLACE FUNCTION upsert_patient(...) AS $$ ... $$;
+CREATE OR REPLACE FUNCTION upsert_client(...) AS $$ SELECT upsert_patient(...); $$;
+```
+
+---
+
+## FASE 45 — Migração de Nomenclatura: Services → Procedures (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 ALTA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** O sistema usa `services` no banco (termo de salão de beleza) mas alterna entre "Serviços" e "Procedimentos" na interface. O termo correto em contexto médico é "Procedimento".  
+> **Benchmark:** Tasy, MV Soul e TUSS usam "procedimento". iClinic usa "procedimento".  
+> **Impacto:** Médio — menos tabelas afetadas que `clients`.
+
+### Auditoria Pré-Implementação — Fase 45
+
+| Camada | Termo Atual | Termo Correto |
+|--------|-------------|---------------|
+| Tabela principal | `services` | `procedures` |
+| Chave estrangeira | `service_id` | `procedure_id` |
+| Tipos TypeScript | `Service` | `Procedure` |
+| Sidebar | "Procedimentos" ✅ | — |
+| Atalhos teclado | "Ir para Serviços" ❌ | "Ir para Procedimentos" |
+| URLs | `/servicos` | `/procedimentos` |
+
+### Critérios de Aceite — Fase 45
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 45.C1 | Tabela `procedures` existe | `SELECT count(*) FROM procedures` = count anterior |
+| 45.C2 | Todas as FKs apontam para `procedures` | Nenhuma referência a `service_id` |
+| 45.C3 | Interface consistente | Nenhuma menção a "Serviços" na UI |
+| 45.C4 | URLs atualizadas | `/servicos` redireciona para `/procedimentos` |
+| 45.C5 | Atalhos atualizados | "Ir para Procedimentos" |
+
+### Itens a Implementar — Fase 45
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 45.1 | Migration: renomear tabela `services` → `procedures` | 🔴 CRÍTICA | ✅ | `20260330400000_rename_services_to_procedures_v1.sql` |
+| 45.2 | Migration: renomear coluna `service_id` → `procedure_id` | 🔴 CRÍTICA | ✅ | ~15 tabelas afetadas na migration |
+| 45.3 | Atualizar tipos TypeScript | 🔴 CRÍTICA | ✅ | `Procedure` interface, `Service` deprecated |
+| 45.4 | Atualizar queries Supabase | 🔴 CRÍTICA | ✅ | `from("procedures")` em ~10 arquivos |
+| 45.5 | Atualizar rotas | 🟠 ALTA | ✅ | `/procedimentos` com redirect de `/servicos` |
+| 45.6 | Atualizar atalhos de teclado | 🟠 MÉDIA | ✅ | "Ir para Procedimentos" |
+| 45.7 | Atualizar textos da interface | 🟠 MÉDIA | ✅ | Página `Procedimentos.tsx` criada |
+
+### Arquivos Modificados — Fase 45 (Concluída 25/02/2026)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/migrations/20260330400000_rename_services_to_procedures_v1.sql` | ✅ CRIADO — Migration completa |
+| `src/types/database.ts` | ✅ `Procedure` interface, `Service` deprecated |
+| `src/lib/supabase-typed-rpc.ts` | ✅ `upsertProcedureV2`, `setProcedureActiveV2` |
+| `src/pages/Procedimentos.tsx` | ✅ CRIADO — Substitui `Servicos.tsx` |
+| `src/pages/Servicos.tsx` | ❌ DELETADO |
+| `src/App.tsx` | ✅ Rota `/procedimentos`, redirect `/servicos` |
+| `src/components/layout/Sidebar.tsx` | ✅ Navegação para `/procedimentos` |
+| `src/components/help/KeyboardShortcutsDialog.tsx` | ✅ "Ir para Procedimentos" |
+| `src/pages/Agenda.tsx` | ✅ `.from("procedures")` |
+| `src/pages/Pacientes.tsx` | ✅ `.from("procedures")` |
+| `src/pages/NovaGuiaTISS.tsx` | ✅ `.from("procedures")` |
+| `src/pages/ListaEspera.tsx` | ✅ `.from("procedures")` |
+| `src/hooks/useOfflineSync.ts` | ✅ `.from("procedures")` |
+| `src/components/equipe/CommissionRulesDrawer.tsx` | ✅ `.from("procedures")` |
+| `src/components/commission/CommissionRuleForm.tsx` | ✅ `.from("procedures")` |
+| `src/components/commission/CommissionSimulator.tsx` | ✅ `.from("procedures")` |
+| `src/components/comandas/ComandaDetail.tsx` | ✅ `.from("procedures")` |
+
+### Tabelas Afetadas — Fase 45
+
+| Tabela | Coluna a Renomear |
+|--------|-------------------|
+| `appointments` | `service_id` → `procedure_id` |
+| `order_items` | `service_id` → `procedure_id` |
+| `commission_rules` | `service_id` → `procedure_id` |
+| `tiss_guias` | `service_id` → `procedure_id` |
+| `treatment_plan_items` | `service_id` → `procedure_id` |
+| `professional_services` | `service_id` → `procedure_id` |
+| `automation_rules` | `service_id` → `procedure_id` |
+| ... | (~15 tabelas total) |
+
+---
+
+## FASE 46 — Renomear "Comanda" → "Conta do Paciente" (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** O termo "comanda" é típico de salões de beleza e restaurantes. Sistemas médicos usam "Conta do Paciente", "Fatura" ou "Cobrança".  
+> **Benchmark:** Tasy usa "Conta do Paciente", MV usa "Fatura", iClinic usa "Cobrança".  
+> **Impacto:** Baixo — apenas nomenclatura na interface e mensagens de erro.
+
+### Critérios de Aceite — Fase 46
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 46.C1 | Nenhuma menção a "comanda" na interface | ✅ Apenas nomes internos de código |
+| 46.C2 | Mensagens de erro atualizadas | ✅ "Conta do paciente não encontrada" |
+| 46.C3 | Documentação atualizada | ✅ Nenhuma referência visível ao usuário |
+
+### Itens a Implementar — Fase 46
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 46.1 | Renomear mensagens de erro em RPCs | 🟠 ALTA | ✅ | `rpc-error.ts` atualizado |
+| 46.2 | Renomear labels na interface | 🟠 ALTA | ✅ | "Conta do Paciente" em `ComandaDetail.tsx` |
+| 46.3 | Atualizar descrições de transações | 🟠 MÉDIA | ✅ | Toasts e mensagens atualizados |
+| 46.4 | Manter tabela `orders` (não renomear) | — | ✅ | `orders` é termo técnico aceitável internamente |
+
+### Arquivos Modificados — Fase 46 (Concluída 25/02/2026)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/lib/rpc-error.ts` | ✅ "Conta do paciente não encontrada", "Esta conta já foi finalizada" |
+| `src/components/comandas/ComandaDetail.tsx` | ✅ "Conta do Paciente", "Finalizar Conta", mensagens de erro |
+| `src/pages/Integracoes.tsx` | ✅ "Quando uma conta é finalizada" |
+
+### Arquivos a Modificar — Fase 46 (Original)
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `supabase/migrations/20260218200000_orders_checkout_v1.sql` | Mensagens de erro |
+| `supabase/migrations/20260312040000_bi_cmv_snapshot_v1.sql` | Mensagens de erro |
+| `supabase/migrations/20260312042000_orders_paid_at_bi_v1.sql` | Mensagens de erro |
+| `src/components/comandas/ComandaDetail.tsx` | Labels da interface |
+| `src/pages/Integracoes.tsx` | "Atendimento concluído" → "Quando uma conta é finalizada" |
+
+---
+
+## FASE 47 — Reorganização do Menu (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟢 BAIXA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** Algumas funcionalidades estão categorizadas incorretamente no menu (ex: "Agendamento Online" em "Marketing").  
+> **Impacto:** Baixo — apenas reorganização de UI.
+
+### Critérios de Aceite — Fase 47
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 47.C1 | Agendamento Online em menu operacional | ✅ Movido para "Recepção" |
+| 47.C2 | Estoque renomeado | ✅ "Estoque" → "Suprimentos" |
+| 47.C3 | Itens de estética agrupados | ✅ Removidos na Fase 43 |
+
+### Itens a Implementar — Fase 47
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 47.1 | Mover "Agendamento Online" para menu "Recepção" | 🟠 MÉDIA | ✅ | Funcionalidade operacional |
+| 47.2 | Criar submenu "Estética" (opcional) | 🟢 BAIXA | ⬚ | N/A — itens removidos na Fase 43 |
+| 47.3 | Renomear "Estoque" → "Suprimentos" | 🟢 BAIXA | ✅ | Termo mais adequado para clínicas |
+| 47.4 | Renomear "Produtos & Insumos" → "Insumos Médicos" | 🟢 BAIXA | ✅ | Termo mais adequado para contexto clínico |
+
+### Arquivos Modificados — Fase 47 (Concluída 25/02/2026)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/layout/Sidebar.tsx` | ✅ "Agendamento Online" movido para "Recepção", "Estoque" → "Suprimentos", "Produtos & Insumos" → "Insumos Médicos" |
+
+---
+
+## Ordem de Execução Recomendada — Fases 40-47
+
+1. **FASE 40** (Crítica) — Refatoração Financeira
+   - Impacto: Alto (corrige dados financeiros incorretos)
+   - Deve ser feita **primeiro**
+
+2. **FASE 43** (Crítica) — Remoção de Lógicas de Salão
+   - Impacto: Médio (melhora credibilidade)
+   - Pode ser feita em paralelo com Fase 40
+
+3. **FASE 41** (Média) — Limpeza de Legado BeautyGest
+   - Impacto: Baixo (nomenclatura)
+   - Pode ser feita em paralelo
+
+4. **FASE 44** (Alta) — Migração clients → patients
+   - Impacto: Alto (breaking change)
+   - Requer planejamento de downtime
+
+5. **FASE 45** (Alta) — Migração services → procedures
+   - Impacto: Médio
+   - Depende da Fase 44 (mesmo padrão)
+
+6. **FASE 46** (Média) — Renomear "Comanda"
+   - Impacto: Baixo
+   - Independente
+
+7. **FASE 42** (Média) — Melhorias Chat
+   - Impacto: Médio
+   - Independente
+
+8. **FASE 47** (Baixa) — Reorganização do Menu
+   - Impacto: Baixo
+   - Depende da Fase 43
+
+---
+
+## AUDITORIA COMPLEMENTAR — Placeholders e Nomenclatura (25/02/2026)
+
+> **Status:** ✅ CONCLUÍDA  
+> **Justificativa:** Auditoria exaustiva para identificar e corrigir placeholders e referências remanescentes de salão de beleza.
+
+### Problemas Identificados e Corrigidos
+
+| Arquivo | Problema | Correção |
+|---------|----------|----------|
+| `src/components/financeiro/tabs/FinanceiroBillsReceivableTab.tsx` | Placeholder "Pacote de cortes — Maria" | "Consulta particular — João Silva" |
+| `src/pages/Automacoes.tsx` | Exemplo "Corte" e "Mariana" | "Consulta" e "Dr. Mariana" |
+| `src/pages/Integracoes.tsx` | "cliente confirma" | "paciente confirma" |
+| `src/pages/Agenda.tsx` | "cliente pediu para remarcar" | "paciente pediu para remarcar" |
+| `src/components/header/GlobalSearch.tsx` | Navegação para `/clientes` | Navegação para `/pacientes` |
+| `src/components/onboarding/WelcomeModal.tsx` | Link `/clientes` | Link `/pacientes` |
+| `src/pages/Ajuda.tsx` | Links `/clientes` | Links `/pacientes` |
+| `src/components/dashboard/DashboardDentista.tsx` | Link `/clientes` | Link `/pacientes` |
+| `src/components/dashboard/DashboardSecretaria.tsx` | Link `/clientes` | Link `/pacientes` |
+| `src/components/layout/MainLayout.tsx` | Link `/clientes` | Link `/pacientes` |
+
+### Melhorias no Modelo de Atestado Médico
+
+Comparação com sistemas de referência (iClinic, Feegow, Amplimed, Tasy):
+
+| Campo | ClinicaFlow (Antes) | ClinicaFlow (Depois) | iClinic | Feegow | CFM Recomenda |
+|-------|:-------------------:|:--------------------:|:-------:|:------:|:-------------:|
+| Nome do paciente | ✅ | ✅ | ✅ | ✅ | ✅ Obrigatório |
+| CPF do paciente | ❌ | ✅ | ✅ | ✅ | ✅ Recomendado |
+| Data de nascimento | ❌ | ✅ | ✅ | ❌ | ⬚ Opcional |
+| CID-10 | ✅ | ✅ (com nota de autorização) | ✅ | ✅ | ✅ Só com autorização |
+| Nome do médico | ✅ | ✅ | ✅ | ✅ | ✅ Obrigatório |
+| CRM do médico | ❌ | ✅ | ✅ | ✅ | ✅ Obrigatório |
+| Especialidade | ❌ | ✅ | ✅ | ✅ | ⬚ Opcional |
+| Endereço da clínica | ❌ | ✅ | ✅ | ✅ | ✅ Recomendado |
+| CNPJ da clínica | ❌ | ✅ | ❌ | ✅ | ⬚ Opcional |
+| Assinatura digital | ❌ | ✅ | ✅ | ✅ | ✅ Válido desde 2024 |
+| Área de assinatura | ❌ | ✅ | ✅ | ✅ | ✅ Obrigatório |
+
+### Requisitos Legais CFM para Atestados (Resolução CFM 1.658/2002)
+
+1. **Identificação do médico**: Nome completo, CRM e especialidade
+2. **Identificação do paciente**: Nome completo (CPF recomendado)
+3. **CID-10**: Somente com autorização expressa do paciente
+4. **Data e local**: Obrigatórios
+5. **Assinatura**: Manuscrita ou digital (ICP-Brasil)
+6. **Carimbo ou identificação**: Obrigatório
+
+### Arquivos Modificados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/patientDocumentPdf.ts` | ✅ Modelo de atestado expandido com campos CFM |
+| `src/components/financeiro/tabs/FinanceiroBillsReceivableTab.tsx` | ✅ Placeholder corrigido |
+| `src/pages/Automacoes.tsx` | ✅ Exemplos corrigidos |
+| `src/pages/Integracoes.tsx` | ✅ Texto corrigido |
+| `src/pages/Agenda.tsx` | ✅ Placeholder corrigido |
+| `src/components/header/GlobalSearch.tsx` | ✅ Navegação corrigida |
+| `src/components/onboarding/WelcomeModal.tsx` | ✅ Link corrigido |
+| `src/pages/Ajuda.tsx` | ✅ Links corrigidos |
+| `src/components/dashboard/DashboardDentista.tsx` | ✅ Link corrigido |
+| `src/components/dashboard/DashboardSecretaria.tsx` | ✅ Link corrigido |
+| `src/components/layout/MainLayout.tsx` | ✅ Link corrigido |
+
+---
+
+## FASE 48 — Assinatura Digital ICP-Brasil Completa (Auditoria 25/02/2026)
+
+> **Prioridade:** 🔴 CRÍTICA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** A assinatura digital atual usa hash SHA-256 interno, mas NÃO atende à Resolução CFM 2.299/2021 que exige certificado ICP-Brasil. Sistemas como TASY, Feegow e iClinic permitem cadastro único do certificado e solicitam apenas a senha nas assinaturas subsequentes.  
+> **Benchmark:** TASY (CertiSign integrado, A1/A3/Nuvem), Feegow (WebPKI, A1/A3/BirdID), iClinic (WebPKI, A1/A3), Memed (ICP-Brasil nativo).  
+> **Impacto:** Alto — sem isso, documentos não têm validade jurídica plena conforme CFM.
+
+### Auditoria Pré-Implementação — Fase 48
+
+| Item | Status | Observações |
+|------|--------|-------------|
+| Biblioteca ICP-Brasil A1 | ⏭️ Existe | `src/lib/icp-brasil-signature.ts` — parsing PKCS#12, assinatura RSA SHA-256 |
+| Hash SHA-256 em prontuários | ⏭️ Existe | `src/lib/digital-signature.ts` |
+| Campos de assinatura em `medical_records` | ⏭️ Existe | `digital_hash`, `signed_at`, `signed_by_name`, `signed_by_crm` |
+| Campos de assinatura em `medical_certificates` | ⏭️ Existe | Mesmos campos (migration 20260330600000) |
+| Upload de certificado no prontuário | ⏭️ Existe | Checkbox + upload .pfx no `ProntuarioForm` |
+| Persistência do certificado no perfil | ✅ Implementado | Tabela `profile_certificates` |
+| Suporte a certificado A3 (token) | ⬚ Fase 51 | Requer WebPKI |
+| Suporte a certificado em nuvem | ⬚ Fase 51 | Requer BirdID ou similar |
+| QR Code de validação | ⬚ Fase 50 | Padrão CFM/ANS |
+
+### Critérios de Aceite — Fase 48
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 48.C1 | Profissional cadastra certificado A1 uma única vez | ✅ Upload .pfx + senha, armazenado criptografado AES-256 |
+| 48.C2 | Assinaturas subsequentes pedem apenas senha | ✅ Não reimporta arquivo |
+| 48.C3 | Suporte a certificado A3 (token/cartão) | ⬚ Fase 51 — Via WebPKI |
+| 48.C4 | Suporte a certificado em nuvem (BirdID) | ⬚ Fase 51 — OAuth + API |
+| 48.C5 | QR Code em todos os documentos assinados | ⬚ Fase 50 |
+| 48.C6 | Página pública de verificação de documentos | ⬚ Fase 50 |
+| 48.C7 | Metadados OID conforme RNDS | ✅ CRM, UF, especialidade |
+
+### Itens a Implementar — Fase 48
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 48.1 | Tabela `profile_certificates` | ALTA | ✅ | Migration 20260330700000 |
+| 48.2 | Criptografia AES-256 para certificados A1 | ALTA | ✅ | Web Crypto API no frontend |
+| 48.3 | RPC `register_certificate_a1` | ALTA | ✅ | Cadastra certificado no perfil |
+| 48.4 | RPC `get_certificate_for_signing` | ALTA | ✅ | Obtém certificado para assinatura |
+| 48.5 | RPC `list_my_certificates` | MÉDIA | ✅ | Lista certificados do profissional |
+| 48.6 | RPC `remove_certificate` | MÉDIA | ✅ | Remove certificado do perfil |
+| 48.7 | Componente `CertificateManager` | ALTA | ✅ | UI para gerenciar certificados |
+| 48.8 | Hook `useCertificateSign` | ALTA | ✅ | Fluxo simplificado de assinatura |
+| 48.9 | Integração WebPKI para A3 | MÉDIA | ⬚ | Fase 51 |
+| 48.10 | Integração BirdID para nuvem | BAIXA | ⬚ | Fase 51 |
+| 48.11 | Geração de QR Code | ALTA | ⬚ | Fase 50 |
+| 48.12 | Página `/verificar/:hash` | ALTA | ⬚ | Fase 50 |
+| 48.13 | Atualizar `Atestados.tsx` | ALTA | ✅ | Usa certificado cadastrado |
+| 48.14 | Atualizar `Receituarios.tsx` | ALTA | ⬚ | Próxima iteração |
+| 48.15 | Atualizar `Prontuarios.tsx` | ALTA | ⬚ | Próxima iteração |
+| 48.16 | Atualizar `Evolucoes.tsx` | MÉDIA | ⬚ | Próxima iteração |
+
+### Arquivos Criados — Fase 48 (Concluída 25/02/2026)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260330700000_profile_certificates_v1.sql` | ✅ Tabela, RPCs, RLS, triggers |
+| `src/components/settings/CertificateManager.tsx` | ✅ UI completa para gerenciar certificados |
+| `src/hooks/useCertificateSign.ts` | ✅ Hook para assinatura simplificada |
+
+### Arquivos Modificados — Fase 48 (Concluída 25/02/2026)
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/pages/Configuracoes.tsx` | ✅ Nova aba "Certificados" com CertificateManager |
+| `src/pages/Atestados.tsx` | ✅ Integração com certificado cadastrado, solicita apenas senha |
+
+---
+
+## FASE 49 — Campos CFM Obrigatórios em Prontuário Eletrônico (Auditoria 25/02/2026)
+
+> **Prioridade:** 🔴 CRÍTICA  
+> **Status:** ✅ CONCLUÍDA (25/02/2026)  
+> **Justificativa:** A Resolução CFM 1.821/2007 e o Manual SBIS-CFM definem campos obrigatórios para prontuário eletrônico. Alguns campos estavam faltando no ClinicaFlow.  
+> **Benchmark:** TASY (certificação SBIS-CFM), MV Soul (certificação SBIS), Feegow (conformidade CFM).  
+> **Impacto:** Alto — conformidade regulatória obrigatória.
+
+### Auditoria Pré-Implementação — Fase 49
+
+| Campo CFM | Status ClinicaFlow | Observações |
+|-----------|:------------------:|-------------|
+| Identificação do paciente | ✅ Existe | Nome, CPF, data nascimento |
+| Queixa principal | ✅ Existe | `chief_complaint` |
+| Anamnese | ✅ Existe | `anamnesis` |
+| Exame físico | ✅ Existe | `physical_exam` |
+| Hipótese diagnóstica | ✅ Existe | `diagnosis` |
+| CID-10 | ✅ Existe | `cid_code` |
+| Conduta/Plano terapêutico | ✅ Existe | `treatment_plan` |
+| Prescrições | ✅ Existe | `prescriptions` |
+| Sinais vitais | ✅ Existe | PA, FC, FR, Temp, SpO2, Peso, Altura |
+| Alergias | ✅ Existe | `allergies` |
+| Medicamentos em uso | ✅ Existe | `current_medications` |
+| Histórico médico | ✅ Existe | `medical_history` |
+| Data/hora do registro | ✅ Existe | `created_at` |
+| Identificação do profissional | ✅ Existe | `signed_by_name`, `signed_by_crm` |
+| **UF do profissional** | ✅ Implementado | `signed_by_uf` em todas as tabelas |
+| **Número do atendimento** | ✅ Implementado | `attendance_number` sequencial por tenant |
+| **Tipo de atendimento** | ✅ Implementado | Enum com 12 tipos CFM |
+| **Carimbo de tempo (timestamp server)** | ✅ Implementado | Trigger `server_timestamp` |
+| **Motivo da alteração** | ✅ Existe | `change_reason` em versões |
+| **Assinatura ICP-Brasil** | ⚠️ Parcial | Hash existe, ICP-Brasil na Fase 48 |
+
+### Critérios de Aceite — Fase 49
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 49.C1 | Campo UF do profissional em todos os documentos | ✅ `signed_by_uf` em 4 tabelas |
+| 49.C2 | Número sequencial de atendimento por tenant | ✅ `attendance_number` com trigger |
+| 49.C3 | Tipo de atendimento selecionável | ✅ Enum com 12 tipos no formulário |
+| 49.C4 | Carimbo de tempo do servidor | ✅ Trigger `server_timestamp` |
+| 49.C5 | Campos obrigatórios validados no frontend | ✅ Exibição nos cards |
+
+### Itens a Implementar — Fase 49
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 49.1 | Campo `signed_by_uf` em `medical_records` | ALTA | ✅ | Migration 20260330800000 |
+| 49.2 | Campo `signed_by_uf` em `medical_certificates` | ALTA | ✅ | Migration 20260330800000 |
+| 49.3 | Campo `signed_by_uf` em `clinical_evolutions` | ALTA | ✅ | Migration 20260330800000 |
+| 49.4 | Campo `signed_by_uf` em `prescriptions` | ALTA | ✅ | Migration 20260330800000 |
+| 49.5 | Campo `attendance_number` sequencial | ALTA | ✅ | Trigger automático |
+| 49.6 | Campo `attendance_type` enum | MÉDIA | ✅ | 12 tipos CFM |
+| 49.7 | Campo `server_timestamp` | MÉDIA | ✅ | Trigger automático |
+| 49.8 | Campo `uf` no perfil do profissional | ALTA | ✅ | `council_state` já existia |
+| 49.9 | Seletor de tipo de atendimento no frontend | MÉDIA | ✅ | `ProntuarioForm.tsx` |
+| 49.10 | Exibição de campos CFM nos cards | MÉDIA | ✅ | `Prontuarios.tsx` |
+
+### Arquivos Criados — Fase 49 (Concluída 25/02/2026)
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/migrations/20260330800000_cfm_required_fields_v1.sql` | ✅ Campos, triggers, RPCs, view de conformidade |
+
+### Arquivos Modificados — Fase 49 (Concluída 25/02/2026)
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/components/prontuario/ProntuarioForm.tsx` | ✅ Seletor de tipo de atendimento (12 opções) |
+| `src/pages/Prontuarios.tsx` | ✅ Exibição de nº atendimento, tipo e UF nos cards |
+| `src/pages/Atestados.tsx` | ✅ Já usa `signed_by_uf` na assinatura |
+
+---
+
+## FASE 50 — QR Code e Verificação Pública de Documentos (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 ALTA  
+> **Status:** ✅ CONCLUÍDA  
+> **Justificativa:** Documentos assinados digitalmente devem ter QR Code para verificação de autenticidade, conforme padrão CFM/ANS. Permite que terceiros (empregadores, convênios) validem a autenticidade.  
+> **Benchmark:** TASY (QR Code em todos os documentos), Memed (token + QR Code), Feegow (QR Code via Memed).  
+> **Impacto:** Médio — diferencial competitivo e conformidade.
+
+### Critérios de Aceite — Fase 50
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 50.C1 | QR Code em atestados assinados | ✅ URL de verificação |
+| 50.C2 | QR Code em receitas assinadas | ✅ URL de verificação |
+| 50.C3 | QR Code em laudos assinados | ✅ URL de verificação |
+| 50.C4 | Página pública de verificação | ✅ Sem login, apenas hash |
+| 50.C5 | Verificação recalcula hash e compara | ✅ Exibe status de integridade |
+| 50.C6 | Exibe dados do documento verificado | ✅ Tipo, data, profissional, paciente |
+
+### Itens a Implementar — Fase 50
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 50.1 | Instalar biblioteca `qrcode` | ALTA | ✅ | `npm install qrcode @types/qrcode` |
+| 50.2 | Componente `DocumentQRCode` | ALTA | ✅ | Gera QR Code com URL |
+| 50.3 | Tabela `document_verifications` | MÉDIA | ✅ | Log de verificações públicas |
+| 50.4 | Página `/verificar/:hash` | ALTA | ✅ | Verificação pública |
+| 50.5 | RPC `verify_document_public` | ALTA | ✅ | Busca e valida documento |
+| 50.6 | Atualizar `generateCertificatePdf` | ALTA | ✅ | Incluir QR Code |
+| 50.7 | Atualizar `generatePrescriptionPdf` | ALTA | ✅ | Incluir QR Code |
+| 50.8 | Atualizar `generateMedicalRecordPdf` | MÉDIA | ✅ | Incluir QR Code |
+
+### Arquivos Criados — Fase 50
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/signature/DocumentQRCode.tsx` | ✅ Componente de QR Code |
+| `src/pages/VerificarDocumento.tsx` | ✅ Página pública de verificação |
+| `supabase/migrations/20260330900000_document_verification_v1.sql` | ✅ Tabela de verificações |
+
+---
+
+## FASE 51 — Integração WebPKI e Certificados em Nuvem (Auditoria 25/02/2026)
+
+> **Prioridade:** 🟠 MÉDIA  
+> **Status:** ✅ CONCLUÍDA  
+> **Justificativa:** Muitos profissionais usam certificados A3 (token/cartão) ou em nuvem (BirdID). O ClinicaFlow atualmente só suporta A1 (arquivo). Para paridade com TASY e Feegow, precisa suportar todos os tipos.  
+> **Benchmark:** TASY (A1/A3/Nuvem via CertiSign), Feegow (A1/A3/BirdID via WebPKI), iClinic (A1/A3 via WebPKI).  
+> **Impacto:** Médio — amplia base de usuários que podem assinar digitalmente.
+
+### Critérios de Aceite — Fase 51
+
+| # | Critério | Verificação |
+|---|----------|-------------|
+| 51.C1 | WebPKI lista certificados A3 instalados | ✅ Token/cartão conectado |
+| 51.C2 | Assinatura com certificado A3 funciona | ✅ Solicita PIN do token |
+| 51.C3 | Integração BirdID funciona | ✅ OAuth + assinatura remota |
+| 51.C4 | Usuário escolhe tipo de certificado | ✅ A1, A3 ou Nuvem |
+| 51.C5 | Certificado A3/Nuvem não armazena chave privada | ✅ Apenas referência |
+
+### Itens a Implementar — Fase 51
+
+| # | Item | Prioridade | Status | Observações |
+|---|------|:----------:|:------:|-------------|
+| 51.1 | Integração WebPKI | ALTA | ✅ | Extensão do navegador |
+| 51.2 | Listar certificados A3 instalados | ALTA | ✅ | Via WebPKI |
+| 51.3 | Assinar com certificado A3 | ALTA | ✅ | Via WebPKI |
+| 51.4 | Integração BirdID OAuth | MÉDIA | ✅ | Autenticação |
+| 51.5 | Assinar com BirdID | MÉDIA | ✅ | API de assinatura remota |
+| 51.6 | UI para seleção de tipo de certificado | ALTA | ✅ | Radio buttons |
+| 51.7 | Fallback para A1 se WebPKI não disponível | BAIXA | ✅ | Graceful degradation |
+
+### Arquivos Criados — Fase 51
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/lib/webpki-integration.ts` | ✅ Integração com WebPKI |
+| `src/lib/birdid-integration.ts` | ✅ Integração com BirdID |
+| `src/components/signature/CertificateSelector.tsx` | ✅ Seletor de tipo de certificado |
+
+---
+
+## Cronograma Geral — Fases 48-51
+
+| Fase | Descrição | Prioridade | Estimativa | Dependências | Status |
+|:----:|-----------|:----------:|:----------:|:------------:|:------:|
+| **48** | Assinatura Digital ICP-Brasil Completa | 🔴 Crítica | 2-3 semanas | Nenhuma | ✅ Concluída |
+| **49** | Campos CFM Obrigatórios | 🔴 Crítica | 1 semana | Nenhuma | ✅ Concluída |
+| **50** | QR Code e Verificação Pública | 🟠 Alta | 1 semana | Fase 48 | ✅ Concluída |
+| **51** | WebPKI e Certificados em Nuvem | 🟠 Média | 2 semanas | Fase 48 | ✅ Concluída |
+
+---
+
+## Ordem de Execução Recomendada — Fases 48-51
+
+1. **FASE 49** (Crítica) — Campos CFM Obrigatórios
+   - Impacto: Alto (conformidade regulatória)
+   - Risco: Baixo (apenas adiciona campos)
+   - Pode ser feita **primeiro** (independente)
+
+2. **FASE 48** (Crítica) — Assinatura Digital ICP-Brasil
+   - Impacto: Alto (validade jurídica)
+   - Risco: Médio (nova infraestrutura)
+   - Base para as fases 50 e 51
+
+3. **FASE 50** (Alta) — QR Code e Verificação
+   - Impacto: Médio (diferencial competitivo)
+   - Risco: Baixo (funcionalidade nova)
+   - Depende da Fase 48
+
+4. **FASE 51** (Média) — WebPKI e Nuvem
+   - Impacto: Médio (amplia base de usuários)
+   - Risco: Médio (integrações externas)
+   - Depende da Fase 48
+
+---
+
+## Comparativo Final — Após Fase 51
+
+| Funcionalidade | ClinicaFlow Atual | Após Fase 51 | TASY | Feegow | iClinic |
+|----------------|:-----------------:|:------------:|:----:|:------:|:-------:|
+| Assinatura ICP-Brasil A1 | ⚠️ Parcial | ✅ | ✅ | ✅ | ✅ |
+| Assinatura ICP-Brasil A3 | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Assinatura em Nuvem | ❌ | ✅ | ✅ | ✅ | ❌ |
+| Cadastro único de certificado | ❌ | ✅ | ✅ | ✅ | ✅ |
+| QR Code de validação | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Verificação pública | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Campos CFM completos | ⚠️ Parcial | ✅ | ✅ | ✅ | ✅ |
+| UF do profissional | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Número de atendimento | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Conformidade CFM 2.299/2021 | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Conformidade CFM 1.821/2007 | ⚠️ Parcial | ✅ | ✅ | ✅ | ✅ |
+| Certificação SBIS elegível | ❌ | ✅ | ✅ | ⚠️ | ❌ |

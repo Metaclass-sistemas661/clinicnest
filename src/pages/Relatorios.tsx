@@ -35,9 +35,16 @@ import {
   DollarSign,
   MessageCircle,
   Loader2,
+  Clock,
+  UserPlus,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Star,
 } from "lucide-react";
 import { format, subDays, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TabProdutividade, TabPacientes, TabNoShow, TabSatisfacao } from "@/components/relatorios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,9 +56,10 @@ interface ApptRow {
   scheduled_at: string;
   client_id: string | null;
   professional_id: string | null;
-  services: { id: string; name: string; price: number } | null;
+  status: string;
+  services: { id: string; name: string; price: number; duration_minutes?: number } | null;
   profiles: { full_name: string | null } | null;
-  clients: { id: string; name: string | null; phone: string | null } | null;
+  clients: { id: string; name: string | null; phone: string | null; created_at?: string; referral_source?: string | null } | null;
 }
 
 interface ChartPoint {
@@ -238,7 +246,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 
 // ─── Visão Geral Tab ──────────────────────────────────────────────────────────
 
-function TabVisaoGeral({ appts, period, isLoading }: { appts: ApptRow[]; period: Period; isLoading: boolean }) {
+function TabVisaoGeral({ appts, prevAppts = [], period, isLoading }: { appts: ApptRow[]; prevAppts?: ApptRow[]; period: Period; isLoading: boolean }) {
   const chartData = useMemo(() => buildChartData(appts, period), [appts, period]);
 
   const totalRevenue = useMemo(() => appts.reduce((s, a) => s + (a.services?.price ?? 0), 0), [appts]);
@@ -246,14 +254,119 @@ function TabVisaoGeral({ appts, period, isLoading }: { appts: ApptRow[]; period:
   const uniqueClients = useMemo(() => new Set(appts.map((a) => a.client_id).filter(Boolean)).size, [appts]);
   const avgTicket = totalAppts > 0 ? totalRevenue / totalAppts : 0;
 
+  // Métricas do período anterior para comparativo
+  const prevTotalRevenue = useMemo(() => prevAppts.reduce((s, a) => s + (a.services?.price ?? 0), 0), [prevAppts]);
+  const prevTotalAppts = prevAppts.length;
+  const prevUniqueClients = useMemo(() => new Set(prevAppts.map((a) => a.client_id).filter(Boolean)).size, [prevAppts]);
+  const prevAvgTicket = prevTotalAppts > 0 ? prevTotalRevenue / prevTotalAppts : 0;
+
+  // Calcular variações
+  const revenueChange = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
+  const apptsChange = prevTotalAppts > 0 ? ((totalAppts - prevTotalAppts) / prevTotalAppts) * 100 : 0;
+  const clientsChange = prevUniqueClients > 0 ? ((uniqueClients - prevUniqueClients) / prevUniqueClients) * 100 : 0;
+  const ticketChange = prevAvgTicket > 0 ? ((avgTicket - prevAvgTicket) / prevAvgTicket) * 100 : 0;
+
+  const formatChange = (change: number) => {
+    if (change === 0) return null;
+    const sign = change > 0 ? "+" : "";
+    return `${sign}${change.toFixed(1)}%`;
+  };
+
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* KPIs com comparativo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={DollarSign} label="Receita Total" value={fmtBRL(totalRevenue)} sub={`em ${PERIOD_LABELS[period]}`} />
-        <KpiCard icon={Calendar} label="Atendimentos" value={String(totalAppts)} sub="concluídos" color="bg-blue-50 dark:bg-blue-950" />
-        <KpiCard icon={Users} label="Pacientes Únicos" value={String(uniqueClients)} sub="no período" color="bg-green-50 dark:bg-green-950" />
-        <KpiCard icon={TrendingUp} label="Ticket Médio" value={fmtBRL(avgTicket)} sub="por atendimento" color="bg-amber-50 dark:bg-amber-950" />
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
+                <p className="text-2xl font-bold text-foreground">{fmtBRL(totalRevenue)}</p>
+                <div className="flex items-center gap-1">
+                  {revenueChange !== 0 && (
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${revenueChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {revenueChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {formatChange(revenueChange)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">vs período anterior</span>
+                </div>
+              </div>
+              <div className="rounded-xl p-3 bg-primary/10">
+                <DollarSign className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Atendimentos</p>
+                <p className="text-2xl font-bold text-foreground">{totalAppts}</p>
+                <div className="flex items-center gap-1">
+                  {apptsChange !== 0 && (
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${apptsChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {apptsChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {formatChange(apptsChange)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">concluídos</span>
+                </div>
+              </div>
+              <div className="rounded-xl p-3 bg-blue-50 dark:bg-blue-950">
+                <Calendar className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Pacientes Únicos</p>
+                <p className="text-2xl font-bold text-foreground">{uniqueClients}</p>
+                <div className="flex items-center gap-1">
+                  {clientsChange !== 0 && (
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${clientsChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {clientsChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {formatChange(clientsChange)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">no período</span>
+                </div>
+              </div>
+              <div className="rounded-xl p-3 bg-green-50 dark:bg-green-950">
+                <Users className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold text-foreground">{fmtBRL(avgTicket)}</p>
+                <div className="flex items-center gap-1">
+                  {ticketChange !== 0 && (
+                    <span className={`text-xs font-medium flex items-center gap-0.5 ${ticketChange > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {ticketChange > 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {formatChange(ticketChange)}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">por atendimento</span>
+                </div>
+              </div>
+              <div className="rounded-xl p-3 bg-amber-50 dark:bg-amber-950">
+                <TrendingUp className="h-5 w-5 text-amber-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Chart */}
@@ -292,9 +405,9 @@ function TabVisaoGeral({ appts, period, isLoading }: { appts: ApptRow[]; period:
   );
 }
 
-// ─── Clientes Inativos Tab ────────────────────────────────────────────────────
+// ─── Pacientes Inativos Tab ────────────────────────────────────────────────────
 
-function TabClientesInativos({ tenantId, period }: { tenantId: string; period: Period }) {
+function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: Period }) {
   const [cutoff, setCutoff] = useState<InactiveCutoff>("60");
   const [loaded, setLoaded] = useState(false);
 
@@ -341,7 +454,7 @@ function TabClientesInativos({ tenantId, period }: { tenantId: string; period: P
 
       // All clients
       const { data: allClients } = await (supabase as any)
-        .from("clients")
+        .from("patients")
         .select("id, name, phone, email")
         .eq("tenant_id", tenantId)
         .eq("is_active", true);
@@ -553,7 +666,7 @@ function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolea
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Ranking por Receita</CardTitle>
+          <CardTitle className="text-base font-semibold">Procedimentos Mais Realizados</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {ranking.map((s, i) => (
@@ -686,7 +799,16 @@ export default function Relatorios() {
   const [activeTab, setActiveTab] = useState("visao-geral");
 
   const { start, end } = useMemo(() => getPeriodDates(period), [period]);
+  
+  // Período anterior para comparativo
+  const prevPeriod = useMemo(() => {
+    const days = { "7d": 7, "30d": 30, "90d": 90, "365d": 365 }[period];
+    const prevEnd = subDays(new Date(), days);
+    const prevStart = subDays(prevEnd, days);
+    return { start: prevStart.toISOString(), end: prevEnd.toISOString() };
+  }, [period]);
 
+  // Query principal - todos os status para análises completas
   const { data: appts = [], isFetching } = useQuery({
     queryKey: ["relatorios-appts", profile?.tenant_id, period],
     enabled: !!profile?.tenant_id,
@@ -695,10 +817,9 @@ export default function Relatorios() {
       const { data, error } = await (supabase as any)
         .from("appointments")
         .select(
-          "id, scheduled_at, client_id, professional_id, services(id, name, price), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone)"
+          "id, scheduled_at, client_id, professional_id, status, services(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
         )
         .eq("tenant_id", profile!.tenant_id)
-        .eq("status", "completed")
         .gte("scheduled_at", start)
         .lte("scheduled_at", end)
         .order("scheduled_at", { ascending: true });
@@ -707,6 +828,51 @@ export default function Relatorios() {
       return (data ?? []) as ApptRow[];
     },
   });
+
+  // Query do período anterior para comparativo
+  const { data: prevAppts = [] } = useQuery({
+    queryKey: ["relatorios-appts-prev", profile?.tenant_id, period],
+    enabled: !!profile?.tenant_id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<ApptRow[]> => {
+      const { data, error } = await (supabase as any)
+        .from("appointments")
+        .select(
+          "id, scheduled_at, client_id, professional_id, status, services(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
+        )
+        .eq("tenant_id", profile!.tenant_id)
+        .gte("scheduled_at", prevPeriod.start)
+        .lte("scheduled_at", prevPeriod.end)
+        .order("scheduled_at", { ascending: true });
+
+      if (error) return [];
+      return (data ?? []) as ApptRow[];
+    },
+  });
+
+  // Query de todos os agendamentos (para análise de pacientes novos vs retornos)
+  const { data: allAppts = [] } = useQuery({
+    queryKey: ["relatorios-all-appts", profile?.tenant_id],
+    enabled: !!profile?.tenant_id && activeTab === "pacientes",
+    staleTime: 10 * 60 * 1000,
+    queryFn: async (): Promise<ApptRow[]> => {
+      const { data, error } = await (supabase as any)
+        .from("appointments")
+        .select(
+          "id, scheduled_at, client_id, professional_id, status, services(id, name, price), profiles!appointments_professional_id_fkey(full_name), clients(id, name, phone, created_at, referral_source)"
+        )
+        .eq("tenant_id", profile!.tenant_id)
+        .eq("status", "completed")
+        .order("scheduled_at", { ascending: true });
+
+      if (error) return [];
+      return (data ?? []) as ApptRow[];
+    },
+  });
+
+  // Filtrar apenas concluídos para métricas financeiras
+  const completedAppts = useMemo(() => appts.filter(a => a.status === "completed"), [appts]);
+  const prevCompletedAppts = useMemo(() => prevAppts.filter(a => a.status === "completed"), [prevAppts]);
 
   const tenantId = profile?.tenant_id ?? "";
 
@@ -749,7 +915,7 @@ export default function Relatorios() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex">
+          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:grid-cols-7 sm:inline-flex overflow-x-auto">
             <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
               <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
               Visão Geral
@@ -766,22 +932,54 @@ export default function Relatorios() {
               <UserCog className="h-3.5 w-3.5 hidden sm:block" />
               Equipe
             </TabsTrigger>
+            <TabsTrigger value="produtividade" className="gap-1.5 text-xs sm:text-sm">
+              <Clock className="h-3.5 w-3.5 hidden sm:block" />
+              Produtividade
+            </TabsTrigger>
+            <TabsTrigger value="pacientes" className="gap-1.5 text-xs sm:text-sm">
+              <UserPlus className="h-3.5 w-3.5 hidden sm:block" />
+              Pacientes
+            </TabsTrigger>
+            <TabsTrigger value="no-show" className="gap-1.5 text-xs sm:text-sm">
+              <AlertTriangle className="h-3.5 w-3.5 hidden sm:block" />
+              No-Show
+            </TabsTrigger>
+            <TabsTrigger value="satisfacao" className="gap-1.5 text-xs sm:text-sm">
+              <Star className="h-3.5 w-3.5 hidden sm:block" />
+              Satisfação
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="visao-geral" className="mt-6">
-            <TabVisaoGeral appts={appts} period={period} isLoading={isFetching} />
+            <TabVisaoGeral appts={completedAppts} prevAppts={prevCompletedAppts} period={period} isLoading={isFetching} />
           </TabsContent>
 
           <TabsContent value="inativos" className="mt-6">
-            <TabClientesInativos tenantId={tenantId} period={period} />
+            <TabPacientesInativos tenantId={tenantId} period={period} />
           </TabsContent>
 
           <TabsContent value="servicos" className="mt-6">
-            <TabServicos appts={appts} isLoading={isFetching} />
+            <TabServicos appts={completedAppts} isLoading={isFetching} />
           </TabsContent>
 
           <TabsContent value="profissionais" className="mt-6">
-            <TabProfissionais appts={appts} isLoading={isFetching} />
+            <TabProfissionais appts={completedAppts} isLoading={isFetching} />
+          </TabsContent>
+
+          <TabsContent value="produtividade" className="mt-6">
+            <TabProdutividade appts={appts} isLoading={isFetching} />
+          </TabsContent>
+
+          <TabsContent value="pacientes" className="mt-6">
+            <TabPacientes appts={completedAppts} allAppts={allAppts} isLoading={isFetching} periodStart={start} />
+          </TabsContent>
+
+          <TabsContent value="no-show" className="mt-6">
+            <TabNoShow appts={appts} isLoading={isFetching} />
+          </TabsContent>
+
+          <TabsContent value="satisfacao" className="mt-6">
+            <TabSatisfacao tenantId={tenantId} periodStart={start} periodEnd={end} />
           </TabsContent>
         </Tabs>
       </div>

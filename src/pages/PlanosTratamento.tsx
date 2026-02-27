@@ -58,7 +58,7 @@ export default function PlanosTratamento() {
   useEffect(() => { if (selectedClient) fetchPlans(); }, [selectedClient, statusFilter]);
 
   const searchClients = async () => {
-    const { data } = await supabase.from("clients").select("id, name").eq("tenant_id", profile!.tenant_id).ilike("name", `%${clientSearch}%`).limit(20);
+    const { data } = await supabase.from("patients").select("id, name").eq("tenant_id", profile!.tenant_id).ilike("name", `%${clientSearch}%`).limit(20);
     setClients(data || []);
   };
 

@@ -18,7 +18,7 @@ A Edge Function `send-custom-auth-email` envia emails customizados via **Resend*
 ## 🚀 Deploy da Edge Function
 
 ```bash
-cd salon-flow
+cd ClinicaFlow
 supabase functions deploy send-custom-auth-email
 ```
 
@@ -52,7 +52,7 @@ supabase secrets list
    - Busca o nome do usuário no banco (se existir)
    - Gera link de recuperação usando `admin.generateLink`
    - Envia email customizado via Resend com template HTML bonito
-   - Link aponta para `https://vynlobella.com/reset-password`
+   - Link aponta para `https://clinicnest.metaclass.com.br/reset-password`
 5. Se a Edge Function falhar, usa fallback para método padrão do Supabase
 
 ### Fallback Automático
@@ -80,8 +80,8 @@ Os templates HTML estão definidos na Edge Function:
 2. Digite um email válido cadastrado no sistema
 3. Verifique a caixa de entrada
 4. O email deve ter:
-   - Visual customizado (gradiente, logo VynloBella)
-   - Link para `https://vynlobella.com/reset-password`
+   - Visual customizado (gradiente, logo ClinicNest)
+   - Link para `https://clinicnest.metaclass.com.br/reset-password`
    - Nome do usuário (se disponível)
 
 ---
@@ -106,7 +106,7 @@ Os templates HTML estão definidos na Edge Function:
 
 ### Link errado no email
 
-- Verificar se `redirectTo` está como `https://vynlobella.com/reset-password`
+- Verificar se `redirectTo` está como `https://clinicnest.metaclass.com.br/reset-password`
 - Verificar Site URL no Supabase Dashboard (Authentication → URL Configuration)
 
 ### Nome não aparece no email

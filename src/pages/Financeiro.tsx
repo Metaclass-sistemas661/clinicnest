@@ -599,16 +599,16 @@ export default function Financeiro() {
           </div>
         )}
 
-        {/* Info about automatic transactions */}
+        {/* Info about payment registration */}
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
               <LinkIcon className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-medium">Integração com Agenda</p>
+              <p className="font-medium">Fluxo de Pagamentos</p>
               <p className="text-sm text-muted-foreground">
-                Receitas são geradas automaticamente quando um agendamento é marcado como "Concluído"
+                Receitas são geradas quando você registra o pagamento de um atendimento concluído na Agenda
               </p>
             </div>
           </CardContent>

@@ -15,7 +15,7 @@ A função `update-password` não está sendo chamada (sem logs). Isso pode ser 
 ### Passo 1: Deploy
 
 ```bash
-cd C:\Users\andre\Desktop\Vynlobella\salon-flow
+cd C:\Users\andre\Desktop\ClinicaFlow
 supabase functions deploy update-password
 ```
 

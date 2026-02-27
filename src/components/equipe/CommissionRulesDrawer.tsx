@@ -140,7 +140,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
           .eq("is_active", true)
           .order("priority", { ascending: false }),
         supabase
-          .from("services")
+          .from("procedures")
           .select("id, name, price")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
@@ -548,7 +548,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
             <div className="space-y-2">
               <Label>Serviço (opcional)</Label>
               <Select value={simServiceId || "__any__"} onValueChange={(v) => setSimServiceId(v === "__any__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Qualquer serviço" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Qualquer procedimento" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__any__">Qualquer serviço</SelectItem>
                   {services.map(s => (

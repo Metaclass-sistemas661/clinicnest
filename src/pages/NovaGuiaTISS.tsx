@@ -54,8 +54,8 @@ export default function NovaGuiaTISS() {
     try {
       const [plansRes, clientsRes, servicesRes] = await Promise.all([
         supabase.from("insurance_plans").select("id, name, ans_code, tiss_version").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
-        supabase.from("clients").select("id, name, cpf, insurance_card_number").eq("tenant_id", profile.tenant_id).order("name").limit(500),
-        supabase.from("services").select("id, name, tuss_code, insurance_price").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
+        supabase.from("patients").select("id, name, cpf, insurance_card_number").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        supabase.from("procedures").select("id, name, tuss_code, insurance_price").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
       ]);
       setPlans((plansRes.data ?? []) as InsurancePlan[]);
       setClients((clientsRes.data ?? []) as Client[]);
@@ -244,7 +244,7 @@ export default function NovaGuiaTISS() {
             <div className="space-y-2">
               <Label>Serviço/Procedimento *</Label>
               <Select value={serviceId} onValueChange={setServiceId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o serviço" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione o procedimento" /></SelectTrigger>
                 <SelectContent>
                   {services.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.name} {s.tuss_code && `(${s.tuss_code})`}</SelectItem>

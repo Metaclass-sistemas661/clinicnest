@@ -40,7 +40,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
 
       // Resolve client_id
       const { data: client } = await supabasePatient
-        .from("clients")
+        .from("patients")
         .select("id")
         .eq("email", user.email)
         .limit(1)

@@ -9,6 +9,7 @@ import { GoalsProgressBar } from "@/components/header/GoalsProgressBar";
 import { ProfessionalGoalMotivationDialog } from "@/components/admin/ProfessionalGoalMotivationDialog";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { AdverseEventButton } from "@/components/quality/AdverseEventButton";
+import { ModuleErrorBoundary } from "@/components/ModuleErrorBoundary";
 import { useAppStatus, usePersistedLastRefresh } from "@/contexts/AppStatusContext";
 import { formatInAppTz } from "@/lib/date";
 import {
@@ -23,6 +24,7 @@ import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { GlobalSearch } from "@/components/header/GlobalSearch";
 import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
+import { AiAgentChat } from "@/components/ai";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -139,7 +141,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                       <Link to="/agenda">Novo agendamento</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to="/clientes">Novo paciente</Link>
+                      <Link to="/pacientes">Novo paciente</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link to="/servicos">Novo procedimento</Link>
@@ -161,12 +163,17 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
             "animate-fade-in",
             isMobile ? "p-4" : "p-8"
           )}>
-            {children}
+            <ModuleErrorBoundary moduleName="Página">
+              {children}
+            </ModuleErrorBoundary>
           </div>
           
           {/* Botão flutuante para notificar eventos adversos */}
           <AdverseEventButton />
         </main>
+
+        {/* Agente IA flutuante */}
+        <AiAgentChat />
       </div>
     </SubscriptionGuard>
   );

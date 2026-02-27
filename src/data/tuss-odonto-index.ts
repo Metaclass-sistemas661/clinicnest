@@ -196,6 +196,3 @@ export const TUSS_ODONTO_STATS = {
     }));
   }
 };
-
-// Log do total ao importar (para debug)
-console.log(`[TUSS Odonto] Total de procedimentos odontológicos: ${TUSS_ODONTO_DATA.length}`);

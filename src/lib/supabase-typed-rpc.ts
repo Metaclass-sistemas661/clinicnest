@@ -1,5 +1,8 @@
 /**
- * Wrapper tipado para RPCs do Supabase que não estão no types gerado
+ * Wrapper tipado para RPCs do Supabase que não estão no types gerado.
+ * Cada função mapeia 1:1 para uma RPC SECURITY DEFINER no Supabase.
+ * O tenant_id é deduzido automaticamente pelo contexto JWT via get_my_context().
+ * @module supabase-typed-rpc
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +28,7 @@ import type {
   CreateScheduleBlockResult,
   DeleteScheduleBlockResult,
   CreateClientPackageResult,
+  PatientTimelineEventRow,
   ClientTimelineEventRow,
   RevertPackageConsumptionResult,
   CreatePurchaseResult,
@@ -37,6 +41,14 @@ import type { AppointmentStatus, TransactionType, StockOutReasonType } from "@/t
 type RpcFn = <T>(name: string, params?: Record<string, unknown>) => Promise<{ data: T | null; error: unknown }>;
 const rpc = supabase.rpc.bind(supabase) as RpcFn;
 
+/**
+ * Retorna totais de salários do dashboard (pendentes, pagos no mês).
+ * Admins veem todos os profissionais; profissionais veem apenas seus dados.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_is_admin - Se o usuário é admin
+ * @param params.p_professional_user_id - UUID do profissional (null se admin)
+ * @returns Totais de salários por período
+ */
 export async function getDashboardSalaryTotals(params: {
   p_tenant_id: string;
   p_is_admin: boolean;
@@ -45,6 +57,14 @@ export async function getDashboardSalaryTotals(params: {
   return rpc<DashboardSalaryTotals>("get_dashboard_salary_totals", params);
 }
 
+/**
+ * Lista pagamentos de salário filtrados por profissional e período.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_professional_id - Filtro por profissional (null = todos)
+ * @param params.p_year - Ano filtro (null = todos)
+ * @param params.p_month - Mês filtro (null = todos)
+ * @returns Array de registros de pagamento
+ */
 export async function getSalaryPayments(params: {
   p_tenant_id: string;
   p_professional_id: string | null;
@@ -54,12 +74,28 @@ export async function getSalaryPayments(params: {
   return rpc<SalaryPaymentRow[]>("get_salary_payments", params);
 }
 
+/**
+ * Lista todos os profissionais com configuração salarial do tenant.
+ * @param params.p_tenant_id - UUID do tenant
+ * @returns Array de profissionais com dados de salário
+ */
 export async function getProfessionalsWithSalary(params: {
   p_tenant_id: string;
 }): Promise<{ data: ProfessionalWithSalaryRow[] | null; error: unknown }> {
   return rpc<ProfessionalWithSalaryRow[]>("get_professionals_with_salary", params);
 }
 
+/**
+ * Registra pagamento de salário para um profissional.
+ * Cria transação financeira automática e registra no histórico.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_professional_id - UUID do profissional
+ * @param params.p_payment_year - Ano de competência
+ * @param params.p_payment_month - Mês de competência
+ * @param params.p_days_worked - Dias trabalhados para cálculo proporcional
+ * @param params.p_payment_method - Método de pagamento (pix, transferencia, etc.)
+ * @returns Resultado do pagamento com ID da transação
+ */
 export async function paySalary(params: {
   p_tenant_id: string;
   p_professional_id: string;
@@ -73,6 +109,13 @@ export async function paySalary(params: {
   return rpc<PaySalaryResult>("pay_salary", params);
 }
 
+/**
+ * Retorna total de perdas de produtos (avarias, vencidos) no período.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_year - Ano (null = todos)
+ * @param params.p_month - Mês (null = todos)
+ * @returns Total monetário de perdas
+ */
 export async function getDashboardProductLossTotal(params: {
   p_tenant_id: string;
   p_year: number | null;
@@ -81,12 +124,25 @@ export async function getDashboardProductLossTotal(params: {
   return rpc<number>("get_dashboard_product_loss_total", params);
 }
 
+/**
+ * Conta total de clientes ativos do tenant.
+ * @param params.p_tenant_id - UUID do tenant
+ * @returns Contagem de clientes
+ */
 export async function getDashboardClientsCount(params: {
   p_tenant_id: string;
 }): Promise<{ data: number | null; error: unknown }> {
   return rpc<number>("get_dashboard_clients_count", params);
 }
 
+/**
+ * Retorna totais de comissões (a pagar, pagas, a receber).
+ * Admins veem todas; profissionais veem apenas suas comissões.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_is_admin - Se o usuário é admin
+ * @param params.p_professional_user_id - UUID do profissional (null se admin)
+ * @returns Totais de comissões por status
+ */
 export async function getDashboardCommissionTotals(params: {
   p_tenant_id: string;
   p_is_admin: boolean;
@@ -95,6 +151,12 @@ export async function getDashboardCommissionTotals(params: {
   return rpc<DashboardCommissionTotals>("get_dashboard_commission_totals", params);
 }
 
+/**
+ * Lista metas (goals) com progresso calculado automaticamente.
+ * @param params.p_tenant_id - UUID do tenant
+ * @param params.p_include_archived - Incluir metas arquivadas (default: false)
+ * @returns Array de metas com valores atuais e % de progresso
+ */
 export async function getGoalsWithProgress(params: {
   p_tenant_id: string;
   p_include_archived?: boolean;
@@ -108,6 +170,17 @@ export type CreateAppointmentV2Result = {
   status: AppointmentStatus;
 };
 
+/**
+ * Cria agendamento com validações de conflito de horário e disponibilidade.
+ * Infere tenant_id do JWT. Valida status e profissional automaticamente.
+ * @param params.p_client_id - UUID do paciente (opcional para encaixe)
+ * @param params.p_service_id - UUID do serviço/procedimento
+ * @param params.p_professional_profile_id - UUID do profissional
+ * @param params.p_scheduled_at - Data/hora ISO do agendamento
+ * @param params.p_duration_minutes - Duração em minutos
+ * @param params.p_price - Valor da consulta
+ * @returns ID do agendamento criado e status
+ */
 export async function createAppointmentV2(params: {
   p_client_id?: string | null;
   p_service_id?: string | null;
@@ -129,6 +202,12 @@ export type UpdateAppointmentV2Result = {
   notes_only: boolean;
 };
 
+/**
+ * Atualiza agendamento existente. Verifica conflitos de horário.
+ * Se apenas `p_notes` mudar, marca `notes_only: true` no resultado.
+ * @param params.p_appointment_id - UUID do agendamento
+ * @returns Resultado com flag notes_only
+ */
 export async function updateAppointmentV2(params: {
   p_appointment_id: string;
   p_client_id?: string | null;
@@ -145,6 +224,11 @@ export async function updateAppointmentV2(params: {
 }
 
 export type DeleteAppointmentV2Result = { success: boolean; appointment_id: string };
+/**
+ * Exclui agendamento (soft delete ou hard delete conforme configuração do tenant).
+ * @param params.p_appointment_id - UUID do agendamento
+ * @param params.p_reason - Motivo do cancelamento (opcional)
+ */
 export async function deleteAppointmentV2(params: {
   p_appointment_id: string;
   p_reason?: string | null;
@@ -159,6 +243,13 @@ export type SetAppointmentStatusV2Result = {
   unchanged?: boolean;
   already_cancelled?: boolean;
 };
+/**
+ * Altera status de agendamento (pending, confirmed, completed, cancelled, no_show).
+ * Não permite alterar agendamentos já cancelados.
+ * @param params.p_appointment_id - UUID do agendamento
+ * @param params.p_status - Novo status
+ * @returns Resultado com flags unchanged/already_cancelled
+ */
 export async function setAppointmentStatusV2(params: {
   p_appointment_id: string;
   p_status: AppointmentStatus;
@@ -167,6 +258,16 @@ export async function setAppointmentStatusV2(params: {
 }
 
 export type CreateFinancialTransactionV2Result = { success: boolean; transaction_id: string };
+/**
+ * Cria transação financeira manual (receita ou despesa).
+ * tenant_id inferido do JWT.
+ * @param params.p_type - 'income' | 'expense'
+ * @param params.p_category - Categoria da transação
+ * @param params.p_amount - Valor em BRL
+ * @param params.p_description - Descrição opcional
+ * @param params.p_transaction_date - Data ISO (default: hoje)
+ * @returns ID da transação criada
+ */
 export async function createFinancialTransactionV2(params: {
   p_type: TransactionType;
   p_category: string;
@@ -184,6 +285,15 @@ export type AdjustStockResult = {
   financial_transaction_id: string | null;
   new_quantity: number;
 };
+/**
+ * Ajusta estoque de produto (entrada ou saída).
+ * Cria movimentação de estoque + transação financeira se comprado com caixa.
+ * @param params.p_product_id - UUID do produto
+ * @param params.p_movement_type - 'in' (entrada) | 'out' (saída)
+ * @param params.p_quantity - Quantidade movimentada
+ * @param params.p_out_reason_type - Motivo da saída (venda, perda, etc.)
+ * @returns Novo saldo, IDs da movimentação e transação
+ */
 export async function adjustStock(params: {
   p_product_id: string;
   p_movement_type: "in" | "out";
@@ -200,6 +310,16 @@ export type CreateProductV2Result = {
   product_id: string;
   financial_transaction_id: string | null;
 };
+/**
+ * Cria produto no estóque com preço de custo, venda e quantidade inicial.
+ * @param params.p_name - Nome do produto
+ * @param params.p_cost - Preço de custo
+ * @param params.p_sale_price - Preço de venda
+ * @param params.p_quantity - Quantidade inicial em estoque
+ * @param params.p_min_quantity - Quantidade mínima para alerta
+ * @param params.p_category_id - UUID da categoria (opcional)
+ * @returns ID do produto criado
+ */
 export async function createProductV2(params: {
   p_name: string;
   p_description?: string | null;
@@ -213,29 +333,64 @@ export async function createProductV2(params: {
   return rpc<CreateProductV2Result>("create_product_v2", params as Record<string, unknown>);
 }
 
-export type UpsertServiceV2Result = { success: boolean; service_id: string };
-export async function upsertServiceV2(params: {
-  p_service_id?: string | null;
+export type UpsertProcedureV2Result = { success: boolean; procedure_id: string };
+/** @deprecated Use UpsertProcedureV2Result instead */
+export type UpsertServiceV2Result = UpsertProcedureV2Result;
+
+/**
+ * Cria ou atualiza procedimento/serviço clínico.
+ * Se p_procedure_id fornecido, atualiza; senão, cria novo.
+ * @param params.p_name - Nome do procedimento
+ * @param params.p_duration_minutes - Duração padrão em minutos
+ * @param params.p_price - Preço padrão
+ * @returns ID do procedimento
+ */
+export async function upsertProcedureV2(params: {
+  p_procedure_id?: string | null;
   p_name: string;
   p_description?: string | null;
   p_duration_minutes: number;
   p_price: number;
   p_is_active?: boolean;
-}): Promise<{ data: UpsertServiceV2Result | null; error: unknown }> {
-  return rpc<UpsertServiceV2Result>("upsert_service_v2", params as Record<string, unknown>);
+}): Promise<{ data: UpsertProcedureV2Result | null; error: unknown }> {
+  return rpc<UpsertProcedureV2Result>("upsert_service_v2", params as Record<string, unknown>);
 }
 
-export type SetServiceActiveV2Result = { success: boolean; service_id: string; is_active: boolean };
-export async function setServiceActiveV2(params: {
-  p_service_id: string;
+/** @deprecated Use upsertProcedureV2 instead */
+export const upsertServiceV2 = upsertProcedureV2;
+
+export type SetProcedureActiveV2Result = { success: boolean; procedure_id: string; is_active: boolean };
+/** @deprecated Use SetProcedureActiveV2Result instead */
+export type SetServiceActiveV2Result = SetProcedureActiveV2Result;
+
+/**
+ * Ativa/desativa procedimento. Procedimentos inativos não aparecem na agenda.
+ * @param params.p_procedure_id - UUID do procedimento
+ * @param params.p_is_active - true para ativar, false para desativar
+ */
+export async function setProcedureActiveV2(params: {
+  p_procedure_id: string;
   p_is_active: boolean;
-}): Promise<{ data: SetServiceActiveV2Result | null; error: unknown }> {
-  return rpc<SetServiceActiveV2Result>("set_service_active_v2", params as Record<string, unknown>);
+}): Promise<{ data: SetProcedureActiveV2Result | null; error: unknown }> {
+  return rpc<SetProcedureActiveV2Result>("set_service_active_v2", params as Record<string, unknown>);
 }
 
-export type UpsertClientV2Result = { success: boolean; client_id: string; access_code?: string };
-export async function upsertClientV2(params: {
-  p_client_id?: string | null;
+/** @deprecated Use setProcedureActiveV2 instead */
+export const setServiceActiveV2 = setProcedureActiveV2;
+
+export type UpsertPatientV2Result = { success: boolean; patient_id: string; access_code?: string };
+/** @deprecated Use UpsertPatientV2Result instead */
+export type UpsertClientV2Result = UpsertPatientV2Result;
+
+/**
+ * Cria ou atualiza paciente com dados completos (CPF, endereço, alergias).
+ * Se p_patient_id fornecido, atualiza; senão, cria e gera access_code.
+ * @param params.p_name - Nome completo do paciente
+ * @param params.p_cpf - CPF (validado no banco)
+ * @returns ID do paciente e access_code (para novos)
+ */
+export async function upsertPatientV2(params: {
+  p_patient_id?: string | null;
   p_name: string;
   p_phone?: string | null;
   p_email?: string | null;
@@ -251,12 +406,22 @@ export async function upsertClientV2(params: {
   p_city?: string | null;
   p_state?: string | null;
   p_allergies?: string | null;
-}): Promise<{ data: UpsertClientV2Result | null; error: unknown }> {
-  return rpc<UpsertClientV2Result>("upsert_client_v2", params as Record<string, unknown>);
+}): Promise<{ data: UpsertPatientV2Result | null; error: unknown }> {
+  return rpc<UpsertPatientV2Result>("upsert_client_v2", params as Record<string, unknown>);
 }
 
-export async function createClientPackageV1(params: {
-  p_client_id: string;
+/** @deprecated Use upsertPatientV2 instead */
+export const upsertClientV2 = upsertPatientV2;
+
+/**
+ * Cria pacote de sessões para paciente (ex: 10 sessões de fisioterapia).
+ * @param params.p_patient_id - UUID do paciente
+ * @param params.p_service_id - UUID do serviço vinculado
+ * @param params.p_total_sessions - Número total de sessões
+ * @param params.p_expires_at - Data de expiração ISO (opcional)
+ */
+export async function createPatientPackageV1(params: {
+  p_patient_id: string;
   p_service_id: string;
   p_total_sessions: number;
   p_expires_at?: string | null;
@@ -265,13 +430,31 @@ export async function createClientPackageV1(params: {
   return rpc<CreateClientPackageResult>("create_client_package_v1", params as Record<string, unknown>);
 }
 
-export async function getClientTimelineV1(params: {
-  p_client_id: string;
+/** @deprecated Use createPatientPackageV1 instead */
+export const createClientPackageV1 = createPatientPackageV1;
+
+/**
+ * Retorna timeline completa do paciente (consultas, exames, prescrições, etc.).
+ * @param params.p_patient_id - UUID do paciente
+ * @param params.p_limit - Máximo de eventos (default: 50)
+ * @returns Array de eventos ordenados por data desc
+ */
+export async function getPatientTimelineV1(params: {
+  p_patient_id: string;
   p_limit?: number;
-}): Promise<{ data: ClientTimelineEventRow[] | null; error: unknown }> {
-  return rpc<ClientTimelineEventRow[]>("get_client_timeline_v1", params as Record<string, unknown>);
+}): Promise<{ data: PatientTimelineEventRow[] | null; error: unknown }> {
+  return rpc<PatientTimelineEventRow[]>("get_client_timeline_v1", params as Record<string, unknown>);
 }
 
+/** @deprecated Use getPatientTimelineV1 instead */
+export const getClientTimelineV1 = getPatientTimelineV1;
+
+/**
+ * Reverte consumo de pacote vinculado a um agendamento cancelado.
+ * Restaura a sessão consumida ao saldo do pacote.
+ * @param params.p_appointment_id - UUID do agendamento cancelado
+ * @param params.p_reason - Motivo da reversão
+ */
 export async function revertPackageConsumptionForAppointmentV1(params: {
   p_appointment_id: string;
   p_reason?: string | null;
@@ -282,6 +465,12 @@ export async function revertPackageConsumptionForAppointmentV1(params: {
   );
 }
 
+/**
+ * Registra compra de fornecedor com múltiplos itens.
+ * Cria movimentações de entrada no estoque + transações financeiras.
+ * @param params.p_items - Array de {product_id, quantity, unit_cost}
+ * @param params.p_purchased_with_company_cash - Se saiu do caixa da empresa
+ */
 export async function createPurchaseV1(params: {
   p_supplier_id?: string | null;
   p_purchased_at?: string | null;
@@ -296,6 +485,11 @@ export async function createPurchaseV1(params: {
   } as Record<string, unknown>);
 }
 
+/**
+ * Cancela compra e reverte movimentações de estoque + transações.
+ * @param params.p_purchase_id - UUID da compra
+ * @param params.p_reason - Motivo do cancelamento
+ */
 export async function cancelPurchaseV1(params: {
   p_purchase_id: string;
   p_reason?: string | null;
@@ -380,6 +574,12 @@ export async function getSecurityDiagnosticsV1(): Promise<{ data: SecurityDiagno
 
 // ─── Orders / Checkout RPCs ──────────────────────────────────
 
+/**
+ * Cria comanda/pedido avulso (walk-in, sem agendamento prévio).
+ * @param params.p_client_id - UUID do paciente (opcional)
+ * @param params.p_professional_id - UUID do profissional (opcional)
+ * @returns ID do pedido criado
+ */
 export async function createWalkinOrderV1(params: {
   p_client_id?: string | null;
   p_professional_id?: string | null;
@@ -388,12 +588,24 @@ export async function createWalkinOrderV1(params: {
   return rpc<CreateWalkinOrderResult>("create_walkin_order_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Cria comanda vinculada a um agendamento existente.
+ * Herda paciente, profissional e serviço do agendamento.
+ * @param params.p_appointment_id - UUID do agendamento
+ */
 export async function createOrderForAppointmentV1(params: {
   p_appointment_id: string;
 }): Promise<{ data: CreateOrderForAppointmentResult | null; error: unknown }> {
   return rpc<CreateOrderForAppointmentResult>("create_order_for_appointment_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Adiciona item (serviço ou produto) a um pedido aberto.
+ * @param params.p_order_id - UUID do pedido
+ * @param params.p_kind - 'service' | 'product'
+ * @param params.p_unit_price - Preço unitário
+ * @param params.p_quantity - Quantidade (default: 1)
+ */
 export async function addOrderItemV1(params: {
   p_order_id: string;
   p_kind: "service" | "product";
@@ -406,12 +618,21 @@ export async function addOrderItemV1(params: {
   return rpc<AddOrderItemResult>("add_order_item_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Remove item de um pedido aberto.
+ * @param params.p_order_item_id - UUID do item
+ */
 export async function removeOrderItemV1(params: {
   p_order_item_id: string;
 }): Promise<{ data: RemoveOrderItemResult | null; error: unknown }> {
   return rpc<RemoveOrderItemResult>("remove_order_item_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Aplica desconto fixo ao pedido.
+ * @param params.p_order_id - UUID do pedido
+ * @param params.p_discount_amount - Valor absoluto do desconto em BRL
+ */
 export async function setOrderDiscountV1(params: {
   p_order_id: string;
   p_discount_amount: number;
@@ -424,6 +645,12 @@ export type FinalizePaymentInput = {
   amount: number;
 };
 
+/**
+ * Finaliza pedido com pagamento(s). Aceita split de pagamento (múltiplos métodos).
+ * Gera transações financeiras, baixa estoque, calcula comissões.
+ * @param params.p_order_id - UUID do pedido
+ * @param params.p_payments - Array de {payment_method_id, amount}
+ */
 export async function finalizeOrderV1(params: {
   p_order_id: string;
   p_payments: FinalizePaymentInput[];
@@ -433,6 +660,12 @@ export async function finalizeOrderV1(params: {
 
 // ─── Cash Register / Caixa RPCs ─────────────────────────────
 
+/**
+ * Abre sessão de caixa do dia. Apenas 1 sessão aberta por vez por usuário.
+ * @param params.p_opening_balance - Saldo de abertura em BRL
+ * @param params.p_notes - Observações
+ * @returns ID da sessão
+ */
 export async function openCashSessionV1(params: {
   p_opening_balance?: number;
   p_notes?: string | null;
@@ -440,6 +673,12 @@ export async function openCashSessionV1(params: {
   return rpc<OpenCashSessionResult>("open_cash_session_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Registra reforço ou sangria no caixa.
+ * @param params.p_type - 'reinforcement' (reforço) | 'withdrawal' (sangria)
+ * @param params.p_amount - Valor em BRL
+ * @param params.p_reason - Motivo (obrigatório para sangria)
+ */
 export async function addCashMovementV1(params: {
   p_type: "reinforcement" | "withdrawal";
   p_amount: number;
@@ -448,12 +687,20 @@ export async function addCashMovementV1(params: {
   return rpc<AddCashMovementResult>("add_cash_movement_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Retorna resumo da sessão de caixa (entradas, saídas, saldo).
+ * @param params.p_session_id - UUID da sessão
+ */
 export async function getCashSessionSummaryV1(params: {
   p_session_id: string;
 }): Promise<{ data: CashSessionSummaryResult | null; error: unknown }> {
   return rpc<CashSessionSummaryResult>("get_cash_session_summary_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Retorna resumo da sessão de caixa atualmente aberta (se houver).
+ * @returns Dados da sessão aberta ou null
+ */
 export async function getOpenCashSessionSummaryV1(): Promise<{
   data: OpenCashSessionSummaryResult | null;
   error: unknown;
@@ -461,6 +708,13 @@ export async function getOpenCashSessionSummaryV1(): Promise<{
   return rpc<OpenCashSessionSummaryResult>("get_open_cash_session_summary_v1");
 }
 
+/**
+ * Fecha sessão de caixa, comparando saldo informado vs calculado.
+ * @param params.p_session_id - UUID da sessão
+ * @param params.p_reported_balance - Saldo contado fisicamente
+ * @param params.p_notes - Observações de fechamento
+ * @returns Resultado com diferença entre informado e calculado
+ */
 export async function closeCashSessionV1(params: {
   p_session_id: string;
   p_reported_balance: number;
@@ -471,6 +725,14 @@ export async function closeCashSessionV1(params: {
 
 // ─── Agenda Availability / Blocks RPCs ──────────────────────
 
+/**
+ * Configura horário de trabalho de profissional (dia da semana + faixa).
+ * @param params.p_professional_id - UUID do profissional
+ * @param params.p_day_of_week - 0 (dom) a 6 (sáb)
+ * @param params.p_start_time - Início (HH:mm)
+ * @param params.p_end_time - Fim (HH:mm)
+ * @param params.p_is_active - Se o horário está ativo
+ */
 export async function upsertProfessionalWorkingHoursV1(params: {
   p_professional_id: string;
   p_day_of_week: number;
@@ -481,6 +743,13 @@ export async function upsertProfessionalWorkingHoursV1(params: {
   return rpc<UpsertProfessionalWorkingHoursResult>("upsert_professional_working_hours_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Cria bloqueio de agenda (férias, feriado, etc.).
+ * @param params.p_professional_id - UUID do profissional (null = todos)
+ * @param params.p_start_at - Início ISO do bloqueio
+ * @param params.p_end_at - Fim ISO do bloqueio
+ * @param params.p_reason - Motivo do bloqueio
+ */
 export async function createScheduleBlockV1(params: {
   p_professional_id?: string | null;
   p_start_at: string;
@@ -490,6 +759,10 @@ export async function createScheduleBlockV1(params: {
   return rpc<CreateScheduleBlockResult>("create_schedule_block_v1", params as Record<string, unknown>);
 }
 
+/**
+ * Remove bloqueio de agenda.
+ * @param params.p_block_id - UUID do bloqueio
+ */
 export async function deleteScheduleBlockV1(params: {
   p_block_id: string;
 }): Promise<{ data: DeleteScheduleBlockResult | null; error: unknown }> {
@@ -498,6 +771,13 @@ export async function deleteScheduleBlockV1(params: {
 
 // ─── BI / DRE RPCs ──────────────────────────────────
 
+/**
+ * Gera DRE (Demonstrativo de Resultado do Exercício) simplificado.
+ * Agrupa receitas e despesas por categoria no período.
+ * @param params.p_start_date - Data início ISO (YYYY-MM-DD)
+ * @param params.p_end_date - Data fim ISO (YYYY-MM-DD)
+ * @returns Receitas, despesas e resultado líquido por categoria
+ */
 export async function getDreSimpleV1(params: {
   p_start_date: string;
   p_end_date: string;
@@ -507,76 +787,30 @@ export async function getDreSimpleV1(params: {
 
 // ─── Financeiro Avançado — Fase 2 ───────────────────────────
 
+/**
+ * Retorna projeção de fluxo de caixa para os próximos N dias.
+ * Baseada em agendamentos confirmados + recorrências.
+ * @param params.p_days - Número de dias para projetar (default: 30)
+ */
 export async function getCashFlowProjectionV1(params: {
   p_days?: number;
 }): Promise<{ data: CashFlowProjectionResult | null; error: unknown }> {
   return rpc<CashFlowProjectionResult>("get_cash_flow_projection_v1", params as Record<string, unknown>);
 }
 
-// ─── Fase 3 — Vendas & Fidelidade ───────────────────────────
-
-export type RedeemVoucherResult = {
-  success: boolean;
-  voucher_id?: string;
-  discount_applied?: number;
-  error?: string;
-};
-export async function redeemVoucherV1(params: {
-  p_code: string;
-  p_order_id: string;
-}): Promise<{ data: RedeemVoucherResult | null; error: unknown }> {
-  return rpc<RedeemVoucherResult>("redeem_voucher_v1", params as Record<string, unknown>);
-}
-
-export type ValidateCouponResult = {
-  valid: boolean;
-  coupon_id?: string;
-  type?: "percent" | "fixed";
-  value?: number;
-  service_id?: string | null;
-  error?: string;
-};
-export async function validateCouponV1(params: {
-  p_code: string;
-  p_tenant_id: string;
-}): Promise<{ data: ValidateCouponResult | null; error: unknown }> {
-  return rpc<ValidateCouponResult>("validate_coupon_v1", params as Record<string, unknown>);
-}
-
-export type ApplyCouponResult = {
-  success: boolean;
-  coupon_id?: string;
-  discount_applied?: number;
-  error?: string;
-};
-export async function applyCouponToOrderV1(params: {
-  p_code: string;
-  p_order_id: string;
-}): Promise<{ data: ApplyCouponResult | null; error: unknown }> {
-  return rpc<ApplyCouponResult>("apply_coupon_to_order_v1", params as Record<string, unknown>);
-}
-
-export type EarnPointsResult = {
-  success: boolean;
-  points_earned?: number;
-  skipped?: string;
-  error?: string;
-};
-export async function earnPointsForOrderV1(params: {
-  p_order_id: string;
-}): Promise<{ data: EarnPointsResult | null; error: unknown }> {
-  return rpc<EarnPointsResult>("earn_points_for_order_v1", params as Record<string, unknown>);
-}
-
-export async function seedDefaultLoyaltyTiersV1(params: {
-  p_tenant_id: string;
-}): Promise<{ data: null; error: unknown }> {
-  return rpc<null>("seed_default_loyalty_tiers_v1", params as Record<string, unknown>);
-}
-
 // ─── Consent System ──────────────────────────────────────────────────────────
 
 export type UpsertConsentTemplateResult = { success: boolean; template_id: string };
+/**
+ * Cria ou atualiza template de termo de consentimento.
+ * Suporta HTML editado no TipTap ou PDF uploadado.
+ * @param params.p_title - Título do template
+ * @param params.p_slug - Slug único para URL
+ * @param params.p_body_html - Conteúdo HTML do template
+ * @param params.p_is_required - Se é obrigatório antes da consulta
+ * @param params.p_template_type - 'html' | 'pdf'
+ * @returns ID do template
+ */
 export async function upsertConsentTemplate(params: {
   p_title: string;
   p_slug: string;
@@ -594,6 +828,14 @@ export async function upsertConsentTemplate(params: {
 }
 
 export type SignConsentResult = { success: boolean; consent_id?: string; message?: string; template_title?: string };
+/**
+ * Registra assinatura de termo de consentimento pelo paciente.
+ * Grava IP, User-Agent e foto facial (se configurado).
+ * @param params.p_client_id - UUID do paciente
+ * @param params.p_template_id - UUID do template assinado
+ * @param params.p_facial_photo_path - Caminho no storage (opcional)
+ * @returns ID do consentimento assinado
+ */
 export async function signConsent(params: {
   p_client_id: string;
   p_template_id: string;

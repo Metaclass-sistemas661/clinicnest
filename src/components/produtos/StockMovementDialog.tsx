@@ -208,7 +208,7 @@ export function StockMovementDialog({
             <Input
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              placeholder="Ex: Compra de fornecedor, uso em serviço..."
+              placeholder="Ex: Compra de fornecedor, uso em procedimento..."
             />
           </div>
         </FormDrawerSection>

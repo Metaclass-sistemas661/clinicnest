@@ -16,11 +16,13 @@ import {
   Save,
   Trophy,
   Sliders,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
+import CertificateManager from "@/components/settings/CertificateManager";
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
@@ -158,10 +160,14 @@ export default function Configuracoes() {
       subtitle="Dados da clínica e preferências do sistema"
     >
       <Tabs defaultValue="clinica" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="clinica" className="gap-2">
             <Building className="h-4 w-4" />
             Clínica
+          </TabsTrigger>
+          <TabsTrigger value="certificados" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Certificados
           </TabsTrigger>
           <TabsTrigger value="preferencias" className="gap-2">
             <Sliders className="h-4 w-4" />
@@ -195,7 +201,7 @@ export default function Configuracoes() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Nome da sua clínica"
                       required
-                      data-tour="settings-salon-name"
+                      data-tour="settings-clinic-name"
                     />
                   </div>
 
@@ -217,7 +223,7 @@ export default function Configuracoes() {
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="(11) 99999-9999"
-                      data-tour="settings-salon-phone"
+                      data-tour="settings-clinic-phone"
                     />
                   </div>
 
@@ -237,7 +243,7 @@ export default function Configuracoes() {
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="Rua, número, bairro, cidade"
-                      data-tour="settings-salon-address"
+                      data-tour="settings-clinic-address"
                     />
                   </div>
                 </div>
@@ -270,7 +276,14 @@ export default function Configuracoes() {
         </TabsContent>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            Tab 2 — Preferências
+            Tab 2 — Certificados Digitais
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="certificados">
+          <CertificateManager />
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 3 — Preferências
         ═══════════════════════════════════════════════════════════════════ */}
         <TabsContent value="preferencias" className="space-y-6">
           {/* Interface */}

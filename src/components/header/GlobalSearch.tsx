@@ -37,7 +37,7 @@ export function GlobalSearch() {
       const isNumeric = /^\d+$/.test(cleaned);
 
       let q = supabase
-        .from("clients")
+        .from("patients")
         .select("id, name, phone, cpf, email")
         .eq("tenant_id", profile.tenant_id)
         .limit(8);
@@ -90,7 +90,7 @@ export function GlobalSearch() {
     setQuery("");
     setResults([]);
     setIsOpen(false);
-    navigate(`/clientes?detail=${client.id}`);
+    navigate(`/pacientes?detail=${client.id}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

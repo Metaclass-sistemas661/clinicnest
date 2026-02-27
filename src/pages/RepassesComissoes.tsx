@@ -205,7 +205,7 @@ export default function RepassesComissoes() {
   return (
     <MainLayout
       title="Comissões"
-      subtitle="Gerencie comissões geradas por atendimentos"
+      subtitle="Gerencie comissões baseadas em recebimentos"
       actions={
         <Button variant="outline" asChild>
           <Link to="/repasses" className="gap-2">
@@ -216,6 +216,22 @@ export default function RepassesComissoes() {
       }
     >
       <div className="space-y-6">
+        {/* Info Banner */}
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-500/30 dark:bg-blue-500/10">
+          <CardContent className="flex items-start gap-3 p-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/20 text-blue-600 shrink-0 mt-0.5">
+              <Wallet className="h-4 w-4" />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium text-blue-700 dark:text-blue-400">Nova lógica de comissões</p>
+              <p className="text-blue-600/80 dark:text-blue-400/80">
+                Comissões são calculadas sobre <strong>pagamentos recebidos</strong>, não sobre atendimentos concluídos.
+                Registre o pagamento na Agenda para gerar a comissão do profissional.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           {isLoading ? (

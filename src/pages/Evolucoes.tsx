@@ -308,7 +308,7 @@ export default function Evolucoes() {
           .eq("tenant_id", tenantId)
           .order("evolution_date", { ascending: false })
           .limit(200),
-        supabase.from("clients").select("id, name")
+        supabase.from("patients").select("id, name")
           .eq("tenant_id", tenantId).order("name").limit(500),
         supabase.from("profiles").select("id, full_name")
           .eq("tenant_id", tenantId).order("full_name"),
@@ -470,6 +470,7 @@ export default function Evolucoes() {
         signed_at: new Date().toISOString(),
         signed_by_name: profile.full_name,
         signed_by_crm: profile.crm || null,
+        signed_by_uf: profile.council_state || null,
       };
 
       if (editingId) {
@@ -527,6 +528,7 @@ export default function Evolucoes() {
         notes: evo.notes,
         signedByName: evo.signed_by_name,
         signedByCrm: evo.signed_by_crm,
+        signedByUf: evo.signed_by_uf,
         signedAt: evo.signed_at,
         digitalHash: evo.digital_hash,
       });

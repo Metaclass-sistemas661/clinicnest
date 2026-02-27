@@ -21,6 +21,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { generatePeriogramPdf } from "@/utils/periogramPdf";
 
 // Constantes
@@ -92,7 +93,7 @@ export default function Periograma() {
   const searchClients = async () => {
     if (!profile?.tenant_id) return;
     const { data } = await supabase
-      .from("clients")
+      .from("patients")
       .select("id, name")
       .eq("tenant_id", profile.tenant_id)
       .ilike("name", `%${clientSearch}%`)
@@ -120,7 +121,7 @@ export default function Periograma() {
         initEmptyMeasurements();
       }
     } catch (err) {
-      console.error("Erro ao carregar periogramas:", err);
+      logger.error("Erro ao carregar periogramas:", err);
       toast.error("Erro ao carregar histórico");
     } finally {
       setIsLoading(false);
@@ -132,7 +133,7 @@ export default function Periograma() {
       p_periogram_id: periogramId,
     });
     if (error) {
-      console.error("Erro ao carregar medições:", error);
+      logger.error("Erro ao carregar medições:", error);
       return;
     }
     const map = new Map<string, Measurement>();
@@ -221,7 +222,7 @@ export default function Periograma() {
       toast.success("Periograma salvo com sucesso");
       await handleSelectClient(selectedClient);
     } catch (err: any) {
-      console.error("Erro ao salvar:", err);
+      logger.error("Erro ao salvar:", err);
       toast.error(err.message || "Erro ao salvar periograma");
     } finally {
       setIsSaving(false);

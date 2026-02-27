@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://beautygest.metaclass.com.br/sitemap.xml
+Sitemap: https://clinicnest.metaclass.com.br/sitemap.xml

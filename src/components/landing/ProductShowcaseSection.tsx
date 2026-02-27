@@ -39,7 +39,7 @@ const features = [
     color: "blue",
   },
   {
-    id: "clientes",
+    id: "pacientes",
     title: "Pacientes",
     description: "Histórico e prontuários",
     icon: Users,
@@ -109,7 +109,7 @@ export function ProductShowcaseSection() {
     const urlMap: Record<string, string> = {
       dashboard: "clinicnest.metaclass.com.br/dashboard",
       agenda: "clinicnest.metaclass.com.br/agenda",
-      clientes: "clinicnest.metaclass.com.br/clientes",
+      pacientes: "clinicnest.metaclass.com.br/pacientes",
       financeiro: "clinicnest.metaclass.com.br/financeiro",
       estoque: "clinicnest.metaclass.com.br/estoque",
     };
@@ -278,7 +278,7 @@ export function ProductShowcaseSection() {
             <div className="border-x border-b border-gray-700 rounded-b-lg overflow-x-auto" style={{ backgroundColor: "hsl(200 25% 7%)", minHeight: "650px" }}>
               {activeFeature === "dashboard" && <DashboardPreview />}
               {activeFeature === "agenda" && <AgendaPreview />}
-              {activeFeature === "clientes" && <ClientesPreview />}
+              {activeFeature === "pacientes" && <ClientesPreview />}
               {activeFeature === "financeiro" && <FinanceiroPreview />}
               {activeFeature === "estoque" && <EstoquePreview />}
             </div>

@@ -16,6 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -30,10 +34,18 @@ import {
   Copy,
   CheckCheck,
   Zap,
+  FileSignature,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { isMemedConfigured, loadMemedSdk, openMemedPrescription } from "@/lib/memed-integration";
+import { useCertificateSign } from "@/hooks/useCertificateSign";
+import { generatePrescriptionPdf } from "@/utils/patientDocumentPdf";
 
 interface Client {
   id: string;
@@ -60,6 +72,11 @@ interface Prescription {
   validity_days: number;
   prescription_type: "simples" | "especial_b" | "especial_a";
   status: "ativo" | "expirado" | "cancelado";
+  signed_by_name?: string | null;
+  signed_by_crm?: string | null;
+  signed_by_uf?: string | null;
+  digital_signature?: string | null;
+  signed_at?: string | null;
 }
 
 
@@ -95,6 +112,22 @@ export default function Receituarios() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [formData, setFormData] = useState(emptyForm);
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
+  
+  // Assinatura digital
+  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  const [signingPrescription, setSigningPrescription] = useState<Prescription | null>(null);
+  const [isSigning, setIsSigning] = useState(false);
+  const [certPassword, setCertPassword] = useState("");
+  const [showCertPassword, setShowCertPassword] = useState(false);
+  
+  const {
+    hasCertificate,
+    certState,
+    signData,
+    reset: resetCertSign,
+  } = useCertificateSign();
+  
+  const useIcpBrasil = hasCertificate;
   const [memedLoading, setMemedLoading] = useState(false);
 
   const memedEnabled = isMemedConfigured();
@@ -110,7 +143,7 @@ export default function Receituarios() {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, name, phone, cpf")
         .eq("tenant_id", profile.tenant_id)
         .order("name");
@@ -204,6 +237,11 @@ export default function Receituarios() {
         validity_days: r.validity_days,
         prescription_type: r.prescription_type,
         status: r.status,
+        signed_by_name: r.signed_by_name,
+        signed_by_crm: r.signed_by_crm,
+        signed_by_uf: r.signed_by_uf,
+        digital_signature: r.digital_signature,
+        signed_at: r.signed_at,
       }));
       setPrescriptions(mapped);
     } catch (err) {
@@ -231,6 +269,9 @@ export default function Receituarios() {
         validity_days: Number(formData.validity_days),
         prescription_type: formData.prescription_type,
         status: "ativo",
+        signed_by_name: profile!.full_name,
+        signed_by_crm: profile!.council_number || null,
+        signed_by_uf: profile!.council_state || null,
       });
       if (error) throw error;
       toast.success("Receituário emitido com sucesso!");
@@ -372,8 +413,8 @@ export default function Receituarios() {
       </div>
       <div class="footer-right">
         <div class="signature-line"></div>
-        <p>${responsibleDoctor || p.professional_name}</p>
-        <p class="small">${responsibleCrm || ""}</p>
+        <p>${p.signed_by_name || responsibleDoctor || p.professional_name}</p>
+        <p class="small">${p.signed_by_crm ? `CRM: ${p.signed_by_crm}${p.signed_by_uf ? `/${p.signed_by_uf}` : ""}` : responsibleCrm || ""}</p>
         <p class="small">${clinicName}</p>
       </div>
     </div>
@@ -388,6 +429,113 @@ export default function Receituarios() {
       w.document.close();
       setTimeout(() => w.print(), 300);
     }
+  };
+
+  const handleOpenSignDialog = (p: Prescription) => {
+    if (p.signed_at) {
+      toast.info("Esta receita já foi assinada digitalmente");
+      return;
+    }
+    setSigningPrescription(p);
+    setCertPassword("");
+    setSignDialogOpen(true);
+  };
+
+  const handleSign = async () => {
+    if (!signingPrescription) return;
+    
+    setIsSigning(true);
+    try {
+      if (useIcpBrasil && hasCertificate) {
+        if (!certPassword) {
+          toast.error("Digite a senha do certificado");
+          setIsSigning(false);
+          return;
+        }
+
+        const dataToSign = JSON.stringify({
+          prescription_type: signingPrescription.prescription_type,
+          medications: signingPrescription.medications,
+          instructions: signingPrescription.instructions,
+          validity_days: signingPrescription.validity_days,
+          client_id: signingPrescription.client_id,
+          issued_at: signingPrescription.issued_at,
+        });
+
+        const signResult = await signData(dataToSign, certPassword);
+        
+        if (!signResult) {
+          setIsSigning(false);
+          return;
+        }
+
+        const { error: updateError } = await supabase
+          .from("prescriptions")
+          .update({
+            digital_signature: signResult.signature,
+            content_hash: signResult.dataHash,
+            digital_hash: signResult.dataHash,
+            signed_at: signResult.signedAt,
+            signed_by_name: signResult.certificate.commonName,
+            signed_by_crm: profile?.council_number || null,
+            signed_by_uf: profile?.council_state || null,
+          })
+          .eq("id", signingPrescription.id);
+
+        if (updateError) throw updateError;
+
+        toast.success("Receita assinada com certificado ICP-Brasil!");
+      } else {
+        const { data, error } = await supabase.rpc("sign_prescription", {
+          p_prescription_id: signingPrescription.id,
+        });
+        
+        if (error) throw error;
+        
+        const result = data as { success: boolean; error?: string; hash?: string; signed_by?: string };
+        
+        if (!result.success) {
+          toast.error(result.error || "Erro ao assinar receita");
+          setIsSigning(false);
+          return;
+        }
+        
+        toast.success("Receita assinada digitalmente com sucesso!");
+      }
+      
+      setSignDialogOpen(false);
+      setSigningPrescription(null);
+      setCertPassword("");
+      resetCertSign();
+      fetchPrescriptions();
+    } catch (err) {
+      logger.error("Error signing prescription:", err);
+      toast.error("Erro ao assinar receita");
+    } finally {
+      setIsSigning(false);
+    }
+  };
+
+  const handleDownloadPdf = (p: Prescription) => {
+    const client = clients.find((c) => c.id === p.client_id);
+    const expiresAt = new Date(new Date(p.issued_at).getTime() + p.validity_days * 24 * 60 * 60 * 1000);
+    
+    generatePrescriptionPdf({
+      prescription_type: p.prescription_type,
+      issued_at: p.issued_at,
+      validity_days: p.validity_days,
+      expires_at: expiresAt.toISOString(),
+      medications: p.medications,
+      instructions: p.instructions || "",
+      professional_name: p.signed_by_name || p.professional_name,
+      professional_crm: p.signed_by_crm,
+      professional_uf: p.signed_by_uf,
+      clinic_name: tenant?.name || "Clínica",
+      patient_name: p.client_name,
+      patient_cpf: client?.cpf,
+      digital_hash: p.digital_signature,
+      signed_at: p.signed_at,
+    });
   };
 
   const filtered = prescriptions.filter(
@@ -473,6 +621,12 @@ export default function Receituarios() {
                       <Badge variant="outline" className={typeColors[p.prescription_type]}>
                         {typeLabel[p.prescription_type]}
                       </Badge>
+                      {p.signed_at ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Assinado
+                        </Badge>
+                      ) : null}
                       {expired ? (
                         <Badge variant="outline" className="bg-muted text-muted-foreground">
                           Expirado
@@ -515,7 +669,17 @@ export default function Receituarios() {
                       {p.instructions}
                     </div>
                   )}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    {!p.signed_at && (
+                      <Button variant="outline" size="sm" onClick={() => handleOpenSignDialog(p)}>
+                        <FileSignature className="h-3.5 w-3.5 mr-1.5" />
+                        Assinar
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => handleDownloadPdf(p)}>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      PDF
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handlePrint(p)}>
                       <Printer className="h-3.5 w-3.5 mr-1.5" />
                       Imprimir
@@ -622,6 +786,105 @@ export default function Receituarios() {
           </FormDrawerSection>
         </div>
       </FormDrawer>
+
+      {/* Dialog de Assinatura Digital */}
+      <AlertDialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-emerald-600" />
+              Assinar Receita Digitalmente
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Você está prestes a assinar digitalmente esta receita. Esta ação:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Gerará um hash SHA-256 único do conteúdo</li>
+                <li>Registrará seu nome e CRM como assinante</li>
+                <li>Impedirá alterações futuras no documento</li>
+                <li>Permitirá verificação de integridade</li>
+              </ul>
+              {signingPrescription && (
+                <div className="mt-4 p-3 rounded-lg bg-muted">
+                  <p className="text-sm font-medium">Receita a ser assinada:</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {typeLabel[signingPrescription.prescription_type]} — {signingPrescription.client_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Emitida em: {new Date(signingPrescription.issued_at).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+              )}
+              
+              {useIcpBrasil && hasCertificate && certState.certificate && (
+                <div className="mt-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <KeyRound className="h-4 w-4 text-emerald-600" />
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                      Assinatura com Certificado ICP-Brasil
+                    </p>
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 mb-3">
+                    Certificado: {certState.certificate.common_name}
+                  </p>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Senha do Certificado</Label>
+                    <div className="relative">
+                      <Input
+                        type={showCertPassword ? "text" : "password"}
+                        value={certPassword}
+                        onChange={(e) => setCertPassword(e.target.value)}
+                        placeholder="Digite a senha do certificado"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowCertPassword(!showCertPassword)}
+                      >
+                        {showCertPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {!useIcpBrasil && (
+                <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    <strong>Nota:</strong> Você não possui certificado ICP-Brasil cadastrado. 
+                    A assinatura será feita com hash SHA-256 interno. Para assinatura com validade jurídica plena, 
+                    cadastre seu certificado em Configurações → Certificados.
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSigning}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSign}
+              disabled={isSigning || (useIcpBrasil && hasCertificate && !certPassword)}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {isSigning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Assinando...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Confirmar Assinatura
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

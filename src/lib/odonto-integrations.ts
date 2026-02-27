@@ -2,7 +2,7 @@
  * Integrações Odontológicas — Fase 25I
  * Laboratórios de prótese, radiologia digital (DICOM), scanner intraoral (STL)
  */
-
+import { logger } from "@/lib/logger";
 // ─── 25I.1: Integração com Laboratórios de Prótese ──────────────────────────
 
 export interface PedidoLaboratorio {
@@ -206,7 +206,7 @@ export function parseDicomBasicTags(arrayBuffer: ArrayBuffer): Partial<DicomStud
       modality: "OT",
     };
   } catch (err) {
-    console.error("Erro ao parsear DICOM:", err);
+    logger.error("Erro ao parsear DICOM:", err);
     return null;
   }
 }

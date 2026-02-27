@@ -19,6 +19,10 @@ import {
   ClipboardList,
   ArrowRightLeft,
   Bell,
+  Brain,
+  Bot,
+  MessageSquare,
+  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -159,6 +163,33 @@ const featureCategories = [
     ],
   },
   {
+    title: "Inteligência Artificial",
+    description: "IA integrada em toda a plataforma",
+    color: "amber",
+    features: [
+      {
+        icon: Bot,
+        title: "Agente IA (Nest)",
+        description: "Assistente inteligente que busca pacientes, consulta prontuários, verifica agenda, agenda consultas e gera resumos financeiros via chat.",
+      },
+      {
+        icon: MessageSquare,
+        title: "Chat IA do Paciente",
+        description: "Assistente virtual no portal do paciente que responde dúvidas sobre agendamentos, serviços e orientações da clínica 24/7.",
+      },
+      {
+        icon: Brain,
+        title: "Triagem Inteligente",
+        description: "Chatbot de IA que entrevista o paciente, classifica urgência e sugere a especialidade ideal antes do atendimento.",
+      },
+      {
+        icon: Mic,
+        title: "IA Clínica Avançada",
+        description: "Sugestão automática de CID-10, resumo clínico do paciente por IA, transcrição de áudio e predição de no-show.",
+      },
+    ],
+  },
+  {
     title: "Segurança & Compliance",
     description: "Preparado para certificações",
     color: "violet",
@@ -171,7 +202,7 @@ const featureCategories = [
       {
         icon: Shield,
         title: "Assinatura Digital",
-        description: "Suporte a certificado digital A1/A3 para assinatura de prontuários e documentos.",
+        description: "Suporte a certificados A1 (arquivo), A3 (token/cartão) e Nuvem (BirdID) para assinatura de prontuários e documentos.",
       },
       {
         icon: Zap,
@@ -194,6 +225,7 @@ const colorClasses: Record<string, { bg: string; text: string; border: string; g
   green: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200", gradient: "from-green-500 to-emerald-500" },
   emerald: { bg: "bg-emerald-100", text: "text-emerald-600", border: "border-emerald-200", gradient: "from-emerald-500 to-teal-500" },
   violet: { bg: "bg-violet-100", text: "text-violet-600", border: "border-violet-200", gradient: "from-violet-500 to-purple-500" },
+  amber: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200", gradient: "from-amber-500 to-orange-500" },
 };
 
 export function FeaturesSection() {
@@ -203,7 +235,7 @@ export function FeaturesSection() {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
             <Sparkles className="h-4 w-4 text-teal-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-teal-600">+60 Funcionalidades</span>
+            <span className="text-sm font-medium text-teal-600">+80 Funcionalidades</span>
           </div>
           <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
             O sistema mais{" "}
@@ -267,14 +299,15 @@ export function FeaturesSection() {
             E muito mais...
           </h3>
           <p className="text-white/80 max-w-2xl mx-auto mb-6">
-            Estoque e compras, comissões e salários, metas e gamificação, campanhas de marketing, 
-            cupons e vouchers, fidelidade e cashback, API pública REST, integrações com ERPs e CRMs, 
-            relatórios customizáveis, SNGPC para controlados...
+            Chat interno da equipe, automações WhatsApp, estoque e compras, comissões e repasses, 
+            metas e gamificação, campanhas de marketing, NFSe, RNDS/eSUS, suporte offline, 
+            contas a pagar/receber, contratos e termos, dashboard ONA e muito mais.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             {[
-              "Estoque", "Comissões", "Metas", "Campanhas", "Cupons", "Fidelidade", 
-              "API REST", "Webhooks", "SNGPC", "Relatórios", "Multi-sede"
+              "Chat Interno", "Automações", "Estoque", "Comissões", "Metas", "Campanhas", 
+              "API REST", "Webhooks", "SNGPC", "Relatórios", "Multi-sede", "NFSe",
+              "RNDS", "WhatsApp API", "Offline", "Dashboard ONA", "eSUS AB", "Memed"
             ].map((item) => (
               <span
                 key={item}

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { ModuleErrorBoundary } from "@/components/ModuleErrorBoundary";
 import {
   LayoutDashboard,
   Calendar,
@@ -32,6 +33,7 @@ import { PatientBottomNav } from "@/components/patient/PatientBottomNav";
 import { PatientGlobalSearch, usePatientGlobalSearch } from "@/components/patient/PatientGlobalSearch";
 import { DependentBanner } from "@/components/patient/DependentSelector";
 import { DependentsProvider, useDependentsOptional } from "@/hooks/useDependents";
+import { AiPatientChat } from "@/components/ai";
 
 interface NavItem {
   label: string;
@@ -325,12 +327,17 @@ function PatientLayoutInner({
         </header>
 
         <div className="px-4 sm:px-6 lg:px-8 py-6">
-          {children}
+          <ModuleErrorBoundary moduleName="Portal do Paciente">
+            {children}
+          </ModuleErrorBoundary>
         </div>
       </main>
 
       {/* Mobile bottom navigation */}
       {isMobile && <PatientBottomNav />}
+
+      {/* Chat IA para pacientes */}
+      <AiPatientChat />
     </div>
   );
 }

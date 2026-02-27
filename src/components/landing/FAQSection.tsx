@@ -44,6 +44,10 @@ const faqs = [
         a: "Sim! O Portal do Paciente permite agendamento self-service 24/7 com visualização de slots em tempo real, escolha de profissional e confirmação automática. O paciente também acessa documentos, acompanha financeiro e pode fazer teleconsulta.",
       },
       {
+        q: "O sistema tem Inteligência Artificial?",
+        a: "Sim! O ClinicNest possui IA integrada em diversas funcionalidades: Agente IA (Nest) que busca pacientes, consulta prontuários e agenda via chat; Chat IA no portal do paciente com atendimento 24/7; Triagem inteligente por chatbot com classificação de urgência; Sugestão automática de CID-10; Resumo clínico gerado por IA; Transcrição de áudio médico; e Predição de no-show para reduzir faltas.",
+      },
+      {
         q: "Vocês têm integração com WhatsApp?",
         a: "Sim! Integramos com a API oficial do WhatsApp Business para confirmação de consultas, lembretes, notificações de documentos prontos e comunicação com pacientes. Tudo automatizado e rastreável.",
       },
@@ -58,7 +62,7 @@ const faqs = [
       },
       {
         q: "Vocês têm assinatura digital?",
-        a: "Sim! O sistema suporta assinatura digital de documentos. Você pode utilizar certificados digitais para assinar prontuários e outros documentos, garantindo autenticidade e integridade.",
+        a: "Sim! O sistema suporta três tipos de certificado digital ICP-Brasil: A1 (arquivo .pfx/.p12), A3 (token ou cartão inteligente via WebPKI) e Certificado em Nuvem (BirdID/RemoteID). Você pode assinar prontuários, receituários, atestados, laudos e qualquer documento clínico com validade jurídica.",
       },
       {
         q: "O sistema atende requisitos de segurança?",

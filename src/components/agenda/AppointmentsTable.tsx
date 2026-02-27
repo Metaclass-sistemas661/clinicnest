@@ -44,6 +44,7 @@ import {
   CalendarDays,
   ClipboardList,
   UserCheck,
+  DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
@@ -52,10 +53,12 @@ import type { Appointment, AppointmentStatus, Client, Service, Profile, Product 
 import { supabase } from "@/integrations/supabase/client";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
+import { RegisterPaymentDialog } from "./RegisterPaymentDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useGamificationEnabled } from "@/hooks/useGamificationEnabled";
+import { AiNoShowBadge } from "@/components/ai";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
@@ -158,6 +161,8 @@ export function AppointmentsTable({
   const [isCompleting, setIsCompleting] = useState(false);
   const [noCommissionDialogOpen, setNoCommissionDialogOpen] = useState(false);
   const [missingRecordWarning, setMissingRecordWarning] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [appointmentForPayment, setAppointmentForPayment] = useState<Appointment | null>(null);
 
   const availableProducts = products.filter((product) => product.quantity > 0);
 
@@ -436,6 +441,20 @@ export function AppointmentsTable({
                         Concluir
                       </Button>
                     )}
+                    {isAdmin && appointment.status === "completed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
+                        onClick={() => {
+                          setAppointmentForPayment(appointment);
+                          setPaymentDialogOpen(true);
+                        }}
+                      >
+                        <DollarSign className="mr-1 h-4 w-4" />
+                        Pagamento
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -554,10 +573,15 @@ export function AppointmentsTable({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={status.className}>
-                      <StatusIcon className="mr-1 h-3 w-3" />
-                      {status.label}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="outline" className={status.className}>
+                        <StatusIcon className="mr-1 h-3 w-3" />
+                        {status.label}
+                      </Badge>
+                      {(appointment.status === "pending" || appointment.status === "confirmed") && (
+                        <AiNoShowBadge appointmentId={appointment.id} tenantId={appointment.tenant_id} />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
@@ -672,6 +696,18 @@ export function AppointmentsTable({
                                 <CheckCircle2 className="mr-2 h-4 w-4 text-success" />
                                 Concluir
                               </DropdownMenuItem>
+                              {isAdmin && appointment.status === "completed" && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setAppointmentForPayment(appointment);
+                                    setPaymentDialogOpen(true);
+                                  }}
+                                  className="text-emerald-600 focus:text-emerald-600"
+                                >
+                                  <DollarSign className="mr-2 h-4 w-4" />
+                                  Registrar Pagamento
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => handleStatusChange(appointment, "cancelled")}
                                 disabled={appointment.status === "cancelled"}
@@ -1009,6 +1045,16 @@ export function AppointmentsTable({
       <NoCommissionWarningDialog
         open={noCommissionDialogOpen}
         onOpenChange={setNoCommissionDialogOpen}
+      />
+
+      <RegisterPaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        appointment={appointmentForPayment}
+        onSuccess={() => {
+          setAppointmentForPayment(null);
+          toast.success("Receita gerada no financeiro!");
+        }}
       />
     </>
   );

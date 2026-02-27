@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope, Gift, Tag, Star } from "lucide-react";
+import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,9 +25,6 @@ import {
   removeOrderItemV1,
   setOrderDiscountV1,
   finalizeOrderV1,
-  redeemVoucherV1,
-  applyCouponToOrderV1,
-  earnPointsForOrderV1,
 } from "@/lib/supabase-typed-rpc";
 import type { Order, OrderItem, Service, Product, PaymentMethod } from "@/types/database";
 
@@ -85,12 +82,6 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
   const [isFinalizing, setIsFinalizing] = useState(false);
 
-  // Voucher / Coupon state
-  const [voucherInput, setVoucherInput] = useState("");
-  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
-  const [couponInput, setCouponInput] = useState("");
-  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-
   const isEditable = order?.status === "draft" || order?.status === "open";
 
   useEffect(() => {
@@ -135,7 +126,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       setItems((itemsData as unknown as OrderItem[]) || []);
     } catch (error) {
       logger.error("Error fetching order:", error);
-      toast.error("Erro ao carregar comanda.");
+      toast.error("Erro ao carregar conta do paciente.");
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +136,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
     if (!profile?.tenant_id) return;
     try {
       const [sRes, pRes, pmRes] = await Promise.all([
-        supabase.from("services").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
+        supabase.from("procedures").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
         supabase.from("products").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
         supabase.from("payment_methods").select("*").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("sort_order"),
       ]);
@@ -293,85 +284,17 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
         })),
       });
       if (error) {
-        toastRpcError(toast, error as any, "Erro ao finalizar comanda");
+        toastRpcError(toast, error as any, "Erro ao finalizar conta");
         return;
       }
-      toast.success("Comanda finalizada com sucesso!");
+      toast.success("Conta finalizada com sucesso!");
       setFinalizeOpen(false);
       fetchOrder();
       onUpdated();
-      // Earn points if program is active (silent — no blocking)
-      earnPointsForOrderV1({ p_order_id: orderId }).catch(() => {});
     } catch {
-      toast.error("Erro ao finalizar comanda");
+      toast.error("Erro ao finalizar conta");
     } finally {
       setIsFinalizing(false);
-    }
-  };
-
-  // ── Apply Voucher ──
-  const handleApplyVoucher = async () => {
-    if (!orderId || !voucherInput.trim()) return;
-    setIsApplyingVoucher(true);
-    try {
-      const { data, error } = await redeemVoucherV1({
-        p_code: voucherInput.trim().toUpperCase(),
-        p_order_id: orderId,
-      });
-      if (error) { toastRpcError(toast, error as any, "Erro ao aplicar voucher"); return; }
-      if (!data?.success) {
-        const msgs: Record<string, string> = {
-          voucher_not_found: "Voucher não encontrado.",
-          voucher_inactive: "Voucher inativo ou já resgatado.",
-          voucher_expired: "Voucher expirado.",
-          order_not_editable: "Comanda não pode ser editada.",
-          voucher_already_applied: "Já existe um voucher aplicado nesta comanda.",
-        };
-        toast.error(msgs[data?.error ?? ""] ?? "Voucher inválido.");
-        return;
-      }
-      toast.success(`Voucher aplicado! Desconto de ${formatCurrency(data.discount_applied ?? 0)}.`);
-      setVoucherInput("");
-      fetchOrder();
-      onUpdated();
-    } catch {
-      toast.error("Erro ao aplicar voucher.");
-    } finally {
-      setIsApplyingVoucher(false);
-    }
-  };
-
-  // ── Apply Coupon ──
-  const handleApplyCoupon = async () => {
-    if (!orderId || !couponInput.trim()) return;
-    setIsApplyingCoupon(true);
-    try {
-      const { data, error } = await applyCouponToOrderV1({
-        p_code: couponInput.trim().toUpperCase(),
-        p_order_id: orderId,
-      });
-      if (error) { toastRpcError(toast, error as any, "Erro ao aplicar cupom"); return; }
-      if (!data?.success) {
-        const msgs: Record<string, string> = {
-          not_found: "Cupom não encontrado.",
-          inactive: "Cupom inativo.",
-          expired: "Cupom expirado.",
-          not_yet_valid: "Cupom ainda não válido.",
-          max_uses_reached: "Cupom esgotado (limite de usos atingido).",
-          order_not_editable: "Comanda não pode ser editada.",
-          coupon_already_applied: "Já existe um cupom aplicado nesta comanda.",
-        };
-        toast.error(msgs[data?.error ?? ""] ?? "Cupom inválido.");
-        return;
-      }
-      toast.success(`Cupom aplicado! Desconto de ${formatCurrency(data.discount_applied ?? 0)}.`);
-      setCouponInput("");
-      fetchOrder();
-      onUpdated();
-    } catch {
-      toast.error("Erro ao aplicar cupom.");
-    } finally {
-      setIsApplyingCoupon(false);
     }
   };
 
@@ -384,7 +307,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              Comanda
+              Conta do Paciente
               {order && (
                 <Badge className={statusColors[order.status] ?? ""}>
                   {statusLabels[order.status] ?? order.status}
@@ -467,60 +390,6 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                 )}
               </div>
 
-              <Separator />
-
-              {/* Voucher & Coupon */}
-              {isEditable && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm font-medium">Voucher / Cupom</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Código do voucher"
-                        value={voucherInput}
-                        onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
-                        className="pl-8 h-9 font-mono uppercase text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && handleApplyVoucher()}
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={handleApplyVoucher}
-                      disabled={isApplyingVoucher || !voucherInput.trim()}
-                    >
-                      {isApplyingVoucher ? <Loader2 className="h-3 w-3 animate-spin" /> : "Aplicar"}
-                    </Button>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Código do cupom"
-                        value={couponInput}
-                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                        className="pl-8 h-9 font-mono uppercase text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9"
-                      onClick={handleApplyCoupon}
-                      disabled={isApplyingCoupon || !couponInput.trim()}
-                    >
-                      {isApplyingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Aplicar"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
               {/* Totals */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -568,7 +437,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                   onClick={handleOpenFinalize}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Finalizar Comanda
+                  Finalizar Conta
                 </Button>
               )}
 
@@ -596,7 +465,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adicionar Item</DialogTitle>
-            <DialogDescription>Selecione um servi&ccedil;o ou produto para adicionar &agrave; comanda.</DialogDescription>
+            <DialogDescription>Selecione um procedimento ou produto para adicionar à conta.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -650,7 +519,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Finalizar Comanda</DialogTitle>
+            <DialogTitle>Finalizar Conta</DialogTitle>
             <DialogDescription>
               Total: <strong>{formatCurrency(order?.total_amount ?? 0)}</strong>. Informe os pagamentos.
             </DialogDescription>

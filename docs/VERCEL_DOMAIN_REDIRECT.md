@@ -1,24 +1,24 @@
-# Problema: vynlobella.com redirecionando para salon-flow-ten.vercel.app
+# Problema: domínio customizado redirecionando para clinicnest.vercel.app
 
-Se ao acessar `https://vynlobella.com` você é redirecionado para `https://salon-flow-ten.vercel.app`, o problema está na configuração do projeto no Vercel.
+Se ao acessar seu domínio customizado você é redirecionado para `https://clinicnest.vercel.app`, o problema está na configuração do projeto no Vercel.
 
 ---
 
 ## Passo 1: Verificar Domínios no Vercel
 
 1. Acesse [Vercel Dashboard](https://vercel.com/dashboard)
-2. Selecione o projeto **salon-flow** (ou o nome do seu projeto)
+2. Selecione o projeto **clinicnest** (ou o nome do seu projeto)
 3. Vá em **Settings** → **Domains**
-4. Verifique se `vynlobella.com` está listado como domínio
+4. Verifique se seu domínio customizado está listado
 
 **O que você deve ver:**
-- ✅ `vynlobella.com` listado como domínio
+- ✅ Seu domínio listado
 - ✅ Status: **Valid** ou **Valid Configuration**
 - ✅ Tipo: **Production** (não Preview ou Development)
 
-**Se `vynlobella.com` NÃO estiver listado:**
+**Se seu domínio NÃO estiver listado:**
 - Clique em **Add Domain**
-- Digite `vynlobella.com`
+- Digite seu domínio
 - Siga as instruções para validar o domínio
 
 ---
@@ -30,8 +30,8 @@ Se ao acessar `https://vynlobella.com` você é redirecionado para `https://salo
 3. Ou vá em **Settings** → **Redirects**
 
 **O que verificar:**
-- ❌ Não deve haver nenhum redirect de `vynlobella.com` → `salon-flow-ten.vercel.app`
-- ❌ Não deve haver redirect de `*` (todos os domínios) → `salon-flow-ten.vercel.app`
+- ❌ Não deve haver nenhum redirect do seu domínio → `clinicnest.vercel.app`
+- ❌ Não deve haver redirect de `*` (todos os domínios) → `clinicnest.vercel.app`
 
 **Se houver redirects indesejados:**
 - Remova-os ou ajuste para não redirecionar o domínio principal
@@ -43,7 +43,6 @@ Se ao acessar `https://vynlobella.com` você é redirecionado para `https://salo
 No projeto local, verifique se existe um arquivo `vercel.json` na raiz:
 
 ```bash
-cd C:\Users\andre\Desktop\Vynlobella\salon-flow
 cat vercel.json
 ```
 
@@ -55,7 +54,7 @@ cat vercel.json
     "redirects": [
       {
         "source": "/(.*)",
-        "destination": "https://salon-flow-ten.vercel.app/$1",
+        "destination": "https://clinicnest.vercel.app/$1",
         "permanent": true
       }
     ]
@@ -73,9 +72,9 @@ cat vercel.json
 No Vercel:
 
 1. **Settings** → **Domains**
-2. Se `vynlobella.com` estiver listado, clique nele
+2. Se seu domínio estiver listado, clique nele
 3. Verifique se está marcado como **Primary Domain** ou **Production Domain**
-4. Se `salon-flow-ten.vercel.app` estiver marcado como principal, **mude para `vynlobella.com`**
+4. Se `clinicnest.vercel.app` estiver marcado como principal, **mude para seu domínio customizado**
 
 **Importante:** O Vercel pode usar o domínio `.vercel.app` como padrão se nenhum domínio customizado estiver configurado como principal.
 
@@ -85,17 +84,17 @@ No Vercel:
 
 Se você tem **múltiplos projetos** no Vercel:
 
-1. Verifique qual projeto está recebendo o tráfego de `vynlobella.com`
-2. Pode ser que `vynlobella.com` esteja apontando para um projeto diferente
-3. No Vercel Dashboard, veja todos os projetos e verifique qual tem `vynlobella.com` configurado
+1. Verifique qual projeto está recebendo o tráfego do seu domínio
+2. Pode ser que seu domínio esteja apontando para um projeto diferente
+3. No Vercel Dashboard, veja todos os projetos e verifique qual tem seu domínio configurado
 
 ---
 
 ## Passo 6: Teste direto no navegador
 
 1. Abra uma **janela anônima/privada** do navegador
-2. Acesse diretamente: `https://vynlobella.com`
-3. Veja se redireciona para `salon-flow-ten.vercel.app`
+2. Acesse diretamente seu domínio
+3. Veja se redireciona para `clinicnest.vercel.app`
 4. Se redirecionar, o problema está no Vercel (não no email)
 
 **Se redirecionar:**
@@ -113,15 +112,15 @@ Se você tem **múltiplos projetos** no Vercel:
 **Configuração ideal:**
 
 1. **Domains:**
-   - `vynlobella.com` → **Production** (principal)
-   - `salon-flow-ten.vercel.app` → pode ficar como secundário (Vercel cria automaticamente)
+   - Seu domínio customizado → **Production** (principal)
+   - `clinicnest.vercel.app` → pode ficar como secundário (Vercel cria automaticamente)
 
 2. **Redirects:**
-   - Nenhum redirect de `vynlobella.com` para `vercel.app`
-   - Se quiser, pode criar redirect **inverso**: `salon-flow-ten.vercel.app` → `vynlobella.com` (opcional)
+   - Nenhum redirect do seu domínio para `vercel.app`
+   - Se quiser, pode criar redirect **inverso**: `clinicnest.vercel.app` → seu domínio (opcional)
 
 3. **vercel.json:**
-   - Não deve ter redirects que afetem `vynlobella.com`
+   - Não deve ter redirects que afetem seu domínio
 
 ---
 
@@ -129,11 +128,11 @@ Se você tem **múltiplos projetos** no Vercel:
 
 | Problema | Solução |
 |----------|---------|
-| `vynlobella.com` não está nos domínios do projeto | Adicionar em Settings → Domains |
-| `salon-flow-ten.vercel.app` está como domínio principal | Mudar para `vynlobella.com` como principal |
-| Há redirect configurado | Remover redirect de `vynlobella.com` → `vercel.app` |
+| Seu domínio não está nos domínios do projeto | Adicionar em Settings → Domains |
+| `clinicnest.vercel.app` está como domínio principal | Mudar para seu domínio como principal |
+| Há redirect configurado | Remover redirect do seu domínio → `vercel.app` |
 | `vercel.json` tem redirects | Remover ou ajustar redirects que afetam o domínio |
-| Múltiplos projetos | Verificar qual projeto tem `vynlobella.com` configurado |
+| Múltiplos projetos | Verificar qual projeto tem seu domínio configurado |
 
 ---
 
@@ -141,7 +140,7 @@ Se você tem **múltiplos projetos** no Vercel:
 
 1. Faça um novo deploy (se necessário): `vercel --prod` ou via GitHub (se conectado)
 2. Aguarde alguns minutos para propagação
-3. Teste acessando `https://vynlobella.com` diretamente no navegador
+3. Teste acessando seu domínio diretamente no navegador
 4. Se funcionar, teste o link do email novamente
 
 ---
@@ -156,11 +155,11 @@ Se após seguir todos os passos o problema persistir:
 
 2. **Verifique o código da aplicação:**
    - Procure por `window.location` ou `redirect` no código que possa estar forçando redirect
-   - Procure por `salon-flow-ten.vercel.app` hardcoded no código
+   - Procure por `clinicnest.vercel.app` hardcoded no código
 
 3. **Teste com curl:**
    ```bash
-   curl -I https://vynlobella.com
+   curl -I https://seudominio.com
    ```
    - Veja o header `Location:` na resposta
-   - Se houver `Location: https://salon-flow-ten.vercel.app`, há um redirect configurado
+   - Se houver `Location: https://clinicnest.vercel.app`, há um redirect configurado

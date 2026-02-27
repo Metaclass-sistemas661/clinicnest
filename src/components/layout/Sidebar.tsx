@@ -61,7 +61,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
@@ -75,6 +75,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useSimpleMode } from "@/lib/simple-mode";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useUnreadChatCount } from "@/hooks/useUnreadChatCount";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { FeatureKey, PLAN_CONFIG, getMinimumTierForFeature as getMinTierForFeature } from "@/types/subscription-plans";
 
@@ -126,7 +127,10 @@ const navCategories: NavCategory[] = [
     gradient: "from-teal-500 to-cyan-500",
     items: [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, resource: "dashboard" },
+      { title: "Painel Recepção", href: "/recepcao", icon: MonitorPlay, resource: "agenda" },
       { title: "Agenda", href: "/agenda", icon: Calendar, resource: "agenda" },
+      { title: "Fila de Atendimento", href: "/recepcao/fila", icon: Users, resource: "agenda" },
+      { title: "Painel TV", href: "/painel-chamada", icon: MonitorPlay, resource: "agenda" },
       { title: "Lista de Espera", href: "/lista-espera", icon: ClockArrowUp, resource: "lista_espera", requiredFeature: "waitlist" },
       { title: "Retornos Pendentes", href: "/retornos-pendentes", icon: CalendarClock, resource: "agenda", requiredFeature: "returnReminders" },
       { title: "Disponibilidade", href: "/disponibilidade", icon: Clock, resource: "disponibilidade" },
@@ -138,7 +142,7 @@ const navCategories: NavCategory[] = [
     color: "text-blue-500",
     gradient: "from-blue-500 to-indigo-500",
     items: [
-      { title: "Pacientes", href: "/clientes", icon: Users, resource: "clientes" },
+      { title: "Pacientes", href: "/pacientes", icon: Users, resource: "pacientes" },
       { title: "Triagem", href: "/triagem", icon: Activity, resource: "triagem", requiredFeature: "triage" },
       { title: "Prontuários", href: "/prontuarios", icon: ClipboardList, resource: "prontuarios" },
       { title: "Evoluções", href: "/evolucoes", icon: NotebookPen, resource: "evolucao_clinica", requiredFeature: "soapEvolutions" },
@@ -199,12 +203,12 @@ const navCategories: NavCategory[] = [
     ],
   },
   {
-    label: "Estoque",
+    label: "Suprimentos",
     icon: Package,
     color: "text-amber-500",
     gradient: "from-amber-500 to-orange-500",
     items: [
-      { title: "Produtos & Insumos", href: "/produtos", icon: Package, resource: "produtos" },
+      { title: "Insumos Médicos", href: "/produtos", icon: Package, resource: "produtos" },
       { title: "Compras", href: "/compras", icon: ShoppingCart, resource: "compras", requiredFeature: "purchases" },
       { title: "Fornecedores", href: "/fornecedores", icon: Truck, resource: "fornecedores", requiredFeature: "suppliers" },
     ],
@@ -215,11 +219,8 @@ const navCategories: NavCategory[] = [
     color: "text-fuchsia-500",
     gradient: "from-fuchsia-500 to-pink-500",
     items: [
-      { title: "Agendamento Online", href: "/agendamento-online", icon: Globe, resource: "agendamento_online" },
       { title: "Campanhas", href: "/campanhas", icon: Send, resource: "campanhas", requiredFeature: "campaigns" },
       { title: "Automações", href: "/automacoes", icon: Zap, resource: "automacoes", requiredFeature: "automations" },
-      { title: "Fidelidade & Cashback", href: "/fidelidade-cashback", icon: Gift, resource: "fidelidade_cashback", requiredFeature: "loyalty" },
-      { title: "Cupons & Vouchers", href: "/cupons", icon: Ticket, resource: "cupons", requiredFeature: "coupons" },
     ],
   },
   {
@@ -232,7 +233,7 @@ const navCategories: NavCategory[] = [
       { title: "Permissões", href: "/gerenciar-permissoes", icon: Shield, requiredFeature: "advancedRbac" },
       { title: "Unidades", href: "/unidades", icon: Building, resource: "configuracoes", requiredFeature: "multiUnit" },
       { title: "Gestão de Salas", href: "/gestao-salas", icon: DoorOpen, resource: "gestao_salas", requiredFeature: "rooms" },
-      { title: "Procedimentos", href: "/servicos", icon: Stethoscope, resource: "especialidades" },
+      { title: "Procedimentos", href: "/procedimentos", icon: Stethoscope, resource: "procedimentos" },
       { title: "Especialidades", href: "/especialidades", icon: HeartPulse, resource: "especialidades", requiredFeature: "specialties" },
       { title: "Modelos Prontuário", href: "/modelos-prontuario", icon: FileCode2, resource: "modelos_prontuario", requiredFeature: "recordTemplates" },
       { title: "Templates de Termos", href: "/termos-consentimento", icon: FileSignature, resource: "contratos_termos", requiredFeature: "contracts" },
@@ -253,7 +254,6 @@ const navCategories: NavCategory[] = [
     gradient: "from-cyan-500 to-teal-500",
     items: [
       { title: "Meu Financeiro", href: "/meu-financeiro", icon: Wallet, staffOnly: true },
-      { title: "Minhas Metas", href: "/minhas-metas", icon: Target, staffOnly: true, requiredFeature: "goals" },
       { title: "Notificações", href: "/notificacoes", icon: Bell },
       { title: "Assinatura", href: "/assinatura", icon: CreditCard, resource: "assinatura" },
       { title: "Ajuda", href: "/ajuda", icon: BookOpen },
@@ -270,8 +270,8 @@ const prefetchByHref: Record<string, () => void> = {
   "/chat": () => void import("@/pages/Chat"),
   "/unidades": () => void import("@/pages/Unidades"),
   "/disponibilidade": () => void import("@/pages/Disponibilidade"),
-  "/servicos": () => void import("@/pages/Servicos"),
-  "/clientes": () => void import("@/pages/Clientes"),
+  "/procedimentos": () => void import("@/pages/Procedimentos"),
+  "/pacientes": () => void import("@/pages/Pacientes"),
   "/prontuarios": () => void import("@/pages/Prontuarios"),
   "/triagem": () => void import("@/pages/Triagem"),
   "/receituarios": () => void import("@/pages/Receituarios"),
@@ -291,16 +291,12 @@ const prefetchByHref: Record<string, () => void> = {
   "/produtos": () => void import("@/pages/Produtos"),
   "/compras": () => void import("@/pages/Compras"),
   "/fornecedores": () => void import("@/pages/Fornecedores"),
-  "/metas": () => void import("@/pages/Metas"),
   "/auditoria": () => void import("@/pages/Auditoria"),
-  "/minhas-metas": () => void import("@/pages/MinhasMetas"),
   "/equipe": () => void import("@/pages/Equipe"),
   "/gerenciar-permissoes": () => void import("@/pages/GerenciarPermissoes"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
   "/termos-consentimento": () => void import("@/pages/TermosConsentimento"),
   "/contratos-termos": () => void import("@/pages/ContratosTermos"),
-  "/agendamento-online": () => void import("@/pages/AgendamentoOnlineAdmin"),
-  "/fidelidade-cashback": () => void import("@/pages/FidelidadeCashbackAdmin"),
   "/minhas-configuracoes": () => void import("@/pages/MinhasConfiguracoes"),
   "/notificacoes": () => void import("@/pages/Notificacoes"),
   "/assinatura": () => void import("@/pages/Assinatura"),
@@ -314,8 +310,6 @@ const prefetchByHref: Record<string, () => void> = {
   "/relatorios": () => void import("@/pages/Relatorios"),
   "/ajuda": () => void import("@/pages/Ajuda"),
   "/suporte": () => void import("@/pages/Suporte"),
-  "/vouchers": () => void import("@/pages/Vouchers"),
-  "/cupons": () => void import("@/pages/Cupons"),
   "/integracoes": () => void import("@/pages/Integracoes"),
   "/odontograma": () => void import("@/pages/Odontograma"),
   "/evolucoes": () => void import("@/pages/Evolucoes"),
@@ -327,6 +321,9 @@ const prefetchByHref: Record<string, () => void> = {
   "/dashboard-ona": () => void import("@/pages/DashboardONA"),
   "/retencao-dados": () => void import("@/pages/RetencaoDados"),
   "/retornos-pendentes": () => void import("@/pages/RetornosPendentes"),
+  "/recepcao/fila": () => void import("@/pages/recepcao/FilaAtendimento"),
+  "/recepcao": () => void import("@/pages/recepcao/DashboardRecepcao"),
+  "/painel-chamada": () => void import("@/pages/PainelChamada"),
 };
 
 function prefetchRoute(href: string) {
@@ -457,8 +454,8 @@ function CategoryGroup({
             const tourKey =
               item.href === "/dashboard" ? "sidebar-dashboard" :
               item.href === "/agenda" ? "sidebar-agenda" :
-              item.href === "/clientes" ? "sidebar-clientes" :
-              item.href === "/servicos" ? "sidebar-servicos" :
+              item.href === "/pacientes" ? "sidebar-pacientes" :
+              item.href === "/procedimentos" ? "sidebar-procedimentos" :
               item.href === "/produtos" ? "sidebar-produtos" :
               item.href === "/financeiro" ? "sidebar-financeiro" :
               item.href === "/minhas-comissoes" ? "sidebar-minhas-comissoes" :
@@ -531,6 +528,7 @@ function SidebarContent({
   const isAdmin = auth?.isAdmin ?? false;
   const { can, professionalType } = usePermissions();
   const { hasFeature } = usePlanFeatures();
+  const { unreadCount: chatUnreadCount } = useUnreadChatCount();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const navRef = useRef<HTMLElement>(null);
 
@@ -587,7 +585,7 @@ function SidebarContent({
   const quickAccessItems = [
     { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { title: "Agenda", href: "/agenda", icon: Calendar },
-    { title: "Pacientes", href: "/clientes", icon: Users },
+    { title: "Pacientes", href: "/pacientes", icon: Users },
   ];
 
   return (
@@ -683,7 +681,10 @@ function SidebarContent({
             if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
               lockedItems.push(item);
             } else {
-              accessibleItems.push(item);
+              const itemWithBadge = item.href === "/chat" && chatUnreadCount > 0
+                ? { ...item, badge: chatUnreadCount }
+                : item;
+              accessibleItems.push(itemWithBadge);
             }
           });
           
@@ -836,7 +837,7 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
                     <Calendar className="mr-2 h-4 w-4" />
                     Novo agendamento
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/clientes")}>
+                  <DropdownMenuItem onClick={() => navigate("/pacientes")}>
                     <Users className="mr-2 h-4 w-4" />
                     Novo paciente
                   </DropdownMenuItem>
@@ -882,10 +883,10 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
               Agenda
             </Button>
             <Button
-              variant={location.pathname === "/clientes" ? "default" : "outline"}
+              variant={location.pathname === "/pacientes" ? "default" : "outline"}
               size="sm"
               className="h-8 rounded-full text-xs gap-1.5 shrink-0"
-              onClick={() => navigate("/clientes")}
+              onClick={() => navigate("/pacientes")}
             >
               <Users className="h-3.5 w-3.5" />
               Pacientes

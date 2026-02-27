@@ -23,7 +23,7 @@ import SocialCreativePanel from "./SocialCreativePanel";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface EmailBuilderProps {
-  defaultSalonName: string;
+  defaultClinicName: string;
   onSave: (payload: {
     name: string;
     subject: string;
@@ -344,7 +344,7 @@ const TEMPLATES: { id: TemplateId; label: string }[] = [
 
 // ─── Main EmailBuilder ────────────────────────────────────────────────────────
 
-export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSaving }: EmailBuilderProps) {
+export default function EmailBuilder({ defaultClinicName, onSave, onCancel, isSaving }: EmailBuilderProps) {
   const isMobile = useIsMobile();
   const { tenant } = useAuth();
   const [previewMobile, setPreviewMobile] = useState(false);
@@ -353,7 +353,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const [state, setState] = useState<BuilderState>(() =>
-    makeDefaultState("promocao", defaultSalonName || "Minha Clínica")
+    makeDefaultState("promocao", defaultClinicName || "Minha Clínica")
   );
 
   const debouncedState = useDebounced(state, 280);
@@ -363,7 +363,7 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
     setState((s) => ({ ...s, [key]: value }));
 
   const handleTemplateChange = (id: TemplateId) => {
-    const defaults = makeDefaultState(id, state.salonName);
+    const defaults = makeDefaultState(id, state.clinicName);
     setState({
       ...defaults,
       campaignName: state.campaignName,
@@ -528,8 +528,8 @@ export default function EmailBuilder({ defaultSalonName, onSave, onCancel, isSav
               <Label className="text-sm">Nome da Clínica</Label>
               <Input
                 placeholder="Nome da sua clínica"
-                value={state.salonName}
-                onChange={(e) => set("salonName", e.target.value)}
+                value={state.clinicName}
+                onChange={(e) => set("clinicName", e.target.value)}
               />
             </div>
             <div className="space-y-1.5">

@@ -9,7 +9,7 @@ type AppStatus = {
 const AppStatusContext = createContext<AppStatus | null>(null);
 
 function storageKey(tenantId: string, userId: string) {
-  return `beautygest:last_refresh:${tenantId}:${userId}`;
+  return `clinicnest:last_refresh:${tenantId}:${userId}`;
 }
 
 export function AppStatusProvider({ children }: { children: React.ReactNode }) {
@@ -38,7 +38,7 @@ export function AppStatusProvider({ children }: { children: React.ReactNode }) {
 
     try {
       window.dispatchEvent(
-        new CustomEvent("beautygest:app_refreshed", {
+        new CustomEvent("clinicnest:app_refreshed", {
           detail: { at: iso, source: source ?? null },
         })
       );

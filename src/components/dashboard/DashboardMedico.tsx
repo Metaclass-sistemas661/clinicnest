@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, Clock, Stethoscope, FileText, Users, UserCheck,
-  ClipboardList, AlertTriangle, Plus, ArrowRight,
+  ClipboardList, AlertTriangle, Plus, ArrowRight, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { CommissionTierIndicator } from "@/components/commission/CommissionTierIndicator";
+import { CallNextButton } from "@/components/queue/CallNextButton";
 import type { Appointment } from "@/types/database";
 
 interface TriageItem {
@@ -272,6 +273,28 @@ export const DashboardMedico = memo(function DashboardMedico() {
 
       {/* Commission Tier Indicator */}
       <CommissionTierIndicator />
+
+      {/* Botão Chamar Próximo - destaque para médico */}
+      <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+                <Megaphone className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-teal-900">Chamar próximo paciente</p>
+                <p className="text-sm text-teal-700">Chame o próximo da fila de espera</p>
+              </div>
+            </div>
+            <CallNextButton 
+              professionalId={profile?.id}
+              size="lg"
+              className="gradient-primary text-primary-foreground"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Agenda do dia */}

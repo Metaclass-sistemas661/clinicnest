@@ -42,7 +42,7 @@ export default function PatientConsentSigning() {
       if (!email) return null;
 
       const { data, error } = await supabasePatient
-        .from("clients")
+        .from("patients")
         .select("id, tenant_id, name, cpf, date_of_birth, birth_date, email, phone, street, street_number, neighborhood, city, state, zip_code, address_street, address_city, address_state, address_zip")
         .eq("email", email)
         .limit(1)

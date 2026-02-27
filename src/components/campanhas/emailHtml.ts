@@ -15,7 +15,7 @@ export interface BuilderState {
   campaignName: string;
   subject: string;
   templateId: TemplateId;
-  salonName: string;
+  clinicName: string;
   primaryColor: string;
   secondaryColor: string;
   useGradient: boolean;
@@ -41,15 +41,15 @@ export const COLOR_PRESETS: ColorPreset[] = [
   { id: "dourado",  name: "Dourado",  primary: "#b45309", secondary: "#d97706", gradient: true  },
 ];
 
-export function makeDefaultState(templateId: TemplateId, salonName: string): BuilderState {
+export function makeDefaultState(templateId: TemplateId, clinicName: string): BuilderState {
   const year = new Date().getFullYear();
-  const footer = `© ${year} ${salonName}. Para cancelar o recebimento, responda este email com "Descadastrar".`;
+  const footer = `© ${year} ${clinicName}. Para cancelar o recebimento, responda este email com "Descadastrar".`;
 
   const base: BuilderState = {
     campaignName: "",
     subject: "",
     templateId,
-    salonName,
+    clinicName,
     primaryColor: "#7c3aed",
     secondaryColor: "#db2777",
     useGradient: true,
@@ -152,7 +152,7 @@ function buildBannerRow(state: BuilderState): string {
   return `
           <tr>
             <td style="padding:0;line-height:0;">
-              <img src="${escHtml(state.bannerUrl)}" alt="${escHtml(state.salonName)}"
+              <img src="${escHtml(state.bannerUrl)}" alt="${escHtml(state.clinicName)}"
                 width="640" height="${h}"
                 style="width:100%;max-width:640px;height:${h}px;object-fit:cover;display:block;border:0;" />
             </td>
@@ -283,7 +283,7 @@ export function generateEmailHtml(state: BuilderState): string {
             <td class="header-cell" style="background:${headerBg};padding:28px 32px;">
               <p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;
                 letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-                ${escHtml(state.salonName)}
+                ${escHtml(state.clinicName)}
               </p>
               ${headerExtra}
             </td>

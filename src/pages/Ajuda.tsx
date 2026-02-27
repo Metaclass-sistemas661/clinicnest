@@ -67,7 +67,7 @@ const CATEGORIES: DocCategory[] = [
     title: "Pacientes",
     icon: Users,
     description: "Cadastro e histórico de pacientes",
-    href: "/clientes",
+    href: "/pacientes",
     articles: [
       "Cadastrar paciente",
       "Histórico de atendimentos",
@@ -170,7 +170,7 @@ const CATEGORIES: DocCategory[] = [
 
 const QUICK_LINKS = [
   { label: "Criar agendamento", href: "/agenda", icon: Calendar },
-  { label: "Cadastrar paciente", href: "/clientes", icon: Users },
+  { label: "Cadastrar paciente", href: "/pacientes", icon: Users },
   { label: "Ver financeiro", href: "/financeiro", icon: DollarSign },
   { label: "Abrir suporte", href: "/suporte", icon: LifeBuoy },
 ];

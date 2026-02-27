@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey } from "lucide-react";
+import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey, Sparkles, Mic } from "lucide-react";
 import { TriageContextCard, type TriageData } from "./TriageContextCard";
 import { DynamicFieldsRenderer, type TemplateField } from "./DynamicFieldsRenderer";
 import { Cid10Combobox } from "@/components/ui/cid10-combobox";
@@ -14,6 +14,7 @@ import { readPfxFile, parsePfxCertificateInfo, signWithCertificate, validateICPC
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { AiCidSuggest, AiTranscribe } from "@/components/ai";
 
 interface Template {
   id: string;
@@ -31,6 +32,7 @@ export interface EditableRecord {
   appointment_id: string | null;
   triage_id?: string | null;
   template_id?: string | null;
+  attendance_type?: string | null;
   chief_complaint: string;
   anamnesis: string;
   physical_exam: string;
@@ -120,6 +122,7 @@ export function ProntuarioForm({
 
   const [clientId, setClientId] = useState(editRecord?.client_id || initialClientId || "");
   const [templateId, setTemplateId] = useState(editRecord?.template_id || "none");
+  const [attendanceType, setAttendanceType] = useState(editRecord?.attendance_type || "consulta");
   const [base, setBase] = useState(
     editRecord
       ? {
@@ -437,6 +440,7 @@ export function ProntuarioForm({
           appointment_id: initialAppointmentId || null,
           triage_id: triage?.id || null,
           template_id: templateId && templateId !== "none" ? templateId : null,
+          attendance_type: attendanceType || "consulta",
           chief_complaint: base.chief_complaint,
           anamnesis: base.anamnesis || null,
           physical_exam: base.physical_exam || null,
@@ -481,6 +485,7 @@ export function ProntuarioForm({
   };
 
   const set = (k: keyof typeof emptyBase, v: string) => setBase((b) => ({ ...b, [k]: v }));
+  const [showAiTranscribe, setShowAiTranscribe] = useState(false);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -533,13 +538,33 @@ export function ProntuarioForm({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label>Paciente *</Label>
           <Select value={clientId || undefined} onValueChange={handleClientChange}>
             <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
             <SelectContent>
               {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Tipo de Atendimento</Label>
+          <Select value={attendanceType} onValueChange={setAttendanceType}>
+            <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="consulta">Consulta</SelectItem>
+              <SelectItem value="retorno">Retorno</SelectItem>
+              <SelectItem value="urgencia">Urgência</SelectItem>
+              <SelectItem value="emergencia">Emergência</SelectItem>
+              <SelectItem value="procedimento">Procedimento</SelectItem>
+              <SelectItem value="exame">Exame</SelectItem>
+              <SelectItem value="teleconsulta">Teleconsulta</SelectItem>
+              <SelectItem value="domiciliar">Domiciliar</SelectItem>
+              <SelectItem value="preventivo">Preventivo</SelectItem>
+              <SelectItem value="pre_operatorio">Pré-operatório</SelectItem>
+              <SelectItem value="pos_operatorio">Pós-operatório</SelectItem>
+              <SelectItem value="outro">Outro</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -649,7 +674,22 @@ export function ProntuarioForm({
           <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
         </div>
         <div className="space-y-1.5">
-          <Label>Anamnese</Label>
+          <div className="flex items-center justify-between">
+            <Label>Anamnese</Label>
+            <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => setShowAiTranscribe(!showAiTranscribe)}>
+              <Mic className="h-3 w-3" />
+              {showAiTranscribe ? "Fechar Ditado" : "Ditar com IA"}
+            </Button>
+          </div>
+          {showAiTranscribe && (
+            <AiTranscribe
+              onTranscriptReady={(text) => {
+                setBase((b) => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis + "\n" + text : text }));
+                setShowAiTranscribe(false);
+              }}
+              className="border-dashed mb-2"
+            />
+          )}
           <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
         </div>
         <div className="space-y-1.5">
@@ -666,6 +706,15 @@ export function ProntuarioForm({
             <Cid10Combobox value={base.cid_code} onChange={(code) => set("cid_code", code)} />
           </div>
         </div>
+
+        {/* Sugestão de CID com IA */}
+        <AiCidSuggest
+          onSelect={(code, description) => {
+            set("cid_code", code);
+            set("diagnosis", description);
+          }}
+          className="border-dashed"
+        />
         <div className="space-y-1.5">
           <Label>Plano Terapêutico / Conduta</Label>
           <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />

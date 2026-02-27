@@ -66,13 +66,13 @@ export function classifyRpcError(error: RpcLikeError): { kind: RpcErrorKind; mes
     case "UNAUTHENTICATED":
       return { kind: "forbidden", message: "Usuário não autenticado" };
     case "ORDER_NOT_FOUND":
-      return { kind: "order_not_found", message: "Comanda não encontrada." };
+      return { kind: "order_not_found", message: "Conta do paciente não encontrada." };
     case "ORDER_ALREADY_FINALIZED":
-      return { kind: "order_already_finalized", message: "Esta comanda já foi finalizada." };
+      return { kind: "order_already_finalized", message: "Esta conta já foi finalizada." };
     case "ORDER_PAYMENT_MISMATCH":
-      return { kind: "order_payment_mismatch", message: "A soma dos pagamentos não confere com o total da comanda." };
+      return { kind: "order_payment_mismatch", message: "A soma dos pagamentos não confere com o total da conta." };
     case "ORDER_EMPTY":
-      return { kind: "order_empty", message: "A comanda não possui itens." };
+      return { kind: "order_empty", message: "A conta não possui itens." };
     case "VALIDATION_ERROR":
       return { kind: "unknown", message: msg };
     case "PROFILE_NOT_FOUND":

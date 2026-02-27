@@ -1,6 +1,4 @@
 export { DashboardStatsGrid } from "./DashboardStatsGrid";
-export { DashboardClientRanking } from "./DashboardClientRanking";
-export { DashboardGoalsCard } from "./DashboardGoalsCard";
 export { DashboardTodayAppointments } from "./DashboardTodayAppointments";
 export { DashboardNextAppointmentCard } from "./DashboardNextAppointmentCard";
 export { DashboardLowStockCard } from "./DashboardLowStockCard";
@@ -10,4 +8,3 @@ export { DashboardEnfermeiro } from "./DashboardEnfermeiro";
 export { DashboardFaturista } from "./DashboardFaturista";
 export { DashboardClinico } from "./DashboardClinico";
 export { DashboardDentista } from "./DashboardDentista";
-export { DailyGamificationSummary } from "./DailyGamificationSummary";

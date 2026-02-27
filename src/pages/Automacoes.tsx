@@ -74,7 +74,7 @@ const availableVariables = [
   "{{date}}",
   "{{time}}",
   "{{professional_name}}",
-  "{{salon_name}}",
+  "{{clinic_name}}",
   "{{nps_link}}",
 ];
 
@@ -106,11 +106,11 @@ export default function Automacoes() {
   const exampleVars = useMemo(
     () => ({
       client_name: "Ana",
-      service_name: "Corte",
+      service_name: "Consulta",
       date: "10/04",
       time: "14:00",
-      professional_name: "Mariana",
-      salon_name: tenant?.name || "ClinicNest",
+      professional_name: "Dr. Mariana",
+      clinic_name: tenant?.name || "ClinicaFlow",
       nps_link: `${window.location.origin}/nps/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
     }),
     [tenant?.name],

@@ -13,7 +13,7 @@ import { useClinicalAudit } from "@/hooks/useClinicalAudit";
 import {
   ArrowLeft, User, Calendar, FileText, Heart, Activity,
   Thermometer, Wind, AlertCircle, Pill, ShieldCheck, Download,
-  History, Lock, ClipboardList, ArrowRightLeft, FlaskConical, Smile,
+  History, Lock, ClipboardList, ArrowRightLeft, FlaskConical, Smile, Sparkles,
 } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { generateMedicalRecordPdf } from "@/utils/patientDocumentPdf";
@@ -23,6 +23,7 @@ import { DentalImagesGallery } from "@/components/prontuario/DentalImagesGallery
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import type { ClinicalEvolution, ClinicalEvolutionType } from "@/types/database";
 import { NotebookPen } from "lucide-react";
+import { AiPatientSummary } from "@/components/ai";
 
 interface RecordDetail {
   id: string; client_id: string; client_name: string; record_date: string;
@@ -297,7 +298,7 @@ export default function ProntuarioDetalhe() {
         </div>
 
         <Tabs defaultValue="prontuario">
-          <TabsList className={`grid w-full h-auto gap-1 p-1 ${isDentist ? "grid-cols-7" : "grid-cols-6"}`}>
+          <TabsList className={`grid w-full h-auto gap-1 p-1 ${isDentist ? "grid-cols-8" : "grid-cols-7"}`}>
             <TabsTrigger value="prontuario" className="text-xs py-2"><ClipboardList className="h-3 w-3 mr-1" />Prontuário</TabsTrigger>
             <TabsTrigger value="vitais" className="text-xs py-2"><Activity className="h-3 w-3 mr-1" />Sinais Vitais</TabsTrigger>
             {isDentist && (
@@ -307,6 +308,7 @@ export default function ProntuarioDetalhe() {
             <TabsTrigger value="documentos" className="text-xs py-2"><FileText className="h-3 w-3 mr-1" />Documentos ({linkedDocs.length})</TabsTrigger>
             <TabsTrigger value="historico" className="text-xs py-2"><History className="h-3 w-3 mr-1" />Histórico ({history.length})</TabsTrigger>
             <TabsTrigger value="versoes" className="text-xs py-2"><FileText className="h-3 w-3 mr-1" />Versões ({versions.length})</TabsTrigger>
+            <TabsTrigger value="ia" className="text-xs py-2"><Sparkles className="h-3 w-3 mr-1" />IA</TabsTrigger>
           </TabsList>
 
           <TabsContent value="prontuario" className="mt-4 space-y-4">
@@ -584,6 +586,13 @@ export default function ProntuarioDetalhe() {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="ia" className="mt-4">
+            <AiPatientSummary
+              clientId={record.client_id}
+              clientName={record.client_name}
+            />
           </TabsContent>
         </Tabs>
       </div>

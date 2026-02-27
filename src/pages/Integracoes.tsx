@@ -41,8 +41,11 @@ import {
   Smartphone,
   Wifi,
   FileText,
+  Building2,
 } from "lucide-react";
 import { NFSeConfig } from "@/components/settings/NFSeConfig";
+import { RNDSConfigTab } from "@/components/settings/RNDSConfigTab";
+import { HL7ConfigTab } from "@/components/settings/HL7ConfigTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,8 +85,8 @@ interface ApiKey {
 
 const WEBHOOK_EVENTS = [
   { id: "appointment.created",   label: "Agendamento criado",      desc: "Quando um novo agendamento é registrado" },
-  { id: "appointment.confirmed", label: "Agendamento confirmado",   desc: "Quando o cliente confirma pelo link" },
-  { id: "appointment.completed", label: "Atendimento concluído",    desc: "Quando uma comanda é finalizada" },
+  { id: "appointment.confirmed", label: "Agendamento confirmado",   desc: "Quando o paciente confirma pelo link" },
+  { id: "appointment.completed", label: "Atendimento concluído",    desc: "Quando uma conta é finalizada" },
   { id: "appointment.cancelled", label: "Agendamento cancelado",    desc: "Quando um agendamento é cancelado" },
   { id: "nps.submitted",         label: "NPS respondido",           desc: "Quando um paciente envia avaliação NPS" },
   { id: "client.created",        label: "Novo paciente",            desc: "Quando um paciente é cadastrado" },
@@ -643,7 +646,7 @@ X-Webhook-Secret: whsec_...
     "service_name": "Consulta Clínica Geral",
     "professional_name": "Ana Lima",
     "scheduled_at": "2026-02-20T10:00:00Z",
-    "tenant_id": "uuid-do-salao"
+    "tenant_id": "uuid-da-clinica"
   }
 }`}
           </pre>
@@ -1708,6 +1711,22 @@ export default function Integracoes() {
       tab: "whatsapp",
       color: "bg-green-50 dark:bg-green-950/40 text-green-600",
     },
+    {
+      icon: Building2,
+      title: "RNDS (eSUS)",
+      description: "Integração com a Rede Nacional de Dados em Saúde do Ministério da Saúde",
+      status: "not_configured" as const,
+      tab: "rnds",
+      color: "bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600",
+    },
+    {
+      icon: FileText,
+      title: "HL7 (Laboratórios)",
+      description: "Receba resultados de exames e envie pedidos via protocolo HL7 v2.x",
+      status: "not_configured" as const,
+      tab: "hl7",
+      color: "bg-violet-50 dark:bg-violet-950/40 text-violet-600",
+    },
   ];
 
   return (
@@ -1728,6 +1747,8 @@ export default function Integracoes() {
             </TabsTrigger>
             <TabsTrigger value="api" className="text-xs sm:text-sm">API & Zapier</TabsTrigger>
             <TabsTrigger value="maquininha" className="text-xs sm:text-sm">Maquininha</TabsTrigger>
+            <TabsTrigger value="rnds" className="text-xs sm:text-sm">RNDS</TabsTrigger>
+            <TabsTrigger value="hl7" className="text-xs sm:text-sm">HL7</TabsTrigger>
           </TabsList>
 
           {/* ── Overview ── */}
@@ -1803,6 +1824,16 @@ export default function Integracoes() {
           {/* ── WhatsApp ── */}
           <TabsContent value="whatsapp" className="mt-6">
             {tenantId && <TabWhatsApp tenantId={tenantId} />}
+          </TabsContent>
+
+          {/* ── RNDS (eSUS) ── */}
+          <TabsContent value="rnds" className="mt-6">
+            {tenantId && <RNDSConfigTab />}
+          </TabsContent>
+
+          {/* ── HL7 (Laboratórios) ── */}
+          <TabsContent value="hl7" className="mt-6">
+            {tenantId && <HL7ConfigTab />}
           </TabsContent>
         </Tabs>
       </div>

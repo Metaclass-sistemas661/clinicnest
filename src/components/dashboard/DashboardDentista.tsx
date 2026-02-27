@@ -11,6 +11,7 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { CommissionTierIndicator } from "@/components/commission/CommissionTierIndicator";
+import { CallNextButton } from "@/components/queue/CallNextButton";
 
 interface TodayAppointment {
   id: string;
@@ -234,6 +235,28 @@ export const DashboardDentista = memo(function DashboardDentista() {
       {/* Commission Tier Indicator */}
       <CommissionTierIndicator />
 
+      {/* Botão Chamar Próximo */}
+      <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+                <Smile className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-teal-900">Chamar próximo paciente</p>
+                <p className="text-sm text-teal-700">Chame o próximo da fila de espera</p>
+              </div>
+            </div>
+            <CallNextButton 
+              professionalId={profile?.id}
+              size="lg"
+              className="gradient-primary text-primary-foreground"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Agenda do Dia */}
         <Card>
@@ -367,7 +390,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
           </Link>
         </Button>
         <Button variant="outline" className="h-auto py-3 justify-start gap-3" asChild>
-          <Link to="/clientes">
+          <Link to="/pacientes">
             <Users className="h-5 w-5 text-violet-500" />
             <div className="text-left">
               <p className="font-medium">Pacientes</p>

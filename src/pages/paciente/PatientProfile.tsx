@@ -155,7 +155,7 @@ export default function PatientProfile() {
       }
 
       const { data: client } = await supabasePatient
-        .from("clients")
+        .from("patients")
         .select(
           "id, name, email, phone, cpf, date_of_birth, marital_status, zip_code, street, street_number, complement, neighborhood, city, state, allergies"
         )
@@ -199,7 +199,7 @@ export default function PatientProfile() {
     setIsSaving(true);
     try {
       const { error } = await supabasePatient
-        .from("clients")
+        .from("patients")
         .update({
           phone: editPhone.replace(/\D/g, "") || null,
           email: editEmail.trim() || null,

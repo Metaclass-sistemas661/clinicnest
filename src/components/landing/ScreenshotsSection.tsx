@@ -22,7 +22,7 @@ const screenshots = [
     image: agendaMockup,
   },
   {
-    id: "clientes",
+    id: "pacientes",
     name: "Pacientes",
     description: "Gestão completa de pacientes e prontuários",
     image: clientesMockup,

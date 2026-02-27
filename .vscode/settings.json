@@ -3,5 +3,6 @@
   "deno.enablePaths": ["supabase/functions"],
   "deno.config": "supabase/functions/deno.json",
   "deno.lint": true,
-  "deno.unstable": true
+  "deno.unstable": true,
+  "github.copilot.chat.copilotMemory.enabled": false
 }

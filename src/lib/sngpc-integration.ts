@@ -2,6 +2,7 @@
 // Integra os dados do ClinicaFlow com a API SNGPC da ANVISA
 
 import { sngpcClient, SNGPCAuthCredentials, SNGPCEnvioResponse, SNGPCConsultaResponse } from './sngpc-api-client';
+import { logger } from '@/lib/logger';
 import {
   MensagemSNGPC,
   MensagemSNGPCInventario,
@@ -219,7 +220,7 @@ export class SNGPCIntegrationService {
       await sngpcClient.autenticar(credentials);
       return true;
     } catch (error) {
-      console.error('Erro na autenticação SNGPC:', error);
+      logger.error('Erro na autenticação SNGPC:', error);
       return false;
     }
   }

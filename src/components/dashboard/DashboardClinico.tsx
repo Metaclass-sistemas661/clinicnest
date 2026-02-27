@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Calendar, Clock, Stethoscope, FileText, UserCheck,
-  ClipboardList, Plus, ArrowRight,
+  ClipboardList, Plus, ArrowRight, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import type { Appointment, ProfessionalType } from "@/types/database";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
+import { CallNextButton } from "@/components/queue/CallNextButton";
 
 const statusBadge: Record<string, { className: string; label: string }> = {
   pending: { className: "bg-warning/20 text-warning border-warning/30", label: "Pendente" },
@@ -130,6 +131,28 @@ export const DashboardClinico = memo(function DashboardClinico() {
 
   return (
     <div className="space-y-6">
+      {/* Botão Chamar Próximo */}
+      <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
+                <Megaphone className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-teal-900">Chamar próximo paciente</p>
+                <p className="text-sm text-teal-700">Chame o próximo da fila de espera</p>
+              </div>
+            </div>
+            <CallNextButton 
+              professionalId={profile?.id}
+              size="lg"
+              className="gradient-primary text-primary-foreground"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Link to="/agenda" className="[&:hover]:no-underline">

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, Stethoscope, ClipboardList, DollarSign, ArrowRight, Heart, Video } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const STORAGE_KEY = "beautygest_onboarding_seen";
+const STORAGE_KEY = "clinicnest_onboarding_seen";
 
 export function WelcomeModal() {
   const [open, setOpen] = useState(false);
@@ -36,7 +36,7 @@ export function WelcomeModal() {
 
   const features = [
     { icon: Calendar, label: "Agenda", href: "/agenda", desc: "Gerencie consultas e horários dos profissionais" },
-    { icon: Users, label: "Pacientes", href: "/clientes", desc: "Cadastro e histórico dos seus pacientes" },
+    { icon: Users, label: "Pacientes", href: "/pacientes", desc: "Cadastro e histórico dos seus pacientes" },
     { icon: Stethoscope, label: "Prontuários", href: "/prontuarios", desc: "Registros clínicos e evolução dos atendimentos" },
     { icon: Video, label: "Teleconsulta", href: "/teleconsulta", desc: "Atendimento por vídeo com seus pacientes" },
     { icon: ClipboardList, label: "Receituários", href: "/receituarios", desc: "Prescrições, atestados e laudos médicos" },

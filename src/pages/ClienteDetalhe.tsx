@@ -18,8 +18,8 @@ import { toastRpcError } from "@/lib/rpc-error";
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
-import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/clientSpending";
-import type { ClientTimelineEventRow, CashbackLedgerRow } from "@/types/supabase-extensions";
+import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/patientSpending";
+import type { ClientTimelineEventRow } from "@/types/supabase-extensions";
 import type { Client, ClinicalEvolution } from "@/types/database";
 import {
   ChevronRight,
@@ -36,7 +36,6 @@ import {
   NotebookPen,
   Package,
   Clock,
-  Gift,
   ShieldCheck,
   Plus,
   Pill,
@@ -67,10 +66,6 @@ export default function ClienteDetalhe() {
     status: string; purchased_at: string; expires_at: string | null;
   }>>([]);
   const [detailTimeline, setDetailTimeline] = useState<ClientTimelineEventRow[]>([]);
-  const [cashbackWallet, setCashbackWallet] = useState<{ balance: number } | null>(null);
-  const [cashbackLedger, setCashbackLedger] = useState<CashbackLedgerRow[]>([]);
-  const [marketingOptOut, setMarketingOptOut] = useState(false);
-  const [isUpdatingMarketing, setIsUpdatingMarketing] = useState(false);
   const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
 
@@ -85,7 +80,7 @@ export default function ClienteDetalhe() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("clients")
+        .from("patients")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
         .eq("id", id)
@@ -113,13 +108,6 @@ export default function ClienteDetalhe() {
           .select("id, service_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, services(name)")
           .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
           .order("purchased_at", { ascending: false }),
-        supabase.from("cashback_wallets").select("balance")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId).maybeSingle(),
-        supabase.from("cashback_ledger").select("id, delta_amount, reason, notes, created_at")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId)
-          .order("created_at", { ascending: false }).limit(20),
-        supabase.from("client_marketing_preferences").select("marketing_opt_out")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", clientId).maybeSingle(),
       ]);
 
       const spending = spendingData.find((s) => s.client_id === clientId);
@@ -138,10 +126,6 @@ export default function ClienteDetalhe() {
           expires_at: p.expires_at ? String(p.expires_at) : null,
         })));
       }
-
-      setCashbackWallet(walletRes.data ? { balance: Number(walletRes.data.balance ?? 0) } : null);
-      setCashbackLedger((ledgerRes.data as unknown as CashbackLedgerRow[]) ?? []);
-      setMarketingOptOut(mktPrefRes.data?.marketing_opt_out ?? false);
 
       // Clinical history
       const clinDocs: typeof clinicalHistory = [];
@@ -200,30 +184,10 @@ export default function ClienteDetalhe() {
     }
   };
 
-  const handleToggleMarketingOptOut = async (checked: boolean) => {
-    if (!client || !profile?.tenant_id || !isAdmin) return;
-    setIsUpdatingMarketing(true);
-    try {
-      const { error } = await supabase.from("client_marketing_preferences")
-        .upsert({ tenant_id: profile.tenant_id, client_id: client.id, marketing_opt_out: checked, updated_at: new Date().toISOString() },
-          { onConflict: "tenant_id,client_id" });
-      if (error) throw error;
-      setMarketingOptOut(checked);
-      toast.success(checked ? "Paciente optou por não receber marketing" : "Preferência de marketing atualizada");
-    } catch (err) {
-      logger.error("[ClienteDetalhe] toggleMarketing error", err);
-      toast.error("Erro ao atualizar preferência");
-    } finally {
-      setIsUpdatingMarketing(false);
-    }
-  };
-
   const formatDate = (d: string) => {
     try { return new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }); }
     catch { return d; }
   };
-
-  const cashbackReasonLabel: Record<string, string> = { earn: "Crédito", redeem: "Resgate", adjust: "Ajuste", revert: "Estorno" };
 
   if (isLoading) {
     return (
@@ -247,7 +211,7 @@ export default function ClienteDetalhe() {
     <MainLayout title="" subtitle="">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
-        <Link to="/clientes" className="hover:text-foreground transition-colors">
+        <Link to="/pacientes" className="hover:text-foreground transition-colors">
           Pacientes
         </Link>
         <ChevronRight className="h-4 w-4" />
@@ -336,10 +300,6 @@ export default function ClienteDetalhe() {
           <TabsTrigger value="timeline" className="gap-2">
             <Clock className="h-4 w-4" />
             Timeline
-          </TabsTrigger>
-          <TabsTrigger value="cashback" className="gap-2">
-            <Gift className="h-4 w-4" />
-            Cashback
           </TabsTrigger>
           <TabsTrigger value="termos" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
@@ -490,7 +450,7 @@ export default function ClienteDetalhe() {
             {/* Tab: Pacotes */}
             <TabsContent value="pacotes" className="space-y-4">
               {isAdmin && (
-                <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => navigate(`/clientes?package=${client.id}`)}>
+                <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => navigate(`/pacientes?package=${client.id}`)}>
                   <Plus className="mr-2 h-4 w-4" />Novo Pacote
                 </Button>
               )}
@@ -532,36 +492,6 @@ export default function ClienteDetalhe() {
                           </div>
                         </div>
                         {ev.body && <div className="text-xs text-muted-foreground mt-1">{ev.body}</div>}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* Tab: Cashback */}
-            <TabsContent value="cashback" className="space-y-4">
-              <Card>
-                <CardContent className="py-4 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">Saldo atual</div>
-                  <div className="text-lg font-bold text-primary">{formatCurrency(cashbackWallet?.balance ?? 0)}</div>
-                </CardContent>
-              </Card>
-              {cashbackLedger.length === 0 ? (
-                <EmptyState icon={Gift} title="Sem movimentações" description="Nenhum cashback gerado para este paciente." />
-              ) : (
-                <div className="space-y-2">
-                  {cashbackLedger.map((entry) => (
-                    <Card key={entry.id}>
-                      <CardContent className="py-3 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="font-medium">{cashbackReasonLabel[entry.reason] ?? entry.reason}</div>
-                          {entry.notes && <div className="text-xs text-muted-foreground">{entry.notes}</div>}
-                          <div className="text-xs text-muted-foreground">{new Date(entry.created_at).toLocaleString("pt-BR")}</div>
-                        </div>
-                        <div className={`font-semibold ${Number(entry.delta_amount) >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
-                          {Number(entry.delta_amount) >= 0 ? "+" : ""}{formatCurrency(Number(entry.delta_amount))}
-                        </div>
                       </CardContent>
                     </Card>
                   ))}

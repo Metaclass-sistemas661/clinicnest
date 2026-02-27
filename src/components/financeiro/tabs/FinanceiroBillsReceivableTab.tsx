@@ -129,7 +129,7 @@ export function FinanceiroBillsReceivableTab() {
     try {
       const [billsRes, clientsRes] = await Promise.all([
         db.from("bills_receivable").select("*, client:clients(id, name)").eq("tenant_id", tenantId).order("due_date", { ascending: true }),
-        db.from("clients").select("id, name, phone, email, notes, tenant_id, created_at, updated_at").eq("tenant_id", tenantId).eq("is_active", true).order("name").limit(200),
+        db.from("patients").select("id, name, phone, email, notes, tenant_id, created_at, updated_at").eq("tenant_id", tenantId).eq("is_active", true).order("name").limit(200),
       ]);
       if (billsRes.error) throw billsRes.error;
       if (clientsRes.error) throw clientsRes.error;
@@ -401,7 +401,7 @@ export function FinanceiroBillsReceivableTab() {
           <form onSubmit={billForm.handleSubmit(handleSaveBill)} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Descrição *</Label>
-              <Input placeholder="Ex: Pacote de cortes — Maria" {...billForm.register("description")} />
+              <Input placeholder="Ex: Consulta particular — João Silva" {...billForm.register("description")} />
               {billForm.formState.errors.description && <p className="text-xs text-destructive">{billForm.formState.errors.description.message}</p>}
             </div>
             <div className="grid grid-cols-2 gap-3">

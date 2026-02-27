@@ -643,6 +643,332 @@ export function validateHL7Message(raw: string): HL7ValidationResult {
   };
 }
 
+// ─── Parser de Mensagens ADT (Admissão/Alta/Transferência) ────────────────────
+
+export const ADT_EVENT_TYPES = {
+  A01: 'Admissão',
+  A02: 'Transferência',
+  A03: 'Alta',
+  A04: 'Registro de Paciente',
+  A08: 'Atualização de Informações',
+  A11: 'Cancelamento de Admissão',
+  A12: 'Cancelamento de Transferência',
+  A13: 'Cancelamento de Alta',
+  A28: 'Adicionar Pessoa',
+  A31: 'Atualizar Pessoa',
+  A40: 'Merge de Pacientes',
+} as const;
+
+export interface HL7ADTEvent {
+  eventType: keyof typeof ADT_EVENT_TYPES;
+  eventDescription: string;
+  eventDateTime: string;
+  patient: HL7Patient;
+  visit?: HL7Visit;
+  location?: HL7Location;
+  attendingDoctor?: HL7Provider;
+  admitSource?: string;
+  dischargeDisposition?: string;
+  message: HL7Message;
+  errors: string[];
+}
+
+export interface HL7Visit {
+  visitNumber: string;
+  patientClass: 'I' | 'O' | 'E' | 'P' | 'R' | 'B' | 'C' | 'N' | 'U'; // Inpatient, Outpatient, Emergency, Preadmit, Recurring, Obstetrics, Commercial, Not Applicable, Unknown
+  admitDateTime?: string;
+  dischargeDateTime?: string;
+  visitIndicator?: string;
+}
+
+export interface HL7Location {
+  pointOfCare?: string;
+  room?: string;
+  bed?: string;
+  facility?: string;
+  building?: string;
+  floor?: string;
+}
+
+export interface HL7Provider {
+  id?: string;
+  name: string;
+  specialty?: string;
+  council?: string;
+  councilNumber?: string;
+}
+
+export function parseADTMessage(raw: string): HL7ADTEvent {
+  const errors: string[] = [];
+  let message: HL7Message;
+  
+  try {
+    message = parseHL7Message(raw);
+  } catch (e) {
+    return {
+      eventType: 'A01',
+      eventDescription: 'Erro',
+      eventDateTime: new Date().toISOString(),
+      patient: { id: '', name: '' },
+      message: { raw, segments: [], messageType: '', messageControlId: '', version: '', dateTime: '' },
+      errors: [`Erro ao parsear mensagem: ${e instanceof Error ? e.message : String(e)}`],
+    };
+  }
+  
+  // Extract event type from message type (e.g., ADT^A01 -> A01)
+  const messageTypeParts = message.messageType.split('^');
+  const eventCode = messageTypeParts[1] as keyof typeof ADT_EVENT_TYPES || 'A01';
+  
+  // Parse Patient (PID segment)
+  const pid = message.segments.find(s => s.name === 'PID');
+  const patient = parsePatientSegment(pid);
+  
+  if (!patient.id && !patient.name) {
+    errors.push('Segmento PID não encontrado ou inválido');
+  }
+  
+  // Parse Visit (PV1 segment)
+  const pv1 = message.segments.find(s => s.name === 'PV1');
+  const visit = parseVisitSegment(pv1);
+  
+  // Parse Location from PV1
+  const location = parseLocationFromPV1(pv1);
+  
+  // Parse Attending Doctor from PV1
+  const attendingDoctor = parseAttendingDoctor(pv1);
+  
+  // Parse EVN segment for event details
+  const evn = message.segments.find(s => s.name === 'EVN');
+  const eventDateTime = evn ? formatHL7DateTime(getFieldValue(evn, 2) || getFieldValue(evn, 6)) : message.dateTime;
+  
+  // Get admit source and discharge disposition
+  const admitSource = pv1 ? getFieldValue(pv1, 14) : undefined;
+  const dischargeDisposition = pv1 ? getFieldValue(pv1, 36) : undefined;
+  
+  return {
+    eventType: eventCode,
+    eventDescription: ADT_EVENT_TYPES[eventCode] || 'Evento Desconhecido',
+    eventDateTime: formatHL7DateTime(eventDateTime),
+    patient,
+    visit,
+    location,
+    attendingDoctor,
+    admitSource,
+    dischargeDisposition,
+    message,
+    errors,
+  };
+}
+
+function parseVisitSegment(pv1?: HL7Segment): HL7Visit | undefined {
+  if (!pv1) return undefined;
+  
+  const patientClass = getFieldValue(pv1, 2) as HL7Visit['patientClass'] || 'U';
+  const visitNumber = getComponent(pv1, 19, 0);
+  const admitDateTime = getFieldValue(pv1, 44);
+  const dischargeDateTime = getFieldValue(pv1, 45);
+  
+  return {
+    visitNumber,
+    patientClass,
+    admitDateTime: admitDateTime ? formatHL7DateTime(admitDateTime) : undefined,
+    dischargeDateTime: dischargeDateTime ? formatHL7DateTime(dischargeDateTime) : undefined,
+  };
+}
+
+function parseLocationFromPV1(pv1?: HL7Segment): HL7Location | undefined {
+  if (!pv1) return undefined;
+  
+  // PV1-3: Assigned Patient Location
+  const locationField = pv1.fields[3];
+  if (!locationField) return undefined;
+  
+  const components = locationField.components;
+  
+  return {
+    pointOfCare: components[0] || undefined,
+    room: components[1] || undefined,
+    bed: components[2] || undefined,
+    facility: components[3] || undefined,
+    building: components[6] || undefined,
+    floor: components[7] || undefined,
+  };
+}
+
+function parseAttendingDoctor(pv1?: HL7Segment): HL7Provider | undefined {
+  if (!pv1) return undefined;
+  
+  // PV1-7: Attending Doctor
+  const doctorField = pv1.fields[7];
+  if (!doctorField || !doctorField.value) return undefined;
+  
+  const components = doctorField.components;
+  const familyName = components[1] || '';
+  const givenName = components[2] || '';
+  
+  return {
+    id: components[0] || undefined,
+    name: [givenName, familyName].filter(Boolean).join(' ') || 'Médico Desconhecido',
+    specialty: components[9] || undefined,
+    council: components[8] || undefined,
+    councilNumber: components[0] || undefined,
+  };
+}
+
+// ─── Gerador de Mensagens ADT ─────────────────────────────────────────────────
+
+export interface ADTMessageRequest {
+  eventType: keyof typeof ADT_EVENT_TYPES;
+  patient: {
+    id: string;
+    name: string;
+    birthDate?: string;
+    gender?: 'M' | 'F';
+    cpf?: string;
+  };
+  visit?: {
+    visitNumber?: string;
+    patientClass?: 'I' | 'O' | 'E';
+    admitDateTime?: string;
+    dischargeDateTime?: string;
+  };
+  location?: {
+    pointOfCare?: string;
+    room?: string;
+    bed?: string;
+  };
+  provider?: {
+    id?: string;
+    name: string;
+    crm?: string;
+  };
+  clinic: {
+    name: string;
+    cnes?: string;
+  };
+}
+
+export function generateADTMessage(request: ADTMessageRequest): string {
+  const now = new Date();
+  const timestamp = formatDateToHL7(now);
+  const messageControlId = crypto.randomUUID().substring(0, 20);
+  
+  const lines: string[] = [];
+  
+  // MSH Segment
+  lines.push([
+    'MSH',
+    '^~\\&',
+    'CLINICAFLOW',
+    request.clinic.cnes || request.clinic.name,
+    'HOSPITAL',
+    '',
+    timestamp,
+    '',
+    `ADT^${request.eventType}`,
+    messageControlId,
+    'P',
+    '2.5',
+  ].join('|'));
+  
+  // EVN Segment (Event Type)
+  lines.push([
+    'EVN',
+    request.eventType,
+    timestamp,
+    '',
+    '',
+    timestamp,
+  ].join('|'));
+  
+  // PID Segment
+  const nameParts = request.patient.name.split(' ');
+  const familyName = nameParts.length > 1 ? nameParts.slice(-1).join(' ') : request.patient.name;
+  const givenName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '';
+  const birthDateHL7 = request.patient.birthDate?.replace(/-/g, '') || '';
+  
+  lines.push([
+    'PID',
+    '1',
+    '',
+    request.patient.id,
+    '',
+    `${familyName}^${givenName}`,
+    '',
+    birthDateHL7,
+    request.patient.gender || '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    request.patient.cpf || '',
+  ].join('|'));
+  
+  // PV1 Segment (Patient Visit)
+  const locationStr = request.location 
+    ? `${request.location.pointOfCare || ''}^${request.location.room || ''}^${request.location.bed || ''}`
+    : '';
+  const providerStr = request.provider
+    ? `${request.provider.id || ''}^${request.provider.name}^^^^^${request.provider.crm || ''}`
+    : '';
+  const admitDT = request.visit?.admitDateTime?.replace(/[-:T]/g, '').substring(0, 14) || timestamp;
+  const dischargeDT = request.visit?.dischargeDateTime?.replace(/[-:T]/g, '').substring(0, 14) || '';
+  
+  lines.push([
+    'PV1',
+    '1',
+    request.visit?.patientClass || 'O',
+    locationStr,
+    '',
+    '',
+    '',
+    providerStr,
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    request.visit?.visitNumber || '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    admitDT,
+    dischargeDT,
+  ].join('|'));
+  
+  return lines.join('\r');
+}
+
 // ─── Mapeamento para FHIR ─────────────────────────────────────────────────────
 
 export function mapHL7ResultToFHIR(result: HL7ParsedLabResult): object {

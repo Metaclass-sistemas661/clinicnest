@@ -19,9 +19,15 @@ interface AuthContextType {
     email: string,
     password: string,
     fullName: string,
-    salonName: string,
+    clinicName: string,
     phone: string,
-    legalAcceptedAt?: string
+    legalAcceptedAt?: string,
+    professionalData?: {
+      professional_type?: string;
+      council_type?: string;
+      council_number?: string;
+      council_state?: string;
+    }
   ) => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -54,9 +60,8 @@ function getAuthRedirectOrigin(): string {
     return productionUrl.replace(/\/+$/, "");
   }
   
-  // Fallback: usar URL de produção hardcoded para evitar localhost em emails
-  // Isso garante que mesmo em dev, os emails tenham links corretos
-  return "https://clinicnest.metaclass.com.br";
+  // Fallback: usar URL de produção via env var para evitar localhost em emails
+  return import.meta.env.VITE_APP_URL || "https://clinicnest.metaclass.com.br";
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -208,9 +213,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     fullName: string,
-    salonName: string,
+    clinicName: string,
     phone: string,
-    legalAcceptedAt?: string
+    legalAcceptedAt?: string,
+    professionalData?: {
+      professional_type?: string;
+      council_type?: string;
+      council_number?: string;
+      council_state?: string;
+    }
   ) => {
     // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
     // tenant, profile, user_roles (admin) e subscription - garantindo admin sempre
@@ -221,11 +232,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
         data: {
           full_name: fullName,
-          salon_name: salonName,
+          clinic_name: clinicName,
           phone,
           terms_accepted: true,
           privacy_policy_accepted: true,
           legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
+          ...(professionalData?.professional_type && {
+            professional_type: professionalData.professional_type,
+          }),
+          ...(professionalData?.council_type && {
+            council_type: professionalData.council_type,
+          }),
+          ...(professionalData?.council_number && {
+            council_number: professionalData.council_number,
+          }),
+          ...(professionalData?.council_state && {
+            council_state: professionalData.council_state,
+          }),
         },
       },
     });

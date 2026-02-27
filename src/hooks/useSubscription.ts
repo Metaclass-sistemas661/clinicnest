@@ -205,28 +205,7 @@ export function useSubscription() {
     throw new Error('Checkout indisponível.');
   };
 
-  const openCustomerPortal = async () => {
-    if (!session?.access_token) {
-      throw new Error('Not authenticated');
-    }
 
-    const { data, error } = await supabase.functions.invoke('customer-portal', {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-    });
-
-    if (error) throw error;
-
-    if (data?.error) {
-      throw new Error(data.error);
-    }
-
-    if (data?.url) {
-      window.open(data.url, '_blank');
-    }
-  };
 
   useEffect(() => {
     checkSubscription();
@@ -245,6 +224,5 @@ export function useSubscription() {
     ...status,
     checkSubscription,
     createCheckout,
-    openCustomerPortal,
   };
 }

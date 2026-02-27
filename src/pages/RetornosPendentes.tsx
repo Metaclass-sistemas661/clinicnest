@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, subDays, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
+  ArrowLeft,
   CalendarClock,
   Calendar,
   CheckCircle,
@@ -89,6 +91,7 @@ function StatCard({
 }
 
 export default function RetornosPendentes() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [professionalFilter, setProfessionalFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState({
@@ -126,11 +129,21 @@ export default function RetornosPendentes() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Retornos Pendentes</h1>
-          <p className="text-muted-foreground">
-            Acompanhamento de pacientes que precisam retornar
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Retornos Pendentes</h1>
+            <p className="text-muted-foreground">
+              Acompanhamento de pacientes que precisam retornar
+            </p>
+          </div>
         </div>
       </div>
 

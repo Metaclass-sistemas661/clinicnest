@@ -4,7 +4,7 @@ Documento consolidado para configuração de webhooks Stripe e Edge Functions re
 
 ## Pré-requisitos
 
-- Conta no Supabase (projeto salon-flow)
+- Conta no Supabase (projeto clinicnest)
 - Conta no Stripe
 - Supabase CLI: https://supabase.com/docs/guides/cli
 
@@ -26,7 +26,7 @@ Ou: https://github.com/supabase/cli/releases
 
 ```bash
 supabase login
-cd salon-flow
+cd ClinicaFlow
 supabase link --project-ref pijjuhtyxcidqceukogv
 ```
 
@@ -51,7 +51,7 @@ supabase secrets set RESEND_API_KEY=re_...
 Para restringir origens em produção, defina:
 
 ```bash
-supabase secrets set SUPABASE_CORS_ORIGINS=https://vynlobella.com,https://www.vynlobella.com
+supabase secrets set SUPABASE_CORS_ORIGINS=https://clinicnest.metaclass.com.br,https://www.clinicnest.metaclass.com.br
 ```
 
 As Edge Functions que usam `getCorsHeaders(req)` respeitam essa variável. Sem ela, usa `*` (desenvolvimento).

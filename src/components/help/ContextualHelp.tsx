@@ -132,7 +132,7 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     docsLink: "/ajuda#agenda",
   },
-  clientes: {
+  pacientes: {
     title: "Pacientes",
     description: "Cadastre e gerencie informações dos pacientes.",
     steps: [
@@ -144,7 +144,7 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
       "Use o campo de observações para preferências",
       "O histórico mostra todos os atendimentos",
     ],
-    docsLink: "/ajuda#clientes",
+    docsLink: "/ajuda#pacientes",
   },
   prontuarios: {
     title: "Prontuários",

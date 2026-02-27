@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowRight,
+  BadgeCheck,
   CalendarDays,
   Clock,
   Eye,
@@ -19,10 +27,34 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { ProfessionalType } from "@/types/database";
+import { COUNCIL_BY_TYPE, PROFESSIONAL_TYPE_LABELS } from "@/types/database";
+import { BRAZILIAN_STATES } from "@/utils/brazilianStates";
+import {
+  requiresCouncil,
+  getCouncilType,
+  validateCouncilFormat,
+  validateCouncilAsync,
+} from "@/utils/councilValidation";
+
+/** Tipos profissionais disponíveis para cadastro (exclui perfis puramente administrativos) */
+const REGISTRATION_PROFESSIONAL_TYPES: ProfessionalType[] = [
+  "medico",
+  "dentista",
+  "enfermeiro",
+  "fisioterapeuta",
+  "nutricionista",
+  "psicologo",
+  "fonoaudiologo",
+  "tec_enfermagem",
+  "secretaria",
+  "faturista",
+  "admin",
+];
 
 export default function Register() {
   const [fullName, setFullName] = useState("");
-  const [salonName, setSalonName] = useState("");
+  const [clinicName, setClinicName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +64,16 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // Campos profissionais
+  const [professionalType, setProfessionalType] = useState<ProfessionalType | "">("");
+  const [councilNumber, setCouncilNumber] = useState("");
+  const [councilState, setCouncilState] = useState("");
+  const [councilError, setCouncilError] = useState("");
+  const [isValidatingCouncil, setIsValidatingCouncil] = useState(false);
+  const [councilValidated, setCouncilValidated] = useState(false);
+
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -41,22 +82,32 @@ export default function Register() {
   const isPasswordValid = password.length >= 6;
   const isConfirmValid = confirmPassword.length > 0 && password === confirmPassword;
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const needsCouncil = professionalType ? requiresCouncil(professionalType as ProfessionalType) : false;
+  const councilType = professionalType ? getCouncilType(professionalType as ProfessionalType) : null;
+
   const canContinueStep1 =
-    !!fullName.trim() && !!salonName.trim() && !!phone.trim() && isPhoneValid && !!email.trim() && isEmailValid;
+    !!fullName.trim() && !!clinicName.trim() && !!phone.trim() && isPhoneValid && !!email.trim() && isEmailValid;
+
+  const canContinueStep2 = (() => {
+    if (!professionalType) return false;
+    if (needsCouncil) {
+      if (!councilNumber.trim() || !councilState) return false;
+      if (councilError) return false;
+    }
+    return true;
+  })();
+
   const canSubmit =
     !isLoading &&
-    !!fullName.trim() &&
-    !!salonName.trim() &&
-    !!email.trim() &&
-    !!phone.trim() &&
-    isPhoneValid &&
-    isEmailValid &&
+    canContinueStep1 &&
+    canContinueStep2 &&
     isPasswordValid &&
     isConfirmValid &&
     legalAccepted;
 
-  const handleContinue = () => {
-    if (!fullName.trim() || !salonName.trim() || !phone.trim() || !email.trim()) {
+  const handleContinueStep1 = () => {
+    if (!fullName.trim() || !clinicName.trim() || !phone.trim() || !email.trim()) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -65,19 +116,92 @@ export default function Register() {
     setStep(2);
   };
 
+  const handleCouncilNumberBlur = async () => {
+    if (!councilType || !councilNumber.trim()) {
+      setCouncilError("");
+      setCouncilValidated(false);
+      return;
+    }
+
+    // Validação de formato local
+    const formatResult = validateCouncilFormat(councilType, councilNumber.trim());
+    if (!formatResult.valid) {
+      setCouncilError(formatResult.message);
+      setCouncilValidated(false);
+      return;
+    }
+
+    if (!councilState) {
+      setCouncilError("");
+      setCouncilValidated(false);
+      return;
+    }
+
+    // Validação assíncrona (tenta API, fallback para formato)
+    setIsValidatingCouncil(true);
+    setCouncilError("");
+    try {
+      const result = await validateCouncilAsync(councilType, councilNumber.trim(), councilState);
+      if (!result.valid) {
+        setCouncilError(result.message);
+        setCouncilValidated(false);
+      } else {
+        setCouncilError("");
+        setCouncilValidated(true);
+        if (!result.formatOnly) {
+          toast.success(`${councilType} ${councilNumber}/${councilState} verificado com sucesso!`);
+        }
+      }
+    } finally {
+      setIsValidatingCouncil(false);
+    }
+  };
+
+  const handleContinueStep2 = () => {
+    if (!professionalType) {
+      toast.error("Selecione sua profissão.");
+      return;
+    }
+    if (needsCouncil && !councilNumber.trim()) {
+      toast.error(`Informe o número do ${councilType}.`);
+      return;
+    }
+    if (needsCouncil && !councilState) {
+      toast.error("Selecione a UF do conselho.");
+      return;
+    }
+    if (councilError) {
+      toast.error("Corrija o número do conselho antes de continuar.");
+      return;
+    }
+    setStep(3);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !salonName.trim() || !phone.trim() || !email.trim() || !password || !confirmPassword) {
+    if (!canSubmit) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-    if (!isPhoneValid) { toast.error("Informe um telefone válido."); return; }
     if (password !== confirmPassword) { toast.error("As senhas não coincidem"); return; }
     if (password.length < 6) { toast.error("A senha deve ter pelo menos 6 caracteres"); return; }
     if (!legalAccepted) { toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade."); return; }
 
     setIsLoading(true);
-    const { error } = await signUp(email, password, fullName, salonName, phone, new Date().toISOString());
+    const { error } = await signUp(
+      email,
+      password,
+      fullName,
+      clinicName,
+      phone,
+      new Date().toISOString(),
+      {
+        professional_type: professionalType || undefined,
+        council_type: councilType || undefined,
+        council_number: needsCouncil ? councilNumber.trim() : undefined,
+        council_state: needsCouncil ? councilState : undefined,
+      }
+    );
     if (error) {
       toast.error("Erro ao criar conta", { description: error.message });
       setIsLoading(false);
@@ -87,6 +211,37 @@ export default function Register() {
     setSubmitted(true);
     setIsLoading(false);
   };
+
+  /** Stepper indicators */
+  const StepIndicator = () => (
+    <div className="flex items-center gap-3 mb-1">
+      {[
+        { num: 1 as const, label: "Dados" },
+        { num: 2 as const, label: "Profissão" },
+        { num: 3 as const, label: "Acesso" },
+      ].map((s, i, arr) => (
+        <div key={s.num} className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => {
+                if (s.num < step) setStep(s.num);
+              }}
+              className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold transition-colors ${
+                step >= s.num ? "bg-teal-600 text-white" : "bg-gray-100 text-muted-foreground"
+              }`}
+            >
+              {s.num}
+            </button>
+            <span className={step === s.num ? "font-medium text-gray-700" : "text-muted-foreground"}>
+              {s.label}
+            </span>
+          </div>
+          {i < arr.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-1 w-6" />}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen">
@@ -216,37 +371,15 @@ export default function Register() {
             <>
               {/* Cabeçalho */}
               <div className="mb-6">
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <button
-                      type="button"
-                      onClick={() => step === 2 && setStep(1)}
-                      className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold transition-colors ${
-                        step >= 1 ? "bg-teal-600 text-white" : "bg-gray-100 text-muted-foreground"
-                      }`}
-                    >
-                      1
-                    </button>
-                    <span className={step === 1 ? "font-medium text-gray-700" : "text-muted-foreground"}>Dados</span>
-                  </div>
-                  <div className="flex-1 h-px bg-gray-200 mx-1" />
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <div
-                      className={`flex items-center justify-center h-6 w-6 rounded-full text-xs font-semibold transition-colors ${
-                        step === 2 ? "bg-teal-600 text-white" : "bg-gray-100 text-muted-foreground"
-                      }`}
-                    >
-                      2
-                    </div>
-                    <span className={step === 2 ? "font-medium text-gray-700" : "text-muted-foreground"}>Acesso</span>
-                  </div>
-                </div>
+                <StepIndicator />
                 <h2 className="font-display text-2xl font-bold text-gray-900 mt-4">
-                  {step === 1 ? "Crie sua conta" : "Defina sua senha"}
+                  {step === 1 ? "Crie sua conta" : step === 2 ? "Sua profissão" : "Defina sua senha"}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {step === 1
                     ? "Dados da clínica e responsável."
+                    : step === 2
+                    ? "Informe sua profissão e registro profissional."
                     : "Crie uma senha segura para acessar a plataforma."}
                 </p>
               </div>
@@ -268,13 +401,13 @@ export default function Register() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="salonName" className="text-sm font-medium text-gray-700">Nome da clínica</Label>
+                      <Label htmlFor="clinicName" className="text-sm font-medium text-gray-700">Nome da clínica</Label>
                       <Input
-                        id="salonName"
+                        id="clinicName"
                         type="text"
                         placeholder="Clínica São Lucas"
-                        value={salonName}
-                        onChange={(e) => setSalonName(e.target.value)}
+                        value={clinicName}
+                        onChange={(e) => setClinicName(e.target.value)}
                         required
                         className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500"
                       />
@@ -311,13 +444,148 @@ export default function Register() {
                     </div>
                     <Button
                       type="button"
-                      onClick={handleContinue}
+                      onClick={handleContinueStep1}
                       disabled={!canContinueStep1}
                       className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:scale-[1.01] transition-all"
                     >
                       Continuar
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
+                  </>
+                ) : step === 2 ? (
+                  <>
+                    {/* Seleção de profissão */}
+                    <div className="space-y-2">
+                      <Label htmlFor="professionalType" className="text-sm font-medium text-gray-700">
+                        Sua profissão
+                      </Label>
+                      <Select
+                        value={professionalType}
+                        onValueChange={(val) => {
+                          setProfessionalType(val as ProfessionalType);
+                          setCouncilNumber("");
+                          setCouncilState("");
+                          setCouncilError("");
+                          setCouncilValidated(false);
+                        }}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:border-teal-500 focus:ring-teal-500">
+                          <SelectValue placeholder="Selecione sua profissão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGISTRATION_PROFESSIONAL_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {PROFESSIONAL_TYPE_LABELS[type]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Campos de conselho (condicional) */}
+                    {needsCouncil && councilType && (
+                      <>
+                        <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-3 space-y-3">
+                          <p className="text-xs font-medium text-teal-700">
+                            Registro no {councilType}
+                          </p>
+                          <div className="grid grid-cols-[1fr_auto] gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="councilNumber" className="text-xs text-gray-600">
+                                Número do {councilType}
+                              </Label>
+                              <div className="relative">
+                                <Input
+                                  id="councilNumber"
+                                  type="text"
+                                  placeholder={councilType === "CRP" ? "06/12345" : councilType === "CRFa" ? "2-12345" : "123456"}
+                                  value={councilNumber}
+                                  onChange={(e) => {
+                                    setCouncilNumber(e.target.value);
+                                    setCouncilError("");
+                                    setCouncilValidated(false);
+                                  }}
+                                  onBlur={handleCouncilNumberBlur}
+                                  className="h-10 rounded-lg border-gray-200 bg-white focus:border-teal-500 focus:ring-teal-500 pr-8"
+                                />
+                                {isValidatingCouncil && (
+                                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-teal-600" />
+                                )}
+                                {councilValidated && !councilError && !isValidatingCouncil && (
+                                  <BadgeCheck className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="councilState" className="text-xs text-gray-600">
+                                UF
+                              </Label>
+                              <Select
+                                value={councilState}
+                                onValueChange={(val) => {
+                                  setCouncilState(val);
+                                  setCouncilError("");
+                                  setCouncilValidated(false);
+                                }}
+                              >
+                                <SelectTrigger className="h-10 w-[90px] rounded-lg border-gray-200 bg-white focus:border-teal-500 focus:ring-teal-500">
+                                  <SelectValue placeholder="UF" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[200px]">
+                                  {BRAZILIAN_STATES.map((s) => (
+                                    <SelectItem key={s.value} value={s.value}>
+                                      {s.value}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {councilError && (
+                            <p className="text-xs text-red-600">{councilError}</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Nota para profissões sem conselho */}
+                    {professionalType && !needsCouncil && (
+                      <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          A profissão <strong>{PROFESSIONAL_TYPE_LABELS[professionalType as ProfessionalType]}</strong> não requer
+                          registro em conselho profissional.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-12 rounded-xl border-gray-200"
+                        onClick={() => setStep(1)}
+                      >
+                        Voltar
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleContinueStep2}
+                        disabled={!canContinueStep2 || isValidatingCouncil}
+                        className="h-12 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:scale-[1.01] transition-all"
+                      >
+                        {isValidatingCouncil ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Verificando...
+                          </>
+                        ) : (
+                          <>
+                            Continuar
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -400,7 +668,7 @@ export default function Register() {
                         type="button"
                         variant="outline"
                         className="h-12 rounded-xl border-gray-200"
-                        onClick={() => setStep(1)}
+                        onClick={() => setStep(2)}
                         disabled={isLoading}
                       >
                         Voltar

@@ -89,7 +89,7 @@ function CreativeCard({ state, format, forExport = false }: CardProps) {
             textShadow: "0 1px 4px rgba(0,0,0,0.3)",
           }}
         >
-          {state.salonName || "Sua Clínica"}
+          {state.clinicName || "Sua Clínica"}
         </div>
         {format === "stories" || format === "whatsapp" ? (
           <div

@@ -123,7 +123,7 @@ export default function Laudos() {
     if (!profile?.tenant_id) return;
     try {
       const { data, error } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, name")
         .eq("tenant_id", profile.tenant_id)
         .order("name");

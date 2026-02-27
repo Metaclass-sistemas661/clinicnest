@@ -13,6 +13,8 @@ import { startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import type { Appointment } from "@/types/database";
+import { CallNextButton } from "@/components/queue/CallNextButton";
+import { useWaitingQueue } from "@/hooks/usePatientQueue";
 
 const statusBadge: Record<string, { className: string; label: string }> = {
   pending: { className: "bg-warning/20 text-warning border-warning/30", label: "Pendente" },
@@ -130,18 +132,19 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
           <CardDescription>Atalhos do dia a dia da recepção</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">
+            <CallNextButton className="justify-start" />
             <Button asChild variant="outline" className="justify-start">
               <Link to="/agenda"><Plus className="mr-2 h-4 w-4" />Novo agendamento</Link>
             </Button>
             <Button asChild variant="outline" className="justify-start">
-              <Link to="/clientes"><Users className="mr-2 h-4 w-4" />Novo paciente</Link>
+              <Link to="/pacientes"><Users className="mr-2 h-4 w-4" />Novo paciente</Link>
             </Button>
             <Button asChild variant="outline" className="justify-start">
               <Link to="/agenda"><Phone className="mr-2 h-4 w-4" />Confirmar consultas</Link>
             </Button>
             <Button asChild variant="outline" className="justify-start">
-              <Link to="/agenda"><Bell className="mr-2 h-4 w-4" />Agenda completa</Link>
+              <Link to="/recepcao"><Bell className="mr-2 h-4 w-4" />Recepção</Link>
             </Button>
           </div>
         </CardContent>

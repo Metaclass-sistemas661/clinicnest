@@ -134,7 +134,7 @@ export default function Campanhas() {
     setIsLoadingClients(true);
     try {
       const { data, error } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, name, email")
         .eq("tenant_id", profile.tenant_id)
         .not("email", "is", null)
@@ -296,7 +296,7 @@ export default function Campanhas() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
-  const defaultSalonName = tenant?.name ?? profile?.full_name ?? "Minha Clínica";
+  const defaultClinicName = tenant?.name ?? profile?.full_name ?? "Minha Clínica";
 
   return (
     <MainLayout
@@ -430,7 +430,7 @@ export default function Campanhas() {
           {/* absolute inset-0 bypasses the DialogContent grid layout that prevents h-full from resolving correctly */}
           <div className="absolute inset-0 flex flex-col overflow-hidden">
             <EmailBuilder
-              defaultSalonName={defaultSalonName}
+              defaultClinicName={defaultClinicName}
               onSave={handleCreateFromBuilder}
               onCancel={() => setIsDialogOpen(false)}
               isSaving={isSaving}

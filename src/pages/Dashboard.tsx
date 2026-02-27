@@ -14,7 +14,7 @@ import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
 import { fromZonedTime } from "date-fns-tz";
-import { fetchClientSpendingByPeriod } from "@/lib/clientSpending";
+import { fetchPatientSpendingByPeriod } from "@/lib/patientSpending";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
@@ -51,7 +51,6 @@ import {
   DashboardFaturista,
   DashboardClinico,
   DashboardDentista,
-  DailyGamificationSummary,
 } from "@/components/dashboard";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { ProfessionalType } from "@/types/database";
@@ -162,8 +161,7 @@ export default function Dashboard() {
     const prefetch = () => {
       void import("@/pages/Agenda");
       void import("@/pages/Produtos");
-      void import("@/pages/Servicos");
-      void import("@/pages/Clientes");
+      void import("@/pages/Pacientes");
       void import("@/pages/Notificacoes");
       void import("@/pages/MinhasConfiguracoes");
 
@@ -172,11 +170,9 @@ export default function Dashboard() {
         void import("@/pages/Equipe");
         void import("@/pages/Configuracoes");
         void import("@/pages/Assinatura");
-        void import("@/pages/Metas");
       } else {
         void import("@/pages/MinhasComissoes");
         void import("@/pages/MeusSalarios");
-        void import("@/pages/MinhasMetas");
       }
 
       return undefined;
@@ -563,13 +559,13 @@ export default function Dashboard() {
               return { data: val, error: null };
             })()
           : Promise.resolve({ data: 0, error: null }),
-        // 8. Total de clientes - usar processNumericRpc (Seção 2.3)
+        // 8. Total de pacientes - usar processNumericRpc (Seção 2.3)
         (async (): Promise<{ data: number; error: any }> => {
           const val = await processNumericRpc(
             await getDashboardClientsCount({ p_tenant_id: profile.tenant_id }),
             async () => {
               const { count } = await supabase
-                .from("clients")
+                .from("patients")
                 .select("id", { count: "exact", head: true })
                 .eq("tenant_id", profile.tenant_id);
               return count ?? 0;
@@ -597,7 +593,7 @@ export default function Dashboard() {
               .gte("scheduled_at", monthStart)
               .lte("scheduled_at", monthEnd)
           : Promise.resolve({ data: null }),
-        // 11. Staff: clientes únicos que atendeu (distinct client_id dos seus agendamentos)
+        // 11. Staff: pacientes únicos que atendeu (distinct patient_id dos seus agendamentos)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -663,7 +659,7 @@ export default function Dashboard() {
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
       const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
-      // Perdas de produtos e clientes: processNumericRpc já aplica fallback (Seção 2.3)
+      // Perdas de produtos e pacientes: processNumericRpc já aplica fallback (Seção 2.3)
       const productLossTotalValue = productLossesResult?.data ?? 0;
       const clientsCountResult = clientsResult?.data ?? 0;
       
@@ -825,8 +821,8 @@ export default function Dashboard() {
 
       if (isAdmin) {
         try {
-          const ranking = await fetchClientSpendingByPeriod(profile.tenant_id);
-          setClientRanking(ranking);
+          const rawRanking = await fetchPatientSpendingByPeriod(profile.tenant_id);
+          setClientRanking(rawRanking.map(r => ({ client_id: r.patient_id, client_name: r.patient_name, today_total: r.today_total, month_total: r.month_total })));
           // Goals functionality disabled - table doesn't exist
           setProfessionalGoalsRanking([]);
         } catch (err) {
@@ -1197,7 +1193,7 @@ export default function Dashboard() {
 
             {/* Pacientes (admin) / Pacientes meus (staff) */}
             {isAdmin ? (
-              <Link to="/clientes" data-tour="dashboard-insights-clients" className="[&:hover]:no-underline">
+              <Link to="/pacientes" data-tour="dashboard-insights-clients" className="[&:hover]:no-underline">
                 <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-blue-200 hover:shadow-md">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
@@ -1255,7 +1251,7 @@ export default function Dashboard() {
                         </Link>
                       </Button>
                       <Button asChild variant="outline" className="justify-start">
-                        <Link to="/clientes" data-tour="dashboard-quick-new-client">
+                        <Link to="/pacientes" data-tour="dashboard-quick-new-client">
                           <Users className="mr-2 h-4 w-4" />
                           Novo paciente
                         </Link>
@@ -1417,8 +1413,6 @@ export default function Dashboard() {
                         <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
                       )}
                       {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
-                      {/* Resumo diário de gamificação (quando pop-ups desativados) */}
-                      <DailyGamificationSummary />
                     </div>
                   </div>
 

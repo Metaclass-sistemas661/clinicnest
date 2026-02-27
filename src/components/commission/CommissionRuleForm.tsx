@@ -117,7 +117,7 @@ export function CommissionRuleForm({
       try {
         const [servicesRes, insurancesRes] = await Promise.all([
           supabase
-            .from("services")
+            .from("procedures")
             .select("id, name")
             .eq("tenant_id", profile.tenant_id)
             .eq("is_active", true)
@@ -326,7 +326,7 @@ export function CommissionRuleForm({
               <Label>Serviço</Label>
               <Select value={serviceId} onValueChange={setServiceId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o serviço" />
+                  <SelectValue placeholder="Selecione o procedimento" />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((svc) => (

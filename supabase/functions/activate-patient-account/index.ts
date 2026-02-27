@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 /**
  * Edge Function: activate-patient-account
@@ -31,6 +32,16 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // Rate limiting: 5 requests per 15 minutes per IP
+    const requesterIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = await checkRateLimit(`activate-patient:${requesterIp}`, 5, 900);
+    if (!rl.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
+        { status: 429, headers: { ...cors, "Content-Type": "application/json", "Retry-After": String(rl.retryAfter ?? 900) } }
+      );
+    }
+
     const { client_id, email, password, full_name } = await req.json();
 
     if (!client_id || !email || !password || !full_name) {
