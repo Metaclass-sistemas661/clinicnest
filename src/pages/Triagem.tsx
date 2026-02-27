@@ -499,10 +499,10 @@ export default function Triagem() {
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="emergencia">🔴 Emergência</SelectItem>
-                  <SelectItem value="urgente">🟠 Urgente</SelectItem>
-                  <SelectItem value="pouco_urgente">🟡 Pouco Urgente</SelectItem>
-                  <SelectItem value="nao_urgente">🟢 Não Urgente</SelectItem>
+                  <SelectItem value="emergencia"><span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500 mr-2" />Emergência</SelectItem>
+                  <SelectItem value="urgente"><span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-500 mr-2" />Urgente</SelectItem>
+                  <SelectItem value="pouco_urgente"><span className="inline-block h-2.5 w-2.5 rounded-full bg-yellow-500 mr-2" />Pouco Urgente</SelectItem>
+                  <SelectItem value="nao_urgente"><span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500 mr-2" />Não Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>

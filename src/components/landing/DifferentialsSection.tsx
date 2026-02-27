@@ -8,6 +8,8 @@ import {
   CheckCircle,
   ArrowRight,
   Brain,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -112,6 +114,34 @@ const differentials = [
     color: "pink",
     badge: "Completo",
   },
+  {
+    icon: DollarSign,
+    title: "Faturamento TISS Completo",
+    subtitle: "Convênios sem dor de cabeça",
+    description: "Gere guias TISS (Consulta, SP/SADT, Honorários, GTO), processe retornos XML automaticamente e gerencie recursos de glosa com workflow completo.",
+    highlights: [
+      "4 tipos de guias TISS + lote automático",
+      "Parser de retorno XML com detecção de glosas",
+      "Dashboard de faturamento por convênio",
+      "Recurso de glosa com histórico",
+    ],
+    color: "indigo",
+    badge: "Faturamento",
+  },
+  {
+    icon: BarChart3,
+    title: "Relatórios e Analytics",
+    subtitle: "Decisões baseadas em dados",
+    description: "Dashboards em tempo real, relatórios avançados de faturamento, comissões, satisfação do paciente e produtividade da equipe. Exportação em PDF e Excel.",
+    highlights: [
+      "Dashboards em tempo real por perfil",
+      "NPS e satisfação pós-consulta",
+      "Relatório de comissões automático",
+      "Exportação PDF e Excel",
+    ],
+    color: "sky",
+    badge: "Analytics",
+  },
 ];
 
 const colorClasses: Record<string, { bg: string; text: string; border: string; gradient: string; badgeBg: string }> = {
@@ -122,6 +152,8 @@ const colorClasses: Record<string, { bg: string; text: string; border: string; g
   emerald: { bg: "bg-emerald-100", text: "text-emerald-600", border: "border-emerald-200", gradient: "from-emerald-500 to-green-500", badgeBg: "bg-emerald-500" },
   amber: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200", gradient: "from-amber-500 to-orange-500", badgeBg: "bg-amber-500" },
   pink: { bg: "bg-pink-100", text: "text-pink-600", border: "border-pink-200", gradient: "from-pink-500 to-rose-500", badgeBg: "bg-pink-500" },
+  indigo: { bg: "bg-indigo-100", text: "text-indigo-600", border: "border-indigo-200", gradient: "from-indigo-500 to-violet-500", badgeBg: "bg-indigo-500" },
+  sky: { bg: "bg-sky-100", text: "text-sky-600", border: "border-sky-200", gradient: "from-sky-500 to-blue-500", badgeBg: "bg-sky-500" },
 };
 
 export function DifferentialsSection() {

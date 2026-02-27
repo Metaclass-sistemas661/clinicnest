@@ -543,14 +543,14 @@ export function HeroSection() {
             </div>
 
             {/* Nest AI Introduction */}
-            <div className="flex items-center gap-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-4 py-3 mb-8 max-w-md transition-all hover:bg-white/15">
-              <NestAvatar size={52} className="flex-shrink-0 drop-shadow-lg" />
+            <div className="flex items-center gap-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-5 py-4 mb-8 max-w-lg transition-all hover:bg-white/15">
+              <NestAvatar size={140} className="flex-shrink-0 drop-shadow-2xl ring-2 ring-white/20" />
               <div>
-                <p className="text-sm font-semibold text-white leading-snug">
-                  Oi, eu sou a <span className="text-teal-300">Nest</span>! 🤖
+                <p className="text-base font-bold text-white leading-snug">
+                  Oi, eu sou a <span className="text-teal-300">Nest</span>
                 </p>
-                <p className="text-xs text-white/70 leading-relaxed mt-0.5">
-                  A inteligência artificial do ClinicNest. Ajudo pacientes e profissionais com respostas rápidas e inteligentes.
+                <p className="text-sm text-white/80 leading-relaxed mt-1">
+                  Sua assistente de inteligência artificial do ClinicNest. Ajudo pacientes e profissionais com respostas rápidas e inteligentes.
                 </p>
               </div>
             </div>

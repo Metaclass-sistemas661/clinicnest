@@ -4,14 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { NestAvatar } from "@/components/patient/NestAvatar";
 import {
-  Bot,
   Send,
   User,
   Loader2,
   RefreshCw,
   X,
-  MessageSquare,
   Minimize2,
   Wrench,
 } from "lucide-react";
@@ -46,7 +45,7 @@ export function AiAgentChat() {
   const greetingMessage: AIChatMessage = {
     id: "greeting",
     role: "assistant",
-    content: "Olá! Eu sou o Nest, seu assistente de IA da clínica. \n\nPosso te ajudar a buscar pacientes, consultar prontuários, verificar a agenda, agendar consultas e muito mais. Em que posso te ajudar?",
+    content: "Olá! Eu sou a Nest, sua assistente de IA da clínica.\n\nPosso te ajudar a buscar pacientes, consultar prontuários, verificar a agenda, agendar consultas e muito mais. Em que posso te ajudar?",
     timestamp: new Date(),
   };
 
@@ -88,10 +87,10 @@ export function AiAgentChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-105 active:scale-95"
-        title="Assistente IA"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 overflow-hidden ring-2 ring-primary/30"
+        title="Assistente IA — Nest"
       >
-        <Bot className="h-6 w-6" />
+        <NestAvatar size={56} />
       </button>
     );
   }
@@ -100,7 +99,7 @@ export function AiAgentChat() {
   if (isMinimized) {
     return (
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-primary-foreground shadow-lg cursor-pointer hover:bg-primary/90 transition-all">
-        <Bot className="h-4 w-4" />
+        <NestAvatar size={20} />
         <span className="text-sm font-medium" onClick={() => setIsMinimized(false)}>
           Nest
         </span>
@@ -115,8 +114,8 @@ export function AiAgentChat() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col w-[400px] h-[560px] rounded-2xl border bg-background shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-primary text-primary-foreground">
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
+        <div className="flex items-center gap-2.5">
+          <NestAvatar size={28} className="ring-1 ring-white/30" />
           <div>
             <h3 className="text-sm font-semibold">Nest</h3>
             <p className="text-xs opacity-80">Assistente IA</p>
@@ -157,10 +156,10 @@ export function AiAgentChat() {
       <ScrollArea ref={scrollRef} className="flex-1 px-4">
         {allMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-8 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <MessageSquare className="h-8 w-8 text-primary" />
+            <div className="mb-4">
+              <NestAvatar size={56} className="ring-2 ring-primary/20 shadow-md" />
             </div>
-            <h4 className="font-medium mb-1">Olá! Eu sou o Nest 👋</h4>
+            <h4 className="font-medium mb-1">Olá! Eu sou a Nest</h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-[280px]">
               Seu assistente de IA da clínica. Em que posso te ajudar?
             </p>
@@ -185,8 +184,8 @@ export function AiAgentChat() {
             ))}
             {isLoading && (
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-primary" />
+                <div className="flex-shrink-0">
+                  <NestAvatar size={32} className="ring-1 ring-primary/20" />
                 </div>
                 <div className="bg-muted rounded-lg px-4 py-3 max-w-[80%]">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -246,8 +245,8 @@ function MessageBubble({ message }: { message: AIChatMessage }) {
   return (
     <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-primary" />
+        <div className="flex-shrink-0">
+          <NestAvatar size={32} className="ring-1 ring-primary/20" />
         </div>
       )}
       <div className={cn("max-w-[80%] space-y-1")}>

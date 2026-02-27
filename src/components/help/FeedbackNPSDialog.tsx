@@ -107,9 +107,9 @@ export function FeedbackNPSDialog() {
 
   const getScoreLabel = () => {
     if (score === null) return "";
-    if (score <= 6) return "Precisamos melhorar 😔";
-    if (score <= 8) return "Bom, mas pode melhorar 🙂";
-    return "Excelente! Obrigado! 🎉";
+    if (score <= 6) return "Precisamos melhorar";
+    if (score <= 8) return "Bom, mas pode melhorar";
+    return "Excelente! Obrigado!";
   };
 
   return (

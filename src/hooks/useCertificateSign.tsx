@@ -213,7 +213,7 @@ export function SignaturePasswordDialog({
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "Ocultar" : "Mostrar"}
               </button>
             </div>
           </div>

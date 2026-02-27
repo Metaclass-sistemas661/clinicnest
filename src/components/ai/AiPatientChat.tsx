@@ -3,14 +3,13 @@ import { useAIAgentChat, type AIChatMessage } from "@/hooks/useAIAgentChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { NestAvatar } from "@/components/patient/NestAvatar";
 import {
-  Bot,
   Send,
   User,
   Loader2,
   RefreshCw,
   X,
-  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +47,7 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
   const greetingMessage: AIChatMessage = {
     id: "greeting",
     role: "assistant",
-    content: "Olá! Eu sou o Nest, assistente virtual da clínica. 😊\n\nPosso te ajudar com informações sobre seus agendamentos, serviços disponíveis e muito mais. Em que posso te ajudar?",
+    content: "Olá! Eu sou a Nest, assistente virtual da clínica.\n\nPosso te ajudar com informações sobre seus agendamentos, serviços disponíveis e muito mais. Em que posso te ajudar?",
     timestamp: new Date(),
   };
 
@@ -83,12 +82,12 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 transition-all hover:scale-105 active:scale-95",
+          "fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95 overflow-hidden ring-2 ring-green-400/40",
           className,
         )}
-        title="Fale conosco"
+        title="Fale com a Nest"
       >
-        <Heart className="h-6 w-6" />
+        <NestAvatar size={56} />
       </button>
     );
   }
@@ -102,8 +101,8 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-green-600 text-white">
-        <div className="flex items-center gap-2">
-          <Heart className="h-5 w-5" />
+        <div className="flex items-center gap-2.5">
+          <NestAvatar size={28} className="ring-1 ring-white/30" />
           <div>
             <h3 className="text-sm font-semibold">Nest</h3>
             <p className="text-xs opacity-80">Assistente Virtual</p>
@@ -135,10 +134,10 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
       <ScrollArea ref={scrollRef} className="flex-1 px-4">
         {allMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-8 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <Heart className="h-8 w-8 text-green-600" />
+            <div className="mb-4">
+              <NestAvatar size={56} className="ring-2 ring-green-300/30 shadow-md" />
             </div>
-            <h4 className="font-medium mb-1">Olá! Eu sou o Nest 😊</h4>
+            <h4 className="font-medium mb-1">Olá! Eu sou a Nest</h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-[260px]">
               Assistente virtual da clínica. Em que posso te ajudar?
             </p>
@@ -163,8 +162,8 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
             ))}
             {isLoading && (
               <div className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-green-600" />
+                <div className="flex-shrink-0">
+                  <NestAvatar size={32} className="ring-1 ring-green-300/30" />
                 </div>
                 <div className="bg-muted rounded-lg px-4 py-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -220,8 +219,8 @@ function PatientMessageBubble({ message }: { message: AIChatMessage }) {
   return (
     <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-          <Bot className="h-4 w-4 text-green-600" />
+        <div className="flex-shrink-0">
+          <NestAvatar size={32} className="ring-1 ring-green-300/30" />
         </div>
       )}
       <div className="max-w-[80%] space-y-1">

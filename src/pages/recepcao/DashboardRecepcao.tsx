@@ -51,8 +51,8 @@ interface ReturnReminder {
 export default function DashboardRecepcao() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { queue, isLoading: queueLoading, refetch: refetchQueue } = useWaitingQueue();
-  const { statistics } = useQueueStatistics();
+  const { data: queue = [], isLoading: queueLoading, refetch: refetchQueue } = useWaitingQueue();
+  const { data: statistics } = useQueueStatistics();
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [returns, setReturns] = useState<ReturnReminder[]>([]);

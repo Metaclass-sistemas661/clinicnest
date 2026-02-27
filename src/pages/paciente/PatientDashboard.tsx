@@ -183,7 +183,7 @@ export default function PatientDashboard() {
           <div className="relative flex flex-col sm:flex-row items-center gap-5 p-5 sm:p-6">
             {/* Avatar */}
             <div className="flex-shrink-0 drop-shadow-xl">
-              <NestAvatar size={88} />
+              <NestAvatar size={100} className="ring-2 ring-white/20" />
             </div>
 
             {/* Text content */}

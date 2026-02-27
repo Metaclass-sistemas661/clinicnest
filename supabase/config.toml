@@ -1,34 +1,125 @@
 project_id = "cxficwktocdouerhamhh"
 
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.customer-portal]
-verify_jwt = false
-
+# ── Auth / Onboarding ────────────────────────────────────────────────────────
 [functions.send-custom-auth-email]
-verify_jwt = false
-
-[functions.invite-team-member]
-verify_jwt = false
-
-[functions.send-support-ticket-email]
 verify_jwt = false
 
 [functions.update-password]
 verify_jwt = false
 
+[functions.invite-team-member]
+verify_jwt = false
+
+[functions.activate-patient-account]
+verify_jwt = false
+
 [functions.jwt-probe]
 verify_jwt = true
 
-[functions.public-booking]
+# ── IA (todas fazem auth própria via getUser) ─────────────────────────────────
+[functions.ai-agent-chat]
 verify_jwt = false
 
+[functions.ai-patient-chat]
+verify_jwt = false
+
+[functions.ai-triage]
+verify_jwt = false
+
+[functions.ai-transcribe]
+verify_jwt = false
+
+[functions.ai-cid-suggest]
+verify_jwt = false
+
+[functions.ai-sentiment]
+verify_jwt = false
+
+[functions.ai-summary]
+verify_jwt = false
+
+# ── Financeiro / Pagamentos ───────────────────────────────────────────────────
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.create-charge-with-split]
+verify_jwt = false
+
+[functions.create-patient-payment]
+verify_jwt = false
+
+[functions.asaas-pix]
+verify_jwt = false
+
+[functions.payment-webhook-handler]
+verify_jwt = false
+
+# ── NFSe / Fiscal ────────────────────────────────────────────────────────────
+[functions.emit-nfse]
+verify_jwt = false
+
+[functions.nfse-webhook-handler]
+verify_jwt = false
+
+# ── Interoperabilidade (HL7 / RNDS) ──────────────────────────────────────────
+[functions.hl7-receiver]
+verify_jwt = false
+
+[functions.hl7-sender]
+verify_jwt = false
+
+[functions.rnds-submit]
+verify_jwt = false
+
+# ── Notificações / Comunicação ────────────────────────────────────────────────
+[functions.notify-patient-appointment]
+verify_jwt = false
+
+[functions.notify-patient-invoice-due]
+verify_jwt = false
+
+[functions.notify-patient-message]
+verify_jwt = false
+
+[functions.send-weekly-financial-summary]
+verify_jwt = false
+
+[functions.send-support-ticket-email]
+verify_jwt = false
+
+[functions.whatsapp-sender]
+verify_jwt = false
+
+# ── Teleconsulta ──────────────────────────────────────────────────────────────
+[functions.twilio-token]
+verify_jwt = false
+
+[functions.twilio-video-token]
+verify_jwt = false
+
+# ── Automação / Campanhas ────────────────────────────────────────────────────
 [functions.run-campaign]
 verify_jwt = true
 
 [functions.automation-worker]
 verify_jwt = false
 
-[functions.twilio-video-token]
+# ── Público (sem auth) ───────────────────────────────────────────────────────
+[functions.public-booking]
+verify_jwt = false
+
+[functions.submit-contact-message]
+verify_jwt = false
+
+[functions.validate-council-number]
+verify_jwt = false
+
+# ── Relatórios ────────────────────────────────────────────────────────────────
+[functions.generate-patient-extract]
 verify_jwt = false

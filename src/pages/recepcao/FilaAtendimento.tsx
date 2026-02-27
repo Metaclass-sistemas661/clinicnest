@@ -62,9 +62,9 @@ const priorityLabels: Record<number, string> = {
 export default function FilaAtendimento() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { queue, isLoading, refetch } = useWaitingQueue();
-  const { currentCall, refetch: refetchCurrent } = useCurrentCall();
-  const { statistics } = useQueueStatistics();
+  const { data: queue = [], isLoading, refetch } = useWaitingQueue();
+  const { data: currentCall, refetch: refetchCurrent } = useCurrentCall();
+  const { data: statistics } = useQueueStatistics();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleRecall = async (callId: string) => {
