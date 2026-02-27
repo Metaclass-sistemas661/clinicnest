@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { NestAvatar } from "@/components/patient/NestAvatar";
 import {
   Calendar,
   Users,
@@ -132,12 +131,12 @@ const VARIANTS = [
     id: "ai",
     bg: "linear-gradient(135deg, #1a1a2e 0%, #16213e 38%, #0f3460 62%, #533483 100%)",
     badgeIcon: Brain,
-    badge: "IA Clínica Integrada",
-    headlinePlain: "Inteligência Artificial que",
+    badge: "Conheça a Nest — IA Clínica",
+    headlinePlain: "Conheça a Nest, a IA que",
     headlineHighlight: "entende medicina",
     headlineHighlightClass: "bg-gradient-to-r from-purple-300 via-pink-200 to-orange-200 bg-clip-text text-transparent",
     headlineSuffix: "",
-    sub: "Agente IA com 8 ferramentas clínicas, transcrição médica por voz, triagem inteligente, sugestão de CID, predição de faltas e análise de sentimento. Tudo nativo na plataforma.",
+    sub: "A Nest é a assistente de inteligência artificial do ClinicNest. Com 8 ferramentas clínicas, transcrição médica por voz, triagem inteligente e predição de faltas. Tudo nativo na plataforma.",
     bullets: [
       "Agente IA com acesso a prontuários, agenda e financeiro",
       "Transcrição médica por voz (Amazon Transcribe Medical)",
@@ -149,8 +148,8 @@ const VARIANTS = [
       { icon: MessageSquare, label: "Chat IA" },
       { icon: Bot, label: "8 Ferramentas" },
     ],
-    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&q=80&fit=crop",
-    imageAlt: "Inteligência artificial aplicada à saúde",
+    image: "/nest-avatar.png",
+    imageAlt: "Nest — Assistente de IA do ClinicNest",
   },
   {
     id: "compliance",
@@ -208,7 +207,10 @@ function HeroVisual({ variant }: { variant: typeof VARIANTS[0] }) {
         <img
           src={variant.image}
           alt={variant.imageAlt}
-          className="w-full h-full object-cover object-top"
+          className={cn(
+            "w-full h-full object-top",
+            variant.id === "ai" ? "object-contain bg-gradient-to-b from-purple-900/40 via-indigo-900/30 to-transparent p-4" : "object-cover",
+          )}
           loading="eager"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
@@ -493,7 +495,7 @@ export function HeroSection() {
               )}
             </h1>
 
-            <p className="text-lg sm:text-xl text-white/78 max-w-[520px] leading-relaxed mb-8 transition-all duration-700">
+            <p className="text-lg sm:text-xl text-white/90 max-w-[520px] leading-relaxed mb-8 transition-all duration-700">
               {v.sub}
             </p>
 
@@ -503,7 +505,7 @@ export function HeroSection() {
                   <div className="h-5 w-5 rounded-full bg-teal-400/20 border border-teal-400/40 flex items-center justify-center flex-shrink-0">
                     <CheckCircle className="h-3 w-3 text-teal-300" />
                   </div>
-                  <span className="text-white/82 text-sm">{item}</span>
+                  <span className="text-white/90 text-sm">{item}</span>
                 </div>
               ))}
             </div>
@@ -540,19 +542,6 @@ export function HeroSection() {
                   <span className="text-xs font-medium text-white/90">{label}</span>
                 </div>
               ))}
-            </div>
-
-            {/* Nest AI Introduction */}
-            <div className="flex items-center gap-4 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-md px-5 py-4 mb-8 max-w-lg transition-all hover:bg-white/15">
-              <NestAvatar size={140} className="flex-shrink-0 drop-shadow-2xl ring-2 ring-white/20" />
-              <div>
-                <p className="text-base font-bold text-white leading-snug">
-                  Oi, eu sou a <span className="text-teal-300">Nest</span>
-                </p>
-                <p className="text-sm text-white/80 leading-relaxed mt-1">
-                  Sua assistente de inteligência artificial do ClinicNest. Ajudo pacientes e profissionais com respostas rápidas e inteligentes.
-                </p>
-              </div>
             </div>
 
             <div className="flex items-center gap-3">
