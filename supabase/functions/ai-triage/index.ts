@@ -122,7 +122,7 @@ serve(async (req) => {
     const { data: _profile } = await supabaseClient
       .from("profiles")
       .select("tenant_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (_profile?.tenant_id) {

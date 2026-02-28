@@ -83,7 +83,7 @@ serve(async (req) => {
     const { data: profile } = await supabaseClient
       .from("profiles")
       .select("professional_type, tenant_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single();
 
     const allowedRoles = ["medico", "dentista", "enfermeiro", "admin"];
@@ -121,7 +121,7 @@ serve(async (req) => {
 
     // Fetch patient data
     const { data: client, error: clientError } = await supabaseClient
-      .from("clients")
+      .from("patients")
       .select(`
         id,
         full_name,
@@ -169,7 +169,7 @@ serve(async (req) => {
           cid_code,
           professional:profiles!appointments_professional_id_fkey(full_name)
         `)
-        .eq("client_id", client_id)
+        .eq("patient_id", client_id)
         .eq("tenant_id", profile.tenant_id)
         .eq("status", "completed")
         .order("start_time", { ascending: false })
@@ -196,7 +196,7 @@ serve(async (req) => {
           end_date,
           notes
         `)
-        .eq("client_id", client_id)
+        .eq("patient_id", client_id)
         .eq("tenant_id", profile.tenant_id)
         .or(`end_date.is.null,end_date.gte.${new Date().toISOString().split("T")[0]}`)
         .order("start_date", { ascending: false });
@@ -214,7 +214,7 @@ serve(async (req) => {
           result_summary,
           is_abnormal
         `)
-        .eq("client_id", client_id)
+        .eq("patient_id", client_id)
         .eq("tenant_id", profile.tenant_id)
         .order("result_date", { ascending: false })
         .limit(10);

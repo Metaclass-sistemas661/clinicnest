@@ -104,7 +104,7 @@ serve(async (req) => {
     const { data: profile } = await supabaseClient
       .from("profiles")
       .select("professional_type, tenant_id")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single();
 
     const allowedRoles = ["medico", "dentista", "enfermeiro", "admin"];
