@@ -285,11 +285,15 @@ export default function ProntuarioDetalhe() {
         {/* Badges */}
         <div className="flex flex-wrap gap-2">
           {record.cid_code && <Badge variant="outline" className="font-mono">CID: {record.cid_code}</Badge>}
-          {record.digital_hash && (
+          {record.signed_at ? (
             <Badge variant="outline" className="text-success border-success/30 gap-1">
               <ShieldCheck className="h-3 w-3" />Assinado digitalmente
             </Badge>
-          )}
+          ) : record.digital_hash ? (
+            <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+              Integridade verificável
+            </Badge>
+          ) : null}
           {record.is_locked && (
             <Badge variant="outline" className="text-amber-600 border-amber-500/30 gap-1">
               <Lock className="h-3 w-3" />Bloqueado

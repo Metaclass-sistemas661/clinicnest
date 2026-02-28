@@ -732,11 +732,15 @@ export default function Prontuarios() {
                         <Lock className="h-3 w-3" />Bloqueado
                       </Badge>
                     )}
-                    {record.digital_hash && (
+                    {record.signed_at ? (
                       <Badge variant="outline" className="text-xs text-success border-success/30 gap-1">
                         <ShieldCheck className="h-3 w-3" />Assinado
                       </Badge>
-                    )}
+                    ) : record.digital_hash ? (
+                      <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                        Integridade verificável
+                      </Badge>
+                    ) : null}
                     <Button variant="outline" size="sm" title="Editar prontuário"
                       onClick={(e) => { e.stopPropagation(); openEditRecord(record); }}>
                       {isRecordEditable(record) ? <Pencil className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}

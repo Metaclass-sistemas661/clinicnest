@@ -20,6 +20,18 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useAuth } from "@/contexts/AuthContext";
 import { TourProvider } from "@/contexts/TourContext";
 import { AppStatusProvider } from "@/contexts/AppStatusContext";
+import { initBirdId } from "@/lib/birdid-integration";
+
+// Inicializa BirdID se credenciais estiverem configuradas
+const birdIdClientId = import.meta.env.VITE_BIRDID_CLIENT_ID;
+if (birdIdClientId) {
+  initBirdId({
+    clientId: birdIdClientId,
+    clientSecret: import.meta.env.VITE_BIRDID_CLIENT_SECRET || "",
+    redirectUri: import.meta.env.VITE_BIRDID_REDIRECT_URI || `${window.location.origin}/auth/birdid/callback`,
+    environment: (import.meta.env.VITE_BIRDID_ENVIRONMENT as "sandbox" | "production") || "sandbox",
+  });
+}
 
 // Todas as páginas usam lazy loading para reduzir bundle inicial e habilitar code splitting
 const LandingPage = lazyWithRetry(() => import("@/pages/LandingPage"));
@@ -144,6 +156,7 @@ const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
 const DashboardRecepcao = lazyWithRetry(() => import("@/pages/recepcao/DashboardRecepcao"));
 const ConfirmarRetornoPublico = lazyWithRetry(() => import("@/pages/ConfirmarRetornoPublico"));
 const VerificarDocumento = lazyWithRetry(() => import("@/pages/VerificarDocumento"));
+const BirdIdCallback = lazyWithRetry(() => import("@/pages/auth/BirdIdCallback"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -207,6 +220,7 @@ const App = () => (
                 <Route path="/assinar-termos/:token" element={<AssinarTermosPublico />} />
                 <Route path="/confirmar-retorno/:token" element={<ConfirmarRetornoPublico />} />
                 <Route path="/verificar/:hash" element={<VerificarDocumento />} />
+                <Route path="/auth/birdid/callback" element={<BirdIdCallback />} />
                 <Route path="/painel-chamada" element={<PainelChamada />} />
 
                 {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}

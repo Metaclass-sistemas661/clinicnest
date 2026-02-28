@@ -92,7 +92,7 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
         )}
         title="Fale com a Nest"
       >
-        <NestAvatar size={44} className="rounded-full" />
+        <NestAvatar size={56} className="rounded-full" />
       </button>
     );
   }

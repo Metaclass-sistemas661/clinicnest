@@ -516,7 +516,7 @@ export function ProntuarioForm({
         </div>
       )}
 
-      {isEditing && editRecord?.digital_hash && (
+      {isEditing && editRecord?.signed_at && (
         <div className="rounded-xl border border-success/30 bg-success/5 px-4 py-2 flex items-center gap-3">
           <ShieldCheck className="h-4 w-4 text-success shrink-0" />
           <div className="text-xs text-muted-foreground">

@@ -701,7 +701,7 @@ export default function Evolucoes() {
               <SelectTrigger className="w-48"><SelectValue placeholder="Paciente" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os pacientes</SelectItem>
-                {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
             {(activeTab === "todas" || activeTab === "soap") && (
@@ -845,7 +845,7 @@ export default function Evolucoes() {
                   <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Selecionar paciente</SelectItem>
-                    {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -964,7 +964,7 @@ export default function Evolucoes() {
                 <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Selecionar paciente</SelectItem>
-                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {patients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
