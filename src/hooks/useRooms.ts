@@ -20,6 +20,7 @@ export function useRooms() {
       const { data, error } = await supabase
         .from("clinic_rooms")
         .select("id, name, room_type, capacity, is_active, tenant_id")
+        .eq("tenant_id", tenantId!)
         .eq("is_active", true)
         .order("name");
 
