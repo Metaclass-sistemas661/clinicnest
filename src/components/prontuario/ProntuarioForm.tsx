@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey, Sparkles, Mic } from "lucide-react";
+import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey, Sparkles, Mic, Settings } from "lucide-react";
 import { TriageContextCard, type TriageData } from "./TriageContextCard";
 import { DynamicFieldsRenderer, type TemplateField } from "./DynamicFieldsRenderer";
 import { Cid10Combobox } from "@/components/ui/cid10-combobox";
 import { generateRecordHash, buildSignaturePayload } from "@/lib/digital-signature";
 import { readPfxFile, parsePfxCertificateInfo, signWithCertificate, validateICPCertificate, type ICPCertificateInfo } from "@/lib/icp-brasil-signature";
+import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -162,10 +163,30 @@ export function ProntuarioForm({
   const [changeReason, setChangeReason] = useState("");
 
   const [icpMode, setIcpMode] = useState(false);
-  const [icpPfxBytes, setIcpPfxBytes] = useState<Uint8Array | null>(null);
   const [icpPassword, setIcpPassword] = useState("");
-  const [icpCertInfo, setIcpCertInfo] = useState<ICPCertificateInfo | null>(null);
   const [icpError, setIcpError] = useState("");
+
+  // Hook para certificado cadastrado no banco
+  const { state: certState, hasCertificate, checkCertificate, signData: signWithStoredCert } = useCertificateSign();
+
+  // Fallback: upload manual (caso não tenha certificado cadastrado)
+  const [icpManualMode, setIcpManualMode] = useState(false);
+  const [icpPfxBytes, setIcpPfxBytes] = useState<Uint8Array | null>(null);
+  const [icpCertInfo, setIcpCertInfo] = useState<ICPCertificateInfo | null>(null);
+
+  // Ao ativar icpMode, verificar se há certificado cadastrado
+  const handleIcpToggle = useCallback(async (checked: boolean) => {
+    setIcpMode(checked);
+    setIcpError("");
+    setIcpManualMode(false);
+    if (checked) {
+      const found = await checkCertificate();
+      if (!found) {
+        // Sem certificado cadastrado — modo manual
+        setIcpManualMode(true);
+      }
+    }
+  }, [checkCertificate]);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
 
@@ -349,7 +370,16 @@ export function ProntuarioForm({
       let signedByCrm: string | null = null;
       let signedAt: string | null = null;
 
-      if (icpMode && icpPfxBytes && icpPassword && icpCertInfo?.isValid) {
+      if (icpMode && hasCertificate && icpPassword && !icpManualMode) {
+        // Assinar com certificado salvo no banco
+        const icpResult = await signWithStoredCert(signPayload, icpPassword);
+        if (!icpResult) throw new Error("Falha na assinatura digital");
+        digitalHash = icpResult.signature;
+        signedByName = icpResult.certificate.commonName;
+        signedByCrm = icpResult.certificate.cpfCnpj || professionalCrm || null;
+        signedAt = new Date().toISOString();
+      } else if (icpMode && icpManualMode && icpPfxBytes && icpPassword && icpCertInfo?.isValid) {
+        // Fallback: assinar com certificado manual (upload)
         const icpResult = await signWithCertificate(signPayload, icpPfxBytes, icpPassword);
         digitalHash = icpResult.signature;
         signedByName = icpResult.certificate.commonName;
@@ -748,15 +778,44 @@ export function ProntuarioForm({
               Assinatura Digital
             </h4>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
-              <input type="checkbox" checked={icpMode} onChange={(e) => setIcpMode(e.target.checked)} className="rounded" />
+              <input type="checkbox" checked={icpMode} onChange={(e) => handleIcpToggle(e.target.checked)} className="rounded" />
               Usar Certificado ICP-Brasil A1
             </label>
           </div>
           {!icpMode && (
             <p className="text-xs text-muted-foreground">O prontuário será assinado com hash SHA-256 padrão. Ative o certificado digital para assinatura com validade jurídica ICP-Brasil.</p>
           )}
-          {icpMode && (
+          {icpMode && certState.isLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Buscando certificado cadastrado...
+            </div>
+          )}
+          {icpMode && !certState.isLoading && hasCertificate && !icpManualMode && (
             <div className="space-y-3">
+              <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
+                  <span className="font-medium text-green-700">Certificado cadastrado encontrado</span>
+                </div>
+                <p><span className="font-medium">Titular:</span> {certState.certificate?.common_name}</p>
+                {certState.certificate?.cpf_cnpj && <p><span className="font-medium">CPF/CNPJ:</span> {certState.certificate.cpf_cnpj}</p>}
+                <p><span className="font-medium">Emissor:</span> {certState.certificate?.issuer}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Senha do certificado</Label>
+                <Input type="password" value={icpPassword} onChange={(e) => setIcpPassword(e.target.value)} placeholder="Digite a senha do certificado" className="text-sm" />
+              </div>
+              {icpError && <p className="text-xs text-destructive">{icpError}</p>}
+            </div>
+          )}
+          {icpMode && !certState.isLoading && icpManualMode && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-xs space-y-2">
+                <p className="text-amber-800">
+                  Nenhum certificado cadastrado. Você pode <a href="/configuracoes" className="underline font-medium inline-flex items-center gap-0.5"><Settings className="h-3 w-3" />cadastrar em Configurações</a> para não precisar importar toda vez, ou importar manualmente abaixo:
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Arquivo .pfx / .p12</Label>

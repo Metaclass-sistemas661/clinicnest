@@ -80,10 +80,10 @@ async function getPatientHistory(
 ): Promise<PatientHistory | null> {
   const { data, error } = await supabase
     .from("appointments")
-    .select("status, start_time")
+    .select("status, scheduled_at")
     .eq("patient_id", patientId)
     .eq("tenant_id", tenantId)
-    .order("start_time", { ascending: false });
+    .order("scheduled_at", { ascending: false });
 
   if (error || !data || data.length === 0) {
     return null;
@@ -97,7 +97,7 @@ async function getPatientHistory(
   const lastNoShow = data.find((a) => a.status === "no_show");
   const lastNoShowDaysAgo = lastNoShow
     ? Math.floor(
-        (Date.now() - new Date(lastNoShow.start_time).getTime()) / (1000 * 60 * 60 * 24)
+        (Date.now() - new Date(lastNoShow.scheduled_at).getTime()) / (1000 * 60 * 60 * 24)
       )
     : null;
 
@@ -109,8 +109,8 @@ async function getPatientHistory(
       const diffs: number[] = [];
       for (let i = 0; i < completedAppts.length - 1; i++) {
         const diff =
-          new Date(completedAppts[i].start_time).getTime() -
-          new Date(completedAppts[i + 1].start_time).getTime();
+          new Date(completedAppts[i].scheduled_at).getTime() -
+          new Date(completedAppts[i + 1].scheduled_at).getTime();
         diffs.push(diff / (1000 * 60 * 60 * 24));
       }
       avgDays = diffs.reduce((a, b) => a + b, 0) / diffs.length;
@@ -138,7 +138,7 @@ async function getProfessionalNoShowRate(
     .select("status")
     .eq("professional_id", professionalId)
     .eq("tenant_id", tenantId)
-    .gte("start_time", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
+    .gte("scheduled_at", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString());
 
   if (error || !data || data.length < 10) {
     return 0.1; // Default 10% if not enough data
@@ -299,8 +299,8 @@ export async function predictNoShow(
       id,
       patient_id,
       professional_id,
-      start_time,
-      is_return
+      scheduled_at,
+      consultation_type
     `)
     .eq("id", appointmentId)
     .eq("tenant_id", tenantId)
@@ -310,7 +310,7 @@ export async function predictNoShow(
     throw new Error("Appointment not found");
   }
 
-  const startTime = new Date(appointment.start_time);
+  const startTime = new Date(appointment.scheduled_at);
   const now = new Date();
 
   // Get patient history
@@ -337,7 +337,7 @@ export async function predictNoShow(
       (startTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     ),
     is_first_appointment: !history || history.total_appointments === 0,
-    is_return: appointment.is_return || false,
+    is_return: appointment.consultation_type === "retorno",
     professional_no_show_rate: professionalRate,
     time_slot_no_show_rate: timeSlotRate,
   };

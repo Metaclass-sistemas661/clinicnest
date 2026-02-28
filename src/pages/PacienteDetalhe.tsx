@@ -68,6 +68,8 @@ export default function PacienteDetalhe() {
   const [detailTimeline, setDetailTimeline] = useState<ClientTimelineEventRow[]>([]);
   const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
   const [isLoadingExtras, setIsLoadingExtras] = useState(false);
+  const [marketingOptOut, setMarketingOptOut] = useState(false);
+  const [isUpdatingMarketing, setIsUpdatingMarketing] = useState(false);
 
   useEffect(() => {
     if (profile?.tenant_id && id) {
@@ -101,14 +103,22 @@ export default function PacienteDetalhe() {
     if (!profile?.tenant_id) return;
     setIsLoadingExtras(true);
     try {
-      const [spendingData, { data: timelineData, error: timelineError }, packagesRes, walletRes, ledgerRes, mktPrefRes] = await Promise.all([
+      const [spendingData, { data: timelineData, error: timelineError }, packagesRes, mktPrefRes] = await Promise.all([
         fetchClientSpendingAllTime(profile.tenant_id),
         getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
         supabase.from("patient_packages")
           .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("purchased_at", { ascending: false }),
+        supabase.from("client_marketing_preferences")
+          .select("marketing_opt_out")
+          .eq("tenant_id", profile.tenant_id).eq("client_id", patientId)
+          .maybeSingle(),
       ]);
+
+      if (mktPrefRes.data) {
+        setMarketingOptOut(mktPrefRes.data.marketing_opt_out ?? false);
+      }
 
       const spending = spendingData.find((s) => s.patient_id === patientId);
       setClientSpending(spending || null);
@@ -181,6 +191,27 @@ export default function PacienteDetalhe() {
       logger.error("Error loading client extras:", err);
     } finally {
       setIsLoadingExtras(false);
+    }
+  };
+
+  const handleToggleMarketingOptOut = async (checked: boolean) => {
+    if (!profile?.tenant_id || !id) return;
+    setIsUpdatingMarketing(true);
+    try {
+      const { error } = await supabase.from("client_marketing_preferences")
+        .upsert({
+          tenant_id: profile.tenant_id,
+          client_id: id,
+          marketing_opt_out: checked,
+        }, { onConflict: "tenant_id,client_id" });
+      if (error) throw error;
+      setMarketingOptOut(checked);
+      toast.success(checked ? "Opt-out de marketing ativado" : "Opt-out de marketing desativado");
+    } catch (err) {
+      logger.error("Error toggling marketing opt-out:", err);
+      toast.error("Erro ao atualizar preferência de marketing");
+    } finally {
+      setIsUpdatingMarketing(false);
     }
   };
 
