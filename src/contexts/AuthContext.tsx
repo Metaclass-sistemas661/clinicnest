@@ -10,6 +10,8 @@ interface AuthContextType {
   profile: Profile | null;
   userRole: UserRole | null;
   tenant: Tenant | null;
+  /** Atalho para profile?.tenant_id — usado por dezenas de hooks (useRooms, usePatientQueue, etc.) */
+  tenantId: string | null;
   isAdmin: boolean;
   isLoading: boolean;
   professionalType: ProfessionalType;
@@ -77,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = userRole?.role === 'admin';
   const professionalType: ProfessionalType = profile?.professional_type ?? 'secretaria';
+  const tenantId = profile?.tenant_id ?? null;
 
   const fetchUserData = async (userId: string): Promise<{ profile: Profile | null; userRole: UserRole | null; tenant: Tenant | null; permissions: PermissionsMap }> => {
     try {
@@ -318,6 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         userRole,
         tenant,
+        tenantId,
         isAdmin,
         isLoading,
         professionalType,
