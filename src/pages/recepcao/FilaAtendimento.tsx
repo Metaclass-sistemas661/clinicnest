@@ -25,7 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
 import { CallNextButton } from "@/components/queue/CallNextButton";
-import { useWaitingQueue, useCurrentCall, useQueueStatistics } from "@/hooks/usePatientQueue";
+import { useWaitingQueue, useCurrentCall, useQueueStatistics, useQueueRealtime } from "@/hooks/usePatientQueue";
 
 interface QueueItem {
   call_id: string;
@@ -62,10 +62,13 @@ const priorityLabels: Record<number, string> = {
 export default function FilaAtendimento() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { data: queue = [], isLoading, refetch } = useWaitingQueue();
+  const { data: queue = [], isLoading, refetch } = useWaitingQueue(20);
   const { data: currentCall, refetch: refetchCurrent } = useCurrentCall();
   const { data: statistics } = useQueueStatistics();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Realtime: atualiza fila instantaneamente
+  useQueueRealtime();
 
   const handleRecall = async (callId: string) => {
     if (!profile?.tenant_id) return;
@@ -210,7 +213,7 @@ export default function FilaAtendimento() {
                   <Timer className="h-5 w-5 text-violet-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{statistics?.avg_wait_minutes || 0} min</p>
+                  <p className="text-2xl font-bold">{statistics?.avg_wait_time_minutes ? Math.round(statistics.avg_wait_time_minutes) : 0} min</p>
                   <p className="text-sm text-muted-foreground">Tempo médio</p>
                 </div>
               </div>

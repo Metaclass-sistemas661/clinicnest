@@ -248,7 +248,7 @@ export default function PainelChamada() {
             
             {queue && queue.length > 0 ? (
               <div className="space-y-2">
-                {queue.slice(0, 6).map((patient, index) => {
+                {queue.slice(0, 8).map((patient, index) => {
                   const pColor = PRIORITY_COLORS[patient.priority as keyof typeof PRIORITY_COLORS] || PRIORITY_COLORS[5];
                   
                   return (
@@ -273,9 +273,16 @@ export default function PainelChamada() {
                         <div className="font-medium truncate text-sm">
                           {patient.client_name}
                         </div>
-                        <div className={cn("text-xs flex items-center gap-1", mutedTextClass)}>
-                          <Clock className="h-3 w-3" />
-                          {patient.wait_time_minutes} min
+                        <div className={cn("text-xs flex items-center gap-2", mutedTextClass)}>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {patient.wait_time_minutes} min
+                          </span>
+                          {patient.priority <= 3 && (
+                            <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold", pColor.bg, pColor.text)}>
+                              {patient.priority_label || pColor.label}
+                            </span>
+                          )}
                         </div>
                       </div>
                       

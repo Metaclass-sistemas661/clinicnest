@@ -27,7 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
-import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, Stethoscope, TrendingUp } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, Stethoscope, TrendingUp, ShieldCheck } from "lucide-react";
 import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -39,7 +39,7 @@ import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import { CallNextButton } from "@/components/queue/CallNextButton";
-import type { Appointment, Patient, Procedure, Profile, AppointmentStatus, Product } from "@/types/database";
+import type { Appointment, Patient, Procedure, Profile, AppointmentStatus, Product, InsurancePlan, ConsultationType } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -62,6 +62,7 @@ export default function Agenda() {
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [professionals, setProfessionals] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,6 +119,25 @@ export default function Agenda() {
     }
   }, [isDialogOpen, isAdmin, profile?.id]);
 
+  // Auto-preencher convênio do paciente quando selecionado
+  useEffect(() => {
+    if (!formData.patient_id) return;
+    const patient = patients.find((p) => p.id === formData.patient_id);
+    if (patient?.insurance_plan_id) {
+      setFormData((prev) => ({
+        ...prev,
+        insurance_plan_id: prev.insurance_plan_id || patient.insurance_plan_id || "",
+      }));
+    }
+  }, [formData.patient_id, patients]);
+
+  // Verificar se convênio selecionado exige autorização
+  const selectedInsurancePlan = useMemo(
+    () => insurancePlans.find((p) => p.id === formData.insurance_plan_id),
+    [insurancePlans, formData.insurance_plan_id]
+  );
+  const requiresAuthorization = selectedInsurancePlan?.requires_authorization ?? false;
+
   // Form state
   const [formData, setFormData] = useState({
     patient_id: "",
@@ -129,6 +149,9 @@ export default function Agenda() {
     status: "pending" as AppointmentStatus,
     telemedicine: false,
     booked_by_id: "",
+    consultation_type: "primeira" as ConsultationType,
+    insurance_plan_id: "",
+    insurance_authorization: "",
   });
 
   useEffect(() => {
@@ -150,7 +173,7 @@ export default function Agenda() {
     }
 
     try {
-      const [appointmentsRes, clientsRes, proceduresRes, professionalsRes, productsRes] = await Promise.all([
+      const [appointmentsRes, clientsRes, proceduresRes, professionalsRes, productsRes, insurancePlansRes] = await Promise.all([
         supabase
           .from("appointments")
           .select(`
@@ -165,7 +188,7 @@ export default function Agenda() {
           .order("scheduled_at", { ascending: true }),
         supabase
           .from("patients")
-          .select("id,tenant_id,name,phone,email,notes,created_at,updated_at")
+          .select("id,tenant_id,name,phone,email,notes,insurance_plan_id,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("name"),
         supabase
@@ -185,6 +208,12 @@ export default function Agenda() {
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
           .order("name"),
+        supabase
+          .from("insurance_plans")
+          .select("*")
+          .eq("tenant_id", profile.tenant_id)
+          .eq("is_active", true)
+          .order("name"),
       ]);
 
       const professionals = (professionalsRes.data as Profile[]) || [];
@@ -195,6 +224,7 @@ export default function Agenda() {
       setProcedures((proceduresRes.data as Procedure[]) || []);
       setProfessionals(professionals);
       setProducts(((productsRes.data as Product[]) || []).filter((product) => product.is_active));
+      setInsurancePlans((insurancePlansRes.data as unknown as InsurancePlan[]) || []);
     } catch (error) {
       logger.error("Error fetching data:", error);
       toast.error("Erro ao carregar agenda. Tente novamente.");
@@ -261,6 +291,12 @@ export default function Agenda() {
       return;
     }
 
+    // Verificar autorização do convênio
+    if (requiresAuthorization && !formData.insurance_authorization.trim()) {
+      toast.error("Este convênio exige número de autorização. Preencha antes de agendar.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -296,6 +332,20 @@ export default function Agenda() {
       const createdId = String((rpcData as any)?.appointment_id ?? "");
       const createdProfessionalId = professionalId;
 
+      // Salvar campos extras que a RPC não suporta (consultation_type, insurance, etc.)
+      if (createdId) {
+        const extraFields: Record<string, unknown> = {};
+        if (formData.consultation_type) extraFields.consultation_type = formData.consultation_type;
+        if (formData.insurance_plan_id) extraFields.insurance_plan_id = formData.insurance_plan_id;
+        if (formData.insurance_authorization) extraFields.insurance_authorization = formData.insurance_authorization;
+        if (Object.keys(extraFields).length > 0) {
+          await supabase
+            .from("appointments")
+            .update(extraFields)
+            .eq("id", createdId);
+        }
+      }
+
       // Notificar profissional: quando admin cria para ele OU quando cria o próprio
       if (createdProfessionalId && profile?.user_id) {
         const prof = professionals.find((p) => p.id === professionalId);
@@ -328,6 +378,10 @@ export default function Agenda() {
         notes: "",
         status: "pending",
         telemedicine: false,
+        booked_by_id: "",
+        consultation_type: "primeira",
+        insurance_plan_id: "",
+        insurance_authorization: "",
       });
       fetchData();
     } catch (error) {
@@ -442,6 +496,17 @@ export default function Agenda() {
         toastRpcError(toast, error, "Erro ao atualizar agendamento");
         return;
       }
+
+      // Salvar campos extras que a RPC não suporta
+      const extraFields: Record<string, unknown> = {
+        consultation_type: data.consultation_type || null,
+        insurance_plan_id: data.insurance_plan_id || null,
+        insurance_authorization: data.insurance_authorization || null,
+      };
+      await supabase
+        .from("appointments")
+        .update(extraFields)
+        .eq("id", id);
 
       toast.success("Agendamento atualizado com sucesso!");
       fetchData();
@@ -801,6 +866,68 @@ export default function Agenda() {
               </div>
             </FormDrawerSection>
 
+            <FormDrawerSection title="Tipo de Consulta e Convênio">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Consulta</Label>
+                  <Select
+                    value={formData.consultation_type}
+                    onValueChange={(v) => setFormData({ ...formData, consultation_type: v as ConsultationType })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="primeira">Primeira Consulta</SelectItem>
+                      <SelectItem value="retorno">Retorno</SelectItem>
+                      <SelectItem value="urgencia">Urgência</SelectItem>
+                      <SelectItem value="procedimento">Procedimento</SelectItem>
+                      <SelectItem value="exame">Exame</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Convênio / Plano de Saúde <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Select
+                    value={formData.insurance_plan_id}
+                    onValueChange={(v) => setFormData({ ...formData, insurance_plan_id: v === "none" ? "" : v, insurance_authorization: v === "none" ? "" : formData.insurance_authorization })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Particular (sem convênio)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Particular (sem convênio)</SelectItem>
+                      {insurancePlans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name}{plan.ans_code ? ` (ANS: ${plan.ans_code})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.insurance_plan_id && (
+                  <div className="space-y-2">
+                    <Label>
+                      Nº Autorização do Convênio
+                      {requiresAuthorization && <span className="text-destructive ml-1">*</span>}
+                    </Label>
+                    <Input
+                      value={formData.insurance_authorization}
+                      onChange={(e) => setFormData({ ...formData, insurance_authorization: e.target.value })}
+                      placeholder="Número da autorização emitida pela operadora"
+                      className="font-mono"
+                    />
+                    {requiresAuthorization && (
+                      <div className="flex items-center gap-1.5 text-xs text-warning">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Este convênio exige autorização prévia para agendamento
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </FormDrawerSection>
+
             <FormDrawerSection title="Opções">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1064,6 +1191,7 @@ export default function Agenda() {
                   procedures={procedures}
                   professionals={professionals}
                   allAppointments={allAppointments}
+                  insurancePlans={insurancePlans}
                   onStatusChange={updateAppointmentStatus}
                   currentProfileId={profile?.id}
                   onComplete={handleCompleteAppointment}

@@ -15,7 +15,9 @@ export interface PatientCall {
   professional_name: string | null;
   checked_in_at: string;
   wait_time_minutes: number;
-  position: number;
+  queue_position: number;
+  appointment_id: string | null;
+  service_name: string | null;
 }
 
 export interface CurrentCall {
@@ -27,6 +29,8 @@ export interface CurrentCall {
   professional_name: string | null;
   times_called: number;
   last_called_at: string;
+  priority: number;
+  priority_label: string | null;
 }
 
 export interface QueueStatistics {

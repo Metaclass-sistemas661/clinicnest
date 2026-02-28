@@ -122,6 +122,8 @@ export interface Patient {
   city: string | null;
   state: string | null;
   allergies: string | null;
+  insurance_plan_id: string | null;
+  insurance_card_number: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -188,6 +190,24 @@ export interface Product {
   updated_at: string;
 }
 
+export type ConsultationType = 'primeira' | 'retorno' | 'urgencia' | 'procedimento' | 'exame';
+
+export interface InsurancePlan {
+  id: string;
+  tenant_id: string;
+  name: string;
+  ans_code: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  reimbursement_days: number;
+  requires_authorization: boolean;
+  tiss_version: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Appointment {
   id: string;
   tenant_id: string;
@@ -202,6 +222,15 @@ export interface Appointment {
   source: 'internal' | 'online' | 'whatsapp' | null;
   confirmed_at: string | null;
   public_booking_token: string | null;
+  consultation_type: ConsultationType | null;
+  insurance_plan_id: string | null;
+  insurance_authorization: string | null;
+  specialty_id: string | null;
+  room_id: string | null;
+  telemedicine: boolean;
+  telemedicine_url: string | null;
+  cid_code: string | null;
+  booked_by_id: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -212,6 +241,7 @@ export interface Appointment {
   /** @deprecated Use procedure instead */
   service?: Procedure;
   professional?: Profile;
+  insurance_plan?: InsurancePlan;
 }
 
 export interface FinancialTransaction {

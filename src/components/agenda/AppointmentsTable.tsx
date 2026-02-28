@@ -45,11 +45,12 @@ import {
   ClipboardList,
   UserCheck,
   DollarSign,
+  ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
-import type { Appointment, AppointmentStatus, Patient, Procedure, Profile, Product } from "@/types/database";
+import type { Appointment, AppointmentStatus, Patient, Procedure, Profile, Product, InsurancePlan, ConsultationType } from "@/types/database";
 import { supabase } from "@/integrations/supabase/client";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
@@ -66,6 +67,7 @@ interface AppointmentsTableProps {
   procedures: Procedure[];
   professionals: Profile[];
   allAppointments: Appointment[];
+  insurancePlans?: InsurancePlan[];
   onStatusChange: (id: string, status: AppointmentStatus) => Promise<void>;
   onComplete: (
     appointment: Appointment,
@@ -91,6 +93,9 @@ export interface EditAppointmentData {
   scheduled_at: string;
   notes: string | null;
   telemedicine: boolean;
+  consultation_type: string | null;
+  insurance_plan_id: string | null;
+  insurance_authorization: string | null;
 }
 
 const statusConfig = {
@@ -127,6 +132,7 @@ export function AppointmentsTable({
   procedures,
   professionals,
   allAppointments,
+  insurancePlans = [],
   onStatusChange,
   onComplete,
   onEdit,
@@ -151,6 +157,9 @@ export function AppointmentsTable({
     scheduled_time: "",
     notes: "",
     telemedicine: false,
+    consultation_type: "primeira" as string,
+    insurance_plan_id: "",
+    insurance_authorization: "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -240,7 +249,10 @@ export function AppointmentsTable({
       scheduled_at: format(scheduledDate, "yyyy-MM-dd"),
       scheduled_time: format(scheduledDate, "HH:mm"),
       notes: appointment.notes || "",
-      telemedicine: Boolean((appointment as any).telemedicine),
+      telemedicine: Boolean(appointment.telemedicine),
+      consultation_type: appointment.consultation_type || "primeira",
+      insurance_plan_id: appointment.insurance_plan_id || "",
+      insurance_authorization: appointment.insurance_authorization || "",
     });
     setEditDialogOpen(true);
   };
@@ -261,6 +273,9 @@ export function AppointmentsTable({
         scheduled_at: scheduledAt.toISOString(),
         notes: editFormData.notes || null,
         telemedicine: Boolean(editFormData.telemedicine),
+        consultation_type: editFormData.consultation_type || null,
+        insurance_plan_id: editFormData.insurance_plan_id || null,
+        insurance_authorization: editFormData.insurance_authorization || null,
       });
       setEditDialogOpen(false);
       setAppointmentToEdit(null);
@@ -999,6 +1014,66 @@ export function AppointmentsTable({
                     setEditFormData({ ...editFormData, professional_id: profId })
                   : undefined}
                 />
+                </div>
+              )}
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Tipo de Consulta</Label>
+                <Select
+                  value={editFormData.consultation_type}
+                  onValueChange={(v) => setEditFormData({ ...editFormData, consultation_type: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primeira">Primeira Consulta</SelectItem>
+                    <SelectItem value="retorno">Retorno</SelectItem>
+                    <SelectItem value="urgencia">Urgência</SelectItem>
+                    <SelectItem value="procedimento">Procedimento</SelectItem>
+                    <SelectItem value="exame">Exame</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Convênio / Plano de Saúde</Label>
+                <Select
+                  value={editFormData.insurance_plan_id}
+                  onValueChange={(v) => setEditFormData({ ...editFormData, insurance_plan_id: v === "none" ? "" : v, insurance_authorization: v === "none" ? "" : editFormData.insurance_authorization })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Particular (sem convênio)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Particular (sem convênio)</SelectItem>
+                    {insurancePlans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name}{plan.ans_code ? ` (ANS: ${plan.ans_code})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {editFormData.insurance_plan_id && (
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>
+                    Nº Autorização do Convênio
+                    {insurancePlans.find((p) => p.id === editFormData.insurance_plan_id)?.requires_authorization && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
+                  <Input
+                    value={editFormData.insurance_authorization}
+                    onChange={(e) => setEditFormData({ ...editFormData, insurance_authorization: e.target.value })}
+                    placeholder="Número da autorização emitida pela operadora"
+                    className="font-mono"
+                  />
+                  {insurancePlans.find((p) => p.id === editFormData.insurance_plan_id)?.requires_authorization && (
+                    <div className="flex items-center gap-1.5 text-xs text-warning">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Este convênio exige autorização prévia
+                    </div>
+                  )}
                 </div>
               )}
 

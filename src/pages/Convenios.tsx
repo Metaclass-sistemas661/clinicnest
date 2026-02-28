@@ -10,6 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormDrawer, FormDrawerSection } from "@/components/ui/form-drawer";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -38,11 +45,14 @@ interface Convenio {
   contact_phone: string;
   contact_email: string;
   reimbursement_days: number;
+  requires_authorization: boolean;
+  tiss_version: string;
   notes: string;
   is_active: boolean;
   created_at: string;
 }
 
+const TISS_VERSIONS = ["3.05.00", "4.00.00", "4.01.00"];
 
 const emptyForm = {
   name: "",
@@ -50,6 +60,8 @@ const emptyForm = {
   contact_phone: "",
   contact_email: "",
   reimbursement_days: "30",
+  requires_authorization: false,
+  tiss_version: "3.05.00",
   notes: "",
   is_active: true,
 };
@@ -85,6 +97,8 @@ export default function Convenios() {
         contact_phone: r.contact_phone ?? "",
         contact_email: r.contact_email ?? "",
         reimbursement_days: r.reimbursement_days ?? 30,
+        requires_authorization: r.requires_authorization ?? false,
+        tiss_version: r.tiss_version ?? "3.05.00",
         notes: r.notes ?? "",
         is_active: r.is_active,
         created_at: r.created_at,
@@ -112,6 +126,8 @@ export default function Convenios() {
         contact_phone: convenio.contact_phone,
         contact_email: convenio.contact_email,
         reimbursement_days: String(convenio.reimbursement_days),
+        requires_authorization: convenio.requires_authorization,
+        tiss_version: convenio.tiss_version,
         notes: convenio.notes,
         is_active: convenio.is_active,
       });
@@ -135,6 +151,8 @@ export default function Convenios() {
         contact_phone: formData.contact_phone || null,
         contact_email: formData.contact_email || null,
         reimbursement_days: Number(formData.reimbursement_days),
+        requires_authorization: formData.requires_authorization,
+        tiss_version: formData.tiss_version || null,
         notes: formData.notes || null,
         is_active: formData.is_active,
       };
@@ -417,6 +435,33 @@ export default function Convenios() {
                   onChange={(e) => setFormData({ ...formData, reimbursement_days: e.target.value })}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Versão TISS</Label>
+              <Select
+                value={formData.tiss_version}
+                onValueChange={(v) => setFormData({ ...formData, tiss_version: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a versão" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TISS_VERSIONS.map((v) => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Versão do padrão TISS usado pela operadora</p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label>Exige Autorização Prévia</Label>
+                <p className="text-sm text-muted-foreground">Requer número de autorização antes de agendar</p>
+              </div>
+              <Switch
+                checked={formData.requires_authorization}
+                onCheckedChange={(checked) => setFormData({ ...formData, requires_authorization: checked })}
+              />
             </div>
           </div>
         </FormDrawerSection>

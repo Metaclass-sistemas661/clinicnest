@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,6 +24,9 @@ import {
   Play,
   RotateCcw,
   XCircle,
+  LogIn,
+  Loader2,
+  Volume2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +35,8 @@ import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { CallNextButton } from "@/components/queue/CallNextButton";
-import { useWaitingQueue, useCurrentCall, useQueueStatistics } from "@/hooks/usePatientQueue";
+import { useWaitingQueue, useCurrentCall, useQueueStatistics, useQueueRealtime } from "@/hooks/usePatientQueue";
+import { setAppointmentStatusV2 } from "@/lib/supabase-typed-rpc";
 import type { Appointment } from "@/types/database";
 
 const statusBadge: Record<string, { className: string; label: string }> = {
@@ -89,16 +93,72 @@ export default function DashboardRecepcao() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { profile } = useAuth();
-  const { data: queue = [], isLoading: queueLoading, refetch: refetchQueue } = useWaitingQueue();
+  const { data: queue = [], isLoading: queueLoading, refetch: refetchQueue } = useWaitingQueue(20);
   const { data: currentCall, refetch: refetchCurrent } = useCurrentCall();
   const { data: statistics } = useQueueStatistics();
+  
+  // Realtime: atualiza fila instantaneamente quando muda no banco
+  useQueueRealtime();
   
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [returns, setReturns] = useState<ReturnReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [checkinLoading, setCheckinLoading] = useState<string | null>(null);
+  const [queueSoundEnabled, setQueueSoundEnabled] = useState(true);
+  const [prevQueueCount, setPrevQueueCount] = useState(0);
+
+  // Som de notificação quando paciente entra na fila
+  useEffect(() => {
+    if (!queueSoundEnabled) return;
+    const current = queue.length;
+    if (current > prevQueueCount && prevQueueCount > 0) {
+      try {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 800;
+        gain.gain.value = 0.15;
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+        setTimeout(() => {
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.frequency.value = 1200;
+          gain2.gain.value = 0.15;
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.2);
+        }, 150);
+      } catch { /* browser may block */ }
+    }
+    setPrevQueueCount(current);
+  }, [queue.length]);
 
   const activeTab = searchParams.get("tab") || "agenda";
+
+  // Check-in direto da recepção
+  const handleCheckin = useCallback(async (appointmentId: string, patientName: string) => {
+    setCheckinLoading(appointmentId);
+    try {
+      const { error } = await setAppointmentStatusV2({
+        p_appointment_id: appointmentId,
+        p_status: "arrived" as any,
+      });
+      if (error) throw error;
+      toast.success(`Check-in realizado: ${patientName}`);
+      fetchData();
+      refetchQueue();
+    } catch (e: any) {
+      logger.error("Checkin error:", e);
+      toast.error(`Erro no check-in: ${e.message}`);
+    } finally {
+      setCheckinLoading(null);
+    }
+  }, []);
 
   const fetchData = async () => {
     if (!profile?.tenant_id) return;
@@ -236,6 +296,15 @@ export default function DashboardRecepcao() {
                 Painel TV
               </Link>
             </Button>
+            <Button
+              variant={queueSoundEnabled ? "outline" : "ghost"}
+              size="icon"
+              onClick={() => setQueueSoundEnabled(!queueSoundEnabled)}
+              title={queueSoundEnabled ? "Som da fila ativado" : "Som da fila desativado"}
+              className="h-9 w-9"
+            >
+              <Volume2 className={`h-4 w-4 ${queueSoundEnabled ? "text-emerald-600" : "text-muted-foreground"}`} />
+            </Button>
             <CallNextButton className="gradient-primary text-primary-foreground" />
           </div>
         </div>
@@ -369,8 +438,10 @@ export default function DashboardRecepcao() {
                       {appointments.map((apt) => {
                         const st = apt.status || "pending";
                         const sb = statusBadge[st];
+                        const canCheckin = st === "confirmed" || st === "pending";
+                        const isArrived = st === "arrived";
                         return (
-                          <div key={apt.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                          <div key={apt.id} className={`flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors ${isArrived ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/30" : ""}`}>
                             <span className="shrink-0 rounded bg-muted px-2.5 py-1 text-xs font-bold tabular-nums">
                               {formatInAppTz(apt.scheduled_at, "HH:mm")}
                             </span>
@@ -382,6 +453,28 @@ export default function DashboardRecepcao() {
                               </p>
                             </div>
                             <Badge variant="outline" className={`text-[10px] ${sb?.className}`}>{sb?.label}</Badge>
+                            {canCheckin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950"
+                                disabled={checkinLoading === apt.id}
+                                onClick={() => handleCheckin(apt.id, apt.patient?.name || "Paciente")}
+                              >
+                                {checkinLoading === apt.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <LogIn className="h-3.5 w-3.5" />
+                                )}
+                                Check-in
+                              </Button>
+                            )}
+                            {isArrived && (
+                              <span className="shrink-0 flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Na fila
+                              </span>
+                            )}
                           </div>
                         );
                       })}
@@ -445,7 +538,7 @@ export default function DashboardRecepcao() {
                       <Timer className="h-5 w-5 text-violet-600" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">{statistics?.avg_wait_minutes || 0} min</p>
+                      <p className="text-2xl font-bold">{statistics?.avg_wait_time_minutes ? Math.round(statistics.avg_wait_time_minutes) : 0} min</p>
                       <p className="text-sm text-muted-foreground">Tempo medio</p>
                     </div>
                   </div>
