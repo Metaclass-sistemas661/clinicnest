@@ -345,14 +345,16 @@ export function ProntuarioForm({
     try {
       const signPayload = buildSignaturePayload({ ...base, ...vitals });
       let digitalHash: string;
-      let signedByName = professionalName || null;
-      let signedByCrm = professionalCrm || null;
+      let signedByName: string | null = null;
+      let signedByCrm: string | null = null;
+      let signedAt: string | null = null;
 
       if (icpMode && icpPfxBytes && icpPassword && icpCertInfo?.isValid) {
         const icpResult = await signWithCertificate(signPayload, icpPfxBytes, icpPassword);
         digitalHash = icpResult.signature;
         signedByName = icpResult.certificate.commonName;
         signedByCrm = icpResult.certificate.cpfCnpj || professionalCrm || null;
+        signedAt = new Date().toISOString();
       } else {
         digitalHash = await generateRecordHash(signPayload);
       }
@@ -426,7 +428,7 @@ export function ProntuarioForm({
           current_medications: vitals.current_medications || null,
           medical_history: vitals.medical_history || null,
           digital_hash: digitalHash,
-          signed_at: now,
+          signed_at: signedAt,
           signed_by_name: signedByName,
           signed_by_crm: signedByCrm,
         }).eq("id", editRecord.id);
@@ -462,7 +464,7 @@ export function ProntuarioForm({
           current_medications: vitals.current_medications || null,
           medical_history: vitals.medical_history || null,
           digital_hash: digitalHash,
-          signed_at: now,
+          signed_at: signedAt,
           signed_by_name: signedByName,
           signed_by_crm: signedByCrm,
           custom_fields: Object.keys(customFields).length > 0 || Object.keys(builtInCustomFields).length > 0

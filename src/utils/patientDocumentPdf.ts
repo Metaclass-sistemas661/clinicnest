@@ -545,8 +545,8 @@ export async function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
   if (r.prescriptions) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Prescrições", r.prescriptions, y); }
   if (r.notes) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Observações", r.notes, y); }
 
-  // Assinatura digital com QR Code
-  if (r.digital_hash && r.signed_at) {
+  // Assinatura digital com QR Code (somente com certificado ICP)
+  if (r.digital_hash && r.signed_at && r.signed_by_name) {
     y = checkPageBreak(doc, y, 35);
     y += 5;
     doc.setDrawColor(200, 200, 200);
@@ -585,6 +585,19 @@ export async function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
     } catch (e) {
       logger.error("Error generating QR code for PDF:", e);
     }
+  } else if (r.digital_hash && !r.signed_at) {
+    // Hash de integridade apenas (sem certificado)
+    y = checkPageBreak(doc, y, 15);
+    y += 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 6;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140, 140, 140);
+    doc.text("Registro de integridade", MARGIN + 3, y + 3);
+    doc.setFontSize(5);
+    doc.text(`SHA-256: ${r.digital_hash}`, MARGIN + 3, y + 7);
   }
 
   addFooter(doc);
@@ -683,7 +696,8 @@ export async function generateEvolutionPdf(e: EvolutionPdfData) {
     y = addField(doc, "Observações", e.notes, y);
   }
 
-  if (e.signedByName) {
+  if (e.signedByName && e.signedAt) {
+    // Assinatura digital real (ICP-Brasil)
     if (y > pageH - 45) { doc.addPage(); y = 20; }
     y += 5;
     doc.setDrawColor(200, 200, 200);
@@ -698,12 +712,10 @@ export async function generateEvolutionPdf(e: EvolutionPdfData) {
       const crmText = e.signedByUf ? `CRM: ${e.signedByCrm}/${e.signedByUf}` : `CRM: ${e.signedByCrm}`;
       doc.text(crmText, MARGIN, y);
     }
-    if (e.signedAt) {
-      y += 4;
-      doc.setFontSize(7);
-      doc.setTextColor(140, 140, 140);
-      doc.text(`Assinado em: ${format(new Date(e.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN, y);
-    }
+    y += 4;
+    doc.setFontSize(7);
+    doc.setTextColor(140, 140, 140);
+    doc.text(`Assinado em: ${format(new Date(e.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN, y);
     if (e.digitalHash) {
       y += 6;
       doc.setFillColor(240, 253, 244);
@@ -726,6 +738,16 @@ export async function generateEvolutionPdf(e: EvolutionPdfData) {
         logger.error("Error generating QR code for PDF:", err);
       }
     }
+  } else if (e.digitalHash && !e.signedAt) {
+    // Apenas hash de integridade (sem certificado)
+    if (y > pageH - 25) { doc.addPage(); y = 20; }
+    y += 5;
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 14, 2, 2, "F");
+    doc.setFontSize(6);
+    doc.setTextColor(140, 140, 140);
+    doc.text("Registro de integridade (sem assinatura digital)", MARGIN + 3, y + 3);
+    doc.text(`SHA-256: ${e.digitalHash}`, MARGIN + 3, y + 7);
   }
 
   addFooter(doc);

@@ -336,9 +336,21 @@ export default function ProntuarioDetalhe() {
                 {record.signed_at && (
                   <>
                     <hr className="border-border" />
+                    <div className="text-xs space-y-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-md p-3">
+                      <p className="font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <ShieldCheck className="h-3.5 w-3.5" /> Assinado digitalmente
+                      </p>
+                      <p className="text-muted-foreground"><span className="font-medium">Profissional:</span> {record.signed_by_name} {record.signed_by_crm ? `(${record.signed_by_crm})` : ""}</p>
+                      <p className="text-muted-foreground"><span className="font-medium">Data:</span> {new Date(record.signed_at).toLocaleString("pt-BR")}</p>
+                      <p className="font-mono text-[10px] text-muted-foreground truncate">SHA-256: {record.digital_hash}</p>
+                    </div>
+                  </>
+                )}
+                {!record.signed_at && record.digital_hash && (
+                  <>
+                    <hr className="border-border" />
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p><span className="font-medium">Assinado por:</span> {record.signed_by_name} {record.signed_by_crm ? `(${record.signed_by_crm})` : ""}</p>
-                      <p><span className="font-medium">Data:</span> {new Date(record.signed_at).toLocaleString("pt-BR")}</p>
+                      <p className="font-medium">Registro de integridade</p>
                       <p className="font-mono text-[10px] truncate">SHA-256: {record.digital_hash}</p>
                     </div>
                   </>

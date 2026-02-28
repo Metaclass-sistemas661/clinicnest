@@ -84,11 +84,15 @@ function SoapEvolutionCard({
                 {EVOLUTION_TYPE_LABELS[evo.evolution_type]}
               </Badge>
               {evo.cid_code && <Badge variant="outline" className="text-xs">{evo.cid_code}</Badge>}
-              {evo.signed_at && (
+              {evo.signed_at ? (
                 <Badge variant="outline" className="text-xs gap-1 text-emerald-600 border-emerald-200">
-                  <ShieldCheck className="h-3 w-3" />Assinado
+                  <ShieldCheck className="h-3 w-3" />Assinado digitalmente
                 </Badge>
-              )}
+              ) : evo.digital_hash ? (
+                <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                  Integridade verificável
+                </Badge>
+              ) : null}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
               <span className="flex items-center gap-1">
@@ -467,10 +471,10 @@ export default function Evolucoes() {
         cid_code: fCid || null,
         notes: fNotes || null,
         digital_hash: hash,
-        signed_at: new Date().toISOString(),
-        signed_by_name: profile.full_name,
-        signed_by_crm: profile.crm || null,
-        signed_by_uf: profile.council_state || null,
+        signed_at: null,
+        signed_by_name: null,
+        signed_by_crm: null,
+        signed_by_uf: null,
       };
 
       if (editingId) {
