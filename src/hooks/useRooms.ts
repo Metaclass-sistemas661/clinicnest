@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 export interface Room {
   id: string;
   name: string;
+  room_type: string;
+  capacity: number;
   is_active: boolean;
   tenant_id: string;
 }
@@ -16,8 +18,9 @@ export function useRooms() {
     queryKey: ["rooms", tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("rooms")
-        .select("id, name, is_active, tenant_id")
+        .from("clinic_rooms")
+        .select("id, name, room_type, capacity, is_active, tenant_id")
+        .eq("is_active", true)
         .order("name");
 
       if (error) throw error;

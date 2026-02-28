@@ -220,7 +220,6 @@ export default function DashboardRecepcao() {
     setActionLoading(callId);
     try {
       const { error } = await supabase.rpc("recall_patient", {
-        p_tenant_id: profile.tenant_id,
         p_call_id: callId,
       });
       if (error) throw error;
@@ -238,7 +237,6 @@ export default function DashboardRecepcao() {
     setActionLoading(callId);
     try {
       const { error } = await supabase.rpc("start_patient_service", {
-        p_tenant_id: profile.tenant_id,
         p_call_id: callId,
       });
       if (error) throw error;
@@ -257,7 +255,6 @@ export default function DashboardRecepcao() {
     setActionLoading(callId);
     try {
       const { error } = await supabase.rpc("mark_patient_no_show", {
-        p_tenant_id: profile.tenant_id,
         p_call_id: callId,
       });
       if (error) throw error;
