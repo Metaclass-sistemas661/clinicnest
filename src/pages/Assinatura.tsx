@@ -75,6 +75,7 @@ const tiers: Array<{
       "Financeiro básico",
       "Histórico de 6 meses",
       "Suporte por e-mail",
+      "IA Essencial (triagem + CID + chat) — 10/dia",
     ],
   },
   {
@@ -91,6 +92,7 @@ const tiers: Array<{
       "Portal do paciente",
       "Histórico de 12 meses",
       "Suporte por e-mail",
+      "IA Clínica (+ resumo + sentimento) — 25/dia",
     ],
   },
   {
@@ -110,6 +112,7 @@ const tiers: Array<{
       "Portal paciente + Teleconsulta",
       "RBAC (5 perfis)",
       "Suporte via chat (Seg–Sáb)",
+      "IA Avançada (+ transcrição + agente) — 60/dia",
     ],
   },
   {
@@ -124,7 +127,8 @@ const tiers: Array<{
       "TISS + Recurso de glosas",
       "SNGPC para controlados",
       "RBAC (11 perfis) + Auditoria",
-      "Assinatura Digital",
+      "Assinatura Digital (A1/A3/Nuvem)",
+      "IA Ilimitada (todos os módulos)",
       "API REST + Webhooks",
       "FHIR R4 + Relatórios custom",
       "Suporte prioritário WhatsApp",
@@ -311,7 +315,7 @@ export default function Assinatura() {
           return (
             <Card
               key={tier.key}
-              className={`relative ${tier.recommended ? "border-2 border-teal-500 shadow-lg shadow-teal-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
+              className={`relative flex flex-col ${tier.recommended ? "border-2 border-teal-500 shadow-lg shadow-teal-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
             >
               {tier.recommended && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -377,8 +381,8 @@ export default function Assinatura() {
                   </Badge>
                 )}
               </CardHeader>
-              <CardContent>
-                <ul className="mb-6 space-y-2">
+              <CardContent className="flex-1 flex flex-col">
+                <ul className="mb-6 space-y-2 flex-1">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
                       <div className="flex h-4 w-4 items-center justify-center rounded-full bg-teal-100 text-teal-600 mt-0.5 flex-shrink-0">
