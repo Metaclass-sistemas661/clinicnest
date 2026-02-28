@@ -18,6 +18,8 @@ export interface PatientCall {
   queue_position: number;
   appointment_id: string | null;
   service_name: string | null;
+  is_triaged: boolean;
+  triage_priority: string | null;
 }
 
 export interface CurrentCall {

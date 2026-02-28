@@ -27,6 +27,7 @@ import {
   LogIn,
   Loader2,
   Volume2,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +78,8 @@ interface QueueItem {
   queue_position: number;
   appointment_id: string | null;
   service_name: string | null;
+  is_triaged: boolean;
+  triage_priority: string | null;
 }
 
 interface ReturnReminder {
@@ -141,14 +144,37 @@ export default function DashboardRecepcao() {
   const activeTab = searchParams.get("tab") || "agenda";
 
   // Check-in direto da recepção
+  // Estratégia dupla: trigger DB + fallback manual para garantir entrada na fila
   const handleCheckin = useCallback(async (appointmentId: string, patientName: string) => {
     setCheckinLoading(appointmentId);
     try {
+      // 1. Altera status para 'arrived' — trigger DB tenta adicionar à fila
       const { error } = await setAppointmentStatusV2({
         p_appointment_id: appointmentId,
         p_status: "arrived" as any,
       });
       if (error) throw error;
+
+      // 2. Fallback: adiciona à fila manualmente (idempotente — se trigger já criou, retorna o ID existente)
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (apt && profile?.tenant_id) {
+        try {
+          await supabase.rpc("add_patient_to_queue", {
+            p_tenant_id: profile.tenant_id,
+            p_patient_id: apt.patient_id,
+            p_appointment_id: appointmentId,
+            p_triage_id: null,
+            p_room_id: null,
+            p_professional_id: apt.professional_id || null,
+            p_priority: 5,
+            p_priority_label: null,
+          });
+        } catch (queueErr: any) {
+          // Se falhar, o trigger pode ter funcionado — apenas log
+          logger.warn("Fallback add_patient_to_queue:", queueErr?.message);
+        }
+      }
+
       toast.success(`Check-in realizado: ${patientName}`);
       fetchData();
       refetchQueue();
@@ -158,7 +184,7 @@ export default function DashboardRecepcao() {
     } finally {
       setCheckinLoading(null);
     }
-  }, []);
+  }, [appointments, profile?.tenant_id]);
 
   const fetchData = async () => {
     if (!profile?.tenant_id) return;
@@ -663,8 +689,19 @@ export default function DashboardRecepcao() {
                                 </Badge>
                               </div>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                {item.service_name && <span>{item.service_name}</span>}
-                                {item.professional_name && <span>- {item.professional_name}</span>}
+                                {item.is_triaged ? (
+                                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <Activity className="h-3 w-3" />
+                                    Triado
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                                    <Activity className="h-3 w-3" />
+                                    Aguarda triagem
+                                  </span>
+                                )}
+                                {item.service_name && <span>· {item.service_name}</span>}
+                                {item.professional_name && <span>· {item.professional_name}</span>}
                               </div>
                             </div>
                             <div className="text-right">

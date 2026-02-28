@@ -278,6 +278,11 @@ export default function PainelChamada() {
                             <Clock className="h-3 w-3" />
                             {patient.wait_time_minutes} min
                           </span>
+                          {patient.is_triaged ? (
+                            <span className="text-emerald-400 text-[10px] font-semibold">✓ Triado</span>
+                          ) : (
+                            <span className="text-amber-400 text-[10px]">Aguarda triagem</span>
+                          )}
                           {patient.priority <= 3 && (
                             <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold", pColor.bg, pColor.text)}>
                               {patient.priority_label || pColor.label}

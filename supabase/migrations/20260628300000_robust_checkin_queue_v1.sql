@@ -228,7 +228,7 @@ BEGIN
   v_call_number := generate_call_number(p_tenant_id);
   
   IF p_room_id IS NOT NULL THEN
-    SELECT name INTO v_room_name FROM rooms WHERE id = p_room_id;
+    SELECT name INTO v_room_name FROM clinic_rooms WHERE id = p_room_id;
   END IF;
   
   IF p_professional_id IS NOT NULL THEN
@@ -398,7 +398,7 @@ DECLARE
   v_professional_name TEXT;
 BEGIN
   IF p_room_id IS NOT NULL THEN
-    SELECT r.name INTO v_room_name FROM rooms r WHERE r.id = p_room_id;
+    SELECT r.name INTO v_room_name FROM clinic_rooms r WHERE r.id = p_room_id;
   END IF;
   
   IF p_professional_id IS NOT NULL THEN

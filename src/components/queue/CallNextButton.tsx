@@ -180,6 +180,11 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
                         #{index + 1}
                       </span>
                       <span className="font-medium">{patient.client_name}</span>
+                      {patient.is_triaged ? (
+                        <span className="text-[10px] text-emerald-600 font-medium">✓ Triado</span>
+                      ) : (
+                        <span className="text-[10px] text-amber-500">Aguarda triagem</span>
+                      )}
                     </div>
                     <span className="text-muted-foreground">
                       {patient.wait_time_minutes} min
