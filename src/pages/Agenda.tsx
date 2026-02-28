@@ -119,6 +119,22 @@ export default function Agenda() {
     }
   }, [isDialogOpen, isAdmin, profile?.id]);
 
+  // Form state
+  const [formData, setFormData] = useState({
+    patient_id: "",
+    procedure_id: "",
+    professional_id: "",
+    scheduled_at: "",
+    scheduled_time: "",
+    notes: "",
+    status: "pending" as AppointmentStatus,
+    telemedicine: false,
+    booked_by_id: "",
+    consultation_type: "primeira" as ConsultationType,
+    insurance_plan_id: "",
+    insurance_authorization: "",
+  });
+
   // Auto-preencher convênio do paciente quando selecionado
   useEffect(() => {
     if (!formData.patient_id) return;
@@ -137,22 +153,6 @@ export default function Agenda() {
     [insurancePlans, formData.insurance_plan_id]
   );
   const requiresAuthorization = selectedInsurancePlan?.requires_authorization ?? false;
-
-  // Form state
-  const [formData, setFormData] = useState({
-    patient_id: "",
-    procedure_id: "",
-    professional_id: "",
-    scheduled_at: "",
-    scheduled_time: "",
-    notes: "",
-    status: "pending" as AppointmentStatus,
-    telemedicine: false,
-    booked_by_id: "",
-    consultation_type: "primeira" as ConsultationType,
-    insurance_plan_id: "",
-    insurance_authorization: "",
-  });
 
   useEffect(() => {
     if (profile?.tenant_id) {
