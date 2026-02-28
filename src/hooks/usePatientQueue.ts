@@ -240,7 +240,7 @@ export function useAddToQueue() {
     }) => {
       const { data, error } = await supabase.rpc("add_patient_to_queue", {
         p_tenant_id: tenantId,
-        p_client_id: patientId,
+        p_patient_id: patientId,
         p_appointment_id: appointmentId || null,
         p_triage_id: triageId || null,
         p_room_id: roomId || null,

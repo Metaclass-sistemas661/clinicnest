@@ -130,6 +130,8 @@ CREATE TRIGGER trg_auto_queue_on_checkin_insert
 -- ─── 2. get_patient_priority (versão robusta) ───────────────────────────────
 -- Lida com campos opcionais e paciente não encontrado graciosamente.
 
+DROP FUNCTION IF EXISTS get_patient_priority(UUID);
+
 CREATE OR REPLACE FUNCTION get_patient_priority(p_patient_id UUID)
 RETURNS TABLE (priority INTEGER, priority_label TEXT)
 LANGUAGE plpgsql
@@ -191,9 +193,11 @@ $$;
 -- ─── 3. add_patient_to_queue (versão robusta) ───────────────────────────────
 -- Protegido contra inserção duplicada (ON CONFLICT).
 
+DROP FUNCTION IF EXISTS add_patient_to_queue(UUID, UUID, UUID, UUID, UUID, UUID, INTEGER, TEXT);
+
 CREATE OR REPLACE FUNCTION add_patient_to_queue(
   p_tenant_id UUID,
-  p_client_id UUID,
+  p_patient_id UUID,
   p_appointment_id UUID DEFAULT NULL,
   p_triage_id UUID DEFAULT NULL,
   p_room_id UUID DEFAULT NULL,
@@ -212,7 +216,7 @@ BEGIN
   SELECT id INTO v_existing_id
   FROM patient_calls
   WHERE tenant_id = p_tenant_id
-    AND patient_id = p_client_id
+    AND patient_id = p_patient_id
     AND created_at::DATE = CURRENT_DATE
     AND status IN ('waiting', 'calling', 'in_service')
   LIMIT 1;
@@ -236,7 +240,7 @@ BEGIN
     room_id, room_name, professional_id, professional_name,
     priority, priority_label, call_number, status
   ) VALUES (
-    p_tenant_id, p_client_id, p_appointment_id, p_triage_id,
+    p_tenant_id, p_patient_id, p_appointment_id, p_triage_id,
     p_room_id, v_room_name, p_professional_id, v_professional_name,
     p_priority, p_priority_label, v_call_number, 'waiting'
   ) RETURNING id INTO v_call_id;
