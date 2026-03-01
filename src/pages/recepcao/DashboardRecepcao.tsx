@@ -158,20 +158,19 @@ export default function DashboardRecepcao() {
       // 2. Fallback: adiciona à fila manualmente (idempotente — se trigger já criou, retorna o ID existente)
       const apt = appointments.find((a) => a.id === appointmentId);
       if (apt && profile?.tenant_id) {
-        try {
-          await supabase.rpc("add_patient_to_queue", {
-            p_tenant_id: profile.tenant_id,
-            p_patient_id: apt.patient_id,
-            p_appointment_id: appointmentId,
-            p_triage_id: null,
-            p_room_id: null,
-            p_professional_id: apt.professional_id || null,
-            p_priority: 5,
-            p_priority_label: null,
-          });
-        } catch (queueErr: any) {
-          // Se falhar, o trigger pode ter funcionado — apenas log
-          logger.warn("Fallback add_patient_to_queue:", queueErr?.message);
+        const { error: queueError } = await supabase.rpc("add_patient_to_queue", {
+          p_tenant_id: profile.tenant_id,
+          p_patient_id: apt.patient_id,
+          p_appointment_id: appointmentId,
+          p_triage_id: null,
+          p_room_id: null,
+          p_professional_id: apt.professional_id || null,
+          p_priority: 5,
+          p_priority_label: null,
+        });
+        if (queueError) {
+          logger.warn("Fallback add_patient_to_queue falhou:", queueError.message);
+          // Não impede o check-in, mas loga para diagnóstico
         }
       }
 

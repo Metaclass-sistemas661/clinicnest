@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ import { UsageIndicator } from "@/components/subscription/LimitGate";
 export default function Agenda() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const goalMotivation = useGoalMotivation();
   const subscription = useSubscription();
   const { isWithinLimit } = usePlanFeatures();
@@ -418,20 +420,22 @@ export default function Agenda() {
 
       // Fallback: se 'arrived', garante entrada na fila manualmente (idempotente)
       if (status === "arrived" && apt && profile?.tenant_id && apt.patient_id) {
-        try {
-          await supabase.rpc("add_patient_to_queue", {
-            p_tenant_id: profile.tenant_id,
-            p_patient_id: apt.patient_id,
-            p_appointment_id: id,
-            p_triage_id: null,
-            p_room_id: null,
-            p_professional_id: apt.professional_id || null,
-            p_priority: 5,
-            p_priority_label: null,
-          });
-        } catch (queueErr: any) {
-          logger.warn("Fallback add_patient_to_queue:", queueErr?.message);
+        const { error: queueError } = await supabase.rpc("add_patient_to_queue", {
+          p_tenant_id: profile.tenant_id,
+          p_patient_id: apt.patient_id,
+          p_appointment_id: id,
+          p_triage_id: null,
+          p_room_id: null,
+          p_professional_id: apt.professional_id || null,
+          p_priority: 5,
+          p_priority_label: null,
+        });
+        if (queueError) {
+          logger.warn("Fallback add_patient_to_queue falhou:", queueError.message);
         }
+        // Invalida cache da fila para que outros componentes atualizem
+        queryClient.invalidateQueries({ queryKey: ["waiting-queue"] });
+        queryClient.invalidateQueries({ queryKey: ["queue-statistics"] });
       }
 
       const statusMessages: Record<string, string> = {
