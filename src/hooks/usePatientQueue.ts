@@ -33,6 +33,7 @@ export interface CurrentCall {
   last_called_at: string;
   priority: number;
   priority_label: string | null;
+  appointment_id: string | null;
 }
 
 export interface QueueStatistics {

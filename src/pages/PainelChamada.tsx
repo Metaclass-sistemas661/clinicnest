@@ -152,8 +152,8 @@ export default function PainelChamada() {
         </div>
         
         <div className="flex items-center gap-4">
-          {/* Botão Chamar Próximo */}
-          <CallNextButton variant="default" size="default" />
+          {/* Botão Chamar Próximo — painel TV não navega */}
+          <CallNextButton variant="default" size="default" navigateToProntuario={false} />
 
           <div className="text-3xl font-mono tabular-nums">
             {format(currentTime, "HH:mm:ss")}

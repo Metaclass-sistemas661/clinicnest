@@ -373,14 +373,16 @@ RETURNS TABLE (
   times_called INTEGER,
   last_called_at TIMESTAMPTZ,
   priority INTEGER,
-  priority_label TEXT
+  priority_label TEXT,
+  appointment_id UUID
 ) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
   RETURN QUERY
   SELECT 
     pc.id, pc.patient_id, c.name, pc.call_number,
     pc.room_name, pc.professional_name, pc.times_called, pc.last_called_at,
-    pc.priority, pc.priority_label
+    pc.priority, pc.priority_label,
+    pc.appointment_id
   FROM patient_calls pc
   JOIN patients c ON c.id = pc.patient_id
   WHERE pc.tenant_id = p_tenant_id

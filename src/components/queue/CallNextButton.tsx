@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Megaphone, UserPlus, RotateCcw, Play, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Megaphone, UserPlus, RotateCcw, XCircle, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,14 +28,19 @@ import {
 } from "@/hooks/usePatientQueue";
 import { useRooms } from "@/hooks/useRooms";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface CallNextButtonProps {
   professionalId?: string;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "lg" | "icon";
+  className?: string;
+  /** Se true, ao clicar "Iniciar" navega automaticamente para o prontuário do paciente */
+  navigateToProntuario?: boolean;
 }
 
-export function CallNextButton({ professionalId, variant = "default", size = "default" }: CallNextButtonProps) {
+export function CallNextButton({ professionalId, variant = "default", size = "default", className, navigateToProntuario = true }: CallNextButtonProps) {
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<string>("");
 
@@ -63,6 +69,18 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
     if (currentCall) {
       startServiceMutation.mutate(currentCall.call_id);
       setDialogOpen(false);
+
+      // Navegar para prontuário do paciente chamado
+      if (navigateToProntuario && currentCall.patient_id) {
+        const params = new URLSearchParams({
+          new: "1",
+          patient_id: currentCall.patient_id,
+        });
+        if (currentCall.appointment_id) {
+          params.set("appointment_id", currentCall.appointment_id);
+        }
+        navigate(`/prontuarios?${params.toString()}`);
+      }
     }
   };
 
@@ -77,7 +95,7 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size} className="gap-2">
+        <Button variant={variant} size={size} className={cn("gap-2", className)}>
           <Megaphone className="h-4 w-4" />
           Chamar
           {waitingCount > 0 && (
@@ -130,8 +148,8 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
                   onClick={handleStartService}
                   disabled={startServiceMutation.isPending}
                 >
-                  <Play className="h-4 w-4 mr-1" />
-                  Iniciar
+                  <Stethoscope className="h-4 w-4 mr-1" />
+                  Iniciar Atendimento
                 </Button>
                 <Button
                   variant="ghost"
