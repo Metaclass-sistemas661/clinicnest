@@ -161,23 +161,28 @@ CREATE TABLE IF NOT EXISTS public.medical_reports (
 ALTER TABLE public.medical_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.medical_reports FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "medical_reports_select" ON public.medical_reports;
 CREATE POLICY "medical_reports_select" ON public.medical_reports
   FOR SELECT TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "medical_reports_insert" ON public.medical_reports;
 CREATE POLICY "medical_reports_insert" ON public.medical_reports
   FOR INSERT TO authenticated
   WITH CHECK (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "medical_reports_update" ON public.medical_reports;
 CREATE POLICY "medical_reports_update" ON public.medical_reports
   FOR UPDATE TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()))
   WITH CHECK (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "medical_reports_delete" ON public.medical_reports;
 CREATE POLICY "medical_reports_delete" ON public.medical_reports
   FOR DELETE TO authenticated
   USING (public.is_tenant_admin(auth.uid(), tenant_id));
 
+DROP TRIGGER IF EXISTS update_medical_reports_updated_at ON public.medical_reports;
 CREATE TRIGGER update_medical_reports_updated_at
   BEFORE UPDATE ON public.medical_reports
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -189,5 +194,39 @@ CREATE INDEX IF NOT EXISTS idx_medical_reports_prof      ON public.medical_repor
 
 COMMENT ON TABLE public.medical_reports IS 'Laudos médicos (CFM Res. 1.658/2002) - persistência do LaudoDrawer';
 COMMENT ON TABLE public.exam_results   IS 'Resultados de exames (laboratoriais, imagem, funcionais, etc.) com TUSS';
+
+-- ============================================================
+-- STORAGE: bucket exam-files (upload de arquivos de exame)
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'exam-files',
+  'exam-files',
+  true,
+  20971520,  -- 20MB
+  ARRAY['application/pdf','image/jpeg','image/png','image/webp','application/dicom']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Políticas de acesso ao bucket
+DROP POLICY IF EXISTS "exam_files_select" ON storage.objects;
+CREATE POLICY "exam_files_select" ON storage.objects
+  FOR SELECT TO authenticated
+  USING (bucket_id = 'exam-files');
+
+DROP POLICY IF EXISTS "exam_files_insert" ON storage.objects;
+CREATE POLICY "exam_files_insert" ON storage.objects
+  FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'exam-files');
+
+DROP POLICY IF EXISTS "exam_files_update" ON storage.objects;
+CREATE POLICY "exam_files_update" ON storage.objects
+  FOR UPDATE TO authenticated
+  USING (bucket_id = 'exam-files');
+
+DROP POLICY IF EXISTS "exam_files_delete" ON storage.objects;
+CREATE POLICY "exam_files_delete" ON storage.objects
+  FOR DELETE TO authenticated
+  USING (bucket_id = 'exam-files');
 
 COMMIT;
