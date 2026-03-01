@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ClipboardList, Printer, Save } from "lucide-react";
+import { ClipboardList, Printer, Save, Loader2, CheckCircle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { LAUDO_TIPOS } from "@/data/exam-types";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import type { DocumentContext } from "./QuickDocumentActions";
+
+// Tipo expandido para incluir os novos tipos da tabela medical_reports
+type LaudoTipo = "medico" | "pericial" | "aptidao" | "capacidade" | "complementar" | "psicologico" | "neuropsicologico" | "ocupacional" | "outro";
 
 interface LaudoDrawerProps {
   open: boolean;
@@ -33,7 +42,7 @@ export interface LaudoData {
   patientId: string;
   professionalId?: string;
   medicalRecordId?: string;
-  tipo: "medico" | "pericial" | "aptidao" | "capacidade" | "outro";
+  tipo: LaudoTipo;
   finalidade: string;
   historiaClinica: string;
   exameFisico: string;
@@ -51,7 +60,8 @@ export function LaudoDrawer({
   onSave,
   onPrint,
 }: LaudoDrawerProps) {
-  const [tipo, setTipo] = useState<LaudoData["tipo"]>("medico");
+  const { profile, tenantId } = useAuth();
+  const [tipo, setTipo] = useState<LaudoTipo>("medico");
   const [finalidade, setFinalidade] = useState("");
   const [historiaClinica, setHistoriaClinica] = useState("");
   const [exameFisico, setExameFisico] = useState("");
@@ -60,6 +70,7 @@ export function LaudoDrawer({
   const [cid10, setCid10] = useState(context.cid10 || "");
   const [conclusao, setConclusao] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -90,9 +101,55 @@ export function LaudoDrawer({
     observacoes,
   });
 
-  const handleSave = () => {
-    onSave?.(getData());
-    onOpenChange(false);
+  // Persiste na tabela medical_reports + chama callback
+  const handleSave = async () => {
+    if (!conclusao.trim()) {
+      toast.error("A conclusão do laudo é obrigatória");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Salvar na tabela medical_reports (CFM Res. 1.658/2002)
+      if (tenantId && profile?.id) {
+        const { error } = await supabase.from("medical_reports").insert({
+          tenant_id: tenantId,
+          patient_id: context.patientId,
+          professional_id: profile.id,
+          medical_record_id: context.medicalRecordId || null,
+          tipo,
+          finalidade: finalidade || null,
+          historia_clinica: historiaClinica || null,
+          exame_fisico: exameFisico || null,
+          exames_complementares: examesComplementares || null,
+          diagnostico: diagnostico || null,
+          cid10: cid10 || null,
+          conclusao,
+          observacoes: observacoes || null,
+          status: "finalizado",
+        });
+
+        if (error) {
+          // Se tabela ainda não existe (migration pendente), apenas loga e continua
+          if (error.code === "42P01") {
+            logger.warn("Tabela medical_reports ainda não existe, salvando apenas via callback");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Laudo salvo no prontuário!");
+        }
+      }
+
+      // Chama callback externo (compatibilidade)
+      onSave?.(getData());
+      onOpenChange(false);
+    } catch (err) {
+      logger.error("Erro ao salvar laudo:", err);
+      toast.error("Erro ao salvar laudo médico");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -114,36 +171,44 @@ export function LaudoDrawer({
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {/* Tipo de laudo — lista expandida CFM */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Tipo de Laudo</Label>
-              <Select value={tipo} onValueChange={(v) => setTipo(v as LaudoData["tipo"])}>
+              <Label>Tipo de Laudo *</Label>
+              <Select value={tipo} onValueChange={(v) => setTipo(v as LaudoTipo)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="medico">Laudo Médico</SelectItem>
-                  <SelectItem value="pericial">Laudo Pericial</SelectItem>
-                  <SelectItem value="aptidao">Laudo de Aptidão</SelectItem>
-                  <SelectItem value="capacidade">Laudo de Capacidade</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
+                  {LAUDO_TIPOS.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Finalidade</Label>
               <Input
-                placeholder="Ex: Processo judicial, INSS, Concurso"
+                placeholder="Ex: Processo judicial, INSS, Concurso, Carteira de motorista"
                 value={finalidade}
                 onChange={(e) => setFinalidade(e.target.value)}
               />
             </div>
           </div>
 
+          {/* Informação CFM */}
+          <div className="rounded-lg bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 p-3">
+            <p className="text-xs text-purple-700 dark:text-purple-300">
+              <strong>CFM Res. 1.658/2002:</strong> O laudo deve conter história clínica, exame físico,
+              exames complementares, diagnóstico com CID-10 e conclusão fundamentada.
+              Este documento será salvo permanentemente no prontuário.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>História Clínica</Label>
             <Textarea
-              placeholder="Resumo da história clínica relevante..."
+              placeholder="Resumo da história clínica relevante, incluindo queixa principal, HDA, antecedentes..."
               value={historiaClinica}
               onChange={(e) => setHistoriaClinica(e.target.value)}
               rows={4}
@@ -153,7 +218,7 @@ export function LaudoDrawer({
           <div className="space-y-2">
             <Label>Exame Físico</Label>
             <Textarea
-              placeholder="Achados do exame físico..."
+              placeholder="Achados do exame físico: inspeção, palpação, ausculta, sinais vitais..."
               value={exameFisico}
               onChange={(e) => setExameFisico(e.target.value)}
               rows={3}
@@ -163,7 +228,7 @@ export function LaudoDrawer({
           <div className="space-y-2">
             <Label>Exames Complementares</Label>
             <Textarea
-              placeholder="Resultados de exames laboratoriais, imagem, etc."
+              placeholder="Resultados de exames laboratoriais, imagem, etc. referenciados neste laudo..."
               value={examesComplementares}
               onChange={(e) => setExamesComplementares(e.target.value)}
               rows={3}
@@ -190,19 +255,23 @@ export function LaudoDrawer({
           </div>
 
           <div className="space-y-2">
-            <Label>Conclusão</Label>
+            <Label>Conclusão *</Label>
             <Textarea
-              placeholder="Conclusão e parecer médico..."
+              placeholder="Conclusão e parecer médico fundamentado..."
               value={conclusao}
               onChange={(e) => setConclusao(e.target.value)}
               rows={4}
+              className={!conclusao.trim() ? "border-orange-300" : ""}
             />
+            {!conclusao.trim() && (
+              <p className="text-xs text-orange-500">Campo obrigatório conforme CFM</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label>Observações</Label>
             <Textarea
-              placeholder="Observações adicionais"
+              placeholder="Observações adicionais, recomendações, prazo de validade..."
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               rows={2}
@@ -211,13 +280,17 @@ export function LaudoDrawer({
         </div>
 
         <SheetFooter className="mt-6 flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
+          <Button variant="outline" onClick={handlePrint} disabled={isSaving}>
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
+          <Button onClick={handleSave} disabled={isSaving || !conclusao.trim()}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {isSaving ? "Salvando..." : "Salvar Laudo"}
           </Button>
         </SheetFooter>
       </SheetContent>
