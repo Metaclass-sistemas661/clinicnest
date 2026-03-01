@@ -12,12 +12,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Maximize2,
   Minimize2,
   ZoomIn,
-  ZoomOut,
   RotateCcw,
   Info,
   Loader2,
@@ -73,14 +71,15 @@ async function loadCornerstoneScripts(): Promise<void> {
     }
 
     // Configure cornerstone-wado-image-loader
-    const cs = (window as any).cornerstone;
-    const cswil = (window as any).cornerstoneWADOImageLoader;
-    const csTools = (window as any).cornerstoneTools;
-    const csMath = (window as any).cornerstoneMath;
+    const win = window as Record<string, unknown>;
+    const cs = win.cornerstone as CornerstoneCore | undefined;
+    const cswil = win.cornerstoneWADOImageLoader as CornerstoneWADOLoader | undefined;
+    const csTools = win.cornerstoneTools as CornerstoneTools | undefined;
+    const csMath = win.cornerstoneMath as Record<string, unknown> | undefined;
 
     if (cswil && cs) {
       cswil.external.cornerstone = cs;
-      cswil.external.dicomParser = (window as any).dicomParser;
+      cswil.external.dicomParser = win.dicomParser;
 
       // Web worker for decoding
       const config = {
@@ -105,6 +104,41 @@ async function loadCornerstoneScripts(): Promise<void> {
   return cornerstoneLoadPromise;
 }
 
+/* ── Minimal type shims for cornerstone libs loaded from CDN ── */
+interface CornerstoneCore {
+  enable(el: HTMLElement): void;
+  disable(el: HTMLElement): void;
+  loadAndCacheImage(imageId: string): Promise<CornerstoneImage>;
+  displayImage(el: HTMLElement, image: CornerstoneImage): void;
+  reset(el: HTMLElement): void;
+  resize(el: HTMLElement, fit?: boolean): void;
+}
+interface CornerstoneImage {
+  rows?: number;
+  columns?: number;
+  windowCenter?: number;
+  windowWidth?: number;
+  data?: {
+    string(tag: string): string | undefined;
+  };
+}
+interface CornerstoneTools {
+  external: Record<string, unknown>;
+  init(): void;
+  addTool(tool: unknown): void;
+  setToolActive(name: string, options: { mouseButtonMask: number }): void;
+  setToolPassive(name: string): void;
+  WwwcTool: unknown;
+  PanTool: unknown;
+  ZoomTool: unknown;
+}
+interface CornerstoneWADOLoader {
+  external: Record<string, unknown>;
+  webWorkerManager: {
+    initialize(config: Record<string, unknown>): void;
+  };
+}
+
 export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerProps) {
   const elementRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,8 +156,9 @@ export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerPro
     try {
       await loadCornerstoneScripts();
 
-      const cs = (window as any).cornerstone;
-      const csTools = (window as any).cornerstoneTools;
+      const win = window as Record<string, unknown>;
+      const cs = win.cornerstone as CornerstoneCore | undefined;
+      const csTools = win.cornerstoneTools as CornerstoneTools | undefined;
 
       if (!cs || !csTools) {
         throw new Error("Cornerstone libraries failed to load");
@@ -186,9 +221,9 @@ export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerPro
       }
 
       setIsLoading(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error("DicomViewer init:", err);
-      setError(err.message || "Erro ao carregar imagem DICOM");
+      setError(err instanceof Error ? err.message : "Erro ao carregar imagem DICOM");
       setIsLoading(false);
     }
   }, [fileUrl]);
@@ -196,18 +231,19 @@ export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerPro
   useEffect(() => {
     void initViewer();
 
+    const el = elementRef.current;
     return () => {
-      if (elementRef.current) {
+      if (el) {
         try {
-          const cs = (window as any).cornerstone;
-          if (cs) cs.disable(elementRef.current);
-        } catch {}
+          const cs = (window as Record<string, unknown>).cornerstone as CornerstoneCore | undefined;
+          if (cs) cs.disable(el);
+        } catch { /* cornerstone already cleaned up */ }
       }
     };
   }, [initViewer]);
 
   const handleToolChange = (tool: Tool) => {
-    const csTools = (window as any).cornerstoneTools;
+    const csTools = (window as Record<string, unknown>).cornerstoneTools as CornerstoneTools | undefined;
     if (!csTools) return;
 
     // Deactivate all
@@ -231,7 +267,7 @@ export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerPro
 
   const handleReset = () => {
     if (!elementRef.current) return;
-    const cs = (window as any).cornerstone;
+    const cs = (window as Record<string, unknown>).cornerstone as CornerstoneCore | undefined;
     if (!cs) return;
     cs.reset(elementRef.current);
   };
@@ -257,10 +293,11 @@ export function DicomViewer({ fileUrl, height = 512, className }: DicomViewerPro
   // Resize on fullscreen change
   useEffect(() => {
     if (elementRef.current) {
-      const cs = (window as any).cornerstone;
+      const cs = (window as Record<string, unknown>).cornerstone as CornerstoneCore | undefined;
       if (cs) {
+        const el = elementRef.current;
         setTimeout(() => {
-          try { cs.resize(elementRef.current, true); } catch {}
+          try { if (el) cs.resize(el, true); } catch { /* noop */ }
         }, 200);
       }
     }
