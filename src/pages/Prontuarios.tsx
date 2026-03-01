@@ -58,6 +58,7 @@ interface MedicalRecord {
   template_id: string | null; custom_fields: Record<string, unknown>;
   attendance_number: number | null; attendance_type: string | null;
   server_timestamp: string | null;
+  return_days: number | null; return_reason: string | null;
 }
 
 interface RecordVersion {
@@ -428,6 +429,8 @@ export default function Prontuarios() {
       lock_reason: record.lock_reason,
       created_at: record.created_at,
       custom_fields: record.custom_fields,
+      return_days: record.return_days,
+      return_reason: record.return_reason,
     };
     setFormState({ patientId: record.patient_id, editRecord: editableRecord });
   };

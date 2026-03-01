@@ -16,6 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { AiCidSuggest, AiTranscribe } from "@/components/ai";
+import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
+import { suggestReturn, suggestReturnMultiple, formatSuggestion, type ReturnSuggestion } from "@/lib/cid-return-suggestion";
+import { CalendarClock, Lightbulb } from "lucide-react";
 
 interface Template {
   id: string;
@@ -61,6 +64,8 @@ export interface EditableRecord {
   is_locked: boolean;
   lock_reason: string | null;
   created_at: string;
+  return_days?: number | null;
+  return_reason?: string | null;
   custom_fields?: Record<string, unknown>;
 }
 
@@ -162,6 +167,22 @@ export function ProntuarioForm({
   const [isSaving, setIsSaving] = useState(false);
   const [changeReason, setChangeReason] = useState("");
 
+  // ── Retorno do paciente ──
+  const [returnConfig, setReturnConfig] = useState<ReturnConfig>(
+    editRecord?.return_days
+      ? {
+          returnDays: editRecord.return_days,
+          reason: editRecord.return_reason || "",
+          notifyPatient: true,
+          notifyDaysBefore: 3,
+          preferredContact: "whatsapp",
+          preSchedule: false,
+        }
+      : defaultReturnConfig
+  );
+  const [cidSuggestion, setCidSuggestion] = useState<ReturnSuggestion | null>(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+
   const [icpMode, setIcpMode] = useState(false);
   const [icpPassword, setIcpPassword] = useState("");
   const [icpError, setIcpError] = useState("");
@@ -173,6 +194,23 @@ export function ProntuarioForm({
   const [icpManualMode, setIcpManualMode] = useState(false);
   const [icpPfxBytes, setIcpPfxBytes] = useState<Uint8Array | null>(null);
   const [icpCertInfo, setIcpCertInfo] = useState<ICPCertificateInfo | null>(null);
+
+  // ── Auto-sugestão de retorno baseada no CID ──
+  useEffect(() => {
+    if (!base.cid_code || base.cid_code.length < 2) {
+      setCidSuggestion(null);
+      return;
+    }
+    // Support multiple CIDs (comma or semicolon separated)
+    const codes = base.cid_code.split(/[,;\s]+/).map(c => c.trim()).filter(Boolean);
+    if (codes.length === 0) {
+      setCidSuggestion(null);
+      return;
+    }
+    const suggestion = codes.length === 1 ? suggestReturn(codes[0]) : suggestReturnMultiple(codes);
+    setCidSuggestion(suggestion);
+    setSuggestionDismissed(false);
+  }, [base.cid_code]);
 
   // Ao ativar icpMode, verificar se há certificado cadastrado
   const handleIcpToggle = useCallback(async (checked: boolean) => {
@@ -461,11 +499,32 @@ export function ProntuarioForm({
           signed_at: signedAt,
           signed_by_name: signedByName,
           signed_by_crm: signedByCrm,
+          return_days: returnConfig.returnDays || null,
+          return_reason: returnConfig.reason || null,
         }).eq("id", editRecord.id);
         if (error) throw error;
+
+        // ── Criar/atualizar lembrete de retorno na edição ──
+        if (returnConfig.returnDays && editRecord.id) {
+          try {
+            await supabase.rpc("create_return_reminder", {
+              p_medical_record_id: editRecord.id,
+              p_return_days: returnConfig.returnDays,
+              p_reason: returnConfig.reason || null,
+              p_notify_patient: returnConfig.notifyPatient,
+              p_notify_days_before: returnConfig.notifyDaysBefore,
+              p_preferred_contact: returnConfig.preferredContact,
+              p_pre_schedule: returnConfig.preSchedule,
+              p_service_id: null,
+            });
+          } catch (retErr) {
+            logger.error("Update return reminder:", retErr);
+          }
+        }
+
         toast.success("Prontuário atualizado! Versão anterior salva no histórico.");
       } else {
-        const { error } = await supabase.from("medical_records").insert({
+        const { data: insertedData, error } = await supabase.from("medical_records").insert({
           tenant_id: tenantId,
           professional_id: professionalId,
           patient_id: patientId,
@@ -497,11 +556,34 @@ export function ProntuarioForm({
           signed_at: signedAt,
           signed_by_name: signedByName,
           signed_by_crm: signedByCrm,
+          return_days: returnConfig.returnDays || null,
+          return_reason: returnConfig.reason || null,
           custom_fields: Object.keys(customFields).length > 0 || Object.keys(builtInCustomFields).length > 0
             ? { ...builtInCustomFields, ...customFields }
             : {},
-        });
+        }).select("id").single();
         if (error) throw error;
+
+        // ── Criar lembrete de retorno se configurado ──
+        if (returnConfig.returnDays && insertedData?.id) {
+          try {
+            await supabase.rpc("create_return_reminder", {
+              p_medical_record_id: insertedData.id,
+              p_return_days: returnConfig.returnDays,
+              p_reason: returnConfig.reason || null,
+              p_notify_patient: returnConfig.notifyPatient,
+              p_notify_days_before: returnConfig.notifyDaysBefore,
+              p_preferred_contact: returnConfig.preferredContact,
+              p_pre_schedule: returnConfig.preSchedule,
+              p_service_id: null,
+            });
+            toast.success(`Retorno em ${returnConfig.returnDays} dias registrado!`, { duration: 4000 });
+          } catch (retErr) {
+            logger.error("Create return reminder:", retErr);
+            toast.warning("Prontuário salvo, mas houve erro ao criar lembrete de retorno.");
+          }
+        }
+
         if (triage?.id) {
           await supabase.from("triage_records").update({ status: "concluida" }).eq("id", triage.id);
         }
@@ -760,6 +842,87 @@ export function ProntuarioForm({
           <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
         </div>
       </div>
+
+      {/* ── Retorno do Paciente ── */}
+      {canEdit && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <CalendarClock className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-semibold">Retorno do Paciente</h4>
+          </div>
+
+          {/* Sugestão automática baseada no CID */}
+          {cidSuggestion && !suggestionDismissed && !returnConfig.returnDays && (
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 p-3">
+              <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  Sugestão de retorno (CID {cidSuggestion.cid_code})
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  {formatSuggestion(cidSuggestion)}
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setReturnConfig({
+                        ...returnConfig,
+                        returnDays: cidSuggestion.suggested_days_min,
+                        reason: cidSuggestion.reason,
+                      });
+                      setSuggestionDismissed(true);
+                    }}
+                  >
+                    Aceitar {cidSuggestion.suggested_days_min} dias
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setReturnConfig({
+                        ...returnConfig,
+                        returnDays: cidSuggestion.suggested_days_max,
+                        reason: cidSuggestion.reason,
+                      });
+                      setSuggestionDismissed(true);
+                    }}
+                  >
+                    Aceitar {cidSuggestion.suggested_days_max} dias
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => setSuggestionDismissed(true)}
+                  >
+                    Dispensar
+                  </Button>
+                </div>
+              </div>
+              <Badge variant="outline" className={`shrink-0 text-[10px] ${
+                cidSuggestion.priority === "alta" ? "border-red-300 text-red-700" :
+                cidSuggestion.priority === "media" ? "border-yellow-300 text-yellow-700" :
+                "border-green-300 text-green-700"
+              }`}>
+                Prioridade {cidSuggestion.priority}
+              </Badge>
+            </div>
+          )}
+
+          <ReturnSelector
+            value={returnConfig}
+            onChange={setReturnConfig}
+            disabled={!canEdit}
+          />
+        </div>
+      )}
 
       {builtInFields && builtInFields.length > 0 && (
         <DynamicFieldsRenderer fields={builtInFields} values={builtInCustomFields} onChange={setBuiltInCustomFields} />
