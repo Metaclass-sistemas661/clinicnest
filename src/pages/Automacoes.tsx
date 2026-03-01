@@ -37,10 +37,16 @@ type TriggerType =
   | "appointment_reminder_24h"
   | "appointment_reminder_2h"
   | "appointment_completed"
+  | "appointment_cancelled"
   | "birthday"
-  | "client_inactive_days";
+  | "client_inactive_days"
+  | "return_reminder"
+  | "consent_signed"
+  | "return_scheduled"
+  | "invoice_created"
+  | "exam_ready";
 
-type Channel = "whatsapp" | "email";
+type Channel = "whatsapp" | "email" | "sms";
 
 type AutomationRow = {
   id: string;
@@ -59,13 +65,20 @@ const triggerLabel: Record<TriggerType, string> = {
   appointment_reminder_24h: "Lembrete 24h antes",
   appointment_reminder_2h: "Lembrete 2h antes",
   appointment_completed: "Pós-atendimento",
+  appointment_cancelled: "Agendamento cancelado",
   birthday: "Aniversário",
   client_inactive_days: "Paciente inativo",
+  return_reminder: "Lembrete de retorno",
+  consent_signed: "Contrato/Termo assinado",
+  return_scheduled: "Retorno agendado",
+  invoice_created: "Fatura gerada",
+  exam_ready: "Exame disponível",
 };
 
 const channelLabel: Record<Channel, string> = {
   whatsapp: "WhatsApp",
   email: "E-mail",
+  sms: "SMS",
 };
 
 const availableVariables = [
@@ -76,6 +89,12 @@ const availableVariables = [
   "{{professional_name}}",
   "{{clinic_name}}",
   "{{nps_link}}",
+  "{{return_reason}}",
+  "{{confirm_link}}",
+  "{{consent_template}}",
+  "{{invoice_amount}}",
+  "{{exam_name}}",
+  "{{cancel_reason}}",
 ];
 
 function interpolateTemplate(template: string, vars: Record<string, string>): string {
@@ -112,6 +131,12 @@ export default function Automacoes() {
       professional_name: "Dr. Mariana",
       clinic_name: tenant?.name || "ClinicNest",
       nps_link: `${window.location.origin}/nps/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`,
+      return_reason: "Acompanhamento pós-procedimento",
+      confirm_link: `${window.location.origin}/confirmar-retorno/xxx`,
+      consent_template: "Termo de Consentimento Cirúrgico",
+      invoice_amount: "R$ 350,00",
+      exam_name: "Hemograma Completo",
+      cancel_reason: "Paciente solicitou cancelamento",
     }),
     [tenant?.name],
   );
@@ -317,16 +342,7 @@ export default function Automacoes() {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(
-                      [
-                        "appointment_created",
-                        "appointment_reminder_24h",
-                        "appointment_reminder_2h",
-                        "appointment_completed",
-                        "birthday",
-                        "client_inactive_days",
-                      ] as TriggerType[]
-                    ).map((t) => (
+                    {(Object.keys(triggerLabel) as TriggerType[]).map((t) => (
                       <SelectItem key={t} value={t}>
                         {triggerLabel[t]}
                       </SelectItem>
@@ -356,7 +372,7 @@ export default function Automacoes() {
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["whatsapp", "email"] as Channel[]).map((c) => (
+                  {(Object.keys(channelLabel) as Channel[]).map((c) => (
                     <SelectItem key={c} value={c}>
                       {channelLabel[c]}
                     </SelectItem>

@@ -24,9 +24,31 @@ import {
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+/** Safely format a date string, returning fallback on invalid values */
+function safeFormat(dateStr: string | null | undefined, fmt: string, fallback = "--"): string {
+  if (!dateStr) return fallback;
+  try {
+    const d = typeof dateStr === "string" ? parseISO(dateStr) : new Date(dateStr);
+    return isValid(d) ? format(d, fmt) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Safely compute differenceInDays, returning Infinity on invalid dates */
+function safeDiffDays(dateStr: string | null | undefined): number {
+  if (!dateStr) return Infinity;
+  try {
+    const d = parseISO(dateStr);
+    return isValid(d) ? differenceInDays(d, new Date()) : Infinity;
+  } catch {
+    return Infinity;
+  }
+}
 import {
   LineChart,
   Line,
@@ -142,15 +164,16 @@ export default function PatientSaude() {
   const activeMedications = medications.filter((m) => !m.is_expired);
   const expiringSoon = medications.filter((m) => {
     if (m.is_expired) return false;
-    const daysUntilExpiry = differenceInDays(new Date(m.expiry_date), new Date());
+    const daysUntilExpiry = safeDiffDays(m.expiry_date);
     return daysUntilExpiry <= 7;
   });
 
   const chartData = vitalSigns
     .slice()
     .reverse()
+    .filter((vs) => vs.recorded_at && isValid(parseISO(vs.recorded_at)))
     .map((vs) => ({
-      date: format(new Date(vs.recorded_at), "dd/MM"),
+      date: safeFormat(vs.recorded_at, "dd/MM"),
       peso: vs.weight,
       fc: vs.heart_rate,
       spo2: vs.oxygen_saturation,
@@ -204,7 +227,7 @@ export default function PatientSaude() {
                 <p className="text-2xl font-bold">{healthInfo.last_vital_signs.weight} kg</p>
                 {healthInfo.last_vital_signs.recorded_at && (
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(healthInfo.last_vital_signs.recorded_at), "dd/MM/yyyy")}
+                    {safeFormat(healthInfo.last_vital_signs.recorded_at, "dd/MM/yyyy")}
                   </p>
                 )}
               </CardContent>
@@ -221,7 +244,7 @@ export default function PatientSaude() {
                 <p className="text-2xl font-bold">{healthInfo.last_vital_signs.blood_pressure}</p>
                 {healthInfo.last_vital_signs.recorded_at && (
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(healthInfo.last_vital_signs.recorded_at), "dd/MM/yyyy")}
+                    {safeFormat(healthInfo.last_vital_signs.recorded_at, "dd/MM/yyyy")}
                   </p>
                 )}
               </CardContent>
@@ -309,7 +332,7 @@ export default function PatientSaude() {
                               )}
                             </div>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              {format(new Date(event.event_date), "dd/MM/yyyy")}
+                              {safeFormat(event.event_date, "dd/MM/yyyy")}
                             </span>
                           </div>
                         </CardContent>
@@ -363,7 +386,7 @@ export default function PatientSaude() {
                           <h3 className="font-medium">{med.medication_name}</h3>
                           {med.is_expired ? (
                             <Badge variant="secondary">Expirada</Badge>
-                          ) : differenceInDays(new Date(med.expiry_date), new Date()) <= 7 ? (
+                          ) : safeDiffDays(med.expiry_date) <= 7 ? (
                             <Badge variant="destructive">Expira em breve</Badge>
                           ) : (
                             <Badge variant="default" className="bg-green-600">
@@ -379,7 +402,7 @@ export default function PatientSaude() {
                       </div>
                       <div className="text-right text-sm">
                         <p className="text-muted-foreground">
-                          Válida até {format(new Date(med.expiry_date), "dd/MM/yyyy")}
+                          Válida até {safeFormat(med.expiry_date, "dd/MM/yyyy")}
                         </p>
                       </div>
                     </div>
@@ -481,11 +504,11 @@ export default function PatientSaude() {
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-medium">
-                          {format(new Date(vaccine.administered_at), "dd/MM/yyyy")}
+                          {safeFormat(vaccine.administered_at, "dd/MM/yyyy")}
                         </p>
                         {vaccine.next_dose_date && (
                           <p className="text-xs text-muted-foreground mt-1">
-                            Próxima: {format(new Date(vaccine.next_dose_date), "dd/MM/yyyy")}
+                            Próxima: {safeFormat(vaccine.next_dose_date, "dd/MM/yyyy")}
                           </p>
                         )}
                       </div>

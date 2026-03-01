@@ -17,12 +17,16 @@ import {
   Trophy,
   Sliders,
   ShieldCheck,
+  Smartphone,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useLocation } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
 import CertificateManager from "@/components/settings/CertificateManager";
+import SmsConfig from "@/components/settings/SmsConfig";
+import ChatbotSettings from "@/components/settings/ChatbotSettings";
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
@@ -160,7 +164,7 @@ export default function Configuracoes() {
       subtitle="Dados da clínica e preferências do sistema"
     >
       <Tabs defaultValue="clinica" className="space-y-6">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
+        <TabsList className="grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="clinica" className="gap-2">
             <Building className="h-4 w-4" />
             Clínica
@@ -168,6 +172,14 @@ export default function Configuracoes() {
           <TabsTrigger value="certificados" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
             Certificados
+          </TabsTrigger>
+          <TabsTrigger value="sms" className="gap-2">
+            <Smartphone className="h-4 w-4" />
+            SMS
+          </TabsTrigger>
+          <TabsTrigger value="chatbot" className="gap-2">
+            <Bot className="h-4 w-4" />
+            Chatbot
           </TabsTrigger>
           <TabsTrigger value="preferencias" className="gap-2">
             <Sliders className="h-4 w-4" />
@@ -283,7 +295,21 @@ export default function Configuracoes() {
         </TabsContent>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            Tab 3 — Preferências
+            Tab 3 — SMS
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="sms">
+          <SmsConfig />
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 4 — Chatbot WhatsApp
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="chatbot">
+          <ChatbotSettings />
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 5 — Preferências
         ═══════════════════════════════════════════════════════════════════ */}
         <TabsContent value="preferencias" className="space-y-6">
           {/* Interface */}

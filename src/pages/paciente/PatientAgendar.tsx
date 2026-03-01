@@ -218,7 +218,7 @@ function PatientAgendarInner() {
     setIsSubmitting(true);
     try {
       const { data, error } = await (supabasePatient as any).rpc("patient_create_appointment", {
-        p_service_id: selectedProcedure.id,
+        p_procedure_id: selectedProcedure.id,
         p_professional_id: selectedProfessional.id,
         p_scheduled_at: selectedSlot.slot_datetime,
         p_for_dependent_id: selectedDependent?.dependent_id || null,

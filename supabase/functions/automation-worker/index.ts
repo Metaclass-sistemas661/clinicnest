@@ -12,11 +12,16 @@ type TriggerType =
   | "appointment_reminder_24h"
   | "appointment_reminder_2h"
   | "appointment_completed"
+  | "appointment_cancelled"
   | "birthday"
   | "client_inactive_days"
-  | "return_reminder";
+  | "return_reminder"
+  | "consent_signed"
+  | "return_scheduled"
+  | "invoice_created"
+  | "exam_ready";
 
-type Channel = "whatsapp" | "email";
+type Channel = "whatsapp" | "email" | "sms";
 
 type AutomationRule = {
   id: string;
@@ -35,6 +40,9 @@ type TenantSettings = {
   whatsapp_api_url: string | null;
   whatsapp_api_key: string | null;
   whatsapp_instance: string | null;
+  sms_provider: string | null;
+  sms_api_key: string | null;
+  sms_sender: string | null;
 };
 
 type SelectResult<T> = { data: T; error: unknown };
@@ -195,6 +203,60 @@ async function sendEmail(
   }
 }
 
+// ─── SMS via provedor configurado ──────────────────────────────────────────────
+
+async function sendSms(
+  settings: TenantSettings,
+  phone: string,
+  message: string,
+): Promise<{ ok: boolean; details?: string }> {
+  const apiKey = (settings.sms_api_key ?? "").trim();
+  const sender = (settings.sms_sender ?? "").trim();
+  const provider = (settings.sms_provider ?? "zenvia").trim();
+
+  if (!apiKey) return { ok: false, details: "missing_sms_settings" };
+
+  const normalizedPhone = phone.replace(/\D/g, "");
+  if (!normalizedPhone || normalizedPhone.length < 10) return { ok: false, details: "invalid_phone" };
+
+  const fullPhone = normalizedPhone.startsWith("55") ? normalizedPhone : `55${normalizedPhone}`;
+
+  try {
+    if (provider === "zenvia") {
+      const res = await fetch("https://api.zenvia.com/v2/channels/sms/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-TOKEN": apiKey },
+        body: JSON.stringify({ from: sender, to: fullPhone, contents: [{ type: "text", text: message }] }),
+      });
+      const text = await res.text();
+      return res.ok ? { ok: true } : { ok: false, details: text.slice(0, 500) };
+    } else if (provider === "twilio") {
+      const [accountSid, authToken] = apiKey.split(":");
+      if (!accountSid || !authToken) return { ok: false, details: "invalid_twilio_key" };
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+      const body = new URLSearchParams({ From: sender, To: `+${fullPhone}`, Body: message });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Authorization": `Basic ${btoa(`${accountSid}:${authToken}`)}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const text = await res.text();
+      return res.ok ? { ok: true } : { ok: false, details: text.slice(0, 500) };
+    } else {
+      // Generic webhook
+      const res = await fetch(apiKey, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: fullPhone, message, sender }),
+      });
+      const text = await res.text();
+      return res.ok ? { ok: true } : { ok: false, details: text.slice(0, 500) };
+    }
+  } catch (e) {
+    return { ok: false, details: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // ─── Core dispatch (idempotent) ────────────────────────────────────────────────
 
 async function dispatch(
@@ -240,6 +302,22 @@ async function dispatch(
       return "skipped";
     }
     result = await sendWhatsapp(tenant, normalized, message);
+  } else if (rule.channel === "sms") {
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      await supabase.from("automation_dispatch_logs").insert({
+        tenant_id: rule.tenant_id,
+        automation_id: rule.id,
+        entity_type: entityType,
+        entity_id: entityId,
+        dispatch_period: dispatchPeriod,
+        channel: "sms",
+        status: "skipped",
+        details: { reason: "missing_phone" },
+      });
+      return "skipped";
+    }
+    result = await sendSms(tenant, normalized, message);
   } else {
     // email channel
     if (!email) {
@@ -309,7 +387,7 @@ async function processAppointmentTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -446,7 +524,7 @@ async function processBirthdayTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -533,7 +611,7 @@ async function processReturnReminderTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -671,7 +749,7 @@ async function processInactiveTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -762,6 +840,135 @@ async function processInactiveTrigger(
   return totals;
 }
 
+// ─── Trigger: queued notifications (consent_signed, return_scheduled, etc.) ───
+
+type QueuedNotifRow = {
+  id: string;
+  tenant_id: string;
+  recipient_id: string | null;
+  template_type: string;
+  metadata: Record<string, unknown>;
+};
+
+async function processQueuedNotifications(
+  supabase: SupabaseClient,
+  rules: AutomationRule[],
+  triggerType: string,
+  resendKey: string,
+): Promise<DispatchResult> {
+  const totals: DispatchResult = { sent: 0, skipped: 0, failed: 0 };
+  if (!rules.length) return totals;
+
+  // Fetch queued notifications matching this trigger type
+  const { data: queued } = (await supabase
+    .from("notification_logs")
+    .select("id, tenant_id, recipient_id, template_type, metadata")
+    .eq("template_type", triggerType)
+    .eq("status", "queued")
+    .limit(200)) as unknown as SelectResult<QueuedNotifRow[] | null>;
+
+  if (!queued?.length) return totals;
+
+  const byTenant = new Map<string, AutomationRule[]>();
+  for (const r of rules) {
+    const list = byTenant.get(r.tenant_id) ?? [];
+    list.push(r);
+    byTenant.set(r.tenant_id, list);
+  }
+
+  for (const notif of queued) {
+    const tenantRules = byTenant.get(notif.tenant_id);
+    if (!tenantRules?.length) {
+      // Mark as processed even without rules
+      await supabase
+        .from("notification_logs")
+        .update({ status: "skipped" })
+        .eq("id", notif.id);
+      totals.skipped++;
+      continue;
+    }
+
+    if (!notif.recipient_id) {
+      await supabase
+        .from("notification_logs")
+        .update({ status: "skipped", error_details: "no_recipient" })
+        .eq("id", notif.id);
+      totals.skipped++;
+      continue;
+    }
+
+    // Get tenant settings
+    const { data: tenant } = (await supabase
+      .from("tenants")
+      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .eq("id", notif.tenant_id)
+      .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
+
+    if (!tenant) {
+      totals.skipped++;
+      continue;
+    }
+
+    // Get client data
+    const { data: client } = (await supabase
+      .from("clients")
+      .select("id, name, phone, email")
+      .eq("id", notif.recipient_id)
+      .maybeSingle()) as unknown as SelectResult<ClientRow | null>;
+
+    if (!client) {
+      await supabase
+        .from("notification_logs")
+        .update({ status: "skipped", error_details: "client_not_found" })
+        .eq("id", notif.id);
+      totals.skipped++;
+      continue;
+    }
+
+    // Build vars based on trigger type
+    const vars: Record<string, string> = {
+      client_name: client.name ?? "",
+      clinic_name: tenant.name ?? "",
+      service_name: "",
+      date: "",
+      time: "",
+      professional_name: "",
+      nps_link: "",
+    };
+
+    // Add metadata-specific vars
+    if (triggerType === "consent_signed") {
+      vars.consent_template = String(notif.metadata?.template_id ?? "");
+    } else if (triggerType === "return_scheduled") {
+      const returnDate = notif.metadata?.return_date as string | undefined;
+      vars.date = returnDate ? formatDateBR(returnDate) : "";
+      vars.return_reason = String(notif.metadata?.reason ?? "");
+    }
+
+    let anySuccess = false;
+    for (const rule of tenantRules) {
+      const message = interpolate(rule.message_template, vars);
+      const r = await dispatch(
+        supabase, rule, tenant,
+        "client", notif.recipient_id, `notif-${notif.id}`,
+        client.phone ?? "", client.email ?? "", client.name ?? "",
+        message, resendKey,
+      );
+      if (r === "sent") { totals.sent++; anySuccess = true; }
+      else if (r === "failed") totals.failed++;
+      else totals.skipped++;
+    }
+
+    // Mark notification as processed
+    await supabase
+      .from("notification_logs")
+      .update({ status: anySuccess ? "sent" : "failed" })
+      .eq("id", notif.id);
+  }
+
+  return totals;
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -824,7 +1031,7 @@ serve(async (req: Request) => {
     log("Worker started", { total_rules: rules.length, since_minutes: sinceMinutes });
 
     // Process all trigger types in parallel
-    const [created, r24h, r2h, completed, birthday, inactive, returnReminder] = await Promise.allSettled([
+    const [created, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled] = await Promise.allSettled([
       processAppointmentTrigger(supabase, byType("appointment_created"), "appointment_created", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_24h"), "appointment_reminder_24h", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_2h"), "appointment_reminder_2h", sinceMinutes, publicUrl, resendKey),
@@ -832,12 +1039,14 @@ serve(async (req: Request) => {
       processBirthdayTrigger(supabase, byType("birthday"), resendKey),
       processInactiveTrigger(supabase, byType("client_inactive_days"), resendKey),
       processReturnReminderTrigger(supabase, byType("return_reminder"), publicUrl, resendKey),
+      processQueuedNotifications(supabase, byType("consent_signed"), "consent_signed", resendKey),
+      processQueuedNotifications(supabase, byType("return_scheduled"), "return_scheduled", resendKey),
     ]);
 
     const extract = (r: PromiseSettledResult<DispatchResult>): DispatchResult =>
       r.status === "fulfilled" ? r.value : { sent: 0, skipped: 0, failed: 0 };
 
-    const totals = [created, r24h, r2h, completed, birthday, inactive, returnReminder].reduce(
+    const totals = [created, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled].reduce(
       (acc, r) => {
         const v = extract(r);
         return { sent: acc.sent + v.sent, skipped: acc.skipped + v.skipped, failed: acc.failed + v.failed };
