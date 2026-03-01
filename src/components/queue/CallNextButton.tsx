@@ -106,7 +106,7 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Megaphone className="h-5 w-5" />
@@ -132,7 +132,7 @@ export function CallNextButton({ professionalId, variant = "default", size = "de
                   {currentCall.room_name}
                 </div>
               )}
-              <div className="flex gap-2 mt-3">
+              <div className="flex flex-wrap gap-2 mt-3">
                 <Button
                   variant="outline"
                   size="sm"
