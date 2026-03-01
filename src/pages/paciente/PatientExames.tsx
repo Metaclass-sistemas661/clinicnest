@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   FileText, RefreshCw, Building2, Stethoscope, Calendar,
-  Download, Upload, Trash2, CheckCircle2, Clock, XCircle,
+  Download, Upload, Trash2, CheckCircle2, Clock, XCircle, SunMedium,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -22,6 +22,8 @@ import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarouse
 import { examesBanners } from "@/components/patient/patientBannerData";
 import { generateExamPdf } from "@/utils/patientDocumentPdf";
 import { toast } from "sonner";
+
+const DicomViewer = lazy(() => import("@/components/patient/DicomViewer"));
 
 /* ── Types ── */
 interface ExamResult {
@@ -105,6 +107,9 @@ export default function PatientExames() {
   const [examDate, setExamDate] = useState("");
   const [examNotes, setExamNotes] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // DICOM viewer
+  const [dicomUrl, setDicomUrl] = useState<string | null>(null);
 
   useEffect(() => { void fetchExams(); }, []);
 
@@ -339,6 +344,12 @@ export default function PatientExames() {
                             </Button>
                           </a>
                         )}
+                        {exam.file_url && (exam.file_name?.toLowerCase().endsWith(".dcm") || exam.file_url.toLowerCase().includes("dicom")) && (
+                          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setDicomUrl(exam.file_url)}>
+                            <SunMedium className="h-3.5 w-3.5" />
+                            Visualizar DICOM
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -505,6 +516,23 @@ export default function PatientExames() {
               {uploading ? "Enviando..." : "Enviar"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DICOM Viewer Dialog */}
+      <Dialog open={!!dicomUrl} onOpenChange={() => setDicomUrl(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-4 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <SunMedium className="h-5 w-5 text-teal-500" />
+              Visualizador DICOM
+            </DialogTitle>
+          </DialogHeader>
+          {dicomUrl && (
+            <Suspense fallback={<div className="h-[512px] flex items-center justify-center"><Skeleton className="h-8 w-8 rounded-full" /></div>}>
+              <DicomViewer fileUrl={dicomUrl} height={512} />
+            </Suspense>
+          )}
         </DialogContent>
       </Dialog>
     </PatientLayout>

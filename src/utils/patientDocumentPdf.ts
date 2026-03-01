@@ -755,3 +755,85 @@ export async function generateEvolutionPdf(e: EvolutionPdfData) {
   const filename = `evolucao_${e.patientName.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(e.evolutionDate), "yyyy-MM-dd")}.pdf`;
   doc.save(filename);
 }
+
+// ─── Laudos Médicos (Medical Reports) ──────────────────────
+
+interface MedicalReportPdfInput {
+  tipo: string;
+  finalidade?: string | null;
+  historia_clinica?: string | null;
+  exame_fisico?: string | null;
+  exames_complementares?: string | null;
+  diagnostico?: string | null;
+  cid10?: string | null;
+  conclusao?: string | null;
+  observacoes?: string | null;
+  created_at: string;
+  professional_name: string;
+  clinic_name: string;
+}
+
+function reportTypeLabel(t: string): string {
+  switch (t) {
+    case "laudo_medico":       return "Laudo Médico";
+    case "laudo_pericial":     return "Laudo Pericial";
+    case "parecer_tecnico":    return "Parecer Técnico";
+    case "relatorio_medico":   return "Relatório Médico";
+    case "laudo_complementar": return "Laudo Complementar";
+    default:                    return t?.replace(/_/g, " ") ?? "Laudo Médico";
+  }
+}
+
+export async function generateMedicalReportPdf(r: MedicalReportPdfInput) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pageH = doc.internal.pageSize.getHeight();
+
+  addHeader(doc, r.clinic_name, r.professional_name);
+
+  let y = 38;
+
+  // Title
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(13, 148, 136);
+  doc.text(reportTypeLabel(r.tipo), MARGIN, y);
+  y += 8;
+
+  // Date
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    `Emitido em ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+    MARGIN,
+    y
+  );
+  y += 8;
+
+  // Fields
+  const sections: [string, string | null | undefined][] = [
+    ["Finalidade", r.finalidade],
+    ["História Clínica", r.historia_clinica],
+    ["Exame Físico", r.exame_fisico],
+    ["Exames Complementares", r.exames_complementares],
+    ["Diagnóstico", r.diagnostico],
+    ["CID-10", r.cid10],
+    ["Conclusão", r.conclusao],
+    ["Observações", r.observacoes],
+  ];
+
+  for (const [label, value] of sections) {
+    if (!value) continue;
+    if (y > pageH - 30) {
+      addFooter(doc);
+      doc.addPage();
+      y = 20;
+    }
+    y = addField(doc, label, value, y);
+  }
+
+  addFooter(doc);
+
+  const filename = `laudo_${format(new Date(r.created_at), "yyyy-MM-dd")}.pdf`;
+  doc.save(filename);
+}

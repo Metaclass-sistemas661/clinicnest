@@ -128,6 +128,27 @@ export const receitasBanners: BannerSlide[] = [
   },
 ];
 
+export const laudosBanners: BannerSlide[] = [
+  {
+    title: "Laudos e relatórios médicos",
+    description:
+      "Acesse laudos, pareceres técnicos e relatórios emitidos pelos seus profissionais de saúde. Tudo em um só lugar.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80",
+    gradient: "bg-gradient-to-r from-indigo-600 to-blue-500",
+    icon: icon(FileText),
+  },
+  {
+    title: "Documentação clínica completa",
+    description:
+      "Laudos finalizados e assinados ficam disponíveis para download em PDF. Compartilhe com outros profissionais quando necessário.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1559757175-5700dde675bc?auto=format&fit=crop&w=600&q=80",
+    gradient: "bg-gradient-to-r from-blue-600 to-indigo-500",
+    icon: icon(Stethoscope),
+  },
+];
+
 export const atestadosBanners: BannerSlide[] = [
   {
     title: "Atestados e declarações digitais",

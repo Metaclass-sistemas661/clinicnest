@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { format, addDays } from "date-fns";
-import { FileSignature, Printer, Save } from "lucide-react";
+import { FileSignature, Printer, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   Sheet,
   SheetContent,
@@ -53,6 +57,8 @@ export function AtestadoDrawer({
   onSave,
   onPrint,
 }: AtestadoDrawerProps) {
+  const { profile, tenantId } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
   const [tipo, setTipo] = useState<AtestadoData["tipo"]>("medico");
   const [dataInicio, setDataInicio] = useState(format(new Date(), "yyyy-MM-dd"));
   const [diasAfastamento, setDiasAfastamento] = useState(1);
@@ -92,9 +98,56 @@ export function AtestadoDrawer({
     horarioComparecimento: tipo === "comparecimento" ? horarioComparecimento : undefined,
   });
 
-  const handleSave = () => {
-    onSave?.(getData());
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!motivo.trim() && tipo === "medico") {
+      toast.error("Preencha o motivo/justificativa");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Montar conteúdo textual do atestado
+      const conteudo = tipo === "comparecimento"
+        ? `Declaro que o paciente ${context.clientName} compareceu a esta unidade de saúde${horarioComparecimento ? ` às ${horarioComparecimento}` : ""} na data de hoje.${motivo ? ` Motivo: ${motivo}` : ""}${observacoes ? ` Obs: ${observacoes}` : ""}`
+        : `Atesto que o paciente ${context.clientName} necessita de ${diasAfastamento} dia(s) de afastamento a partir de ${format(new Date(dataInicio), "dd/MM/yyyy")}.${motivo ? ` Motivo: ${motivo}` : ""}${cid10 && incluirCid ? ` CID-10: ${cid10}` : ""}${observacoes ? ` Obs: ${observacoes}` : ""}`;
+
+      const certificateType = tipo === "comparecimento" ? "declaracao_comparecimento" : "atestado";
+
+      if (tenantId && profile?.id) {
+        const { error } = await supabase.from("medical_certificates").insert({
+          tenant_id: tenantId,
+          patient_id: context.patientId,
+          professional_id: profile.id,
+          appointment_id: null,
+          medical_record_id: context.medicalRecordId || null,
+          certificate_type: certificateType,
+          days_off: tipo === "medico" ? diasAfastamento : null,
+          start_date: tipo === "medico" ? dataInicio : null,
+          end_date: tipo === "medico" ? dataFim : null,
+          cid_code: incluirCid ? cid10 || null : null,
+          content: conteudo,
+          notes: observacoes || null,
+        });
+
+        if (error) {
+          if (error.code === "42P01") {
+            logger.warn("Tabela medical_certificates não encontrada, salvando via callback");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Atestado salvo com sucesso!");
+        }
+      }
+
+      onSave?.(getData());
+      onOpenChange(false);
+    } catch (err) {
+      logger.error("Erro ao salvar atestado:", err);
+      toast.error("Erro ao salvar atestado");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -221,9 +274,9 @@ export function AtestadoDrawer({
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {isSaving ? "Salvando..." : "Salvar"}
           </Button>
         </SheetFooter>
       </SheetContent>

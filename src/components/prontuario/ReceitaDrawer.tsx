@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Pill, Plus, Trash2, Printer, Save } from "lucide-react";
+import { Pill, Plus, Trash2, Printer, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   Sheet,
   SheetContent,
@@ -67,6 +71,8 @@ export function ReceitaDrawer({
   onSave,
   onPrint,
 }: ReceitaDrawerProps) {
+  const { profile, tenantId } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
   const [tipo, setTipo] = useState<ReceitaData["tipo"]>("simples");
   const [itens, setItens] = useState<ReceitaItem[]>([emptyItem()]);
   const [observacoes, setObservacoes] = useState("");
@@ -107,9 +113,60 @@ export function ReceitaDrawer({
     usoContinuo,
   });
 
-  const handleSave = () => {
-    onSave?.(getData());
-    onOpenChange(false);
+  const handleSave = async () => {
+    const validItems = itens.filter(i => i.medicamento.trim());
+    if (validItems.length === 0) {
+      toast.error("Adicione ao menos um medicamento");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Formatar medicamentos como texto (mesmo formato do Receituarios.tsx)
+      const medicationsText = validItems.map((item, idx) => {
+        return `${idx + 1}) ${item.medicamento}${item.dosagem ? ` - ${item.dosagem}` : ""}${item.posologia ? ` | ${item.posologia}` : ""}${item.quantidade ? ` | Qtd: ${item.quantidade}` : ""}${item.uso !== "oral" ? ` (${item.uso})` : ""}`;
+      }).join("\n");
+
+      const prescriptionType = tipo === "especial" ? "especial_b" 
+        : tipo === "controle_especial" ? "especial_a" 
+        : "simples";
+
+      if (tenantId && profile?.id) {
+        const { error } = await supabase.from("prescriptions").insert({
+          tenant_id: tenantId,
+          patient_id: context.patientId,
+          professional_id: profile.id,
+          appointment_id: null,
+          medical_record_id: context.medicalRecordId || null,
+          prescription_type: prescriptionType,
+          medications: medicationsText,
+          instructions: observacoes || null,
+          validity_days: 30,
+          status: "ativo",
+          signed_by_name: profile.full_name,
+          signed_by_crm: profile.council_number || null,
+          signed_by_uf: profile.council_state || null,
+        });
+
+        if (error) {
+          if (error.code === "42P01") {
+            logger.warn("Tabela prescriptions não encontrada, salvando via callback");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Receita salva com sucesso!");
+        }
+      }
+
+      onSave?.(getData());
+      onOpenChange(false);
+    } catch (err) {
+      logger.error("Erro ao salvar receita:", err);
+      toast.error("Erro ao salvar receita");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
@@ -260,9 +317,9 @@ export function ReceitaDrawer({
             <Printer className="h-4 w-4 mr-2" />
             Imprimir
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Salvar
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {isSaving ? "Salvando..." : "Salvar"}
           </Button>
         </SheetFooter>
       </SheetContent>

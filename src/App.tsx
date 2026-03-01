@@ -95,6 +95,8 @@ const Integracoes = lazyWithRetry(() => import("@/pages/Integracoes"));
 
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
+const ExamesRecebidos = lazyWithRetry(() => import("@/pages/ExamesRecebidos"));
+const FaturasPacientes = lazyWithRetry(() => import("@/pages/FaturasPacientes"));
 
 // Portal do Paciente
 const PatientLogin = lazyWithRetry(() => import("@/pages/paciente/PatientLogin"));
@@ -109,6 +111,7 @@ const PatientTeleconsulta = lazyWithRetry(() => import("@/pages/paciente/Patient
 const PatientExames = lazyWithRetry(() => import("@/pages/paciente/PatientExames"));
 const PatientReceitas = lazyWithRetry(() => import("@/pages/paciente/PatientReceitas"));
 const PatientAtestados = lazyWithRetry(() => import("@/pages/paciente/PatientAtestados"));
+const PatientLaudos = lazyWithRetry(() => import("@/pages/paciente/PatientLaudos"));
 const PatientConsentSigning = lazyWithRetry(() => import("@/pages/paciente/PatientConsentSigning"));
 const PatientProfile = lazyWithRetry(() => import("@/pages/paciente/PatientProfile"));
 const PatientSettings = lazyWithRetry(() => import("@/pages/paciente/PatientSettings"));
@@ -152,6 +155,7 @@ const DashboardONA = lazyWithRetry(() => import("@/pages/DashboardONA"));
 const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
 const RetornosPendentes = lazyWithRetry(() => import("@/pages/RetornosPendentes"));
 const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
+const PublicBooking = lazyWithRetry(() => import("@/pages/PublicBooking"));
 // FilaAtendimento merged into DashboardRecepcao (tabs)
 const DashboardRecepcao = lazyWithRetry(() => import("@/pages/recepcao/DashboardRecepcao"));
 const ConfirmarRetornoPublico = lazyWithRetry(() => import("@/pages/ConfirmarRetornoPublico"));
@@ -222,6 +226,7 @@ const App = () => (
                 <Route path="/verificar/:hash" element={<VerificarDocumento />} />
                 <Route path="/auth/birdid/callback" element={<BirdIdCallback />} />
                 <Route path="/painel-chamada" element={<PainelChamada />} />
+                <Route path="/agendar/:slug" element={<PublicBooking />} />
 
                 {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}
                 <Route
@@ -808,6 +813,22 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/exames-recebidos"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <ExamesRecebidos />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/faturas-pacientes"
+                  element={
+                    <ProtectedRoute resource="financeiro">
+                      <FaturasPacientes />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Conta */}
                 <Route
@@ -973,6 +994,16 @@ const App = () => (
                     <PatientProtectedRoute>
                       <ConsentGate>
                         <PatientAtestados />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/laudos"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientLaudos />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { ArrowRightLeft, Printer, Save } from "lucide-react";
+import { ArrowRightLeft, Printer, Save, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import {
   Sheet,
   SheetContent,
@@ -77,6 +81,8 @@ export function EncaminhamentoDrawer({
   onSave,
   onPrint,
 }: EncaminhamentoDrawerProps) {
+  const { profile, tenantId } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
   const [tipo, setTipo] = useState<EncaminhamentoData["tipo"]>("especialista");
   const [especialidade, setEspecialidade] = useState("");
   const [profissionalDestino, setProfissionalDestino] = useState("");
@@ -125,9 +131,45 @@ export function EncaminhamentoDrawer({
     contraReferencia,
   });
 
-  const handleSave = () => {
-    onSave?.(getData());
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!motivoEncaminhamento.trim()) {
+      toast.error("Informe o motivo do encaminhamento");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (tenantId && profile?.id) {
+        const { error } = await supabase.from("referrals").insert({
+          tenant_id: tenantId,
+          patient_id: context.patientId,
+          from_professional: profile.id,
+          medical_record_id: context.medicalRecordId || null,
+          priority: prioridade,
+          reason: motivoEncaminhamento,
+          clinical_summary: resumoClinico || null,
+          notes: [observacoes, examesSolicitados ? `Exames: ${examesSolicitados}` : "", contraReferencia ? "Contra-referência solicitada" : ""].filter(Boolean).join(" | ") || null,
+        });
+
+        if (error) {
+          if (error.code === "42P01") {
+            logger.warn("Tabela referrals não encontrada, salvando via callback");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Encaminhamento salvo com sucesso!");
+        }
+      }
+
+      onSave?.(getData());
+      onOpenChange(false);
+    } catch (err) {
+      logger.error("Erro ao salvar encaminhamento:", err);
+      toast.error("Erro ao salvar encaminhamento");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePrint = () => {
