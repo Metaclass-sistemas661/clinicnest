@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { SlotPicker } from "@/components/patient/SlotPicker";
 import { ProfessionalList } from "@/components/patient/ProfessionalCard";
 import { DependentSelector } from "@/components/patient/DependentSelector";
-import { useDependents, Dependent } from "@/hooks/useDependents";
+import { useDependents, DependentsProvider, Dependent } from "@/hooks/useDependents";
 
 interface ProcedureOption {
   id: string;
@@ -65,7 +65,7 @@ interface BookingSettings {
 
 type Step = "service" | "professional" | "datetime" | "confirm";
 
-export default function PatientAgendar() {
+function PatientAgendarInner() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>("service");
   const [settings, setSettings] = useState<BookingSettings | null>(null);
@@ -547,5 +547,13 @@ export default function PatientAgendar() {
         </CardContent>
       </Card>
     </PatientLayout>
+  );
+}
+
+export default function PatientAgendar() {
+  return (
+    <DependentsProvider>
+      <PatientAgendarInner />
+    </DependentsProvider>
   );
 }
