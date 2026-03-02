@@ -98,9 +98,12 @@ interface SalesConversation {
 }
 
 interface IncomingWebhook {
-  // Evolution API format
+  // Evolution API v2 format
+  event?: string;
+  instance?: string;
   data?: {
-    key?: { remoteJid?: string; fromMe?: boolean };
+    key?: { remoteJid?: string; fromMe?: boolean; id?: string };
+    pushName?: string;
     message?: {
       conversation?: string;
       extendedTextMessage?: { text?: string };
@@ -108,6 +111,7 @@ interface IncomingWebhook {
       listResponseMessage?: { singleSelectReply?: { selectedRowId?: string } };
     };
     messageType?: string;
+    messageTimestamp?: number;
   };
   // Direct API call
   phone?: string;
@@ -136,10 +140,19 @@ function extractMessage(body: IncomingWebhook): { phone: string; message: string
     return { phone: normalizePhone(body.phone), message: body.message.trim() };
   }
 
-  // Evolution API webhook
+  // Evolution API v2 webhook — only process messages.upsert (case-insensitive)
+  if (body.event && body.event.toLowerCase() !== "messages.upsert") {
+    log("Ignoring event", { event: body.event });
+    return null;
+  }
+
   const data = body.data;
   if (!data?.key?.remoteJid) return null;
   if (data.key.fromMe) return null; // ignore own messages
+  // Ignore group messages
+  if (data.key.remoteJid.includes("@g.us")) return null;
+  // Ignore status broadcasts
+  if (data.key.remoteJid === "status@broadcast") return null;
 
   const phone = normalizePhone(data.key.remoteJid.replace("@s.whatsapp.net", ""));
 
@@ -444,17 +457,45 @@ serve(async (req) => {
   }
 
   try {
-    // Auth via query param
+    // Evolution API webhook does NOT send auth tokens by default.
+    // We accept all POST requests but validate the payload structure.
+    // For direct API calls, optionally validate token.
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
-    if (SALES_CHATBOT_SECRET && token !== SALES_CHATBOT_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const headerApiKey = req.headers.get("apikey") || req.headers.get("x-api-key") || "";
 
     const body: IncomingWebhook = await req.json();
+
+    // Determine if this is an Evolution webhook (has event field) or direct call
+    const isEvolutionWebhook = !!(body as Record<string, unknown>).event || !!body.data;
+    const isDirectCall = !!body.phone && !!body.message;
+
+    // Only require auth for direct API calls, not Evolution webhooks
+    if (isDirectCall && !isEvolutionWebhook) {
+      const isAuthed =
+        !SALES_CHATBOT_SECRET ||
+        token === SALES_CHATBOT_SECRET ||
+        headerApiKey === SALES_CHATBOT_SECRET ||
+        headerApiKey === EVOLUTION_API_KEY;
+
+      if (!isAuthed) {
+        log("Unauthorized direct call", { hasToken: !!token, hasHeader: !!headerApiKey });
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+    log("Webhook received", {
+      event: (body as Record<string,unknown>).event,
+      hasData: !!body.data,
+      isEvolutionWebhook,
+      isDirectCall,
+      instanceName: (body as Record<string,unknown>).instance,
+      remoteJid: body.data?.key?.remoteJid,
+      fromMe: body.data?.key?.fromMe,
+      messageType: body.data?.messageType,
+    });
     const extracted = extractMessage(body);
     if (!extracted) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), {
