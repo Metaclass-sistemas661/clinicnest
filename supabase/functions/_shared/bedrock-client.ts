@@ -1,11 +1,20 @@
 /**
- * AWS Bedrock Client for Supabase Edge Functions
- * Uses Claude 3 Haiku for cost-effective AI operations
- * 
- * Required environment variables:
+ * Multi-provider AI Client for Supabase Edge Functions
+ *
+ * Primary: AWS Bedrock (Claude 3 Haiku)
+ * Fallback: Google Vertex AI (Gemini 2.0 Flash)
+ *
+ * If Bedrock fails or is not configured, automatically falls back to Vertex AI.
+ * If only one provider is configured, uses that one exclusively.
+ *
+ * AWS Bedrock env vars:
  * - AWS_ACCESS_KEY_ID
  * - AWS_SECRET_ACCESS_KEY
  * - AWS_REGION (default: us-east-1)
+ *
+ * Google Vertex AI env vars:
+ * - GCP_SERVICE_ACCOUNT_KEY (full JSON service account key)
+ * - GCP_REGION (default: us-central1)
  */
 
 const AWS_REGION = Deno.env.get("AWS_REGION") || "us-east-1";
@@ -14,6 +23,14 @@ const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY") || "";
 
 // Claude 3 Haiku - Best cost-benefit for medical use cases
 const MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0";
+
+// ── Vertex AI (Google Gemini) fallback ──────────────────────────
+const GCP_SERVICE_ACCOUNT_KEY = Deno.env.get("GCP_SERVICE_ACCOUNT_KEY") || "";
+const GCP_REGION = Deno.env.get("GCP_REGION") || "us-central1";
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+const BEDROCK_AVAILABLE = !!AWS_ACCESS_KEY_ID && !!AWS_SECRET_ACCESS_KEY;
+const VERTEX_AI_AVAILABLE = !!GCP_SERVICE_ACCOUNT_KEY;
 
 // ── Configurações de resiliência ────────────────────────────────
 const BEDROCK_TIMEOUT_MS = 25_000; // 25 s (edge functions têm 30 s de wall-time)
@@ -137,71 +154,353 @@ async function signRequest(
   });
 }
 
+// ══════════════════════════════════════════════════════════════════
+// ██  Vertex AI (Google Gemini) — Auth + Format Translators      ██
+// ══════════════════════════════════════════════════════════════════
+
+interface GcpServiceAccount {
+  project_id: string;
+  private_key: string;
+  client_email: string;
+  token_uri: string;
+}
+
+let _gcpAccessToken: string | null = null;
+let _gcpTokenExpiry = 0;
+
+function _getGcpCreds(): GcpServiceAccount {
+  try {
+    return JSON.parse(GCP_SERVICE_ACCOUNT_KEY);
+  } catch {
+    throw new Error("Invalid GCP_SERVICE_ACCOUNT_KEY JSON");
+  }
+}
+
+function _base64url(buf: Uint8Array): string {
+  let s = "";
+  for (const b of buf) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function _createGcpJwt(): Promise<string> {
+  const creds = _getGcpCreds();
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const claims = {
+    iss: creds.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: creds.token_uri || "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+  const enc = new TextEncoder();
+  const h = _base64url(enc.encode(JSON.stringify(header)));
+  const p = _base64url(enc.encode(JSON.stringify(claims)));
+  const sigInput = `${h}.${p}`;
+
+  // Import RSA private key from PEM
+  const pem = creds.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s/g, "");
+  const keyBytes = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    keyBytes.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const sig = new Uint8Array(
+    await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, enc.encode(sigInput)),
+  );
+  return `${sigInput}.${_base64url(sig)}`;
+}
+
+async function _getGcpAccessToken(): Promise<string> {
+  if (_gcpAccessToken && Date.now() < _gcpTokenExpiry) return _gcpAccessToken;
+
+  const jwt = await _createGcpJwt();
+  const creds = _getGcpCreds();
+  const tokenUri = creds.token_uri || "https://oauth2.googleapis.com/token";
+
+  const resp = await fetch(tokenUri, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`,
+  });
+  if (!resp.ok) {
+    const txt = await resp.text();
+    throw new Error(`GCP token exchange failed: ${resp.status} - ${txt}`);
+  }
+  const data = await resp.json();
+  _gcpAccessToken = data.access_token;
+  _gcpTokenExpiry = Date.now() + (data.expires_in - 120) * 1000;
+  return _gcpAccessToken!;
+}
+
+function _geminiEndpoint(): string {
+  const creds = _getGcpCreds();
+  return `https://${GCP_REGION}-aiplatform.googleapis.com/v1/projects/${creds.project_id}/locations/${GCP_REGION}/publishers/google/models/${GEMINI_MODEL}:generateContent`;
+}
+
+// ── Format translators: Claude ↔ Gemini ──────────────────────────
+
+interface GeminiPart {
+  text?: string;
+  functionCall?: { name: string; args: Record<string, unknown> };
+  functionResponse?: { name: string; response: { output: string } };
+}
+interface GeminiContent {
+  role: "user" | "model";
+  parts: GeminiPart[];
+}
+
+function _claudeSimpleToGemini(messages: BedrockMessage[]): GeminiContent[] {
+  return messages.map((m) => ({
+    role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+    parts: [{ text: m.content }],
+  }));
+}
+
+function _claudeAgentToGemini(messages: AgentMessage[]): GeminiContent[] {
+  // Build tool_use_id → name map for resolving tool_result
+  const toolIdToName = new Map<string, string>();
+  for (const m of messages) {
+    if (Array.isArray(m.content)) {
+      for (const block of m.content) {
+        if (block.type === "tool_use") {
+          const tu = block as ContentBlockToolUse;
+          toolIdToName.set(tu.id, tu.name);
+        }
+      }
+    }
+  }
+
+  return messages.map((m) => {
+    if (typeof m.content === "string") {
+      return {
+        role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+        parts: [{ text: m.content }],
+      };
+    }
+    const parts: GeminiPart[] = [];
+    for (const block of m.content) {
+      if (block.type === "text") {
+        parts.push({ text: (block as ContentBlockText).text });
+      } else if (block.type === "tool_use") {
+        const tu = block as ContentBlockToolUse;
+        toolIdToName.set(tu.id, tu.name);
+        parts.push({ functionCall: { name: tu.name, args: tu.input } });
+      } else if (block.type === "tool_result") {
+        const tr = block as ContentBlockToolResult;
+        const name = toolIdToName.get(tr.tool_use_id) || "unknown_tool";
+        parts.push({ functionResponse: { name, response: { output: tr.content } } });
+      }
+    }
+    return {
+      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
+      parts,
+    };
+  });
+}
+
+function _geminiToClaudeSimple(
+  // deno-lint-ignore no-explicit-any
+  geminiResp: any,
+): { text: string; usage: { input_tokens: number; output_tokens: number } } {
+  const candidate = geminiResp.candidates?.[0];
+  // deno-lint-ignore no-explicit-any
+  const text = candidate?.content?.parts?.map((p: any) => p.text || "").join("") || "";
+  const u = geminiResp.usageMetadata || {};
+  return {
+    text,
+    usage: { input_tokens: u.promptTokenCount || 0, output_tokens: u.candidatesTokenCount || 0 },
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+function _geminiToClaudeAgent(geminiResp: any): AgentResponse {
+  const candidate = geminiResp.candidates?.[0];
+  const parts = candidate?.content?.parts || [];
+  const content: ContentBlock[] = [];
+
+  for (const part of parts) {
+    if (part.text) {
+      content.push({ type: "text", text: part.text });
+    }
+    if (part.functionCall) {
+      content.push({
+        type: "tool_use",
+        id: `toolu_${crypto.randomUUID().slice(0, 12)}`,
+        name: part.functionCall.name,
+        input: part.functionCall.args || {},
+      });
+    }
+  }
+
+  // Determine stop_reason based on presence of tool_use blocks
+  const hasToolUse = content.some((b) => b.type === "tool_use");
+  const u = geminiResp.usageMetadata || {};
+
+  return {
+    content,
+    stop_reason: hasToolUse ? "tool_use" : "end_turn",
+    usage: { input_tokens: u.promptTokenCount || 0, output_tokens: u.candidatesTokenCount || 0 },
+  };
+}
+
+// ── Vertex AI invoke (internal) ──────────────────────────────────
+
+async function _invokeVertexGemini(request: BedrockRequest): Promise<{
+  text: string;
+  usage: { input_tokens: number; output_tokens: number };
+}> {
+  const token = await _getGcpAccessToken();
+  const url = _geminiEndpoint();
+  const contents = _claudeSimpleToGemini(request.messages);
+
+  // deno-lint-ignore no-explicit-any
+  const reqBody: any = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: request.max_tokens || 1024,
+      temperature: request.temperature ?? 0.3,
+    },
+  };
+  if (request.system) {
+    reqBody.systemInstruction = { parts: [{ text: request.system }] };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(reqBody),
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Vertex AI error: ${resp.status} - ${errText}`);
+    }
+    return _geminiToClaudeSimple(await resp.json());
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function _invokeVertexGeminiWithTools(
+  messages: AgentMessage[],
+  system: string,
+  tools: ToolDefinition[],
+  options?: { maxTokens?: number; temperature?: number },
+): Promise<AgentResponse> {
+  const token = await _getGcpAccessToken();
+  const url = _geminiEndpoint();
+  const contents = _claudeAgentToGemini(messages);
+
+  const functionDeclarations = tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.input_schema,
+  }));
+
+  const reqBody = {
+    contents,
+    systemInstruction: { parts: [{ text: system }] },
+    tools: [{ functionDeclarations }],
+    generationConfig: {
+      maxOutputTokens: options?.maxTokens || 4096,
+      temperature: options?.temperature ?? 0.3,
+    },
+  };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(reqBody),
+      signal: controller.signal,
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Vertex AI error: ${resp.status} - ${errText}`);
+    }
+    return _geminiToClaudeAgent(await resp.json());
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ██  Public API — Bedrock primary, Vertex AI fallback           ██
+// ══════════════════════════════════════════════════════════════════
+
 /**
- * Invoke Claude 3 Haiku via AWS Bedrock with retry + timeout
+ * Invoke Claude 3 Haiku via AWS Bedrock with retry + timeout.
+ * Falls back to Google Vertex AI (Gemini) if Bedrock fails or is not configured.
  */
 export async function invokeBedrockClaude(request: BedrockRequest): Promise<{
   text: string;
   usage: { input_tokens: number; output_tokens: number };
 }> {
-  if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.");
-  }
-
-  const url = `https://bedrock-runtime.${AWS_REGION}.amazonaws.com/model/${MODEL_ID}/invoke`;
-
-  const body = JSON.stringify({
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: request.max_tokens || 1024,
-    temperature: request.temperature ?? 0.3,
-    system: request.system || "",
-    messages: request.messages,
-  });
-
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await sleep(backoffMs(attempt - 1));
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
-
+  // ── Try AWS Bedrock first ──
+  if (BEDROCK_AVAILABLE) {
     try {
-      const headers = await signRequest("POST", url, body, "bedrock");
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body,
-        signal: controller.signal,
+      const url = `https://bedrock-runtime.${AWS_REGION}.amazonaws.com/model/${MODEL_ID}/invoke`;
+      const body = JSON.stringify({
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: request.max_tokens || 1024,
+        temperature: request.temperature ?? 0.3,
+        system: request.system || "",
+        messages: request.messages,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
-        if (RETRYABLE_STATUS.has(response.status)) continue; // retry
-        throw lastError; // 4xx não-retryable: falha imediata
-      }
+      let lastError: Error | null = null;
 
-      const data: BedrockResponse = await response.json();
-      return {
-        text: data.content[0]?.text || "",
-        usage: data.usage,
-      };
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      if (lastError.name === "AbortError") {
-        lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (attempt > 0) await sleep(backoffMs(attempt - 1));
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+        try {
+          const headers = await signRequest("POST", url, body, "bedrock");
+          const response = await fetch(url, { method: "POST", headers, body, signal: controller.signal });
+          if (!response.ok) {
+            const errorText = await response.text();
+            lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+            if (RETRYABLE_STATUS.has(response.status)) continue;
+            throw lastError;
+          }
+          const data: BedrockResponse = await response.json();
+          return { text: data.content[0]?.text || "", usage: data.usage };
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          if (lastError.name === "AbortError") lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+          if (attempt < MAX_RETRIES) continue;
+        } finally {
+          clearTimeout(timer);
+        }
       }
-      // Retry em erros de rede / timeout (exceto último attempt)
-      if (attempt < MAX_RETRIES) continue;
-    } finally {
-      clearTimeout(timer);
+      throw lastError ?? new Error("Bedrock request failed after retries");
+    } catch (bedrockErr) {
+      // If Vertex AI is available, fall back; otherwise re-throw
+      if (!VERTEX_AI_AVAILABLE) throw bedrockErr;
+      console.warn(`[AI] Bedrock failed: ${bedrockErr instanceof Error ? bedrockErr.message : bedrockErr}. Falling back to Vertex AI (Gemini).`);
     }
   }
 
-  throw lastError ?? new Error("Bedrock request failed after retries");
+  // ── Fallback to Vertex AI (Gemini) ──
+  if (VERTEX_AI_AVAILABLE) {
+    return _invokeVertexGemini(request);
+  }
+
+  throw new Error("No AI provider configured. Set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (Bedrock) or GCP_SERVICE_ACCOUNT_KEY (Vertex AI).");
 }
 
 /**
@@ -278,8 +577,7 @@ export interface AgentResponse {
 
 /**
  * Invoke Claude 3 Haiku via AWS Bedrock with native tool use support.
- * Used by the AI Agent for function calling (search patients, schedule, etc.).
- * Includes retry with exponential backoff + AbortController timeout.
+ * Falls back to Google Vertex AI (Gemini) if Bedrock fails or is not configured.
  */
 export async function invokeBedrockClaudeWithTools(
   messages: AgentMessage[],
@@ -287,60 +585,56 @@ export async function invokeBedrockClaudeWithTools(
   tools: ToolDefinition[],
   options?: { maxTokens?: number; temperature?: number }
 ): Promise<AgentResponse> {
-  if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.");
-  }
-
-  const url = `https://bedrock-runtime.${AWS_REGION}.amazonaws.com/model/${MODEL_ID}/invoke`;
-
-  const body = JSON.stringify({
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: options?.maxTokens || 4096,
-    temperature: options?.temperature ?? 0.3,
-    system,
-    messages,
-    tools,
-  });
-
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await sleep(backoffMs(attempt - 1));
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
-
+  // ── Try AWS Bedrock first ──
+  if (BEDROCK_AVAILABLE) {
     try {
-      const headers = await signRequest("POST", url, body, "bedrock");
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body,
-        signal: controller.signal,
+      const url = `https://bedrock-runtime.${AWS_REGION}.amazonaws.com/model/${MODEL_ID}/invoke`;
+      const body = JSON.stringify({
+        anthropic_version: "bedrock-2023-05-31",
+        max_tokens: options?.maxTokens || 4096,
+        temperature: options?.temperature ?? 0.3,
+        system,
+        messages,
+        tools,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
-        if (RETRYABLE_STATUS.has(response.status)) continue;
-        throw lastError;
-      }
+      let lastError: Error | null = null;
 
-      return response.json();
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      if (lastError.name === "AbortError") {
-        lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (attempt > 0) await sleep(backoffMs(attempt - 1));
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+        try {
+          const headers = await signRequest("POST", url, body, "bedrock");
+          const response = await fetch(url, { method: "POST", headers, body, signal: controller.signal });
+          if (!response.ok) {
+            const errorText = await response.text();
+            lastError = new Error(`Bedrock API error: ${response.status} - ${errorText}`);
+            if (RETRYABLE_STATUS.has(response.status)) continue;
+            throw lastError;
+          }
+          return response.json();
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+          if (lastError.name === "AbortError") lastError = new Error(`Bedrock timeout after ${BEDROCK_TIMEOUT_MS}ms`);
+          if (attempt < MAX_RETRIES) continue;
+        } finally {
+          clearTimeout(timer);
+        }
       }
-      if (attempt < MAX_RETRIES) continue;
-    } finally {
-      clearTimeout(timer);
+      throw lastError ?? new Error("Bedrock request failed after retries");
+    } catch (bedrockErr) {
+      if (!VERTEX_AI_AVAILABLE) throw bedrockErr;
+      console.warn(`[AI] Bedrock WithTools failed: ${bedrockErr instanceof Error ? bedrockErr.message : bedrockErr}. Falling back to Vertex AI (Gemini).`);
     }
   }
 
-  throw lastError ?? new Error("Bedrock request failed after retries");
+  // ── Fallback to Vertex AI (Gemini) ──
+  if (VERTEX_AI_AVAILABLE) {
+    return _invokeVertexGeminiWithTools(messages, system, tools, options);
+  }
+
+  throw new Error("No AI provider configured. Set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (Bedrock) or GCP_SERVICE_ACCOUNT_KEY (Vertex AI).");
 }
 
 // Re-export types
