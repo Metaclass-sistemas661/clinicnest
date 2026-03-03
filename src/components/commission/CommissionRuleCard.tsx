@@ -38,7 +38,7 @@ export interface CommissionRule {
   is_inverted: boolean;
   is_active: boolean;
   created_at: string;
-  service?: { name: string } | null;
+  procedure?: { name: string } | null;
   insurance?: { name: string } | null;
 }
 
@@ -108,7 +108,7 @@ export function CommissionRuleCard({
       case "insurance":
         return rule.insurance?.name || "Convênio não encontrado";
       case "service":
-        return rule.procedure?.name || "Serviço não encontrado";
+        return rule.procedure?.name || "Procedimento não encontrado";
       case "procedure":
         return `TUSS: ${rule.procedure_code}`;
       case "referral":

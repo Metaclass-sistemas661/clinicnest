@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { TussCombobox } from "@/components/ui/tuss-combobox";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -50,6 +51,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
   // Simulation inputs
   const [selectedProcedureId, setSelectedProcedureId] = useState<string>("");
   const [selectedInsuranceId, setSelectedInsuranceId] = useState<string>("particular");
+  const [procedureCode, setProcedureCode] = useState<string>("");
   const [procedureValue, setProcedureValue] = useState<string>("");
   const [monthlyRevenue, setMonthlyRevenue] = useState<string>("0");
 
@@ -107,9 +109,11 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
     const sortedRules = [...activeRules].sort((a, b) => b.priority - a.priority);
 
     for (const rule of sortedRules) {
-      // Check procedure rules first (highest priority)
+      // Check procedure/TUSS rules (highest priority)
       if (rule.rule_type === "procedure" && rule.procedure_code) {
-        // For simulation, we skip procedure matching since we don't have TUSS input
+        if (procedureCode && rule.procedure_code === procedureCode) {
+          return rule;
+        }
         continue;
       }
 
@@ -194,9 +198,11 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
   const getRuleTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       default: "Padrão",
-      service: "Por Serviço",
+      service: "Por Procedimento",
       insurance: "Por Convênio",
-      procedure: "Por Procedimento",
+      procedure: "Por Código TUSS",
+      referral: "Por Captação",
+      sale: "Por Venda",
     };
     return labels[type] || type;
   };
@@ -211,9 +217,9 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Service Select */}
+          {/* Procedure Select */}
           <div className="space-y-2">
-            <Label>Serviço</Label>
+            <Label>Procedimento</Label>
             <Select value={selectedProcedureId} onValueChange={setSelectedProcedureId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um procedimento" />
@@ -246,9 +252,22 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
             </Select>
           </div>
 
+          {/* TUSS Code (optional, for procedure rules) */}
+          <div className="space-y-2">
+            <Label>Código TUSS (opcional)</Label>
+            <TussCombobox
+              value={procedureCode}
+              onChange={setProcedureCode}
+              placeholder="Buscar código TUSS..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Usado para testar regras por código TUSS
+            </p>
+          </div>
+
           {/* Service Value */}
           <div className="space-y-2">
-            <Label>Valor do Serviço (R$)</Label>
+            <Label>Valor do Procedimento (R$)</Label>
             <Input
               type="number"
               min="0"
@@ -321,7 +340,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
                   <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10">
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-muted-foreground">
-                        Valor do Serviço
+                        Valor do Procedimento
                       </span>
                       <span className="font-semibold">
                         {formatCurrency(Number(procedureValue))}

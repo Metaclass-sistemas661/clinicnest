@@ -20,12 +20,12 @@ import {
 
 interface CommissionRule {
   id: string;
-  rule_type: "default" | "service" | "insurance" | "procedure" | "sale";
+  rule_type: "default" | "service" | "insurance" | "procedure" | "sale" | "referral";
   calculation_type: "percentage" | "fixed" | "tiered";
   value: number;
   tier_config: { min: number; max: number | null; value: number }[] | null;
   is_inverted: boolean;
-  service?: { name: string } | null;
+  procedure?: { name: string } | null;
   insurance?: { name: string } | null;
   procedure_code?: string | null;
 }

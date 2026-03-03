@@ -98,7 +98,7 @@ export function CommissionRuleForm({
   const [ruleType, setRuleType] = useState<string>("default");
   const [calculationType, setCalculationType] = useState<string>("percentage");
   const [value, setValue] = useState<string>("30");
-  const [procedureId, setServiceId] = useState<string>("");
+  const [procedureId, setProcedureId] = useState<string>("");
   const [insuranceId, setInsuranceId] = useState<string>("");
   const [procedureCode, setProcedureCode] = useState<string>("");
   const [isInverted, setIsInverted] = useState(false);
@@ -146,7 +146,7 @@ export function CommissionRuleForm({
       setRuleType(rule.rule_type);
       setCalculationType(rule.calculation_type);
       setValue(String(rule.value));
-      setServiceId(rule.procedure_id || "");
+      setProcedureId(rule.procedure_id || "");
       setInsuranceId(rule.insurance_id || "");
       setProcedureCode(rule.procedure_code || "");
       setIsInverted(rule.is_inverted);
@@ -159,7 +159,7 @@ export function CommissionRuleForm({
       setRuleType("default");
       setCalculationType("percentage");
       setValue("30");
-      setServiceId("");
+      setProcedureId("");
       setInsuranceId("");
       setProcedureCode("");
       setIsInverted(false);
@@ -199,7 +199,7 @@ export function CommissionRuleForm({
       return false;
     }
     if (ruleType === "service" && !procedureId) {
-      toast.error("Selecione um serviço");
+      toast.error("Selecione um procedimento");
       return false;
     }
     if (ruleType === "procedure" && !procedureCode) {
@@ -213,6 +213,18 @@ export function CommissionRuleForm({
     if (calculationType === "tiered" && tiers.length === 0) {
       toast.error("Configure pelo menos uma faixa");
       return false;
+    }
+    // Validar sobreposição de faixas (tiers)
+    if (calculationType === "tiered" && tiers.length > 1) {
+      const sorted = [...tiers].sort((a, b) => a.min - b.min);
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1];
+        const curr = sorted[i];
+        if (prev.max !== null && curr.min <= prev.max) {
+          toast.error(`Faixa ${i + 1} sobrepõe a faixa ${i}: ${curr.min} ≤ ${prev.max}`);
+          return false;
+        }
+      }
     }
     return true;
   };
@@ -325,8 +337,8 @@ export function CommissionRuleForm({
           {/* Filter by Service */}
           {ruleType === "service" && (
             <div className="space-y-2">
-              <Label>Serviço</Label>
-              <Select value={procedureId} onValueChange={setServiceId}>
+              <Label>Procedimento</Label>
+              <Select value={procedureId} onValueChange={setProcedureId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o procedimento" />
                 </SelectTrigger>
@@ -347,7 +359,7 @@ export function CommissionRuleForm({
               <Label>Procedimento TUSS</Label>
               <TussCombobox
                 value={procedureCode}
-                onValueChange={setProcedureCode}
+                onChange={setProcedureCode}
                 placeholder="Buscar código TUSS..."
               />
             </div>
