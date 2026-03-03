@@ -81,7 +81,7 @@ export function ProtectedRoute({
           p_action: action,
           p_metadata: { path: location.pathname },
         })
-        .catch((err: unknown) => logger.error("Audit log_access_denied failed:", err));
+        .then(() => {}, (err: unknown) => logger.error("Audit log_access_denied failed:", err));
 
       return <Navigate to="/403" replace />;
     }
