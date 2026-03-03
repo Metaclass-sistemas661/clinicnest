@@ -50,16 +50,16 @@ export default function PatientMensagens() {
         const { data: { user } } = await supabasePatient.auth.getUser();
         if (!user) return;
 
-        // Buscar patient_profile para obter patient_id e tenant_id
+        // Buscar patient_profile para obter client_id e tenant_id
         const { data: link } = await supabasePatient
           .from("patient_profiles")
-          .select("patient_id, tenant_id")
+          .select("client_id, tenant_id")
           .eq("user_id", user.id)
           .eq("is_active", true)
           .limit(1)
           .single();
 
-        if (!link?.patient_id) return;
+        if (!link?.client_id) return;
 
         channel = supabasePatient
           .channel("patient-messages-realtime")
@@ -69,7 +69,7 @@ export default function PatientMensagens() {
               event: "INSERT",
               schema: "public",
               table: "patient_messages",
-              filter: `patient_id=eq.${link.patient_id}`,
+              filter: `patient_id=eq.${link.client_id}`,
             },
             (payload: any) => {
               // Nova mensagem recebida — recarregar lista completa

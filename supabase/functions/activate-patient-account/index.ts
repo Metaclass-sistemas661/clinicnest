@@ -42,11 +42,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { client_id, email, password, full_name } = await req.json();
+    const body = await req.json();
+    // Accept both patient_id (new) and client_id (legacy) for backward compatibility
+    const client_id = body.patient_id || body.client_id;
+    const { email, password, full_name } = body;
 
     if (!client_id || !email || !password || !full_name) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: client_id, email, password, full_name" }),
+        JSON.stringify({ error: "Missing required fields: patient_id, email, password, full_name" }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
@@ -65,36 +68,36 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 1. Verify client exists and has no account yet (direct query by UUID)
-    const { data: clientRow, error: clientError } = await adminClient
-      .from("clients")
+    // 1. Verify patient exists and has no account yet
+    const { data: patientRow, error: patientError } = await adminClient
+      .from("patients")
       .select("id, user_id, name")
       .eq("id", client_id)
       .maybeSingle();
 
-    if (clientError) {
-      console.error("client lookup error:", clientError);
+    if (patientError) {
+      console.error("patient lookup error:", patientError);
       return new Response(
         JSON.stringify({ error: "Erro ao validar paciente" }),
         { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    if (!clientRow) {
+    if (!patientRow) {
       return new Response(
         JSON.stringify({ error: "Paciente não encontrado" }),
         { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    if (clientRow.user_id) {
+    if (patientRow.user_id) {
       return new Response(
         JSON.stringify({ error: "Este paciente já possui uma conta. Faça login com sua senha." }),
         { status: 409, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
-    const actualClientId = clientRow.id;
+    const actualClientId = patientRow.id;
 
     // 2. Create auth user
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({

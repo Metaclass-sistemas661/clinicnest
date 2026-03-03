@@ -79,6 +79,28 @@ export default function PatientDashboard() {
         const { data: dashData, error } = await (supabasePatient as any).rpc("get_patient_dashboard_summary");
         
         if (!error && dashData) {
+          // If not linked, try auto-linking before showing the banner
+          if (!dashData.is_linked) {
+            try {
+              const { data: linkResult } = await (supabasePatient as any).rpc("auto_link_patient");
+              if (linkResult?.linked) {
+                // Re-fetch dashboard after successful auto-link
+                const { data: refreshed } = await (supabasePatient as any).rpc("get_patient_dashboard_summary");
+                if (refreshed) {
+                  setDashboardData({
+                    isLinked: refreshed.is_linked ?? false,
+                    clinicName: refreshed.clinic_name ?? null,
+                    upcomingAppointments: refreshed.upcoming_appointments ?? [],
+                    upcomingTeleconsultas: refreshed.upcoming_teleconsultas ?? [],
+                  });
+                  return;
+                }
+              }
+            } catch {
+              // Auto-link failed silently — show unlinked banner
+            }
+          }
+
           setDashboardData({
             isLinked: dashData.is_linked ?? false,
             clinicName: dashData.clinic_name ?? null,
