@@ -27,6 +27,8 @@ import {
   Trash2, Pencil, Download, ShieldCheck, CheckCircle2, AlertTriangle, FileSignature,
   Eye, EyeOff, KeyRound,
 } from "lucide-react";
+import { Cid10Combobox } from "@/components/ui/cid10-combobox";
+import { CID10_MAP } from "@/data/cid10-index";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { MODAL_SIZES } from "@/lib/modal-constants";
@@ -73,14 +75,14 @@ interface Certificate {
 interface AppointmentRow {
   id: string;
   scheduled_at: string;
-  services: { name: string } | null;
+  procedure: { name: string } | null;
   medical_records: { id: string }[] | { id: string } | null;
 }
 
 interface CertificateRow {
   id: string;
   patient_id: string;
-  clients: { name: string } | null;
+  patient: { name: string } | null;
   profiles: { full_name: string } | null;
   certificate_type: string;
   issued_at: string;
@@ -290,6 +292,7 @@ export default function Atestados() {
     setEditingId(c.id);
     setFormData({
       patient_id: c.patient_id,
+      appointment_id: "",
       certificate_type: c.certificate_type,
       days_off: c.days_off?.toString() ?? "",
       start_date: c.start_date ?? "",
@@ -492,6 +495,7 @@ export default function Atestados() {
     const clinicAddress = tenant?.address || "";
     const clinicPhone = tenant?.phone || "";
     const clinicEmail = tenant?.email || "";
+    const tenantAny = tenant as any;
     const cnpj = tenantAny?.cnpj || "";
     const responsibleDoctor = tenantAny?.responsible_doctor || "";
     const responsibleCrm = tenantAny?.responsible_crm || "";
@@ -562,10 +566,10 @@ export default function Atestados() {
   <div class="type-banner">${title.toUpperCase()}</div>
   <div class="patient-section">
     <div class="row"><span class="label">Paciente:</span><span class="value">${c.client_name}</span></div>
-    ${patient?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${client.cpf}</span></div>` : ""}
+    ${patient?.cpf ? `<div class="row"><span class="label">CPF:</span><span class="value">${patient.cpf}</span></div>` : ""}
     <div class="row"><span class="label">Data de Emissão:</span><span class="value">${issuedDate}</span></div>
     ${c.days_off ? `<div class="row"><span class="label">Dias de Afastamento:</span><span class="value">${c.days_off} dia(s)${c.start_date && c.end_date ? ` — de ${new Date(c.start_date + "T12:00:00").toLocaleDateString("pt-BR")} a ${new Date(c.end_date + "T12:00:00").toLocaleDateString("pt-BR")}` : ""}</span></div>` : ""}
-    ${c.cid_code ? `<div class="row"><span class="label">CID-10:</span><span class="value">${c.cid_code}</span></div>` : ""}
+    ${c.cid_code ? `<div class="row"><span class="label">CID-10:</span><span class="value">${c.cid_code}${(() => { const d = CID10_MAP.get(c.cid_code!); return d ? ` — ${d.description}` : ''; })()}</span></div>` : ""}
   </div>
   <div class="content-section">${contentHtml}</div>
   ${c.notes ? `<div class="notes-section"><strong>Observações:</strong>${c.notes}</div>` : ""}
@@ -594,6 +598,7 @@ export default function Atestados() {
 
   const handleDownloadPdf = (c: Certificate) => {
     const tenantData = tenant as TenantWithLogo | null;
+    const tenantAny = tenant as any;
     const patient = patients.find((cl) => cl.id === c.patient_id);
     
     generateCertificatePdf({
@@ -613,8 +618,8 @@ export default function Atestados() {
       clinic_address: tenant?.address,
       clinic_phone: tenant?.phone,
       clinic_cnpj: tenantAny?.cnpj,
-      patient_name: client?.name,
-      patient_cpf: client?.cpf,
+      patient_name: patient?.name,
+      patient_cpf: patient?.cpf,
       digital_signature: c.digital_signature,
       signed_at: c.signed_at,
     });
@@ -715,7 +720,9 @@ export default function Atestados() {
                       </Badge>
                     )}
                     {c.cid_code && (
-                      <Badge variant="outline">{c.cid_code}</Badge>
+                      <Badge variant="outline" title={CID10_MAP.get(c.cid_code)?.description}>
+                        {c.cid_code}{CID10_MAP.get(c.cid_code) ? ` — ${CID10_MAP.get(c.cid_code)!.description}` : ""}
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -880,10 +887,10 @@ export default function Atestados() {
             </div>
             <div className="space-y-2">
               <Label>CID-10</Label>
-              <Input
+              <Cid10Combobox
                 value={formData.cid_code}
-                onChange={(e) => setFormData({ ...formData, cid_code: e.target.value })}
-                placeholder="Ex: J06.9"
+                onChange={(code) => setFormData(f => ({ ...f, cid_code: code }))}
+                placeholder="Buscar CID-10 (código ou descrição)..."
               />
             </div>
           </FormDrawerSection>
