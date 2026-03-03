@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign, ArrowDown, AlertTriangle, Check, X, KeyRound, Copy, Lock, LockOpen, Settings2 } from "lucide-react";
+import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign, ArrowDown, AlertTriangle, Check, X, KeyRound, Copy, Lock, LockOpen, Settings2, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { Profile, UserRole, AppRole, ProfessionalType } from "@/types/database";
@@ -182,6 +182,19 @@ export default function Equipe() {
   const [isReadonlyOpen, setIsReadonlyOpen] = useState(false);
   const [readonlyMember, setReadonlyMember] = useState<TeamMember | null>(null);
   const [readonlyReason, setReadonlyReason] = useState("");
+
+  // Remover membro
+  const [isRemoveOpen, setIsRemoveOpen] = useState(false);
+  const [removeMember, setRemoveMember] = useState<TeamMember | null>(null);
+  const [removeMode, setRemoveMode] = useState<"deactivate" | "delete">("deactivate");
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  // Reset senha membro
+  const [isResetPwOpen, setIsResetPwOpen] = useState(false);
+  const [resetPwMember, setResetPwMember] = useState<TeamMember | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isResettingPw, setIsResettingPw] = useState(false);
 
   useEffect(() => {
     if (profile?.tenant_id && isAdmin) {
@@ -654,6 +667,93 @@ export default function Equipe() {
     }
   };
 
+  // ── Remover membro da equipe ──
+  const handleRemoveMember = async () => {
+    if (!removeMember || !session?.access_token) return;
+    setIsRemoving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("remove-team-member", {
+        body: {
+          target_user_id: removeMember.user_id,
+          mode: removeMode,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+      if (error) {
+        let msg = error.message || "Erro ao remover membro";
+        try {
+          const body = typeof error.context?.body === "string" ? JSON.parse(error.context.body) : error.context?.body;
+          if (body?.error) msg = body.error;
+        } catch { /* ignore */ }
+        toast.error(msg);
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success(data?.message ?? "Membro removido com sucesso.");
+      setIsRemoveOpen(false);
+      setRemoveMember(null);
+      fetchTeam();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao remover membro");
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
+  // ── Redefinir senha de membro ──
+  const handleResetPassword = async () => {
+    if (!resetPwMember || !session?.access_token) return;
+    if (newPassword.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+    setIsResettingPw(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reset-team-member-password", {
+        body: {
+          target_user_id: resetPwMember.user_id,
+          new_password: newPassword,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+      });
+      if (error) {
+        let msg = error.message || "Erro ao redefinir senha";
+        try {
+          const body = typeof error.context?.body === "string" ? JSON.parse(error.context.body) : error.context?.body;
+          if (body?.error) msg = body.error;
+        } catch { /* ignore */ }
+        toast.error(msg);
+        return;
+      }
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success(data?.message ?? "Senha redefinida com sucesso.");
+      setIsResetPwOpen(false);
+      setResetPwMember(null);
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao redefinir senha");
+    } finally {
+      setIsResettingPw(false);
+    }
+  };
+
   const handleUpdateProfessionalType = async (member: TeamMember, newType: ProfessionalType) => {
     if (!profile?.tenant_id) return;
     try {
@@ -1043,6 +1143,92 @@ export default function Equipe() {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog de Remover Membro */}
+      <Dialog open={isRemoveOpen} onOpenChange={setIsRemoveOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remover Membro da Equipe</DialogTitle>
+            <DialogDescription>
+              Você está prestes a remover <strong>{removeMember?.full_name}</strong> da clínica. Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Modo de remoção</Label>
+              <Select value={removeMode} onValueChange={(v) => setRemoveMode(v as "deactivate" | "delete")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="deactivate">Desvincular da clínica (conta preservada)</SelectItem>
+                  <SelectItem value="delete">Excluir permanentemente (conta + dados)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {removeMode === "deactivate"
+                  ? "O profissional perderá acesso ao sistema mas a conta poderá ser reutilizada no futuro."
+                  : "A conta do profissional será excluída permanentemente. Use apenas se necessário (LGPD)."}
+              </p>
+            </div>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm text-destructive font-medium">Serão removidos:</p>
+              <ul className="text-xs text-destructive/80 mt-1 space-y-0.5 list-disc list-inside">
+                <li>Acesso ao sistema da clínica</li>
+                <li>Permissões e regras de comissão</li>
+                <li>Vínculo com a equipe</li>
+                {removeMode === "delete" && <li>Conta de autenticação (irreversível)</li>}
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRemoveOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleRemoveMember} disabled={isRemoving}>
+              {isRemoving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Removendo...</> : <><Trash2 className="mr-2 h-4 w-4" />Remover</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Redefinir Senha */}
+      <Dialog open={isResetPwOpen} onOpenChange={(open) => { setIsResetPwOpen(open); if (!open) { setNewPassword(""); setConfirmNewPassword(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Redefinir Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <strong>{resetPwMember?.full_name}</strong>. Ele precisará usar a nova senha no próximo login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                minLength={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Nova Senha</Label>
+              <Input
+                type="password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Repita a senha"
+                minLength={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsResetPwOpen(false)}>Cancelar</Button>
+            <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmNewPassword} className="gradient-primary text-primary-foreground">
+              {isResettingPw ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redefinindo...</> : <><RotateCcw className="mr-2 h-4 w-4" />Redefinir Senha</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* 12D.8 — Banner de migração */}
       {!isLoading && undefinedTypeCount > 0 && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-700 p-4 flex items-start gap-3">
@@ -1181,6 +1367,33 @@ export default function Equipe() {
                             {member.is_readonly ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                             {member.is_readonly ? "Desbloquear" : "Bloquear"}
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setResetPwMember(member);
+                              setNewPassword("");
+                              setConfirmNewPassword("");
+                              setIsResetPwOpen(true);
+                            }}
+                            className="gap-1"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Redefinir senha
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setRemoveMember(member);
+                              setRemoveMode("deactivate");
+                              setIsRemoveOpen(true);
+                            }}
+                            className="gap-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Remover
+                          </Button>
                           <Select
                             value={currentRole}
                             onValueChange={(v) => updateRole(member.user_id, v as AppRole)}
@@ -1292,6 +1505,32 @@ export default function Equipe() {
                                 title={member.is_readonly ? "Desativar modo somente leitura" : "Ativar modo somente leitura"}
                               >
                                 {member.is_readonly ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setResetPwMember(member);
+                                  setNewPassword("");
+                                  setConfirmNewPassword("");
+                                  setIsResetPwOpen(true);
+                                }}
+                                title="Redefinir senha"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setRemoveMember(member);
+                                  setRemoveMode("deactivate");
+                                  setIsRemoveOpen(true);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                                title="Remover membro"
+                              >
+                                <Trash2 className="h-3 w-3" />
                               </Button>
                               <Button
                                 variant="outline"

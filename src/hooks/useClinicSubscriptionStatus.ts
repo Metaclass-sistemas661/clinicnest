@@ -42,7 +42,7 @@ export function useClinicSubscriptionStatus() {
         .from("tenants")
         .select("name")
         .eq("id", link.tenant_id)
-        .single();
+        .maybeSingle();
 
       if (tenant?.name) {
         setClinicName(tenant.name);
