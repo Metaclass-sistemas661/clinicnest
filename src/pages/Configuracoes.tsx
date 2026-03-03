@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Smartphone,
   Bot,
+  CalendarPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -44,6 +45,8 @@ export default function Configuracoes() {
   });
 
   const [tenantGamificationEnabled, setTenantGamificationEnabled] = useState(true);
+  const [patientBookingEnabled, setPatientBookingEnabled] = useState(true);
+  const [isSavingBooking, setIsSavingBooking] = useState(false);
 
   useEffect(() => {
     if (tenant) {
@@ -55,6 +58,7 @@ export default function Configuracoes() {
         billingCpfCnpj: tenant.billing_cpf_cnpj || "",
       });
       setTenantGamificationEnabled(tenant.gamification_enabled ?? true);
+      setPatientBookingEnabled(tenant.patient_booking_enabled ?? true);
     }
   }, [tenant]);
 
@@ -140,6 +144,32 @@ export default function Configuracoes() {
       toast.error("Erro ao salvar configuração");
     } finally {
       setIsSavingGamification(false);
+    }
+  };
+
+  const handleSaveBooking = async () => {
+    if (!tenant?.id) return;
+
+    setIsSavingBooking(true);
+    try {
+      const { error } = await supabase
+        .from("tenants")
+        .update({ patient_booking_enabled: patientBookingEnabled } as any)
+        .eq("id", tenant.id);
+
+      if (error) throw error;
+
+      await writeAuditLog("patient_booking_settings_updated", "tenants", tenant.id, {
+        patient_booking_enabled: patientBookingEnabled,
+      });
+
+      toast.success("Configuração de agendamento do portal salva");
+      refreshProfile();
+    } catch (err) {
+      logger.error("Error saving patient booking setting:", err);
+      toast.error("Erro ao salvar configuração");
+    } finally {
+      setIsSavingBooking(false);
     }
   };
 
@@ -341,6 +371,59 @@ export default function Configuracoes() {
                   onCheckedChange={(checked) => setSimpleModeEnabled(checked)}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Portal do Paciente — Agendamento */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600">
+                  <CalendarPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Portal do Paciente</CardTitle>
+                  <CardDescription>
+                    Configure o agendamento online feito pelos próprios pacientes
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg border border-border/70 px-4 py-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="patient-booking" className="cursor-pointer font-medium">
+                    Permitir agendamento pelo portal
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Pacientes vinculados podem agendar consultas diretamente pelo portal
+                  </p>
+                </div>
+                <Switch
+                  id="patient-booking"
+                  checked={patientBookingEnabled}
+                  onCheckedChange={setPatientBookingEnabled}
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveBooking}
+                disabled={isSavingBooking}
+                variant="outline"
+                className="w-full"
+              >
+                {isSavingBooking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar configuração
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
 

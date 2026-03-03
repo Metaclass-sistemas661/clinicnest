@@ -72,6 +72,10 @@ export interface Tenant {
   asaas_api_key?: string | null;
   asaas_environment?: string | null;
   gamification_enabled?: boolean;
+  patient_booking_enabled?: boolean;
+  patient_booking_min_hours_advance?: number;
+  patient_booking_max_days_advance?: number;
+  patient_booking_max_pending_per_patient?: number;
   created_at: string;
   updated_at: string;
 }
