@@ -54,16 +54,19 @@ CREATE INDEX IF NOT EXISTS idx_patient_notif_prefs_tenant
 
 ALTER TABLE public.patient_notification_preferences ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Tenant members can view patient prefs" ON public.patient_notification_preferences;
 CREATE POLICY "Tenant members can view patient prefs"
   ON public.patient_notification_preferences FOR SELECT
   TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Tenant members can upsert patient prefs" ON public.patient_notification_preferences;
 CREATE POLICY "Tenant members can upsert patient prefs"
   ON public.patient_notification_preferences FOR INSERT
   TO authenticated
   WITH CHECK (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Tenant members can update patient prefs" ON public.patient_notification_preferences;
 CREATE POLICY "Tenant members can update patient prefs"
   ON public.patient_notification_preferences FOR UPDATE
   TO authenticated
@@ -92,11 +95,13 @@ CREATE INDEX IF NOT EXISTS idx_notification_logs_status
 
 ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Tenant members can view notification logs" ON public.notification_logs;
 CREATE POLICY "Tenant members can view notification logs"
   ON public.notification_logs FOR SELECT
   TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Service role can insert notification logs" ON public.notification_logs;
 CREATE POLICY "Service role can insert notification logs"
   ON public.notification_logs FOR INSERT
   TO authenticated
@@ -104,6 +109,7 @@ CREATE POLICY "Service role can insert notification logs"
 
 -- Permitir service_role inserir sem RLS
 ALTER TABLE public.notification_logs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Service role bypass notification logs" ON public.notification_logs;
 CREATE POLICY "Service role bypass notification logs"
   ON public.notification_logs FOR ALL
   TO service_role
@@ -133,11 +139,13 @@ CREATE INDEX IF NOT EXISTS idx_chatbot_conv_updated
 
 ALTER TABLE public.chatbot_conversations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Tenant members can view chatbot conversations" ON public.chatbot_conversations;
 CREATE POLICY "Tenant members can view chatbot conversations"
   ON public.chatbot_conversations FOR SELECT
   TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Service role bypass chatbot conversations" ON public.chatbot_conversations;
 CREATE POLICY "Service role bypass chatbot conversations"
   ON public.chatbot_conversations FOR ALL
   TO service_role
@@ -163,11 +171,13 @@ CREATE INDEX IF NOT EXISTS idx_chatbot_msg_tenant
 
 ALTER TABLE public.chatbot_messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Tenant members can view chatbot messages" ON public.chatbot_messages;
 CREATE POLICY "Tenant members can view chatbot messages"
   ON public.chatbot_messages FOR SELECT
   TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Service role bypass chatbot messages" ON public.chatbot_messages;
 CREATE POLICY "Service role bypass chatbot messages"
   ON public.chatbot_messages FOR ALL
   TO service_role
@@ -193,12 +203,14 @@ CREATE TABLE IF NOT EXISTS public.chatbot_settings (
 
 ALTER TABLE public.chatbot_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Tenant admins manage chatbot settings" ON public.chatbot_settings;
 CREATE POLICY "Tenant admins manage chatbot settings"
   ON public.chatbot_settings FOR ALL
   TO authenticated
   USING (tenant_id = public.get_user_tenant_id(auth.uid()))
   WITH CHECK (tenant_id = public.get_user_tenant_id(auth.uid()));
 
+DROP POLICY IF EXISTS "Service role bypass chatbot settings" ON public.chatbot_settings;
 CREATE POLICY "Service role bypass chatbot settings"
   ON public.chatbot_settings FOR ALL
   TO service_role

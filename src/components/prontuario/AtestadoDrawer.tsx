@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Cid10Combobox } from "@/components/ui/cid10-combobox";
 import type { DocumentContext } from "./QuickDocumentActions";
 
 interface AtestadoDrawerProps {
@@ -223,10 +224,10 @@ export function AtestadoDrawer({
               {incluirCid && (
                 <div className="space-y-2">
                   <Label>Código CID-10</Label>
-                  <Input
-                    placeholder="Ex: J06.9"
+                  <Cid10Combobox
                     value={cid10}
-                    onChange={(e) => setCid10(e.target.value)}
+                    onChange={(code) => setCid10(code)}
+                    placeholder="Buscar CID-10 (código ou descrição)..."
                   />
                 </div>
               )}

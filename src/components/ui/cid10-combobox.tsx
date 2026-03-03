@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Search, X } from "lucide-react";
-import { CID10_DATA, type Cid10Entry } from "@/data/cid10";
+import { CID10_DATA, type Cid10Entry } from "@/data/cid10-index";
 import { cn } from "@/lib/utils";
 
 interface Props {
