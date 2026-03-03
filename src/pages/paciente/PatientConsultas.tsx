@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Calendar,
+  CalendarPlus,
   Clock,
   Stethoscope,
   Building2,
@@ -27,6 +28,7 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
@@ -82,6 +84,7 @@ function canModify(appt: PatientAppointment): { allowed: boolean; reason?: strin
 }
 
 export default function PatientConsultas() {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"upcoming" | "past" | "all">("upcoming");
@@ -275,10 +278,16 @@ export default function PatientConsultas() {
       title="Minhas Consultas"
       subtitle="Histórico e próximos agendamentos"
       actions={
-        <Button variant="outline" size="sm" onClick={() => void fetchAppointments()} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => navigate("/paciente/agendar")}>
+            <CalendarPlus className="h-4 w-4 mr-2" />
+            Agendar
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void fetchAppointments()} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       }
     >
       <PatientBannerCarousel slides={consultasBanners} />
@@ -314,8 +323,14 @@ export default function PatientConsultas() {
           title="Nenhuma consulta encontrada"
           description={
             filter === "upcoming"
-              ? "Você não tem consultas agendadas. Quando sua clínica vincular seu cadastro, suas consultas aparecerão aqui."
+              ? "Você não tem consultas agendadas."
               : "Nenhuma consulta encontrada para o filtro selecionado."
+          }
+          action={
+            <Button onClick={() => navigate("/paciente/agendar")}>
+              <CalendarPlus className="h-4 w-4 mr-2" />
+              Agendar Nova Consulta
+            </Button>
           }
         />
       ) : (
