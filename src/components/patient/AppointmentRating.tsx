@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface PendingRating {
@@ -74,12 +74,17 @@ function RatingDialog({ appointment, onClose, onSubmit }: RatingDialogProps) {
           <DialogTitle>Como foi seu atendimento?</DialogTitle>
           <DialogDescription>
             {appointment.service_name} com {appointment.professional_name}
-            <br />
-            <span className="text-xs">
-              {format(new Date(appointment.completed_at), "dd 'de' MMMM", {
-                locale: ptBR,
-              })}
-            </span>
+            {(() => {
+              const d = appointment.completed_at ? parseISO(appointment.completed_at) : null;
+              return d && isValid(d) ? (
+                <>
+                  <br />
+                  <span className="text-xs">
+                    {format(d, "dd 'de' MMMM", { locale: ptBR })}
+                  </span>
+                </>
+              ) : null;
+            })()}
           </DialogDescription>
         </DialogHeader>
 
