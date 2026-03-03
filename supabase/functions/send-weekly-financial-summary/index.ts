@@ -162,24 +162,24 @@ serve(async (req) => {
         <head>
           <meta charset="utf-8">
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
-            .header h1 { margin: 0; font-size: 24px; }
-            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #334155; max-width: 600px; margin: 0 auto; padding: 20px; background: #f0fdfa; }
+            .header { background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%); color: white; padding: 32px; border-radius: 16px 16px 0 0; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+            .content { background: #ffffff; padding: 32px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 24px rgba(13,148,136,.08); }
             .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
-            .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            .stat-value { font-size: 24px; font-weight: bold; color: #667eea; }
-            .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
-            .highlight { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+            .stat-card { background: #f0fdfa; padding: 20px; border-radius: 10px; text-align: center; }
+            .stat-value { font-size: 24px; font-weight: bold; color: #0d9488; }
+            .stat-label { font-size: 12px; color: #64748b; margin-top: 5px; }
+            .highlight { background: #f0fdfa; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #0d9488; }
             .pending { color: #f59e0b; }
             .paid { color: #10b981; }
-            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+            .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>Resumo Financeiro Semanal</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">${summary.tenant_name}</p>
+            <span style="opacity:0.85;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;">${summary.tenant_name}</span>
+            <h1 style="margin-top:8px;">Resumo Financeiro Semanal</h1>
           </div>
           <div class="content">
             <p>Olá, <strong>${summary.professional_name}</strong>!</p>
@@ -215,7 +215,7 @@ serve(async (req) => {
           </div>
           <div class="footer">
             <p>Este é um email automático. Para desativar, acesse suas preferências de notificação.</p>
-            <p>${summary.tenant_name} - Powered by ClinicNest</p>
+            <p>&copy; ${new Date().getFullYear()} ${summary.tenant_name} &middot; Enviado via <span style="color:#0d9488;font-weight:600;">ClinicNest</span></p>
           </div>
         </body>
         </html>
@@ -223,6 +223,7 @@ serve(async (req) => {
 
       if (resendApiKey) {
         try {
+          const senderDomain = Deno.env.get("CLINIC_EMAIL_DOMAIN") || "metaclass.com.br";
           const response = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: {
@@ -230,7 +231,7 @@ serve(async (req) => {
               Authorization: `Bearer ${resendApiKey}`,
             },
             body: JSON.stringify({
-              from: "ClinicNest <noreply@ClinicNest.com.br>",
+              from: `${summary.tenant_name} <notificacoes@${senderDomain}>`,
               to: summary.email,
               subject: `Resumo Financeiro Semanal - ${summary.tenant_name}`,
               html: emailHtml,

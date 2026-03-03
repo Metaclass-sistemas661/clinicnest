@@ -2,6 +2,12 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
+import {
+  sendClinicEmail,
+  greeting,
+  paragraph,
+  type ClinicInfo,
+} from "../_shared/clinicEmail.ts";
 
 const log = createLogger("NOTIFY-PATIENT-MESSAGE");
 
@@ -13,76 +19,7 @@ interface MessageNotificationPayload {
   conversation_id: string;
 }
 
-interface MessageDetails {
-  id: string;
-  content: string;
-  created_at: string;
-  sender_type: "clinic" | "patient";
-  conversation: {
-    id: string;
-    patient_id: string;
-    tenant_id: string;
-    subject?: string;
-  };
-  patient: {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    user_id?: string;
-  };
-  tenant: {
-    id: string;
-    name: string;
-    phone?: string;
-  };
-  sender?: {
-    full_name: string;
-  };
-}
-
-async function sendEmailViaResend(
-  to: string,
-  subject: string,
-  html: string,
-  text: string
-): Promise<boolean> {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendApiKey) {
-    log("EMAIL: RESEND_API_KEY não configurada");
-    return false;
-  }
-
-  try {
-    const emailFrom = Deno.env.get("EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>";
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: emailFrom,
-        to,
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      log("EMAIL: Erro ao enviar", { status: response.status, error: errorText });
-      return false;
-    }
-
-    log("EMAIL: Enviado com sucesso", { to });
-    return true;
-  } catch (error) {
-    log("EMAIL: Exceção", { error: error instanceof Error ? error.message : String(error) });
-    return false;
-  }
-}
+// ─── Push Notification ─────────────────────────────────────────────────────────
 
 async function sendPushNotification(
   supabaseAdmin: ReturnType<typeof createClient>,
@@ -150,104 +87,13 @@ function formatDateTime(isoString: string): string {
   });
 }
 
-function getEmailTemplate(details: MessageDetails): { subject: string; html: string; text: string } {
-  const patientName = details.patient.name.split(" ")[0];
-  const clinicName = details.tenant.name;
-  const senderName = details.sender?.full_name || clinicName;
-  const messagePreview = truncateMessage(details.content, 200);
-  const messageTime = formatDateTime(details.created_at);
-  const siteUrl = Deno.env.get("SITE_URL") || "https://clinicnest.metaclass.com.br";
-  const messagesUrl = `${siteUrl}/paciente/mensagens`;
-
-  const subject = `💬 Nova mensagem de ${clinicName}`;
-
-  const html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-          <tr>
-            <td style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); padding: 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Nova Mensagem</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 40px 30px;">
-              <p style="margin: 0 0 20px; color: #374151; font-size: 16px;">Olá, <strong>${patientName}</strong>!</p>
-              
-              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Você recebeu uma nova mensagem de <strong>${clinicName}</strong>.
-              </p>
-              
-              <div style="background-color: #f9fafb; border-radius: 8px; padding: 24px; margin: 24px 0; border-left: 4px solid #7c3aed;">
-                <div style="margin-bottom: 12px;">
-                  <span style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">De: ${senderName}</span>
-                  <span style="color: #9ca3af; font-size: 12px; float: right;">${messageTime}</span>
-                </div>
-                ${details.conversation.subject ? `
-                <div style="margin-bottom: 12px;">
-                  <span style="color: #374151; font-size: 14px; font-weight: 600;">Assunto: ${details.conversation.subject}</span>
-                </div>
-                ` : ""}
-                <div style="color: #1f2937; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${messagePreview}</div>
-              </div>
-
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 20px 0;">
-                    <a href="${messagesUrl}" style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
-                      Ver Mensagem Completa
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin: 24px 0 0; color: #6b7280; font-size: 14px; text-align: center;">
-                Acesse o portal do paciente para responder.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} ${clinicName}. Enviado via ClinicNest.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  const text = `
-Nova Mensagem de ${clinicName}
-
-Olá, ${patientName}!
-
-Você recebeu uma nova mensagem de ${clinicName}.
-
-De: ${senderName}
-Data: ${messageTime}
-${details.conversation.subject ? `Assunto: ${details.conversation.subject}` : ""}
-
-Mensagem:
-${messagePreview}
-
-Acesse para ver a mensagem completa e responder: ${messagesUrl}
-
-© ${new Date().getFullYear()} ${clinicName}
-`.trim();
-
-  return { subject, html, text };
+function escHtml(s: string): string {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 serve(async (req) => {
@@ -332,7 +178,7 @@ serve(async (req) => {
         .single(),
       supabaseAdmin
         .from("tenants")
-        .select("id, name, phone")
+        .select("id, name, email, phone")
         .eq("id", conversation.tenant_id)
         .single(),
       message.sender_id
@@ -352,37 +198,67 @@ serve(async (req) => {
       );
     }
 
-    const details: MessageDetails = {
-      id: message.id,
-      content: message.content,
-      created_at: message.created_at,
-      sender_type: message.sender_type,
-      conversation: {
-        id: conversation.id,
-        patient_id: conversation.patient_id,
-        tenant_id: conversation.tenant_id,
-        subject: conversation.subject,
-      },
-      patient: patientResult.data,
-      tenant: tenantResult.data ?? { id: conversation.tenant_id, name: "Clínica" },
-      sender: senderResult.data ?? undefined,
-    };
+    const patient = patientResult.data;
+    const tenant = tenantResult.data ?? { id: conversation.tenant_id, name: "Clínica", email: null, phone: null };
+    const patientName = (patient.name ?? "").split(" ")[0] || "Paciente";
+    const clinicName = tenant.name ?? "Sua Clínica";
+    const senderName = senderResult.data?.full_name || clinicName;
+    const messagePreview = truncateMessage(message.content, 200);
+    const messageTime = formatDateTime(message.created_at);
+    const siteUrl = Deno.env.get("SITE_URL") || "https://clinicnest.metaclass.com.br";
+    const messagesUrl = `${siteUrl}/paciente/mensagens`;
+    const clinic: ClinicInfo = { name: clinicName, email: tenant.email, phone: tenant.phone };
 
-    const emailTemplate = getEmailTemplate(details);
+    // Build message card HTML
+    const messageCardHtml = `
+    <div style="background-color: #f0fdfa; border-radius: 10px; padding: 20px 24px; margin: 20px 0; border-left: 4px solid #0d9488;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom: 10px;">
+            <span style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">De: ${escHtml(senderName)}</span>
+            <span style="color: #94a3b8; font-size: 12px; float: right;">${escHtml(messageTime)}</span>
+          </td>
+        </tr>
+        ${conversation.subject ? `
+        <tr>
+          <td style="padding-bottom: 10px;">
+            <span style="color: #1e293b; font-size: 14px; font-weight: 600;">Assunto: ${escHtml(conversation.subject)}</span>
+          </td>
+        </tr>` : ""}
+        <tr>
+          <td>
+            <div style="color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">${escHtml(messagePreview)}</div>
+          </td>
+        </tr>
+      </table>
+    </div>`;
 
-    const [emailSent, pushSent] = await Promise.all([
-      sendEmailViaResend(
-        details.patient.email,
-        emailTemplate.subject,
-        emailTemplate.html,
-        emailTemplate.text
-      ),
-      details.patient.user_id
+    const bodyHtml =
+      greeting(patientName) +
+      paragraph(`Você recebeu uma nova mensagem de <strong>${escHtml(clinicName)}</strong>.`) +
+      messageCardHtml +
+      paragraph(`<span style="color:#64748b;font-size:13px;">Acesse o portal do paciente para responder.</span>`);
+
+    const bodyText = `Olá, ${patientName}! Você recebeu uma nova mensagem de ${clinicName}.\n\nDe: ${senderName}\nData: ${messageTime}\n${conversation.subject ? `Assunto: ${conversation.subject}\n` : ""}\nMensagem:\n${messagePreview}\n\nAcesse para ver: ${messagesUrl}`;
+
+    const [emailResult, pushSent] = await Promise.all([
+      sendClinicEmail({
+        to: patient.email,
+        subject: `💬 Nova mensagem de ${clinicName}`,
+        clinic,
+        headline: "Nova Mensagem",
+        icon: "💬",
+        bodyHtml,
+        bodyText,
+        ctaLabel: "Ver Mensagem Completa",
+        ctaUrl: messagesUrl,
+      }),
+      patient.user_id
         ? sendPushNotification(
             supabaseAdmin,
-            details.patient.user_id,
-            `💬 ${details.tenant.name}`,
-            truncateMessage(details.content, 80),
+            patient.user_id,
+            `💬 ${clinicName}`,
+            truncateMessage(message.content, 80),
             {
               type: "message",
               conversation_id,
@@ -398,16 +274,16 @@ serve(async (req) => {
       recipient_id: conversation.patient_id,
       channel: "email",
       template_type: "patient_message",
-      status: emailSent ? "sent" : "failed",
+      status: emailResult.ok ? "sent" : "failed",
       metadata: { message_id, conversation_id },
     });
 
-    log("Notificação processada", { emailSent, pushSent });
+    log("Notificação processada", { emailSent: emailResult.ok, pushSent });
 
     return new Response(
       JSON.stringify({
         success: true,
-        email_sent: emailSent,
+        email_sent: emailResult.ok,
         push_sent: pushSent,
       }),
       { status: 200, headers: { ...cors, "Content-Type": "application/json" } }

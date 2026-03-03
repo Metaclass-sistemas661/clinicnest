@@ -37,6 +37,7 @@ type AutomationRule = {
 type TenantSettings = {
   id: string;
   name: string | null;
+  email: string | null;
   whatsapp_api_url: string | null;
   whatsapp_api_key: string | null;
   whatsapp_instance: string | null;
@@ -158,18 +159,19 @@ function buildEmailHtml(message: string, clinicName: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
   const lines = escaped.split("\n").map((l) => `<p style="margin:0 0 10px 0">${l}</p>`).join("");
+  const year = new Date().getFullYear();
   return `<!DOCTYPE html>
 <html lang="pt-BR">
-<body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:24px">
-  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)">
-    <div style="background:linear-gradient(135deg,#7c3aed,#ec4899);padding:24px 32px">
-      <h1 style="color:#fff;margin:0;font-size:20px">${clinicName || "Sua Clínica"}</h1>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f0fdfa;margin:0;padding:24px">
+  <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(13,148,136,.08),0 1px 4px rgba(0,0,0,.04)">
+    <div style="background:linear-gradient(135deg,#0d9488 0%,#0891b2 100%);padding:28px 32px">
+      <span style="color:rgba(255,255,255,0.85);font-size:13px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase">${clinicName || "Sua Clínica"}</span>
     </div>
-    <div style="padding:24px 32px;color:#333;font-size:14px;line-height:1.6">
+    <div style="padding:28px 32px;color:#334155;font-size:15px;line-height:1.7">
       ${lines}
     </div>
-    <div style="padding:16px 32px;background:#f9f9f9;font-size:12px;color:#999;text-align:center">
-      Você está recebendo este e-mail porque tem agendamentos conosco.
+    <div style="padding:20px 32px;background:#f8fafc;font-size:12px;color:#94a3b8;text-align:center;border-top:1px solid #e2e8f0">
+      &copy; ${year} ${clinicName || "Sua Clínica"} &middot; Enviado via <span style="color:#0d9488;font-weight:600">ClinicNest</span>
     </div>
   </div>
 </body>
@@ -182,19 +184,27 @@ async function sendEmail(
   toName: string,
   subject: string,
   html: string,
+  clinicName?: string,
+  clinicEmail?: string | null,
 ): Promise<{ ok: boolean; details?: string }> {
   if (!resendKey) return { ok: false, details: "missing_resend_key" };
   if (!toEmail) return { ok: false, details: "missing_email" };
   try {
+    const senderDomain = Deno.env.get("CLINIC_EMAIL_DOMAIN") || "metaclass.com.br";
+    const fromField = clinicName
+      ? `${clinicName} <notificacoes@${senderDomain}>`
+      : `ClinicNest <notificacoes@${senderDomain}>`;
+    const payload: Record<string, unknown> = {
+      from: fromField,
+      to: [toName ? `${toName} <${toEmail}>` : toEmail],
+      subject,
+      html,
+    };
+    if (clinicEmail) payload.reply_to = clinicEmail;
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-      body: JSON.stringify({
-        from: "ClinicNest <no-reply@metaclass.com.br>",
-        to: [toName ? `${toName} <${toEmail}>` : toEmail],
-        subject,
-        html,
-      }),
+      body: JSON.stringify(payload),
     });
     const text = await res.text();
     return res.ok ? { ok: true } : { ok: false, details: text.slice(0, 500) };
@@ -336,7 +346,7 @@ async function dispatch(
     const clinicName = tenant.name ?? "";
     const subject = clinicName ? `Mensagem de ${clinicName}` : "Mensagem da sua clínica";
     const html = buildEmailHtml(message, clinicName);
-    result = await sendEmail(resendKey, email, clientName, subject, html);
+    result = await sendEmail(resendKey, email, clientName, subject, html, clinicName, tenant.email);
   }
 
   const status = result.ok ? "sent" : "failed";
@@ -387,7 +397,7 @@ async function processAppointmentTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -524,7 +534,7 @@ async function processBirthdayTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -611,7 +621,7 @@ async function processReturnReminderTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -749,7 +759,7 @@ async function processInactiveTrigger(
   for (const [tenantId, tenantRules] of byTenant) {
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", tenantId)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -900,7 +910,7 @@ async function processQueuedNotifications(
     // Get tenant settings
     const { data: tenant } = (await supabase
       .from("tenants")
-      .select("id, name, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+      .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
       .eq("id", notif.tenant_id)
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 

@@ -55,29 +55,42 @@ function normalizeSiteUrl(raw: string | undefined | null): string {
   return `https://${s}`.replace(/\/+$/, "");
 }
 
-async function sendEmailViaResend(to: string, subject: string, html: string, text: string): Promise<boolean> {
+async function sendEmailViaResend(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  clinicName?: string,
+  clinicEmail?: string | null,
+): Promise<boolean> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) {
     log("EMAIL: RESEND_API_KEY não configurada. E-mail não enviado.");
     return false;
   }
 
-  const emailFrom = Deno.env.get("EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>";
+  const senderDomain = Deno.env.get("CLINIC_EMAIL_DOMAIN") || "metaclass.com.br";
+  const emailFrom = clinicName
+    ? `${clinicName} <notificacoes@${senderDomain}>`
+    : `ClinicNest <notificacoes@${senderDomain}>`;
 
   try {
+    const payload: Record<string, unknown> = {
+      from: emailFrom,
+      to,
+      subject,
+      html,
+      text,
+    };
+    if (clinicEmail) payload.reply_to = clinicEmail;
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${resendApiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: emailFrom,
-        to,
-        subject,
-        html,
-        text,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -115,35 +128,36 @@ function getBookingConfirmationEmailHtml(input: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Confirmação de agendamento</title>
 </head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f5f5;">
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#f0fdfa;">
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(13,148,136,0.10);">
           <tr>
-            <td style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:28px;color:#fff;text-align:center;">
-              <div style="font-size:22px;font-weight:800;">${escapeHtml(input.tenantName)}</div>
-              <div style="opacity:.92;margin-top:6px;">Agendamento online</div>
+            <td style="background:linear-gradient(135deg,#0d9488 0%,#0891b2 100%);padding:32px 28px;color:#fff;text-align:center;">
+              <div style="font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.85;margin-bottom:6px;">${escapeHtml(input.tenantName)}</div>
+              <div style="font-size:24px;font-weight:800;">Agendamento Confirmado</div>
+              <div style="opacity:.88;margin-top:6px;font-size:14px;">Seu horário foi reservado com sucesso</div>
             </td>
           </tr>
           <tr>
-            <td style="padding:24px 22px;">
-              <h2 style="margin:0 0 12px;color:#111827;font-size:20px;">Agendamento confirmado</h2>
-              <p style="margin:0 0 14px;color:#374151;line-height:1.6;">Olá, ${escapeHtml(input.clientName)}. Seu agendamento foi registrado com sucesso.</p>
-              <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;">
-                <div style="color:#6b7280;font-size:13px;margin-bottom:8px;">Detalhes</div>
-                <div style="color:#111827;font-size:14px;font-weight:700;margin-bottom:6px;">${escapeHtml(input.serviceName)}</div>
-                <div style="color:#374151;font-size:14px;margin-bottom:6px;">Profissional: <strong>${escapeHtml(input.professionalName)}</strong></div>
-                <div style="color:#374151;font-size:14px;">Horário: <strong>${escapeHtml(input.scheduledAtLocal)}</strong></div>
+            <td style="padding:28px 24px;">
+              <p style="margin:0 0 18px;color:#374151;line-height:1.6;font-size:15px;">Olá, <strong>${escapeHtml(input.clientName)}</strong>! Seu agendamento foi registrado com sucesso.</p>
+              <div style="border-left:4px solid #0d9488;border-radius:10px;padding:16px 18px;background:#f0fdfa;margin-bottom:20px;">
+                <div style="color:#0f766e;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Detalhes do agendamento</div>
+                <div style="color:#111827;font-size:15px;font-weight:700;margin-bottom:8px;">${escapeHtml(input.serviceName)}</div>
+                <div style="color:#374151;font-size:14px;margin-bottom:6px;">👨‍⚕️ Profissional: <strong>${escapeHtml(input.professionalName)}</strong></div>
+                <div style="color:#374151;font-size:14px;">📅 Horário: <strong>${escapeHtml(input.scheduledAtLocal)}</strong></div>
               </div>
-              ${input.confirmUrl ? `<p style="margin:14px 0 0;"><a href="${input.confirmUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;">Confirmar presença</a></p>` : ""}
+              ${input.confirmUrl ? `<p style="margin:0 0 14px;text-align:center;"><a href="${input.confirmUrl}" style="display:inline-block;background:linear-gradient(135deg,#0d9488,#0891b2);color:#fff;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;box-shadow:0 2px 8px rgba(13,148,136,0.25);">✓ Confirmar presença</a></p>` : ""}
               <p style="margin:14px 0 0;color:#6b7280;font-size:13px;line-height:1.6;">Se precisar cancelar, utilize o link abaixo (sujeito à política de antecedência da clínica):</p>
-              <p style="margin:10px 0 0;"><a href="${input.cancelUrl}" style="color:#7c3aed;font-weight:700;">Cancelar agendamento</a></p>
+              <p style="margin:10px 0 0;"><a href="${input.cancelUrl}" style="color:#0d9488;font-weight:700;">Cancelar agendamento</a></p>
             </td>
           </tr>
           <tr>
-            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:14px 18px;text-align:center;color:#6b7280;font-size:12px;">
-              Mensagem automática. Não responda este e-mail.
+            <td style="background:#f0fdfa;border-top:1px solid #ccfbf1;padding:16px 18px;text-align:center;">
+              <div style="color:#6b7280;font-size:12px;">${escapeHtml(input.tenantName)} · Enviado via ClinicNest</div>
+              <div style="color:#9ca3af;font-size:11px;margin-top:4px;">Mensagem automática. Não responda este e-mail.</div>
             </td>
           </tr>
         </table>
@@ -543,7 +557,9 @@ serve(async (req) => {
           clientName,
         });
 
-        await sendEmailViaResend(clientEmail, "Confirmação de agendamento", html, text);
+        const clinicName = String((tenant as any).name ?? "ClinicNest");
+        const clinicEmail = (tenant as any).email ?? null;
+        await sendEmailViaResend(clientEmail, "Confirmação de agendamento", html, text, clinicName, clinicEmail);
       }
 
       return new Response(JSON.stringify({ success: true, appointment_id: appointmentId, token }), {

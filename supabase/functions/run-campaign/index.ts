@@ -4,6 +4,11 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getAuthenticatedUserWithTenant } from "../_shared/auth.ts";
+import {
+  sendClinicEmail,
+  buildClinicEmailHtml,
+  type ClinicInfo,
+} from "../_shared/clinicEmail.ts";
 
 const log = createLogger("RUN-CAMPAIGN");
 
@@ -73,57 +78,25 @@ function renderHtmlWithHeader(params: {
   const looksLikeFullDoc = /<html[\s>]/i.test(raw) || /<body[\s>]/i.test(raw);
   if (looksLikeFullDoc) return raw;
 
-  return `
-  <div style="margin:0;padding:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-    ${preheaderHtml}
-    <div style="max-width:640px;margin:0 auto;padding:24px;">
-      <div style="background:linear-gradient(135deg,#7c3aed 0%,#db2777 100%);padding:18px 20px;color:#fff;border-radius:16px;">
-        <div style="font-size:18px;font-weight:800;">ClinicNest</div>
-        <div style="opacity:.92;margin-top:6px;">${escapeHtml(params.subject)}</div>
-      </div>
-      <div style="padding:18px 6px 0 6px;">
-        ${bannerHtml}
-        ${raw}
-      </div>
-    </div>
-  </div>
-  `.trim();
+  return `${preheaderHtml}${bannerHtml}${raw}`;
 }
 
-async function sendEmailViaResend(to: string, subject: string, html: string, text: string): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendApiKey) {
-    return { ok: false, error: "RESEND_API_KEY não configurada" };
-  }
-
-  const emailFrom = Deno.env.get("EMAIL_FROM") || "ClinicNest <no-reply@metaclass.com.br>";
-
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: emailFrom,
-        to,
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return { ok: false, error: `Resend error: ${response.status} ${errText}` };
-    }
-
-    const result = await response.json();
-    return { ok: true, id: result.id };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+async function sendCampaignEmail(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+  text: string,
+  clinic: ClinicInfo,
+): Promise<{ ok: boolean; id?: string; error?: string }> {
+  return sendClinicEmail({
+    to,
+    subject,
+    clinic,
+    headline: subject,
+    icon: "📢",
+    bodyHtml,
+    bodyText: text,
+  });
 }
 
 serve(async (req) => {
@@ -230,6 +203,19 @@ serve(async (req) => {
     });
   }
 
+  // Fetch tenant info for clinic branding + Reply-To
+  const { data: tenantData } = await supabaseAdmin
+    .from("tenants")
+    .select("name, email, phone")
+    .eq("id", auth.tenantId)
+    .single();
+
+  const clinic: ClinicInfo = {
+    name: tenantData?.name || "Clínica",
+    email: tenantData?.email || null,
+    phone: tenantData?.phone || null,
+  };
+
   const safeSubject = String(campaign.subject || "");
   const html = renderHtmlWithHeader({
     name: String(campaign.name || ""),
@@ -242,7 +228,7 @@ serve(async (req) => {
   // Test send: does not create deliveries, does not change campaign status.
   if (testEmail) {
     const text = `Campanha (teste): ${campaign.name}\n\n${safeSubject}`;
-    const res = await sendEmailViaResend(testEmail, safeSubject, html, text);
+    const res = await sendCampaignEmail(testEmail, safeSubject, html, text, clinic);
     if (!res.ok) {
       return new Response(JSON.stringify({ error: res.error || "Falha ao enviar teste" }), {
         status: 500,
@@ -362,7 +348,7 @@ serve(async (req) => {
     const deliveryId = String((upsertRes.data as { id?: unknown } | null)?.id || "");
 
     const text = `Campanha: ${campaign.name}\n\n${safeSubject}`;
-    const res = await sendEmailViaResend(toEmail, safeSubject, html, text);
+    const res = await sendCampaignEmail(toEmail, safeSubject, html, text, clinic);
 
     if (res.ok) {
       sent++;
