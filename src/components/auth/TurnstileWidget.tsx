@@ -103,7 +103,7 @@ export default function TurnstileWidget({
       theme,
       size,
       language: "pt-br",
-      appearance: "interaction-only",
+      appearance: "always",
     });
   }, [onVerify, onExpire, onError, theme, size]);
 
