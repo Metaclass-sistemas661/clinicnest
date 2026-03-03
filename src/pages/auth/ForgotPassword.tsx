@@ -7,23 +7,26 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
+import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const { resetPassword } = useAuth();
+  const { token: captchaToken, onVerify, onExpire, onError, reset: resetCaptcha } = useTurnstile();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await resetPassword(email);
+    const { error } = await resetPassword(email, captchaToken ?? undefined);
 
     if (error) {
       toast.error("Erro ao enviar email de recuperação", {
         description: error.message,
       });
+      resetCaptcha();
       setIsLoading(false);
       return;
     }
@@ -81,6 +84,13 @@ export default function ForgotPassword() {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col gap-5 pt-2">
+                <TurnstileWidget
+                  onVerify={onVerify}
+                  onExpire={onExpire}
+                  onError={onError}
+                  theme="light"
+                  className="flex justify-center"
+                />
                 <Button
                   type="submit"
                   className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"

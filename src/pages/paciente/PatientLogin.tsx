@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
 
 type Step = "identify" | "login" | "create_password" | "success";
 
@@ -51,6 +52,7 @@ export default function PatientLogin() {
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const navigate = useNavigate();
+  const { token: captchaToken, onVerify, onExpire, onError, reset: resetCaptcha } = useTurnstile();
 
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
@@ -118,10 +120,12 @@ export default function PatientLogin() {
       const { data, error } = await supabasePatient.auth.signInWithPassword({
         email: patientInfo.client_email,
         password,
+        options: captchaToken ? { captchaToken } : undefined,
       });
 
       if (error) {
         toast.error("Erro ao fazer login", { description: normalizeAuthError(error.message) });
+        resetCaptcha();
         return;
       }
 
@@ -377,6 +381,14 @@ export default function PatientLogin() {
               </div>
             </div>
 
+            <TurnstileWidget
+              onVerify={onVerify}
+              onExpire={onExpire}
+              onError={onError}
+              theme="light"
+              className="flex justify-center"
+            />
+
             <Button
               type="submit"
               className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
@@ -490,6 +502,14 @@ export default function PatientLogin() {
                 className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>
+
+            <TurnstileWidget
+              onVerify={onVerify}
+              onExpire={onExpire}
+              onError={onError}
+              theme="light"
+              className="flex justify-center"
+            />
 
             <Button
               type="submit"

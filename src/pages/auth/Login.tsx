@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
 import {
   Eye,
   EyeOff,
@@ -25,6 +26,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { token: captchaToken, onVerify, onExpire, onError, reset: resetCaptcha } = useTurnstile();
 
   const prefetchMainRoutes = () => {
     void import("@/pages/Dashboard");
@@ -52,9 +54,10 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, captchaToken ?? undefined);
     if (error) {
       toast.error("Erro ao fazer login", { description: normalizeAuthError(error.message) });
+      resetCaptcha();
       setIsLoading(false);
       return;
     }
@@ -227,6 +230,14 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            <TurnstileWidget
+              onVerify={onVerify}
+              onExpire={onExpire}
+              onError={onError}
+              theme="light"
+              className="flex justify-center"
+            />
 
             <Button
               type="submit"

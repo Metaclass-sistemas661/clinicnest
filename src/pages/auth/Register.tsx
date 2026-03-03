@@ -27,6 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
 import type { ProfessionalType } from "@/types/database";
 import { COUNCIL_BY_TYPE, PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { BRAZILIAN_STATES } from "@/utils/brazilianStates";
@@ -76,6 +77,7 @@ export default function Register() {
 
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const { token: captchaToken, onVerify, onExpire, onError, reset: resetCaptcha } = useTurnstile();
 
   const phoneDigits = phone.replace(/\D/g, "");
   const isPhoneValid = phoneDigits.length >= 10;
@@ -200,10 +202,12 @@ export default function Register() {
         council_type: councilType || undefined,
         council_number: needsCouncil ? councilNumber.trim() : undefined,
         council_state: needsCouncil ? councilState : undefined,
-      }
+      },
+      captchaToken ?? undefined,
     );
     if (error) {
       toast.error("Erro ao criar conta", { description: error.message });
+      resetCaptcha();
       setIsLoading(false);
       return;
     }
@@ -662,6 +666,14 @@ export default function Register() {
                         </span>
                       </label>
                     </div>
+
+                    <TurnstileWidget
+                      onVerify={onVerify}
+                      onExpire={onExpire}
+                      onError={onError}
+                      theme="light"
+                      className="flex justify-center"
+                    />
 
                     <div className="grid grid-cols-2 gap-3">
                       <Button

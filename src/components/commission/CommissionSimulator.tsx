@@ -94,7 +94,7 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
   useEffect(() => {
     if (selectedProcedureId) {
       const procedure = procedures.find((s) => s.id === selectedProcedureId);
-      if (service) {
+      if (procedure) {
         setProcedureValue(String(procedure.price));
       }
     }

@@ -16,7 +16,7 @@ interface AuthContextType {
   isLoading: boolean;
   professionalType: ProfessionalType;
   permissions: PermissionsMap;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signUp: (
     email: string,
     password: string,
@@ -29,9 +29,10 @@ interface AuthContextType {
       council_type?: string;
       council_number?: string;
       council_state?: string;
-    }
+    },
+    captchaToken?: string,
   ) => Promise<{ error: Error | null }>;
-  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -204,10 +205,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: captchaToken ? { captchaToken } : undefined,
     });
     return { error };
   };
@@ -224,7 +226,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       council_type?: string;
       council_number?: string;
       council_state?: string;
-    }
+    },
+    captchaToken?: string,
   ) => {
     // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
     // tenant, profile, user_roles (admin) e subscription - garantindo admin sempre
@@ -233,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
+        captchaToken,
         data: {
           full_name: fullName,
           clinic_name: clinicName,
@@ -263,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string, captchaToken?: string) => {
     const redirectTo = siteOrigin ? `${siteOrigin}/reset-password` : undefined;
     try {
       // Chamar Edge Function para enviar email customizado
@@ -281,6 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fallback para método padrão do Supabase se Edge Function falhar
         const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
+          captchaToken,
         });
         return { error: fallbackError || error };
       }
@@ -289,6 +294,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fallback para método padrão
         const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
+          captchaToken,
         });
         return { error: fallbackError || new Error(data?.message || "Erro ao enviar email") };
       }
@@ -298,6 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Fallback para método padrão em caso de erro
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
+        captchaToken,
       });
       return { error: error || (err instanceof Error ? err : new Error("Erro ao solicitar recuperação de senha")) };
     }
