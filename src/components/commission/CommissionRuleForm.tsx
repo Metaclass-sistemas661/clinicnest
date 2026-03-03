@@ -65,13 +65,13 @@ const ruleTypeOptions = [
   { value: "service", label: "Por Serviço", description: "Comissão diferenciada por serviço" },
   { value: "procedure", label: "Por Procedimento TUSS", description: "Comissão por código TUSS" },
   { value: "referral", label: "Por Captação/Indicação", description: "Comissão para quem agendou ou indicou o paciente" },
-];
+] as const;
 
 const calculationTypeOptions = [
   { value: "percentage", label: "Percentual (%)", description: "Porcentagem do valor do serviço" },
   { value: "fixed", label: "Valor Fixo (R$)", description: "Valor fixo por atendimento" },
   { value: "tiered", label: "Escalonado", description: "Percentual varia conforme faturamento" },
-];
+] as const;
 
 const priorityByType: Record<string, number> = {
   default: 0,
@@ -285,14 +285,16 @@ export function CommissionRuleForm({
             <Label>Tipo de Regra</Label>
             <Select value={ruleType} onValueChange={setRuleType}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Selecione o tipo">
+                  {ruleTypeOptions.find((o) => o.value === ruleType)?.label}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {ruleTypeOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    <div>
-                      <span className="font-medium">{opt.label}</span>
-                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    <div className="flex flex-col items-start py-0.5">
+                      <span className="font-medium leading-tight">{opt.label}</span>
+                      <span className="text-xs text-muted-foreground leading-tight">{opt.description}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -358,14 +360,16 @@ export function CommissionRuleForm({
             <Label>Tipo de Cálculo</Label>
             <Select value={calculationType} onValueChange={setCalculationType}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Selecione o cálculo">
+                  {calculationTypeOptions.find((o) => o.value === calculationType)?.label}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {calculationTypeOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    <div>
-                      <span className="font-medium">{opt.label}</span>
-                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    <div className="flex flex-col items-start py-0.5">
+                      <span className="font-medium leading-tight">{opt.label}</span>
+                      <span className="text-xs text-muted-foreground leading-tight">{opt.description}</span>
                     </div>
                   </SelectItem>
                 ))}
