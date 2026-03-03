@@ -3,6 +3,7 @@ import { logger } from "./logger";
 
 export type NotificationType =
   | "appointment_created"
+  | "appointment_confirmed"
   | "appointment_completed"
   | "appointment_cancelled"
   | "goal_approved"
@@ -12,8 +13,9 @@ export type NotificationType =
   | "commission_paid"
   | "salary_paid";
 
-const PREF_MAP: Record<NotificationType, keyof { goal_approved: boolean; goal_rejected: boolean; appointment_created: boolean; appointment_completed: boolean; appointment_cancelled: boolean; goal_reminder: boolean; goal_reached: boolean; commission_paid: boolean; salary_paid: boolean }> = {
+const PREF_MAP: Record<NotificationType, keyof { goal_approved: boolean; goal_rejected: boolean; appointment_created: boolean; appointment_confirmed: boolean; appointment_completed: boolean; appointment_cancelled: boolean; goal_reminder: boolean; goal_reached: boolean; commission_paid: boolean; salary_paid: boolean }> = {
   appointment_created: "appointment_created",
+  appointment_confirmed: "appointment_confirmed",
   appointment_completed: "appointment_completed",
   appointment_cancelled: "appointment_cancelled",
   goal_approved: "goal_approved",

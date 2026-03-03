@@ -447,6 +447,31 @@ export default function Agenda() {
       };
 
       toast.success(statusMessages[status]);
+
+      // Notificar paciente e profissional quando agendamento é confirmado
+      if (status === "confirmed" && apt && profile?.tenant_id) {
+        // Notificar profissional (in-app)
+        const prof = professionals.find((p) => p.id === apt.professional_id);
+        const patient = apt.patient as { name?: string } | undefined;
+        if (prof?.user_id) {
+          notifyUser(
+            profile.tenant_id,
+            prof.user_id,
+            "appointment_confirmed",
+            "Agendamento confirmado",
+            `O agendamento com ${patient?.name || "paciente"} foi confirmado.`,
+            {}
+          ).catch(() => {});
+        }
+        // Notificar paciente via email + push (Edge Function)
+        supabase.functions.invoke("notify-patient-appointment", {
+          body: {
+            appointment_id: id,
+            notification_type: "confirmed",
+          },
+        }).catch(() => {});
+      }
+
       fetchData();
     } catch (error: any) {
       logger.error("Exception updating appointment status:", error);

@@ -9,6 +9,7 @@ const log = createLogger("AUTOMATION-WORKER");
 
 type TriggerType =
   | "appointment_created"
+  | "appointment_confirmed"
   | "appointment_reminder_24h"
   | "appointment_reminder_2h"
   | "appointment_completed"
@@ -50,8 +51,8 @@ type SelectResult<T> = { data: T; error: unknown };
 
 type AppointmentRow = {
   id: string;
-  client_id: string | null;
-  service_id: string | null;
+  patient_id: string | null;
+  procedure_id: string | null;
   professional_id: string | null;
   scheduled_at: string | null;
   status: string;
@@ -65,8 +66,8 @@ type ProfileRow = { id: string; full_name: string | null };
 type NpsRow = { appointment_id: string; token: string | null };
 
 type BirthdayClientRow = ClientRow & { birth_date: string | null };
-type ApptRecentRow = { client_id: string };
-type ApptWindowRow = { client_id: string; scheduled_at: string | null };
+type ApptRecentRow = { patient_id: string };
+type ApptWindowRow = { patient_id: string; scheduled_at: string | null };
 
 type DispatchResult = { sent: number; skipped: number; failed: number };
 
@@ -410,7 +411,7 @@ async function processAppointmentTrigger(
     const now = new Date();
     let apptQuery = supabase
       .from("appointments")
-      .select("id, client_id, service_id, professional_id, scheduled_at, status, created_at, updated_at")
+      .select("id, patient_id, procedure_id, professional_id, scheduled_at, status, created_at, updated_at")
       .eq("tenant_id", tenantId)
       .neq("status", "cancelled")
       .limit(300);
@@ -418,6 +419,9 @@ async function processAppointmentTrigger(
     if (triggerType === "appointment_created") {
       const since = new Date(now.getTime() - sinceMinutes * 60_000).toISOString();
       apptQuery = apptQuery.gte("created_at", since);
+    } else if (triggerType === "appointment_confirmed") {
+      const since = new Date(now.getTime() - sinceMinutes * 60_000).toISOString();
+      apptQuery = apptQuery.eq("status", "confirmed").gte("updated_at", since);
     } else if (triggerType === "appointment_reminder_24h") {
       // Window: appointments scheduled 24h±15min from now
       const lo = new Date(now.getTime() + (24 * 60 - 15) * 60_000).toISOString();
@@ -441,15 +445,15 @@ async function processAppointmentTrigger(
     if (!appts?.length) continue;
 
     // Batch-fetch related data
-    const clientIds = [...new Set(appts.map((a) => a.client_id).filter((v): v is string => Boolean(v)))];
-    const serviceIds = [...new Set(appts.map((a) => a.service_id).filter((v): v is string => Boolean(v)))];
+    const patientIds = [...new Set(appts.map((a) => a.patient_id).filter((v): v is string => Boolean(v)))];
+    const procedureIds = [...new Set(appts.map((a) => a.procedure_id).filter((v): v is string => Boolean(v)))];
     const profIds = [...new Set(appts.map((a) => a.professional_id).filter((v): v is string => Boolean(v)))];
     const apptIds = appts.map((a) => a.id);
 
-    const [clientsRes, servicesRes, profsRes, npsRes] = await Promise.all([
-      (supabase.from("clients").select("id, name, phone, email").in("id", clientIds)) as unknown as SelectResult<ClientRow[] | null>,
-      serviceIds.length
-        ? ((supabase.from("services").select("id, name").in("id", serviceIds)) as unknown as SelectResult<ServiceRow[] | null>)
+    const [patientsRes, proceduresRes, profsRes, npsRes] = await Promise.all([
+      (supabase.from("patients").select("id, name, phone, email").in("id", patientIds)) as unknown as SelectResult<ClientRow[] | null>,
+      procedureIds.length
+        ? ((supabase.from("procedures").select("id, name").in("id", procedureIds)) as unknown as SelectResult<ServiceRow[] | null>)
         : Promise.resolve({ data: [] as ServiceRow[] }),
       profIds.length
         ? ((supabase.from("profiles").select("id, full_name").in("id", profIds)) as unknown as SelectResult<ProfileRow[] | null>)
@@ -459,11 +463,11 @@ async function processAppointmentTrigger(
         : Promise.resolve({ data: [] as NpsRow[] }),
     ]);
 
-    const clientMap = new Map<string, { id: string; name: string | null; phone: string | null; email: string | null }>(
-      (clientsRes.data ?? []).map((c) => [String(c.id), c]),
+    const patientMap = new Map<string, { id: string; name: string | null; phone: string | null; email: string | null }>(
+      (patientsRes.data ?? []).map((c) => [String(c.id), c]),
     );
-    const serviceMap = new Map<string, string>(
-      (servicesRes.data ?? []).map((s) => [String(s.id), String(s.name ?? "")]),
+    const procedureMap = new Map<string, string>(
+      (proceduresRes.data ?? []).map((s) => [String(s.id), String(s.name ?? "")]),
     );
     const profMap = new Map<string, string>(
       (profsRes.data ?? []).map((p) => [String(p.id), String(p.full_name ?? "")]),
@@ -473,17 +477,17 @@ async function processAppointmentTrigger(
     );
 
     for (const appt of appts) {
-      const client = appt.client_id ? clientMap.get(appt.client_id) : undefined;
+      const client = appt.patient_id ? patientMap.get(appt.patient_id) : undefined;
       if (!client) { totals.skipped++; continue; }
 
-      const serviceName = appt.service_id ? (serviceMap.get(appt.service_id) ?? "") : "";
+      const serviceName = appt.procedure_id ? (procedureMap.get(appt.procedure_id) ?? "") : "";
       const profName = appt.professional_id ? (profMap.get(appt.professional_id) ?? "") : "";
       const npsToken = npsMap.get(appt.id);
       const npsLink = npsToken && publicUrl ? `${publicUrl}/nps/${npsToken}` : "";
 
       const vars: Record<string, string> = {
-        client_name: client.name ?? "",
-        service_name: serviceName,
+        patient_name: client.name ?? "",
+        procedure_name: serviceName,
         date: formatDateBR(appt.scheduled_at ?? ""),
         time: formatTimeBR(appt.scheduled_at ?? ""),
         professional_name: profName,
@@ -539,9 +543,9 @@ async function processBirthdayTrigger(
       .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
     if (!tenant) { totals.skipped += tenantRules.length; continue; }
 
-    // Fetch all clients with a birth_date for this tenant
+    // Fetch all patients with a birth_date for this tenant
     const { data: clients, error } = (await supabase
-      .from("clients")
+      .from("patients")
       .select("id, name, phone, email, birth_date")
       .eq("tenant_id", tenantId)
       .not("birth_date", "is", null)) as unknown as SelectResult<BirthdayClientRow[] | null>;
@@ -563,8 +567,8 @@ async function processBirthdayTrigger(
 
     for (const client of todayClients) {
       const vars: Record<string, string> = {
-        client_name: client.name ?? "",
-        service_name: "",
+        patient_name: client.name ?? "",
+        procedure_name: "",
         date: "",
         time: "",
         professional_name: "",
@@ -594,7 +598,7 @@ async function processBirthdayTrigger(
 
 type ReturnReminderRow = {
   id: string;
-  client_id: string;
+  patient_id: string;
   professional_id: string | null;
   return_date: string;
   reason: string | null;
@@ -642,7 +646,7 @@ async function processReturnReminderTrigger(
       // Get return reminders that need notification
       const { data: returns, error: returnErr } = (await supabase
         .from("return_reminders")
-        .select("id, client_id, professional_id, return_date, reason, status, tenant_id")
+        .select("id, patient_id, professional_id, return_date, reason, status, tenant_id")
         .eq("tenant_id", tenantId)
         .eq("status", "pending")
         .eq("return_date", targetDateStr)
@@ -656,11 +660,11 @@ async function processReturnReminderTrigger(
       if (!returns?.length) continue;
 
       // Batch-fetch client and professional data
-      const clientIds = [...new Set(returns.map((r) => r.client_id))];
+      const clientIds = [...new Set(returns.map((r) => r.patient_id))];
       const profIds = [...new Set(returns.map((r) => r.professional_id).filter((v): v is string => Boolean(v)))];
 
       const [clientsRes, profsRes] = await Promise.all([
-        (supabase.from("clients").select("id, name, phone, email").in("id", clientIds)) as unknown as SelectResult<ClientRow[] | null>,
+        (supabase.from("patients").select("id, name, phone, email").in("id", clientIds)) as unknown as SelectResult<ClientRow[] | null>,
         profIds.length
           ? ((supabase.from("profiles").select("id, full_name").in("id", profIds)) as unknown as SelectResult<ProfileRow[] | null>)
           : Promise.resolve({ data: [] as ProfileRow[] }),
@@ -674,7 +678,7 @@ async function processReturnReminderTrigger(
       );
 
       for (const returnItem of returns) {
-        const client = clientMap.get(returnItem.client_id);
+        const client = clientMap.get(returnItem.patient_id);
         if (!client) {
           totals.skipped++;
           continue;
@@ -698,8 +702,8 @@ async function processReturnReminderTrigger(
         }
 
         const vars: Record<string, string> = {
-          client_name: client.name ?? "",
-          service_name: "",
+          patient_name: client.name ?? "",
+          procedure_name: "",
           date: formatDateBR(returnItem.return_date),
           time: "",
           professional_name: profName,
@@ -777,7 +781,7 @@ async function processInactiveTrigger(
       // Get the most recent appointment per client (non-cancelled) within the lower/upper range
       const { data: apptRows, error: apptErr } = (await supabase
         .from("appointments")
-        .select("client_id, scheduled_at")
+        .select("patient_id, scheduled_at")
         .eq("tenant_id", tenantId)
         .neq("status", "cancelled")
         .gte("scheduled_at", lowerBound)
@@ -795,9 +799,9 @@ async function processInactiveTrigger(
       const seen = new Set<string>();
       const candidateClientIds: string[] = [];
       for (const row of (apptRows ?? [])) {
-        if (!seen.has(row.client_id)) {
-          seen.add(row.client_id);
-          candidateClientIds.push(row.client_id);
+        if (!seen.has(row.patient_id)) {
+          seen.add(row.patient_id);
+          candidateClientIds.push(row.patient_id);
         }
       }
 
@@ -805,26 +809,26 @@ async function processInactiveTrigger(
       if (candidateClientIds.length) {
         const { data: recentRows } = (await supabase
           .from("appointments")
-          .select("client_id")
+          .select("patient_id")
           .eq("tenant_id", tenantId)
           .neq("status", "cancelled")
-          .in("client_id", candidateClientIds)
+          .in("patient_id", candidateClientIds)
           .gt("scheduled_at", upperBound)) as unknown as SelectResult<ApptRecentRow[] | null>;
 
-        const recentSet = new Set((recentRows ?? []).map((r) => r.client_id));
+        const recentSet = new Set((recentRows ?? []).map((r) => r.patient_id));
         const trueInactiveIds = candidateClientIds.filter((id) => !recentSet.has(id));
 
         if (!trueInactiveIds.length) continue;
 
         const { data: clients } = (await supabase
-          .from("clients")
+          .from("patients")
           .select("id, name, phone, email")
           .in("id", trueInactiveIds)) as unknown as SelectResult<ClientRow[] | null>;
 
         for (const client of (clients ?? [])) {
           const vars: Record<string, string> = {
-            client_name: client.name ?? "",
-            service_name: "",
+            patient_name: client.name ?? "",
+            procedure_name: "",
             date: "",
             time: "",
             professional_name: "",
@@ -919,9 +923,9 @@ async function processQueuedNotifications(
       continue;
     }
 
-    // Get client data
+    // Get patient data
     const { data: client } = (await supabase
-      .from("clients")
+      .from("patients")
       .select("id, name, phone, email")
       .eq("id", notif.recipient_id)
       .maybeSingle()) as unknown as SelectResult<ClientRow | null>;
@@ -929,7 +933,7 @@ async function processQueuedNotifications(
     if (!client) {
       await supabase
         .from("notification_logs")
-        .update({ status: "skipped", error_details: "client_not_found" })
+        .update({ status: "skipped", error_details: "patient_not_found" })
         .eq("id", notif.id);
       totals.skipped++;
       continue;
@@ -937,9 +941,9 @@ async function processQueuedNotifications(
 
     // Build vars based on trigger type
     const vars: Record<string, string> = {
-      client_name: client.name ?? "",
+      patient_name: client.name ?? "",
       clinic_name: tenant.name ?? "",
-      service_name: "",
+      procedure_name: "",
       date: "",
       time: "",
       professional_name: "",
@@ -1041,8 +1045,9 @@ serve(async (req: Request) => {
     log("Worker started", { total_rules: rules.length, since_minutes: sinceMinutes });
 
     // Process all trigger types in parallel
-    const [created, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled] = await Promise.allSettled([
+    const [created, confirmed, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled] = await Promise.allSettled([
       processAppointmentTrigger(supabase, byType("appointment_created"), "appointment_created", sinceMinutes, publicUrl, resendKey),
+      processAppointmentTrigger(supabase, byType("appointment_confirmed"), "appointment_confirmed", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_24h"), "appointment_reminder_24h", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_2h"), "appointment_reminder_2h", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_completed"), "appointment_completed", sinceMinutes, publicUrl, resendKey),
@@ -1056,7 +1061,7 @@ serve(async (req: Request) => {
     const extract = (r: PromiseSettledResult<DispatchResult>): DispatchResult =>
       r.status === "fulfilled" ? r.value : { sent: 0, skipped: 0, failed: 0 };
 
-    const totals = [created, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled].reduce(
+    const totals = [created, confirmed, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled].reduce(
       (acc, r) => {
         const v = extract(r);
         return { sent: acc.sent + v.sent, skipped: acc.skipped + v.skipped, failed: acc.failed + v.failed };

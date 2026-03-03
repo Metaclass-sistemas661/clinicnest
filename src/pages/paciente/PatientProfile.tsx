@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   User,
   Phone,
   Mail,
@@ -19,6 +26,7 @@ import {
   Loader2,
   Save,
   ShieldCheck,
+  Heart,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,6 +58,11 @@ const MARITAL_OPTIONS = [
   { value: "divorciado", label: "Divorciado(a)" },
   { value: "viuvo", label: "Viúvo(a)" },
   { value: "uniao_estavel", label: "União Estável" },
+];
+
+const BRAZILIAN_STATES = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
+  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ];
 
 function InfoRow({
@@ -101,6 +114,12 @@ function formatCpf(value: string) {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+function formatZipCode(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
 export default function PatientProfile() {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,15 +144,36 @@ export default function PatientProfile() {
       } = await supabasePatient.auth.getUser();
       if (!user) return;
 
-      const { data: links } = await supabasePatient
-        .from("patient_profiles")
-        .select("client_id, tenant_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .limit(1)
-        .single();
+      // Usa RPC SECURITY DEFINER — sem depender de RLS direta na tabela patients
+      const { data, error } = await (supabasePatient as any).rpc("get_patient_profile");
 
-      if (!links) {
+      if (error) {
+        console.error("[PatientProfile] RPC get_patient_profile error:", error);
+        throw error;
+      }
+
+      // RPC retorna jsonb com os dados ou { error: "..." }
+      if (data && !data.error) {
+        setPatient({
+          id: data.id,
+          name: data.name || user.user_metadata?.full_name || "Paciente",
+          email: data.email ?? user.email ?? null,
+          phone: data.phone ?? null,
+          cpf: data.cpf ?? null,
+          date_of_birth: data.date_of_birth ?? null,
+          marital_status: data.marital_status ?? null,
+          zip_code: data.zip_code ?? null,
+          street: data.street ?? null,
+          street_number: data.street_number ?? null,
+          complement: data.complement ?? null,
+          neighborhood: data.neighborhood ?? null,
+          city: data.city ?? null,
+          state: data.state ?? null,
+          allergies: data.allergies ?? null,
+        });
+      } else {
+        // Sem link ativo — fallback para dados do auth
+        console.warn("[PatientProfile] No patient link found, using auth metadata");
         setPatient({
           id: user.id,
           name: user.user_metadata?.full_name ?? "Paciente",
@@ -151,19 +191,6 @@ export default function PatientProfile() {
           state: null,
           allergies: null,
         });
-        return;
-      }
-
-      const { data: client } = await supabasePatient
-        .from("patients")
-        .select(
-          "id, name, email, phone, cpf, date_of_birth, marital_status, zip_code, street, street_number, complement, neighborhood, city, state, allergies"
-        )
-        .eq("id", links.client_id)
-        .single();
-
-      if (client) {
-        setPatient(client as PatientData);
       }
     } catch {
       toast.error("Erro ao carregar perfil");
@@ -198,37 +225,42 @@ export default function PatientProfile() {
     if (!patient) return;
     setIsSaving(true);
     try {
-      const { error } = await supabasePatient
-        .from("patients")
-        .update({
-          phone: editPhone.replace(/\D/g, "") || null,
-          email: editEmail.trim() || null,
-          zip_code: editZipCode.replace(/\D/g, "") || null,
-          street: editStreet.trim() || null,
-          street_number: editStreetNumber.trim() || null,
-          complement: editComplement.trim() || null,
-          neighborhood: editNeighborhood.trim() || null,
-          city: editCity.trim() || null,
-          state: editState.trim() || null,
-        })
-        .eq("id", patient.id);
+      const { data, error } = await (supabasePatient as any).rpc("update_patient_contact", {
+        p_phone: editPhone.replace(/\D/g, "") || null,
+        p_email: editEmail.trim() || null,
+        p_zip_code: editZipCode.replace(/\D/g, "") || null,
+        p_street: editStreet.trim() || null,
+        p_street_number: editStreetNumber.trim() || null,
+        p_complement: editComplement.trim() || null,
+        p_neighborhood: editNeighborhood.trim() || null,
+        p_city: editCity.trim() || null,
+        p_state: editState.trim().toUpperCase() || null,
+      });
 
       if (error) throw error;
+      if (data && !data.success) throw new Error(data.error || "UPDATE_FAILED");
 
-      toast.success("Dados atualizados com sucesso");
+      toast.success("Dados atualizados com sucesso!");
       setIsEditing(false);
       fetchProfile();
-    } catch {
-      toast.error("Erro ao salvar. A clínica pode precisar autorizar essa alteração.");
+    } catch (err) {
+      console.error("[PatientProfile] Save error:", err);
+      toast.error("Erro ao salvar. Tente novamente ou entre em contato com a clínica.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const formattedBirth = patient?.date_of_birth
-    ? format(parseISO(patient.date_of_birth), "dd 'de' MMMM 'de' yyyy", {
-        locale: ptBR,
-      })
+    ? (() => {
+        try {
+          return format(parseISO(patient.date_of_birth), "dd 'de' MMMM 'de' yyyy", {
+            locale: ptBR,
+          });
+        } catch {
+          return patient.date_of_birth;
+        }
+      })()
     : null;
 
   const formattedAddress = patient
@@ -241,10 +273,7 @@ export default function PatientProfile() {
           ? `${patient.city} - ${patient.state}`
           : patient.city || patient.state,
         patient.zip_code
-          ? `CEP ${patient.zip_code.replace(
-              /^(\d{5})(\d{3})$/,
-              "$1-$2"
-            )}`
+          ? `CEP ${patient.zip_code.replace(/^(\d{5})(\d{3})$/, "$1-$2")}`
           : null,
       ]
         .filter(Boolean)
@@ -257,7 +286,7 @@ export default function PatientProfile() {
 
   return (
     <PatientLayout title="Meu Perfil" subtitle="Seus dados pessoais e informações clínicas">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         {/* Avatar + name header */}
         <Card>
           <CardContent className="py-6 px-5">
@@ -288,28 +317,31 @@ export default function PatientProfile() {
                     </Badge>
                   </div>
                 </div>
+                {!isEditing && !isLoading && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs flex-shrink-0"
+                    onClick={startEditing}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar contato
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Dados pessoais */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Dados Pessoais</CardTitle>
-              {!isEditing && !isLoading && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={startEditing}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Editar contato
-                </Button>
-              )}
-              {isEditing && (
+        {/* Edit form — full width */}
+        {isEditing && (
+          <Card className="border-teal-200 dark:border-teal-800">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-teal-600" />
+                  Editar Dados de Contato
+                </CardTitle>
                 <div className="flex gap-2">
                   <Button
                     variant="ghost"
@@ -332,124 +364,160 @@ export default function PatientProfile() {
                     ) : (
                       <Save className="h-3.5 w-3.5" />
                     )}
-                    Salvar
+                    Salvar alterações
                   </Button>
                 </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full" />
-                ))}
               </div>
-            ) : isEditing ? (
-              <div className="space-y-4">
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Contato */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                  Contato
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Telefone</Label>
+                    <Label className="text-xs font-medium">Telefone</Label>
                     <Input
                       value={formatPhone(editPhone)}
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="(11) 99999-9999"
+                      className="h-10"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">E-mail</Label>
+                    <Label className="text-xs font-medium">E-mail</Label>
                     <Input
                       type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
                       placeholder="seu@email.com"
+                      className="h-10"
                     />
                   </div>
                 </div>
-                <div className="border-t pt-4">
-                  <p className="text-xs font-semibold text-muted-foreground mb-3">
-                    Endereço
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">CEP</Label>
-                      <Input
-                        value={editZipCode}
-                        onChange={(e) => setEditZipCode(e.target.value)}
-                        placeholder="00000-000"
-                        maxLength={9}
-                      />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">Rua</Label>
-                      <Input
-                        value={editStreet}
-                        onChange={(e) => setEditStreet(e.target.value)}
-                        placeholder="Nome da rua"
-                      />
-                    </div>
+              </div>
+
+              {/* Endereço */}
+              <div className="border-t pt-5">
+                <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+                  Endereço
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">CEP</Label>
+                    <Input
+                      value={formatZipCode(editZipCode)}
+                      onChange={(e) => setEditZipCode(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      className="h-10"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Número</Label>
-                      <Input
-                        value={editStreetNumber}
-                        onChange={(e) => setEditStreetNumber(e.target.value)}
-                        placeholder="123"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Complemento</Label>
-                      <Input
-                        value={editComplement}
-                        onChange={(e) => setEditComplement(e.target.value)}
-                        placeholder="Apto 12"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Bairro</Label>
-                      <Input
-                        value={editNeighborhood}
-                        onChange={(e) => setEditNeighborhood(e.target.value)}
-                        placeholder="Bairro"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Cidade</Label>
-                      <Input
-                        value={editCity}
-                        onChange={(e) => setEditCity(e.target.value)}
-                        placeholder="Cidade"
-                      />
-                    </div>
+                  <div className="space-y-1.5 sm:col-span-1 lg:col-span-3">
+                    <Label className="text-xs font-medium">Rua / Logradouro</Label>
+                    <Input
+                      value={editStreet}
+                      onChange={(e) => setEditStreet(e.target.value)}
+                      placeholder="Nome da rua"
+                      className="h-10"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Estado</Label>
-                      <Input
-                        value={editState}
-                        onChange={(e) => setEditState(e.target.value)}
-                        placeholder="SP"
-                        maxLength={2}
-                      />
-                    </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Número</Label>
+                    <Input
+                      value={editStreetNumber}
+                      onChange={(e) => setEditStreetNumber(e.target.value)}
+                      placeholder="123"
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Complemento</Label>
+                    <Input
+                      value={editComplement}
+                      onChange={(e) => setEditComplement(e.target.value)}
+                      placeholder="Apto 12"
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Bairro</Label>
+                    <Input
+                      value={editNeighborhood}
+                      onChange={(e) => setEditNeighborhood(e.target.value)}
+                      placeholder="Bairro"
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Cidade</Label>
+                    <Input
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                      placeholder="Cidade"
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Estado</Label>
+                    <Select value={editState.toUpperCase()} onValueChange={setEditState}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BRAZILIAN_STATES.map((uf) => (
+                          <SelectItem key={uf} value={uf}>
+                            {uf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div>
-                <InfoRow icon={IdCard} label="CPF" value={patient?.cpf ? formatCpf(patient.cpf) : null} />
-                <InfoRow icon={Phone} label="Telefone" value={patient?.phone ? formatPhone(patient.phone) : null} />
-                <InfoRow icon={Mail} label="E-mail" value={patient?.email} />
-                <InfoRow icon={Calendar} label="Data de Nascimento" value={formattedBirth} />
-                <InfoRow icon={User} label="Estado Civil" value={maritalLabel} />
-                <InfoRow icon={MapPin} label="Endereço" value={formattedAddress} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Informacoes clinicas */}
+              {/* Info note */}
+              <p className="text-xs text-muted-foreground border-t pt-4">
+                Você pode alterar telefone, e-mail e endereço. CPF, data de nascimento e dados
+                clínicos só podem ser alterados pela equipe da clínica.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Dados pessoais — read only view */}
+        {!isEditing && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Dados Pessoais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <InfoRow icon={IdCard} label="CPF" value={patient?.cpf ? formatCpf(patient.cpf) : null} />
+                  <InfoRow icon={Phone} label="Telefone" value={patient?.phone ? formatPhone(patient.phone) : null} />
+                  <InfoRow icon={Mail} label="E-mail" value={patient?.email} />
+                  <InfoRow icon={Calendar} label="Data de Nascimento" value={formattedBirth} />
+                  <InfoRow icon={Heart} label="Estado Civil" value={maritalLabel} />
+                  <InfoRow icon={MapPin} label="Endereço" value={formattedAddress} />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Informações clínicas */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Informações Clínicas</CardTitle>

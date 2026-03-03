@@ -10,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 
 interface AppointmentNotificationPayload {
   appointment_id: string;
-  notification_type: "created" | "updated" | "cancelled" | "reminder";
+  notification_type: "created" | "confirmed" | "updated" | "cancelled" | "reminder";
 }
 
 interface AppointmentDetails {
@@ -160,6 +160,12 @@ function getEmailTemplate(
       message: `Sua consulta foi agendada para <strong>${date}</strong> às <strong>${time}</strong>.`,
       color: "#10b981",
     },
+    confirmed: {
+      subject: `✅ Consulta confirmada - ${clinicName}`,
+      title: "Consulta Confirmada pela Clínica!",
+      message: `Sua consulta para <strong>${date}</strong> às <strong>${time}</strong> foi <strong>confirmada</strong> pela clínica.`,
+      color: "#059669",
+    },
     updated: {
       subject: `📝 Consulta reagendada - ${clinicName}`,
       title: "Consulta Reagendada",
@@ -296,6 +302,10 @@ function getPushMessage(
       title: "Consulta Agendada ✅",
       body: `${details.service.name} em ${date} às ${time} - ${clinicName}`,
     },
+    confirmed: {
+      title: "Consulta Confirmada ✅",
+      body: `Sua consulta em ${date} às ${time} foi confirmada! - ${clinicName}`,
+    },
     updated: {
       title: "Consulta Reagendada 📝",
       body: `Nova data: ${date} às ${time} - ${clinicName}`,
@@ -348,13 +358,13 @@ serve(async (req) => {
       .from("appointments")
       .select(`
         id,
-        start_time,
-        end_time,
+        scheduled_at,
+        duration_minutes,
         status,
         notes,
-        client_id,
+        patient_id,
         professional_id,
-        service_id,
+        procedure_id,
         tenant_id
       `)
       .eq("id", appointment_id)
@@ -368,15 +378,19 @@ serve(async (req) => {
       );
     }
 
+    // Calcular end_time a partir de scheduled_at + duration_minutes
+    const startDt = new Date(appointment.scheduled_at);
+    const endDt = new Date(startDt.getTime() + (appointment.duration_minutes || 30) * 60 * 1000);
+
     const [clientResult, professionalResult, serviceResult, tenantResult] = await Promise.all([
-      supabaseAdmin.from("clients").select("id, name, email, phone").eq("id", appointment.client_id).single(),
+      supabaseAdmin.from("patients").select("id, name, email, phone").eq("id", appointment.patient_id).single(),
       supabaseAdmin.from("profiles").select("id, full_name").eq("user_id", appointment.professional_id).single(),
-      supabaseAdmin.from("services").select("id, name, duration_minutes").eq("id", appointment.service_id).single(),
+      supabaseAdmin.from("procedures").select("id, name, duration_minutes").eq("id", appointment.procedure_id).single(),
       supabaseAdmin.from("tenants").select("id, name, phone, address").eq("id", appointment.tenant_id).single(),
     ]);
 
     if (!clientResult.data?.email) {
-      log("Cliente sem email", { client_id: appointment.client_id });
+      log("Cliente sem email", { patient_id: appointment.patient_id });
       return new Response(
         JSON.stringify({ error: "Cliente não possui email cadastrado" }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
@@ -385,8 +399,8 @@ serve(async (req) => {
 
     const details: AppointmentDetails = {
       id: appointment.id,
-      start_time: appointment.start_time,
-      end_time: appointment.end_time,
+      start_time: appointment.scheduled_at,
+      end_time: endDt.toISOString(),
       status: appointment.status,
       notes: appointment.notes,
       client: clientResult.data,
@@ -412,7 +426,7 @@ serve(async (req) => {
     await supabaseAdmin.from("notification_logs").insert({
       tenant_id: appointment.tenant_id,
       recipient_type: "patient",
-      recipient_id: appointment.client_id,
+      recipient_id: appointment.patient_id,
       channel: "email",
       template_type: `appointment_${notification_type}`,
       status: emailSent ? "sent" : "failed",
