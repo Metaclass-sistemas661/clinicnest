@@ -1361,35 +1361,24 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
 
 // ─── Tab: WhatsApp Evolution API ──────────────────────────────────────────────
 
+type WhatsAppConnectionState = "not_configured" | "connecting" | "qr_ready" | "connected" | "disconnected";
+
 function TabWhatsApp({ tenantId }: { tenantId: string }) {
+  const [connectionState, setConnectionState] = useState<WhatsAppConnectionState>("not_configured");
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
+  const [instanceName, setInstanceName] = useState("");
+  const [connectedPhone, setConnectedPhone] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActioning, setIsActioning] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [apiUrl, setApiUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [instance, setInstance] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const [testPhone, setTestPhone] = useState("");
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await (supabase as any)
-          .from("tenants")
-          .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
-          .eq("id", tenantId)
-          .maybeSingle();
-        if (data) {
-          setApiUrl(data.whatsapp_api_url ?? "");
-          setApiKey(data.whatsapp_api_key ?? "");
-          setInstance(data.whatsapp_instance ?? "");
-        }
-      } catch { /* column may not exist yet */ } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [tenantId]);
+  const [isSaving, setIsSaving] = useState(false);
+  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getAuthHeaders = async () => {
     const { data, error } = await supabase.auth.getSession();
@@ -1399,24 +1388,188 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const callProxy = async (action: string) => {
+    const headers = await getAuthHeaders();
+    const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+      headers,
+      body: { action, tenant_id: tenantId },
+    });
+    if (error) throw new Error(error.message || "Erro ao comunicar com servidor");
+    return data;
+  };
+
+  // Load initial state
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: tenant } = await (supabase as any)
+          .from("tenants")
+          .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+          .eq("id", tenantId)
+          .maybeSingle();
+
+        if (tenant) {
+          setApiUrl(tenant.whatsapp_api_url ?? "");
+          setApiKey(tenant.whatsapp_api_key ?? "");
+          setInstance(tenant.whatsapp_instance ?? "");
+        }
+
+        // Try to get status from Evolution proxy
+        try {
+          const status = await callProxy("get-status");
+          if (status?.state === "open" || status?.instance?.state === "open") {
+            setConnectionState("connected");
+            setInstanceName(status.instanceName || tenant?.whatsapp_instance || "");
+            setConnectedPhone(status?.instance?.phoneNumber || "");
+          } else if (status?.state === "connecting" || status?.instance?.state === "connecting") {
+            setConnectionState("connecting");
+            setInstanceName(status.instanceName || "");
+          } else if (tenant?.whatsapp_instance) {
+            setConnectionState("disconnected");
+            setInstanceName(tenant.whatsapp_instance);
+          } else {
+            setConnectionState("not_configured");
+          }
+        } catch {
+          // Proxy not available — use manual config check
+          if (tenant?.whatsapp_api_url && tenant?.whatsapp_api_key) {
+            setConnectionState("connected");
+            setInstanceName(tenant.whatsapp_instance || "");
+          }
+        }
+      } catch {
+        /* column may not exist yet */
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      if (qrPollRef.current) clearInterval(qrPollRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
+
+  const handleConnect = async () => {
+    setIsActioning(true);
     try {
-      const { error } = await (supabase as any)
-        .from("tenants")
-        .update({
-          whatsapp_api_url: apiUrl.trim() || null,
-          whatsapp_api_key: apiKey.trim() || null,
-          whatsapp_instance: instance.trim() || null,
-        })
-        .eq("id", tenantId);
-      if (error) throw error;
-      toast.success("Configurações do WhatsApp salvas!");
-    } catch (e) {
-      logger.error("[WhatsApp] save error", e);
-      toast.error("Erro ao salvar configurações.");
+      const result = await callProxy("create-instance");
+      setInstanceName(result.instanceName || "");
+
+      // Check if QR code is in the response
+      const qr = result?.qrcode?.base64 || result?.base64 || null;
+      if (qr) {
+        setQrCodeBase64(qr);
+        setConnectionState("qr_ready");
+        startQrPolling();
+      } else if (result?.instance?.state === "open") {
+        setConnectionState("connected");
+        toast.success("WhatsApp já conectado!");
+      } else {
+        // Try to get QR code separately
+        const qrResult = await callProxy("get-qrcode");
+        const qrBase64 = qrResult?.qrcode?.base64 || qrResult?.base64 || null;
+        if (qrBase64) {
+          setQrCodeBase64(qrBase64);
+          setConnectionState("qr_ready");
+          startQrPolling();
+        } else {
+          setConnectionState("connecting");
+          toast.info("Instância criada. Aguardando QR Code...");
+          startQrPolling();
+        }
+      }
+    } catch (err) {
+      logger.error("[WhatsApp] connect error", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao conectar WhatsApp");
     } finally {
-      setIsSaving(false);
+      setIsActioning(false);
+    }
+  };
+
+  const startQrPolling = () => {
+    if (qrPollRef.current) clearInterval(qrPollRef.current);
+    let attempts = 0;
+    qrPollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) {
+        // 2 minutes timeout
+        if (qrPollRef.current) clearInterval(qrPollRef.current);
+        setConnectionState("disconnected");
+        toast.error("Tempo esgotado. Tente novamente.");
+        return;
+      }
+      try {
+        const status = await callProxy("get-status");
+        if (status?.state === "open" || status?.instance?.state === "open") {
+          if (qrPollRef.current) clearInterval(qrPollRef.current);
+          setConnectionState("connected");
+          setConnectedPhone(status?.instance?.phoneNumber || "");
+          setQrCodeBase64(null);
+          toast.success("WhatsApp conectado com sucesso! ✅");
+
+          // Reload tenant data
+          const { data: tenant } = await (supabase as any)
+            .from("tenants")
+            .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
+            .eq("id", tenantId)
+            .maybeSingle();
+          if (tenant) {
+            setApiUrl(tenant.whatsapp_api_url ?? "");
+            setApiKey(tenant.whatsapp_api_key ?? "");
+            setInstance(tenant.whatsapp_instance ?? "");
+          }
+          return;
+        }
+
+        // Refresh QR code if still connecting
+        if (attempts % 5 === 0) {
+          const qrResult = await callProxy("get-qrcode");
+          const qr = qrResult?.qrcode?.base64 || qrResult?.base64 || null;
+          if (qr) {
+            setQrCodeBase64(qr);
+            setConnectionState("qr_ready");
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 2000);
+  };
+
+  const handleDisconnect = async () => {
+    setIsActioning(true);
+    try {
+      await callProxy("disconnect");
+      setConnectionState("disconnected");
+      setQrCodeBase64(null);
+      setConnectedPhone("");
+      if (qrPollRef.current) clearInterval(qrPollRef.current);
+      toast.success("WhatsApp desconectado.");
+    } catch (err) {
+      logger.error("[WhatsApp] disconnect error", err);
+      toast.error("Erro ao desconectar.");
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsActioning(true);
+    try {
+      await callProxy("delete-instance");
+      setConnectionState("not_configured");
+      setQrCodeBase64(null);
+      setInstanceName("");
+      setConnectedPhone("");
+      setApiUrl(""); setApiKey(""); setInstance("");
+      if (qrPollRef.current) clearInterval(qrPollRef.current);
+      toast.success("Integração WhatsApp removida.");
+    } catch (err) {
+      logger.error("[WhatsApp] delete error", err);
+      toast.error("Erro ao remover integração.");
+    } finally {
+      setIsActioning(false);
     }
   };
 
@@ -1432,7 +1585,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
         headers,
         body: {
           phone: testPhone.trim(),
-          message: "Teste de conexão WhatsApp - ClinicNest",
+          message: "✅ Teste de conexão WhatsApp — ClinicNest funcionando!",
           tenant_id: tenantId,
         },
       });
@@ -1444,7 +1597,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
         toast.error(data?.error || "Falha ao testar conexão");
         return;
       }
-      toast.success("Mensagem de teste enviada!");
+      toast.success("Mensagem de teste enviada com sucesso!");
     } catch (err) {
       logger.error("[WhatsApp] test error", err);
       toast.error("Erro ao testar WhatsApp");
@@ -1453,60 +1606,237 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleSaveManual = async () => {
     setIsSaving(true);
     try {
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from("tenants")
-        .update({ whatsapp_api_url: null, whatsapp_api_key: null, whatsapp_instance: null })
+        .update({
+          whatsapp_api_url: apiUrl.trim() || null,
+          whatsapp_api_key: apiKey.trim() || null,
+          whatsapp_instance: instance.trim() || null,
+        })
         .eq("id", tenantId);
-      setApiUrl(""); setApiKey(""); setInstance("");
-      toast.success("Integração WhatsApp removida.");
-    } catch { toast.error("Erro ao remover."); }
-    finally { setIsSaving(false); }
+      if (error) throw error;
+      setConnectionState(apiUrl && apiKey ? "connected" : "not_configured");
+      toast.success("Configurações salvas!");
+    } catch (e) {
+      logger.error("[WhatsApp] manual save error", e);
+      toast.error("Erro ao salvar.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  const isConfigured = Boolean(apiUrl && apiKey);
+  const stateConfig = {
+    not_configured: { label: "Não configurado", color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", dot: "bg-gray-400" },
+    connecting: { label: "Conectando...", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400", dot: "bg-yellow-500 animate-pulse" },
+    qr_ready: { label: "Escaneie o QR Code", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400", dot: "bg-blue-500 animate-pulse" },
+    connected: { label: "Conectado", color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400", dot: "bg-green-500" },
+    disconnected: { label: "Desconectado", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400", dot: "bg-red-500" },
+  };
+
+  const currentStateConfig = stateConfig[connectionState];
 
   return (
     <div className="space-y-6">
+      {/* Status Card */}
       <Card>
         <CardContent className="pt-6 pb-5">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-green-50 dark:bg-green-950/40">
-              <Send className="h-7 w-7 text-green-600" />
+              <Smartphone className="h-7 w-7 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-foreground">WhatsApp (Evolution API)</p>
+              <p className="font-semibold text-foreground">WhatsApp Business</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {isConfigured ? "Credenciais configuradas" : "Não configurado"}
+                {connectionState === "connected"
+                  ? `Conectado${connectedPhone ? ` — ${connectedPhone}` : ""}`
+                  : connectionState === "qr_ready"
+                  ? "Escaneie o QR Code no celular"
+                  : "Conecte seu WhatsApp para enviar notificações automáticas"}
               </p>
             </div>
-            <StatusBadge status={isConfigured ? "connected" : "not_configured"} />
+            <Badge className={cn("gap-1.5 text-xs font-medium px-2.5 py-1", currentStateConfig.color)}>
+              <span className={cn("h-2 w-2 rounded-full", currentStateConfig.dot)} />
+              {currentStateConfig.label}
+            </Badge>
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator className="my-4" />
+      {/* QR Code / Connect Card */}
+      <Card>
+        <CardContent className="pt-6 pb-5">
+          {connectionState === "not_configured" || connectionState === "disconnected" ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50 dark:bg-green-950/40">
+                <Smartphone className="h-10 w-10 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">Conectar WhatsApp</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                  Clique no botão abaixo para gerar um QR Code. Depois, escaneie com o WhatsApp do celular da clínica.
+                </p>
+              </div>
+              <Button
+                size="lg"
+                className="gap-2 bg-green-600 hover:bg-green-700"
+                onClick={handleConnect}
+                disabled={isActioning}
+              >
+                {isActioning ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Wifi className="h-5 w-5" />
+                )}
+                {connectionState === "disconnected" ? "Reconectar WhatsApp" : "Conectar WhatsApp"}
+              </Button>
+              {connectionState === "disconnected" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive gap-1.5"
+                  onClick={handleDelete}
+                  disabled={isActioning}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Remover integração
+                </Button>
+              )}
+            </div>
+          ) : connectionState === "qr_ready" || connectionState === "connecting" ? (
+            <div className="text-center py-6 space-y-4">
+              <div>
+                <h3 className="font-semibold text-lg">Escaneie o QR Code</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Abra o WhatsApp no celular → Configurações → Dispositivos conectados → Conectar dispositivo
+                </p>
+              </div>
+              {qrCodeBase64 ? (
+                <div className="inline-block p-4 bg-white rounded-2xl shadow-lg border">
+                  <img
+                    src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
+                    alt="QR Code WhatsApp"
+                    className="w-64 h-64"
+                  />
+                </div>
+              ) : (
+                <div className="inline-flex items-center justify-center w-64 h-64 bg-muted rounded-2xl">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Aguardando leitura do QR Code...</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O QR Code expira em 2 minutos. Se não funcionar, clique em "Gerar novo QR Code".
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleConnect}
+                disabled={isActioning}
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Gerar novo QR Code
+              </Button>
+            </div>
+          ) : connectionState === "connected" ? (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-green-800 dark:text-green-300">WhatsApp conectado e ativo</p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                    {connectedPhone ? `Número: ${connectedPhone}` : `Instância: ${instanceName}`}
+                    {" · "}Mensagens automáticas habilitadas
+                  </p>
+                </div>
+              </div>
 
-          <div className="space-y-4">
+              <Separator />
+
+              {/* Test connection */}
+              <div className="space-y-1.5">
+                <Label>Testar conexão</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="Ex.: 5511999999999"
+                    inputMode="numeric"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={handleTest}
+                    disabled={isTesting}
+                  >
+                    {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Testar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Envia uma mensagem de teste para o número informado.
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5"
+                  onClick={handleDisconnect}
+                  disabled={isActioning}
+                >
+                  {isActioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                  Desconectar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
+                  onClick={handleDelete}
+                  disabled={isActioning}
+                >
+                  <Trash2 className="h-4 w-4" /> Remover integração
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Advanced / Manual Config */}
+      <Card>
+        <CardHeader className="pb-3 cursor-pointer" onClick={() => setShowAdvanced(!showAdvanced)}>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Lock className="h-4 w-4" /> Configuração avançada
+            {showAdvanced ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Configure manualmente se você tem sua própria instância Evolution API
+          </CardDescription>
+        </CardHeader>
+        {showAdvanced && (
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="whatsapp-api-url">Evolution API URL <span className="text-destructive">*</span></Label>
+              <Label htmlFor="whatsapp-api-url">Evolution API URL</Label>
               <Input
                 id="whatsapp-api-url"
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="https://sua-evolution-api.exemplo"
               />
-              <p className="text-xs text-muted-foreground">
-                URL base da sua instância Evolution API.
-              </p>
             </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="whatsapp-api-key">API Key <span className="text-destructive">*</span></Label>
+              <Label htmlFor="whatsapp-api-key">API Key</Label>
               <div className="flex gap-2">
                 <Input
                   id="whatsapp-api-key"
@@ -1521,67 +1851,24 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
                 </Button>
               </div>
             </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="whatsapp-instance">Nome da Instância</Label>
               <Input
                 id="whatsapp-instance"
                 value={instance}
                 onChange={(e) => setInstance(e.target.value)}
-                placeholder="Nome/ID da instância"
+                placeholder="Nome da instância"
               />
             </div>
-
-            <Separator />
-
-            <div className="space-y-1.5">
-              <Label>Testar conexão</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="Ex.: 5511999999999"
-                  inputMode="numeric"
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleTest}
-                  disabled={isTesting || !isConfigured}
-                >
-                  {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  Testar
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Envia uma mensagem de teste para o número informado.
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 pt-2">
-              {isConfigured && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
-                  onClick={handleDisconnect}
-                  disabled={isSaving}
-                >
-                  <XCircle className="h-4 w-4" /> Remover integração
-                </Button>
-              )}
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="ml-auto gap-2"
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Salvar configurações
-              </Button>
-            </div>
-          </div>
-        </CardContent>
+            <Button onClick={handleSaveManual} disabled={isSaving} className="gap-2">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Salvar configurações
+            </Button>
+          </CardContent>
+        )}
       </Card>
 
+      {/* How it works */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -1593,7 +1880,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
             {[
               { icon: Send, title: "Mensagens automáticas", desc: "Lembretes de agendamento, confirmações e notificações enviadas automaticamente" },
               { icon: CheckCircle2, title: "Confirmação de consulta", desc: "Pacientes podem confirmar presença respondendo a mensagem" },
-              { icon: Clock, title: "Lembretes programados", desc: "Envio automático 24h e 1h antes do horário agendado" },
+              { icon: Clock, title: "Lembretes programados", desc: "Envio automático 24h e 2h antes do horário agendado" },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
@@ -1605,22 +1892,14 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
             ))}
           </div>
 
-          <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 flex gap-3">
-            <AlertCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-            <div className="text-xs text-green-700 dark:text-green-300 space-y-1">
-              <p className="font-semibold">Evolution API</p>
-              <p>Esta integração utiliza a Evolution API, uma solução open-source para automação de WhatsApp. Você precisa ter sua própria instância da Evolution API configurada e funcionando.</p>
-            </div>
+          <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 space-y-2">
+            <p className="text-xs font-semibold text-green-700 dark:text-green-300">Passo a passo</p>
+            <ol className="text-xs text-green-600 dark:text-green-400 space-y-1 list-decimal list-inside">
+              <li>Clique em <strong>Conectar WhatsApp</strong></li>
+              <li>Escaneie o QR Code com o WhatsApp do celular da clínica</li>
+              <li>Pronto! Mensagens automáticas já estão ativas.</li>
+            </ol>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-2 text-xs"
-            onClick={() => window.open("https://doc.evolution-api.com", "_blank")}
-          >
-            <ExternalLink className="h-3 w-3" /> Documentação Evolution API
-          </Button>
         </CardContent>
       </Card>
     </div>
