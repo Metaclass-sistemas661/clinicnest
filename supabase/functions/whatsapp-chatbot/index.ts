@@ -1,3 +1,21 @@
+/**
+ * WhatsApp Chatbot — Chatbot profissional para clínicas via Evolution API.
+ *
+ * Recebe webhooks da Evolution API (instância da clínica).
+ * Máquina de estados: IDLE→MENU→BOOKING_SERVICE→PROFESSIONAL→DATE→TIME→CONFIRM
+ * Armazena conversas em chatbot_conversations / chatbot_messages / chatbot_settings.
+ *
+ * Correções aplicadas:
+ *   - clients → patients (tabela renomeada)
+ *   - services → procedures (tabela renomeada)
+ *   - professional_services → professional_procedures (tabela renomeada)
+ *   - appointments: client_id → patient_id, service_id → procedure_id, start_time → scheduled_at
+ *   - Auto-criação de chatbot_settings com defaults
+ *   - Idempotência (dedup de message_id)
+ *   - Fallback de buttons/list para texto quando não suportado
+ *   - Tratamento de mensagens de mídia
+ *   - Recuperação de erros por estado
+ */
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
@@ -41,14 +59,7 @@ interface Conversation {
   last_message_at: string;
 }
 
-interface ClientRow {
-  id: string;
-  name: string;
-  phone: string | null;
-  email: string | null;
-}
-
-interface ServiceRow {
+interface ProcedureRow {
   id: string;
   name: string;
   duration_minutes: number;
@@ -58,15 +69,6 @@ interface ServiceRow {
 interface ProfessionalRow {
   id: string;
   full_name: string;
-}
-
-interface AppointmentRow {
-  id: string;
-  scheduled_at: string;
-  start_time: string;
-  status: string;
-  service_id: string;
-  professional_id: string;
 }
 
 interface IncomingWebhook {
@@ -96,6 +98,24 @@ const STATE = {
   WAITING_HUMAN: "waiting_human",
 } as const;
 
+// ─── Idempotency — prevent duplicate webhook processing ──────────────────────
+
+const recentMessageIds = new Map<string, number>();
+const DEDUP_TTL_MS = 60_000;
+
+function isDuplicateMessage(messageId: string | undefined): boolean {
+  if (!messageId) return false;
+  const now = Date.now();
+  if (recentMessageIds.size > 500) {
+    for (const [id, ts] of recentMessageIds) {
+      if (now - ts > DEDUP_TTL_MS) recentMessageIds.delete(id);
+    }
+  }
+  if (recentMessageIds.has(messageId)) return true;
+  recentMessageIds.set(messageId, now);
+  return false;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function normalizePhone(raw: string): string {
@@ -119,7 +139,7 @@ function formatTimeBR(iso: string): string {
 
 function isWithinBusinessHours(settings: ChatbotSettings): boolean {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const day = now.getDay();
   if (!settings.business_days.includes(day)) return false;
 
   const [startH, startM] = settings.business_hours_start.split(":").map(Number);
@@ -131,10 +151,12 @@ function isWithinBusinessHours(settings: ChatbotSettings): boolean {
   return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
 }
 
-function generateSlots(date: Date, durationMinutes: number): string[] {
+function generateSlots(durationMinutes: number, settings: ChatbotSettings): string[] {
   const slots: string[] = [];
-  const start = 8 * 60; // 8:00
-  const end = 18 * 60; // 18:00
+  const [startH, startM] = settings.business_hours_start.split(":").map(Number);
+  const [endH, endM] = settings.business_hours_end.split(":").map(Number);
+  const start = startH * 60 + startM;
+  const end = endH * 60 + endM;
   for (let m = start; m + durationMinutes <= end; m += 30) {
     const h = Math.floor(m / 60);
     const min = m % 60;
@@ -153,7 +175,10 @@ async function sendWhatsAppMessage(
   const apiUrl = (tenant.whatsapp_api_url ?? "").trim();
   const apiKey = (tenant.whatsapp_api_key ?? "").trim();
   const instance = (tenant.whatsapp_instance ?? "").trim();
-  if (!apiUrl || !apiKey || !instance) return false;
+  if (!apiUrl || !apiKey || !instance) {
+    log("sendMessage: missing config", { tenantId: tenant.id });
+    return false;
+  }
 
   const endpoint = `${apiUrl.replace(/\/$/, "")}/message/sendText/${encodeURIComponent(instance)}`;
   try {
@@ -162,8 +187,12 @@ async function sendWhatsAppMessage(
       headers: { "Content-Type": "application/json", apikey: apiKey },
       body: JSON.stringify({ number: phone, text: message }),
     });
+    if (!res.ok) {
+      log("sendMessage failed", { status: res.status });
+    }
     return res.ok;
-  } catch {
+  } catch (err) {
+    log("sendMessage error", { error: String(err) });
     return false;
   }
 }
@@ -196,9 +225,17 @@ async function sendWhatsAppButtons(
         })),
       }),
     });
-    return res.ok;
+    if (!res.ok) {
+      // Buttons may not be supported; fall back to text
+      const textFallback = `${title}\n${message}\n\n` +
+        buttons.map((b, i) => `*${i + 1}* - ${b.text}`).join("\n");
+      return sendWhatsAppMessage(tenant, phone, textFallback);
+    }
+    return true;
   } catch {
-    return false;
+    const textFallback = `${title}\n${message}\n\n` +
+      buttons.map((b, i) => `*${i + 1}* - ${b.text}`).join("\n");
+    return sendWhatsAppMessage(tenant, phone, textFallback);
   }
 }
 
@@ -223,17 +260,21 @@ async function sendWhatsAppList(
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: apiKey },
-      body: JSON.stringify({
-        number: phone,
-        title,
-        description,
-        buttonText,
-        sections,
-      }),
+      body: JSON.stringify({ number: phone, title, description, buttonText, sections }),
     });
-    return res.ok;
+    if (!res.ok) {
+      // Fall back to numbered text
+      const allRows = sections.flatMap((s) => s.rows);
+      const textFallback = `${title}\n${description}\n\n` +
+        allRows.map((r, i) => `*${i + 1}* - ${r.title}${r.description ? ` (${r.description})` : ""}`).join("\n");
+      return sendWhatsAppMessage(tenant, phone, textFallback);
+    }
+    return true;
   } catch {
-    return false;
+    const allRows = sections.flatMap((s) => s.rows);
+    const textFallback = `${title}\n${description}\n\n` +
+      allRows.map((r, i) => `*${i + 1}* - ${r.title}${r.description ? ` (${r.description})` : ""}`).join("\n");
+    return sendWhatsAppMessage(tenant, phone, textFallback);
   }
 }
 
@@ -252,7 +293,6 @@ async function getOrCreateConversation(
     .maybeSingle()) as unknown as SelectResult<Conversation | null>;
 
   if (existing) {
-    // Update last_message_at
     await supabase
       .from("chatbot_conversations")
       .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -260,9 +300,9 @@ async function getOrCreateConversation(
     return existing;
   }
 
-  // Try to find matching client
-  const { data: client } = (await supabase
-    .from("clients")
+  // Try to find matching patient (tabela renomeada: clients → patients)
+  const { data: patient } = (await supabase
+    .from("patients")
     .select("id")
     .eq("tenant_id", tenantId)
     .or(`phone.eq.${phone},phone.eq.${phone.replace(/^55/, "")}`)
@@ -273,7 +313,7 @@ async function getOrCreateConversation(
     .insert({
       tenant_id: tenantId,
       phone,
-      client_id: client?.id ?? null,
+      client_id: patient?.id ?? null,
       state: STATE.IDLE,
       context: {},
     })
@@ -312,6 +352,57 @@ async function logMessage(
   });
 }
 
+// ─── Auto-create chatbot settings ───────────────────────────────────────────
+
+async function getOrCreateSettings(
+  supabase: SupabaseClient,
+  tenantId: string,
+  tenantName: string,
+): Promise<ChatbotSettings | null> {
+  const { data: settings } = (await supabase
+    .from("chatbot_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
+
+  if (settings) return settings;
+
+  // Auto-create with sensible defaults
+  const clinicName = tenantName || "nossa clínica";
+  const defaults = {
+    tenant_id: tenantId,
+    is_active: true,
+    welcome_message: `Olá! 👋 Bem-vindo(a) à *${clinicName}*. Como posso ajudá-lo(a)?`,
+    menu_message: "Escolha uma opção:",
+    outside_hours_message: `Nosso horário de atendimento é de segunda a sexta, das 8h às 18h.\nDeixe sua mensagem que retornaremos assim que possível. 😊`,
+    business_hours_start: "08:00",
+    business_hours_end: "18:00",
+    business_days: [1, 2, 3, 4, 5],
+    auto_confirm_booking: false,
+    max_future_days: 30,
+  };
+
+  const { data: created } = (await supabase
+    .from("chatbot_settings")
+    .insert(defaults)
+    .select("*")
+    .single()) as unknown as SelectResult<ChatbotSettings | null>;
+
+  if (created) {
+    log("Auto-created chatbot_settings", { tenantId });
+    return created;
+  }
+
+  // Race condition fallback
+  const { data: retry } = (await supabase
+    .from("chatbot_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
+
+  return retry;
+}
+
 // ─── Handlers por estado ────────────────────────────────────────────────────
 
 async function handleIdle(
@@ -321,26 +412,24 @@ async function handleIdle(
   settings: ChatbotSettings,
   _message: string,
 ): Promise<void> {
-  // Enviar boas-vindas + menu
   const clientName = conv.client_id
     ? await getClientName(supabase, conv.client_id)
     : null;
 
   const greeting = clientName
     ? settings.welcome_message.replace("{{nome}}", clientName)
-    : settings.welcome_message;
+    : settings.welcome_message.replace(/\s*{{nome}}\s*/g, "");
 
   await sendWhatsAppMessage(tenant, conv.phone, greeting);
   await logMessage(supabase, conv.id, conv.tenant_id, "outbound", greeting);
 
-  // Enviar menu com botões
   await sendWhatsAppButtons(tenant, conv.phone, "📋 Menu Principal", settings.menu_message, [
     { id: "btn_agendar", text: "📅 Agendar" },
     { id: "btn_consultas", text: "📋 Minhas Consultas" },
     { id: "btn_falar", text: "💬 Falar c/ Atendente" },
   ]);
 
-  await logMessage(supabase, conv.id, conv.tenant_id, "outbound", "[MENU] Options: Agendar, Consultas, Falar", "interactive");
+  await logMessage(supabase, conv.id, conv.tenant_id, "outbound", "[MENU]", "interactive");
   await updateConversation(supabase, conv.id, STATE.MENU, {});
 }
 
@@ -348,14 +437,14 @@ async function handleMenu(
   supabase: SupabaseClient,
   conv: Conversation,
   tenant: TenantConfig,
-  _settings: ChatbotSettings,
+  settings: ChatbotSettings,
   message: string,
   buttonPayload?: string,
 ): Promise<void> {
   const input = (buttonPayload ?? message).toLowerCase().trim();
 
   if (input === "btn_agendar" || input.includes("agendar") || input === "1") {
-    await startBookingFlow(supabase, conv, tenant);
+    await startBookingFlow(supabase, conv, tenant, settings);
   } else if (input === "btn_consultas" || input.includes("consulta") || input === "2") {
     await showAppointments(supabase, conv, tenant);
   } else if (input === "btn_falar" || input.includes("falar") || input.includes("atendente") || input === "3") {
@@ -363,11 +452,7 @@ async function handleMenu(
   } else if (input.includes("cancelar")) {
     await startCancelFlow(supabase, conv, tenant);
   } else {
-    await sendWhatsAppMessage(
-      tenant,
-      conv.phone,
-      "Desculpe, não entendi. Por favor, escolha uma das opções do menu:",
-    );
+    await sendWhatsAppMessage(tenant, conv.phone, "Desculpe, não entendi. Por favor, escolha uma das opções do menu:");
     await sendWhatsAppButtons(tenant, conv.phone, "📋 Menu Principal", "Escolha uma opção:", [
       { id: "btn_agendar", text: "📅 Agendar" },
       { id: "btn_consultas", text: "📋 Minhas Consultas" },
@@ -382,17 +467,18 @@ async function startBookingFlow(
   supabase: SupabaseClient,
   conv: Conversation,
   tenant: TenantConfig,
+  _settings: ChatbotSettings,
 ): Promise<void> {
-  // Buscar serviços ativos
-  const { data: services } = (await supabase
-    .from("services")
+  // Tabela renomeada: services → procedures
+  const { data: procedures } = (await supabase
+    .from("procedures")
     .select("id, name, duration_minutes, price")
     .eq("tenant_id", conv.tenant_id)
     .eq("is_active", true)
     .order("name")
-    .limit(10)) as unknown as SelectResult<ServiceRow[] | null>;
+    .limit(10)) as unknown as SelectResult<ProcedureRow[] | null>;
 
-  if (!services?.length) {
+  if (!procedures?.length) {
     await sendWhatsAppMessage(tenant, conv.phone, "No momento não temos serviços disponíveis para agendamento online. Por favor, entre em contato diretamente com a clínica.");
     await updateConversation(supabase, conv.id, STATE.MENU, {});
     return;
@@ -400,41 +486,34 @@ async function startBookingFlow(
 
   const sections = [{
     title: "Serviços Disponíveis",
-    rows: services.map((s, i) => ({
+    rows: procedures.map((s) => ({
       title: s.name.slice(0, 24),
       rowId: `svc_${s.id}`,
       description: s.price ? `R$ ${Number(s.price).toFixed(2)} • ${s.duration_minutes}min` : `${s.duration_minutes}min`,
     })),
   }];
 
-  await sendWhatsAppList(
-    tenant,
-    conv.phone,
-    "📅 Agendamento",
-    "Selecione o serviço desejado:",
-    "Ver Serviços",
-    sections,
-  );
-
-  await logMessage(supabase, conv.id, conv.tenant_id, "outbound", `[LIST] ${services.length} serviços`, "interactive");
-  await updateConversation(supabase, conv.id, STATE.BOOKING_SERVICE, { services: services.map((s) => ({ id: s.id, name: s.name, duration: s.duration_minutes })) });
+  await sendWhatsAppList(tenant, conv.phone, "📅 Agendamento", "Selecione o serviço desejado:", "Ver Serviços", sections);
+  await logMessage(supabase, conv.id, conv.tenant_id, "outbound", `[LIST] ${procedures.length} procedimentos`, "interactive");
+  await updateConversation(supabase, conv.id, STATE.BOOKING_SERVICE, {
+    services: procedures.map((s) => ({ id: s.id, name: s.name, duration: s.duration_minutes })),
+  });
 }
 
 async function handleBookingService(
   supabase: SupabaseClient,
   conv: Conversation,
   tenant: TenantConfig,
+  _settings: ChatbotSettings,
   message: string,
   listReplyId?: string,
 ): Promise<void> {
   const input = listReplyId ?? message;
 
-  // Parse service selection
   let serviceId: string | null = null;
   if (input.startsWith("svc_")) {
     serviceId = input.replace("svc_", "");
   } else {
-    // Try to match by name or number
     const services = (conv.context.services as Array<{ id: string; name: string; duration: number }>) ?? [];
     const idx = parseInt(input) - 1;
     if (idx >= 0 && idx < services.length) {
@@ -453,16 +532,16 @@ async function handleBookingService(
   const services = (conv.context.services as Array<{ id: string; name: string; duration: number }>) ?? [];
   const selectedService = services.find((s) => s.id === serviceId);
 
-  // Buscar profissionais que oferecem este serviço
+  // Tabela renomeada: professional_services → professional_procedures, service_id → procedure_id
   const { data: profs } = (await supabase
-    .from("professional_services")
+    .from("professional_procedures")
     .select("professional_id, profiles!inner(id, full_name)")
-    .eq("service_id", serviceId)
+    .eq("procedure_id", serviceId)
     .eq("tenant_id", conv.tenant_id)
     .limit(10)) as unknown as SelectResult<Array<{ professional_id: string; profiles: { id: string; full_name: string } }> | null>;
 
   if (!profs?.length) {
-    // Se não houver relação, buscar qualquer profissional ativo
+    // Fallback: buscar qualquer profissional ativo
     const { data: anyProfs } = (await supabase
       .from("profiles")
       .select("id, full_name")
@@ -547,7 +626,6 @@ async function handleBookingProfessional(
   const profs = (conv.context.professionals as Array<{ id: string; name: string }>) ?? [];
   const selectedProf = profs.find((p) => p.id === profId);
 
-  // Oferecer próximos dias disponíveis
   const today = new Date();
   const dates: Array<{ label: string; value: string }> = [];
   for (let i = 1; i <= Math.min(settings.max_future_days, 7); i++) {
@@ -568,10 +646,7 @@ async function handleBookingProfessional(
 
   const sections = [{
     title: "Datas Disponíveis",
-    rows: dates.map((d) => ({
-      title: d.label,
-      rowId: `date_${d.value}`,
-    })),
+    rows: dates.map((d) => ({ title: d.label, rowId: `date_${d.value}` })),
   }];
 
   await sendWhatsAppList(tenant, conv.phone, "📆 Data", "Selecione a data desejada:", "Ver Datas", sections);
@@ -587,6 +662,7 @@ async function handleBookingDate(
   supabase: SupabaseClient,
   conv: Conversation,
   tenant: TenantConfig,
+  settings: ChatbotSettings,
   message: string,
   listReplyId?: string,
 ): Promise<void> {
@@ -608,7 +684,7 @@ async function handleBookingDate(
     return;
   }
 
-  // Buscar horários já ocupados nesse dia
+  // appointments usa scheduled_at + duration_minutes (NÃO start_time/end_time)
   const dayStart = `${dateStr}T00:00:00`;
   const dayEnd = `${dateStr}T23:59:59`;
   const profId = conv.context.selected_professional_id as string;
@@ -616,27 +692,30 @@ async function handleBookingDate(
 
   const { data: busyAppts } = (await supabase
     .from("appointments")
-    .select("start_time, end_time")
+    .select("scheduled_at, duration_minutes")
     .eq("tenant_id", conv.tenant_id)
     .eq("professional_id", profId)
-    .gte("start_time", dayStart)
-    .lte("start_time", dayEnd)
-    .neq("status", "cancelled")) as unknown as SelectResult<Array<{ start_time: string; end_time: string }> | null>;
+    .gte("scheduled_at", dayStart)
+    .lte("scheduled_at", dayEnd)
+    .neq("status", "cancelled")) as unknown as SelectResult<Array<{
+      scheduled_at: string;
+      duration_minutes: number;
+    }> | null>;
 
   const busyMinutes = new Set<number>();
   for (const appt of busyAppts ?? []) {
-    const start = new Date(appt.start_time);
-    const end = new Date(appt.end_time);
-    for (let m = start.getHours() * 60 + start.getMinutes(); m < end.getHours() * 60 + end.getMinutes(); m += 30) {
-      busyMinutes.add(m);
+    const start = new Date(appt.scheduled_at);
+    const apptDuration = appt.duration_minutes || 30;
+    const startMin = start.getHours() * 60 + start.getMinutes();
+    for (let m = 0; m < apptDuration; m += 30) {
+      busyMinutes.add(startMin + m);
     }
   }
 
-  const allSlots = generateSlots(new Date(dateStr), duration);
+  const allSlots = generateSlots(duration, settings);
   const availableSlots = allSlots.filter((slot) => {
     const [h, m] = slot.split(":").map(Number);
     const slotMinute = h * 60 + m;
-    // Check if any part of the service duration overlaps with busy slots
     for (let dm = 0; dm < duration; dm += 30) {
       if (busyMinutes.has(slotMinute + dm)) return false;
     }
@@ -652,13 +731,9 @@ async function handleBookingDate(
     return;
   }
 
-  // Show max 10 slots
   const sections = [{
     title: "Horários Disponíveis",
-    rows: availableSlots.slice(0, 10).map((slot) => ({
-      title: slot,
-      rowId: `time_${slot}`,
-    })),
+    rows: availableSlots.slice(0, 10).map((slot) => ({ title: slot, rowId: `time_${slot}` })),
   }];
 
   await sendWhatsAppList(tenant, conv.phone, "🕐 Horário", `Horários para ${formatDateBR(dateStr + "T12:00:00")}:`, "Ver Horários", sections);
@@ -682,7 +757,6 @@ async function handleBookingTime(
   if (input.startsWith("time_")) {
     timeStr = input.replace("time_", "");
   } else {
-    // Try to match time format HH:MM
     const match = input.match(/(\d{1,2}):(\d{2})/);
     if (match) {
       timeStr = `${match[1].padStart(2, "0")}:${match[2]}`;
@@ -740,33 +814,29 @@ async function handleBookingConfirm(
     return;
   }
 
-  // Criar o agendamento
+  // appointments usa: patient_id, procedure_id, scheduled_at, duration_minutes
   const dateStr = conv.context.selected_date as string;
   const timeStr = conv.context.selected_time as string;
   const serviceId = conv.context.selected_service_id as string;
   const profId = conv.context.selected_professional_id as string;
   const duration = (conv.context.selected_service_duration as number) ?? 30;
 
-  const startTime = new Date(`${dateStr}T${timeStr}:00`);
-  const endTime = new Date(startTime.getTime() + duration * 60_000);
-
-  const status = settings.auto_confirm_booking ? "confirmed" : "scheduled";
+  const scheduledAt = new Date(`${dateStr}T${timeStr}:00`);
+  const status = settings.auto_confirm_booking ? "confirmed" : "pending";
 
   const insertPayload: Record<string, unknown> = {
     tenant_id: conv.tenant_id,
-    service_id: serviceId,
+    procedure_id: serviceId,     // was service_id
     professional_id: profId,
-    start_time: startTime.toISOString(),
-    end_time: endTime.toISOString(),
-    scheduled_at: startTime.toISOString(),
+    scheduled_at: scheduledAt.toISOString(),
+    duration_minutes: duration,
     status,
     source: "whatsapp_chatbot",
     notes: "Agendado via chatbot WhatsApp",
   };
 
-  // Link client if known
   if (conv.client_id) {
-    insertPayload.client_id = conv.client_id;
+    insertPayload.patient_id = conv.client_id;  // was client_id
   }
 
   const { data: appt, error: apptErr } = await supabase
@@ -776,7 +846,7 @@ async function handleBookingConfirm(
     .single();
 
   if (apptErr) {
-    log("Booking error", { error: apptErr });
+    log("Booking error", { error: String(apptErr) });
     await sendWhatsAppMessage(tenant, conv.phone, "Desculpe, ocorreu um erro ao realizar o agendamento. Por favor, tente novamente ou entre em contato diretamente com a clínica.");
     await updateConversation(supabase, conv.id, STATE.MENU, {});
     return;
@@ -785,14 +855,15 @@ async function handleBookingConfirm(
   const confirmMsg = `✅ *Agendamento ${status === "confirmed" ? "Confirmado" : "Realizado"}!*\n\n` +
     `📌 ${conv.context.selected_service_name}\n` +
     `👨‍⚕️ ${conv.context.selected_professional_name}\n` +
-    `📅 ${formatDateBR(startTime.toISOString())} às ${timeStr}\n\n` +
-    (status === "scheduled" ? "⚠️ Seu agendamento será confirmado pela clínica em breve.\n\n" : "") +
+    `📅 ${formatDateBR(scheduledAt.toISOString())} às ${timeStr}\n\n` +
+    (status === "pending" ? "⚠️ Seu agendamento será confirmado pela clínica em breve.\n\n" : "") +
     `📍 ${tenant.name}\n` +
     (tenant.address ? `📍 ${tenant.address}\n` : "") +
     `\nObrigado por agendar conosco! 🙏`;
 
   await sendWhatsAppMessage(tenant, conv.phone, confirmMsg);
-  await logMessage(supabase, conv.id, conv.tenant_id, "outbound", `[BOOKING] Appointment ${appt.id} created`, "system");
+  await logMessage(supabase, conv.id, conv.tenant_id, "outbound",
+    `[BOOKING] Appointment ${(appt as { id: string }).id} created`, "system");
   await updateConversation(supabase, conv.id, STATE.IDLE, {});
 }
 
@@ -804,25 +875,26 @@ async function showAppointments(
   tenant: TenantConfig,
 ): Promise<void> {
   if (!conv.client_id) {
-    await sendWhatsAppMessage(
-      tenant,
-      conv.phone,
-      "Não encontramos um cadastro associado a este número. Para ver seus agendamentos, entre em contato com a clínica.",
-    );
+    await sendWhatsAppMessage(tenant, conv.phone,
+      "Não encontramos um cadastro associado a este número. Para ver seus agendamentos, entre em contato com a clínica.");
     await updateConversation(supabase, conv.id, STATE.MENU, {});
     return;
   }
 
   const now = new Date().toISOString();
+  // appointments: patient_id (was client_id), procedure_id (was service_id), scheduled_at (not start_time)
   const { data: appts } = (await supabase
     .from("appointments")
-    .select("id, start_time, status, service_id, professional_id")
+    .select("id, scheduled_at, duration_minutes, status, procedure_id, professional_id")
     .eq("tenant_id", conv.tenant_id)
-    .eq("client_id", conv.client_id)
-    .gte("start_time", now)
+    .eq("patient_id", conv.client_id)
+    .gte("scheduled_at", now)
     .neq("status", "cancelled")
-    .order("start_time")
-    .limit(5)) as unknown as SelectResult<AppointmentRow[] | null>;
+    .order("scheduled_at")
+    .limit(5)) as unknown as SelectResult<Array<{
+      id: string; scheduled_at: string; duration_minutes: number;
+      status: string; procedure_id: string; professional_id: string;
+    }> | null>;
 
   if (!appts?.length) {
     await sendWhatsAppMessage(tenant, conv.phone, "Você não tem consultas agendadas. Deseja agendar uma?");
@@ -834,29 +906,28 @@ async function showAppointments(
     return;
   }
 
-  // Fetch service and professional names
-  const serviceIds = [...new Set(appts.map((a) => a.service_id).filter(Boolean))];
+  const procIds = [...new Set(appts.map((a) => a.procedure_id).filter(Boolean))];
   const profIds = [...new Set(appts.map((a) => a.professional_id).filter(Boolean))];
 
-  const [servicesRes, profsRes] = await Promise.all([
-    serviceIds.length
-      ? (supabase.from("services").select("id, name").in("id", serviceIds) as unknown as SelectResult<ServiceRow[] | null>)
-      : { data: [] as ServiceRow[] },
+  const [procsRes, profsRes] = await Promise.all([
+    procIds.length
+      ? (supabase.from("procedures").select("id, name").in("id", procIds) as unknown as SelectResult<ProcedureRow[] | null>)
+      : { data: [] as ProcedureRow[] },
     profIds.length
       ? (supabase.from("profiles").select("id, full_name").in("id", profIds) as unknown as SelectResult<ProfessionalRow[] | null>)
       : { data: [] as ProfessionalRow[] },
   ]);
 
-  const svcMap = new Map((servicesRes.data ?? []).map((s) => [s.id, s.name]));
+  const procMap = new Map((procsRes.data ?? []).map((s) => [s.id, s.name]));
   const profMap = new Map((profsRes.data ?? []).map((p) => [p.id, p.full_name]));
 
   let msg = "📋 *Seus Agendamentos*\n\n";
   for (const appt of appts) {
-    const svcName = svcMap.get(appt.service_id) ?? "Consulta";
+    const procName = procMap.get(appt.procedure_id) ?? "Consulta";
     const profName = profMap.get(appt.professional_id) ?? "";
     const statusEmoji = appt.status === "confirmed" ? "✅" : "⏳";
-    msg += `${statusEmoji} *${svcName}*\n`;
-    msg += `   📅 ${formatDateBR(appt.start_time)} às ${formatTimeBR(appt.start_time)}\n`;
+    msg += `${statusEmoji} *${procName}*\n`;
+    msg += `   📅 ${formatDateBR(appt.scheduled_at)} às ${formatTimeBR(appt.scheduled_at)}\n`;
     if (profName) msg += `   👨‍⚕️ ${profName}\n`;
     msg += "\n";
   }
@@ -871,8 +942,8 @@ async function showAppointments(
   await updateConversation(supabase, conv.id, STATE.VIEW_APPOINTMENTS, {
     appointments: appts.map((a) => ({
       id: a.id,
-      date: a.start_time,
-      service: svcMap.get(a.service_id) ?? "Consulta",
+      date: a.scheduled_at,
+      service: procMap.get(a.procedure_id) ?? "Consulta",
     })),
   });
 }
@@ -893,13 +964,15 @@ async function startCancelFlow(
   const now = new Date().toISOString();
   const { data: appts } = (await supabase
     .from("appointments")
-    .select("id, start_time, status, service_id")
+    .select("id, scheduled_at, status, procedure_id")
     .eq("tenant_id", conv.tenant_id)
-    .eq("client_id", conv.client_id)
-    .gte("start_time", now)
+    .eq("patient_id", conv.client_id)
+    .gte("scheduled_at", now)
     .neq("status", "cancelled")
-    .order("start_time")
-    .limit(5)) as unknown as SelectResult<AppointmentRow[] | null>;
+    .order("scheduled_at")
+    .limit(5)) as unknown as SelectResult<Array<{
+      id: string; scheduled_at: string; status: string; procedure_id: string;
+    }> | null>;
 
   if (!appts?.length) {
     await sendWhatsAppMessage(tenant, conv.phone, "Você não tem consultas para cancelar.");
@@ -907,24 +980,28 @@ async function startCancelFlow(
     return;
   }
 
-  const serviceIds = [...new Set(appts.map((a) => a.service_id).filter(Boolean))];
-  const { data: services } = serviceIds.length
-    ? (await supabase.from("services").select("id, name").in("id", serviceIds) as unknown as SelectResult<ServiceRow[] | null>)
-    : { data: [] as ServiceRow[] };
-  const svcMap = new Map((services ?? []).map((s) => [s.id, s.name]));
+  const procIds = [...new Set(appts.map((a) => a.procedure_id).filter(Boolean))];
+  const { data: procs } = procIds.length
+    ? (await supabase.from("procedures").select("id, name").in("id", procIds) as unknown as SelectResult<ProcedureRow[] | null>)
+    : { data: [] as ProcedureRow[] };
+  const procMap = new Map((procs ?? []).map((s) => [s.id, s.name]));
 
   const sections = [{
     title: "Suas Consultas",
     rows: appts.map((a) => ({
-      title: `${svcMap.get(a.service_id) ?? "Consulta"} - ${formatDateBR(a.start_time)}`,
+      title: `${procMap.get(a.procedure_id) ?? "Consulta"} - ${formatDateBR(a.scheduled_at)}`,
       rowId: `cancel_${a.id}`,
-      description: formatTimeBR(a.start_time),
+      description: formatTimeBR(a.scheduled_at),
     })),
   }];
 
   await sendWhatsAppList(tenant, conv.phone, "❌ Cancelar", "Selecione a consulta a cancelar:", "Ver Consultas", sections);
   await updateConversation(supabase, conv.id, STATE.CANCEL_SELECT, {
-    cancel_appointments: appts.map((a) => ({ id: a.id, service: svcMap.get(a.service_id) ?? "Consulta", date: a.start_time })),
+    cancel_appointments: appts.map((a) => ({
+      id: a.id,
+      service: procMap.get(a.procedure_id) ?? "Consulta",
+      date: a.scheduled_at,
+    })),
   });
 }
 
@@ -937,10 +1014,7 @@ async function handleCancelSelect(
 ): Promise<void> {
   const input = listReplyId ?? message;
   let apptId: string | null = null;
-
-  if (input.startsWith("cancel_")) {
-    apptId = input.replace("cancel_", "");
-  }
+  if (input.startsWith("cancel_")) apptId = input.replace("cancel_", "");
 
   if (!apptId) {
     await sendWhatsAppMessage(tenant, conv.phone, "Não entendi. Selecione a consulta da lista.");
@@ -956,11 +1030,8 @@ async function handleCancelSelect(
     return;
   }
 
-  await sendWhatsAppMessage(
-    tenant,
-    conv.phone,
-    `Deseja realmente cancelar?\n\n📌 ${selected.service}\n📅 ${formatDateBR(selected.date)} às ${formatTimeBR(selected.date)}`,
-  );
+  await sendWhatsAppMessage(tenant, conv.phone,
+    `Deseja realmente cancelar?\n\n📌 ${selected.service}\n📅 ${formatDateBR(selected.date)} às ${formatTimeBR(selected.date)}`);
   await sendWhatsAppButtons(tenant, conv.phone, "⚠️ Confirmar", "Confirmar cancelamento?", [
     { id: "btn_confirm_cancel", text: "❌ Sim, Cancelar" },
     { id: "btn_keep", text: "✅ Manter" },
@@ -999,7 +1070,8 @@ async function handleCancelConfirm(
       await sendWhatsAppMessage(tenant, conv.phone, "Erro ao cancelar. Entre em contato com a clínica.");
     } else {
       await sendWhatsAppMessage(tenant, conv.phone, "✅ Consulta cancelada com sucesso.\n\nSe desejar reagendar, é só acessar o menu!");
-      await logMessage(supabase, conv.id, conv.tenant_id, "outbound", `[CANCEL] Appointment ${apptId} cancelled`, "system");
+      await logMessage(supabase, conv.id, conv.tenant_id, "outbound",
+        `[CANCEL] Appointment ${apptId} cancelled`, "system");
     }
     await updateConversation(supabase, conv.id, STATE.IDLE, {});
   } else {
@@ -1014,12 +1086,9 @@ async function transferToHuman(
   conv: Conversation,
   tenant: TenantConfig,
 ): Promise<void> {
-  await sendWhatsAppMessage(
-    tenant,
-    conv.phone,
+  await sendWhatsAppMessage(tenant, conv.phone,
     "Certo! Estou transferindo para um atendente. Por favor, aguarde.\n\n" +
-    "💡 Dica: você pode digitar *menu* a qualquer momento para voltar ao menu automático.",
-  );
+    "💡 Dica: você pode digitar *menu* a qualquer momento para voltar ao menu automático.");
   await logMessage(supabase, conv.id, conv.tenant_id, "outbound", "[TRANSFER] Transferred to human", "system");
   await updateConversation(supabase, conv.id, STATE.WAITING_HUMAN, {});
 }
@@ -1027,8 +1096,9 @@ async function transferToHuman(
 // ─── Helpers de Dados ───────────────────────────────────────────────────────
 
 async function getClientName(supabase: SupabaseClient, clientId: string): Promise<string | null> {
+  // Tabela renomeada: clients → patients
   const { data } = (await supabase
-    .from("clients")
+    .from("patients")
     .select("name")
     .eq("id", clientId)
     .maybeSingle()) as unknown as SelectResult<{ name: string | null } | null>;
@@ -1051,15 +1121,10 @@ async function processMessage(
     .eq("id", tenantId)
     .maybeSingle()) as unknown as SelectResult<TenantConfig | null>;
 
-  if (!tenant) return { handled: false, state: "error" };
+  if (!tenant) return { handled: false, state: "tenant_not_found" };
 
-  // Get chatbot settings
-  const { data: settings } = (await supabase
-    .from("chatbot_settings")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
-
+  // Get or auto-create chatbot settings
+  const settings = await getOrCreateSettings(supabase, tenantId, tenant.name);
   if (!settings?.is_active) return { handled: false, state: "inactive" };
 
   // Get or create conversation
@@ -1090,57 +1155,63 @@ async function processMessage(
     conv.context = {};
   }
 
-  // Route by state
-  switch (conv.state) {
-    case STATE.IDLE:
-      await handleIdle(supabase, conv, tenant, settings, payload.message);
-      break;
+  // Route by state with error recovery
+  try {
+    switch (conv.state) {
+      case STATE.IDLE:
+        await handleIdle(supabase, conv, tenant, settings, payload.message);
+        break;
 
-    case STATE.MENU:
-    case STATE.VIEW_APPOINTMENTS:
-      await handleMenu(supabase, conv, tenant, settings, payload.message, payload.button_payload);
-      break;
+      case STATE.MENU:
+      case STATE.VIEW_APPOINTMENTS:
+        await handleMenu(supabase, conv, tenant, settings, payload.message, payload.button_payload);
+        break;
 
-    case STATE.BOOKING_SERVICE:
-      await handleBookingService(supabase, conv, tenant, payload.message, payload.list_reply_id);
-      break;
+      case STATE.BOOKING_SERVICE:
+        await handleBookingService(supabase, conv, tenant, settings, payload.message, payload.list_reply_id);
+        break;
 
-    case STATE.BOOKING_PROFESSIONAL:
-      await handleBookingProfessional(supabase, conv, tenant, settings, payload.message, payload.list_reply_id);
-      break;
+      case STATE.BOOKING_PROFESSIONAL:
+        await handleBookingProfessional(supabase, conv, tenant, settings, payload.message, payload.list_reply_id);
+        break;
 
-    case STATE.BOOKING_DATE:
-      await handleBookingDate(supabase, conv, tenant, payload.message, payload.list_reply_id);
-      break;
+      case STATE.BOOKING_DATE:
+        await handleBookingDate(supabase, conv, tenant, settings, payload.message, payload.list_reply_id);
+        break;
 
-    case STATE.BOOKING_TIME:
-      await handleBookingTime(supabase, conv, tenant, payload.message, payload.list_reply_id);
-      break;
+      case STATE.BOOKING_TIME:
+        await handleBookingTime(supabase, conv, tenant, payload.message, payload.list_reply_id);
+        break;
 
-    case STATE.BOOKING_CONFIRM:
-      await handleBookingConfirm(supabase, conv, tenant, settings, payload.message, payload.button_payload);
-      break;
+      case STATE.BOOKING_CONFIRM:
+        await handleBookingConfirm(supabase, conv, tenant, settings, payload.message, payload.button_payload);
+        break;
 
-    case STATE.CANCEL_SELECT:
-      await handleCancelSelect(supabase, conv, tenant, payload.message, payload.list_reply_id);
-      break;
+      case STATE.CANCEL_SELECT:
+        await handleCancelSelect(supabase, conv, tenant, payload.message, payload.list_reply_id);
+        break;
 
-    case STATE.CANCEL_CONFIRM:
-      await handleCancelConfirm(supabase, conv, tenant, payload.message, payload.button_payload);
-      break;
+      case STATE.CANCEL_CONFIRM:
+        await handleCancelConfirm(supabase, conv, tenant, payload.message, payload.button_payload);
+        break;
 
-    case STATE.WAITING_HUMAN:
-      // Don't auto-reply, let human handle
-      // Check if keyword to return to bot
-      if (msgLower === "bot" || msgLower === "robô" || msgLower === "robo") {
+      case STATE.WAITING_HUMAN:
+        if (msgLower === "bot" || msgLower === "robô" || msgLower === "robo" || msgLower === "menu") {
+          await updateConversation(supabase, conv.id, STATE.IDLE, {});
+          await handleIdle(supabase, conv, tenant, settings, payload.message);
+        }
+        return { handled: true, state: STATE.WAITING_HUMAN };
+
+      default:
         await updateConversation(supabase, conv.id, STATE.IDLE, {});
         await handleIdle(supabase, conv, tenant, settings, payload.message);
-      }
-      return { handled: true, state: STATE.WAITING_HUMAN };
-
-    default:
-      await updateConversation(supabase, conv.id, STATE.IDLE, {});
-      await handleIdle(supabase, conv, tenant, settings, payload.message);
+    }
+  } catch (err) {
+    log("State handler error", { state: conv.state, error: String(err) });
+    await updateConversation(supabase, conv.id, STATE.IDLE, {});
+    await sendWhatsAppMessage(tenant, normalizedPhone,
+      "Desculpe, tive um problema temporário. 😅 Digite *menu* para recomeçar.");
+    return { handled: false, state: "error" };
   }
 
   return { handled: true, state: conv.state };
@@ -1191,8 +1262,8 @@ serve(async (req: Request) => {
   try {
     const body = await req.json();
 
-    // Handle Evolution API webhook format
-    if (body.event === "messages.upsert" && body.data?.message) {
+    // ── Handle Evolution API webhook format ──
+    if (body.event === "messages.upsert" && body.data) {
       const tenantId = body.instance?.instanceName
         ? await resolveTenantByInstance(supabase, body.instance.instanceName)
         : null;
@@ -1200,60 +1271,100 @@ serve(async (req: Request) => {
       if (!tenantId) {
         log("Unknown instance", { instance: body.instance?.instanceName });
         return new Response(JSON.stringify({ ok: true, skipped: "unknown_instance" }), {
-          status: 200,
-          headers: { ...cors, "Content-Type": "application/json" },
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
       const msg = body.data.message;
       const key = body.data.key;
 
-      // Ignorar mensagens enviadas por nós (fromMe)
+      // Ignore own messages
       if (key?.fromMe) {
         return new Response(JSON.stringify({ ok: true, skipped: "from_me" }), {
-          status: 200,
-          headers: { ...cors, "Content-Type": "application/json" },
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      // Ignore group messages and status broadcasts
+      if (key?.remoteJid?.includes("@g.us") || key?.remoteJid === "status@broadcast") {
+        return new Response(JSON.stringify({ ok: true, skipped: "group_or_status" }), {
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      // Idempotency check
+      if (isDuplicateMessage(key?.id)) {
+        return new Response(JSON.stringify({ ok: true, skipped: "duplicate" }), {
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
       const phone = key?.remoteJid?.replace("@s.whatsapp.net", "") ?? "";
       const text = msg?.conversation ?? msg?.extendedTextMessage?.text ?? "";
-      const buttonPayload = msg?.buttonsResponseMessage?.selectedButtonId ?? msg?.templateButtonReplyMessage?.selectedId ?? undefined;
+      const buttonPayload = msg?.buttonsResponseMessage?.selectedButtonId
+        ?? msg?.templateButtonReplyMessage?.selectedId ?? undefined;
       const listReplyId = msg?.listResponseMessage?.singleSelectReply?.selectedRowId ?? undefined;
 
-      if (!phone || (!text && !buttonPayload && !listReplyId)) {
+      // Handle media messages gracefully
+      const messageType = body.data.messageType ?? "";
+      const isMediaMessage = [
+        "imageMessage", "audioMessage", "videoMessage",
+        "stickerMessage", "documentMessage", "documentWithCaptionMessage",
+      ].includes(messageType);
+
+      if (!phone || (!text && !buttonPayload && !listReplyId && !isMediaMessage)) {
         return new Response(JSON.stringify({ ok: true, skipped: "no_content" }), {
-          status: 200,
-          headers: { ...cors, "Content-Type": "application/json" },
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+
+      // For media without text, provide a friendly message
+      const messageText = text || buttonPayload || listReplyId || (
+        isMediaMessage ? "[mídia recebida - por favor envie uma mensagem de texto]" : ""
+      );
+
+      if (!messageText) {
+        return new Response(JSON.stringify({ ok: true, skipped: "empty" }), {
+          status: 200, headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
       const result = await processMessage(supabase, {
         tenant_id: tenantId,
         phone,
-        message: text || buttonPayload || listReplyId || "",
+        message: messageText,
         message_id: key?.id,
-        message_type: buttonPayload ? "button" : listReplyId ? "list_reply" : "text",
+        message_type: buttonPayload ? "button" : listReplyId ? "list_reply" : isMediaMessage ? "media" : "text",
         button_payload: buttonPayload,
         list_reply_id: listReplyId,
       });
 
       return new Response(JSON.stringify({ ok: true, ...result }), {
-        status: 200,
-        headers: { ...cors, "Content-Type": "application/json" },
+        status: 200, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
-    // Handle Meta Cloud API webhook format
+    // ── Handle non-message Evolution events (CONNECTION_UPDATE, etc.) ──
+    if (body.event && body.event !== "messages.upsert") {
+      log("Non-message event", { event: body.event });
+      return new Response(JSON.stringify({ ok: true, skipped: "non_message_event" }), {
+        status: 200, headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Handle Meta Cloud API webhook format ──
     if (body.object === "whatsapp_business_account" && body.entry) {
       for (const entry of body.entry) {
         for (const change of entry.changes ?? []) {
           const messages = change.value?.messages ?? [];
-          for (const msg of messages) {
-            const phone = msg.from;
-            const text = msg.text?.body ?? msg.button?.text ?? msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title ?? "";
-            const buttonPayload = msg.button?.payload ?? msg.interactive?.button_reply?.id ?? undefined;
-            const listReplyId = msg.interactive?.list_reply?.id ?? undefined;
+          for (const cloudMsg of messages) {
+            const phone = cloudMsg.from;
+            const text = cloudMsg.text?.body ?? cloudMsg.button?.text
+              ?? cloudMsg.interactive?.button_reply?.title
+              ?? cloudMsg.interactive?.list_reply?.title ?? "";
+            const buttonPayload = cloudMsg.button?.payload
+              ?? cloudMsg.interactive?.button_reply?.id ?? undefined;
+            const listReplyId = cloudMsg.interactive?.list_reply?.id ?? undefined;
             const phoneNumberId = change.value?.metadata?.phone_number_id;
 
             const tenantId = phoneNumberId
@@ -1261,13 +1372,14 @@ serve(async (req: Request) => {
               : null;
 
             if (!tenantId || !phone) continue;
+            if (isDuplicateMessage(cloudMsg.id)) continue;
 
             await processMessage(supabase, {
               tenant_id: tenantId,
               phone,
-              message: text,
-              message_id: msg.id,
-              message_type: msg.type,
+              message: text || "[mídia recebida]",
+              message_id: cloudMsg.id,
+              message_type: cloudMsg.type,
               button_payload: buttonPayload,
               list_reply_id: listReplyId,
             });
@@ -1276,29 +1388,26 @@ serve(async (req: Request) => {
       }
 
       return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...cors, "Content-Type": "application/json" },
+        status: 200, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
-    // Handle direct API call format (internal)
+    // ── Handle direct API call format (internal) ──
     if (body.tenant_id && body.phone && body.message) {
       const result = await processMessage(supabase, body as IncomingWebhook);
       return new Response(JSON.stringify({ ok: true, ...result }), {
-        status: 200,
-        headers: { ...cors, "Content-Type": "application/json" },
+        status: 200, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
+    log("Unrecognized format", { keys: Object.keys(body).slice(0, 10) });
     return new Response(JSON.stringify({ ok: true, skipped: "unrecognized_format" }), {
-      status: 200,
-      headers: { ...cors, "Content-Type": "application/json" },
+      status: 200, headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (error) {
     log("Exception", { error: error instanceof Error ? error.message : String(error) });
     return new Response(JSON.stringify({ error: "Erro interno" }), {
-      status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+      status: 500, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });
@@ -1315,7 +1424,6 @@ async function resolveTenantByInstance(supabase: SupabaseClient, instanceName: s
 }
 
 async function resolveTenantByPhoneNumberId(supabase: SupabaseClient, phoneNumberId: string): Promise<string | null> {
-  // For Meta Cloud API, the phone_number_id maps to a tenant config
   const { data } = (await supabase
     .from("tenants")
     .select("id")

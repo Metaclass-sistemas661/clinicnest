@@ -99,6 +99,15 @@ verify_jwt = false
 [functions.whatsapp-sender]
 verify_jwt = false
 
+[functions.evolution-proxy]
+verify_jwt = false
+
+[functions.whatsapp-chatbot]
+verify_jwt = false
+
+[functions.whatsapp-sales-chatbot]
+verify_jwt = false
+
 # ── Teleconsulta ──────────────────────────────────────────────────────────────
 [functions.twilio-token]
 verify_jwt = false

@@ -100,6 +100,37 @@ async function createInstance(tenantId: string, instName: string): Promise<{ ok:
         whatsapp_instance: instName,
       })
       .eq("id", tenantId);
+
+    // Auto-seed chatbot_settings with sensible defaults if not exists
+    const { data: existing } = await supabase
+      .from("chatbot_settings")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (!existing) {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("name")
+        .eq("id", tenantId)
+        .maybeSingle();
+
+      const clinicName = (tenant as { name?: string } | null)?.name ?? "nossa clínica";
+
+      await supabase.from("chatbot_settings").insert({
+        tenant_id: tenantId,
+        is_active: true,
+        welcome_message: `Olá! 👋 Bem-vindo(a) à *${clinicName}*. Como posso ajudá-lo(a)?`,
+        menu_message: "Escolha uma opção:",
+        outside_hours_message: `Nosso horário de atendimento é de segunda a sexta, das 8h às 18h.\nDeixe sua mensagem que retornaremos assim que possível. 😊`,
+        business_hours_start: "08:00",
+        business_hours_end: "18:00",
+        business_days: [1, 2, 3, 4, 5],
+        auto_confirm_booking: false,
+        max_future_days: 30,
+      });
+      log("Chatbot settings auto-created", { tenantId });
+    }
   }
 
   return result;
