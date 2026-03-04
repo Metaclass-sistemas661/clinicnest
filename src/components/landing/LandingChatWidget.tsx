@@ -140,7 +140,7 @@ export function LandingChatWidget() {
       {open && (
         <div
           className={cn(
-            "fixed bottom-[5rem] right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)]",
+            "fixed bottom-[5rem] right-6 z-[55] w-[360px] max-w-[calc(100vw-2rem)]",
             "flex flex-col rounded-2xl shadow-2xl border border-border/50",
             "bg-background overflow-hidden",
             "animate-in slide-in-from-bottom-5 fade-in duration-300",

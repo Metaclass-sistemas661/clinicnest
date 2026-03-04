@@ -32,7 +32,7 @@ export function WhatsAppButton() {
       {/* Tooltip */}
       <div
         className={cn(
-          "bg-white rounded-xl shadow-lg px-4 py-2 text-sm text-gray-700 max-w-[200px] mb-2",
+          "bg-white rounded-xl shadow-lg px-4 py-2 text-sm text-gray-700 max-w-[200px] mb-1",
           "border border-gray-100 opacity-0 translate-y-2 transition-all duration-500",
           show && "opacity-100 translate-y-0",
           "animate-in fade-in slide-in-from-bottom-2 duration-700 delay-1000",
