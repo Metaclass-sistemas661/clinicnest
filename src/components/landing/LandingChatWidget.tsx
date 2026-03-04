@@ -123,7 +123,7 @@ export function LandingChatWidget() {
           <img
             src="/nest-avatar.png"
             alt="Nest IA"
-            className="w-12 h-12 rounded-full object-cover"
+            className="w-9 h-9 rounded-full object-cover"
           />
         )}
       </button>
