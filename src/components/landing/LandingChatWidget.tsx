@@ -109,8 +109,8 @@ export function LandingChatWidget() {
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "fixed bottom-6 right-24 z-50 flex items-center justify-center",
-          "w-14 h-14 rounded-full shadow-xl transition-all duration-300",
+          "fixed bottom-6 right-[5.5rem] z-[51] flex items-center justify-center",
+          "w-[3.5rem] h-[3.5rem] rounded-full shadow-xl transition-all duration-300",
           "bg-gradient-to-br from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700",
           "text-white hover:scale-105 active:scale-95",
           open && "rotate-90 scale-90",
@@ -123,16 +123,16 @@ export function LandingChatWidget() {
           <img
             src="/nest-avatar.png"
             alt="Nest IA"
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-12 h-12 rounded-full object-cover"
           />
         )}
       </button>
 
       {/* Notification dot when closed */}
       {!open && (
-        <span className="fixed bottom-[4.25rem] right-[5.5rem] z-50 flex h-3 w-3 pointer-events-none">
+        <span className="fixed bottom-[4.5rem] right-[5.25rem] z-[52] flex h-3.5 w-3.5 pointer-events-none">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-orange-500" />
+          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-orange-500" />
         </span>
       )}
 

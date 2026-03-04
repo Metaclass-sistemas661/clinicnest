@@ -87,6 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Prefer single-roundtrip context load via RPC (enterprise hardening)
       try {
         const { data: ctx, error: ctxError } = await (supabase as any).rpc("get_my_context");
+        if (ctxError) {
+          logger.warn('[AuthContext] get_my_context RPC failed:', ctxError.message);
+        }
         if (!ctxError && ctx) {
           const ctxAny = ctx as any;
           const profileData = (ctxAny.profile ?? null) as Profile | null;
@@ -95,10 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const permsData = (ctxAny.permissions ?? {}) as PermissionsMap;
 
           if (profileData?.user_id === userId) {
+            logger.info('[AuthContext] Loaded via RPC — role:', roleData?.role, 'isAdmin:', roleData?.role === 'admin');
             return { profile: profileData, userRole: roleData, tenant: tenantData, permissions: permsData };
           }
         }
-      } catch {
+      } catch (rpcErr) {
+        logger.warn('[AuthContext] get_my_context exception:', rpcErr);
         // Fallback to legacy multi-query path
       }
 
@@ -152,14 +157,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Aplica a sessão e garante que profile/tenant estejam carregados antes de liberar a UI.
-   * Atualiza profile, userRole e tenant em batch junto com isLoading para evitar race
-   * entre state updates e re-render do Dashboard.
+   * Usa um ref para serializar chamadas e evitar que applySession rode em paralelo
+   * (ex: INITIAL_SESSION + TOKEN_REFRESHED disparados em sequência).
    */
+  const applyRef = React.useRef(0);
+
   const applySession = async (session: Session | null) => {
+    const seq = ++applyRef.current; // gera número de sequência
+
     // Ignorar sessões de paciente — o portal do paciente usa seu próprio client isolado.
-    // Isso evita que login de paciente em outra aba derrube a sessão da clínica.
     if (session?.user?.user_metadata?.account_type === 'patient') {
-      // Não alterar estado — manter sessão atual da clínica intacta
       setIsLoading(false);
       return;
     }
@@ -169,6 +176,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (session?.user) {
       const data = await fetchUserData(session.user.id);
+      // Se outra chamada mais recente já disparou, descartar este resultado
+      if (applyRef.current !== seq) {
+        logger.info('[AuthContext] applySession descartado (seq antigo)');
+        return;
+      }
       setProfile(data.profile);
       setUserRole(data.userRole);
       setTenant(data.tenant);
@@ -185,19 +197,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    const applySessionSafe = async (session: Session | null) => {
-      await applySession(session);
-    };
-
+    // Supabase v2 onAuthStateChange emits INITIAL_SESSION on subscribe,
+    // so there is no need for a separate getSession() call.
+    // This avoids race conditions where both fire and cause double processing.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!cancelled) applySessionSafe(session);
+      (event, session) => {
+        if (cancelled) return;
+        logger.info('[AuthContext] onAuthStateChange event:', event);
+        applySession(session);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!cancelled) applySessionSafe(session);
-    });
 
     return () => {
       cancelled = true;

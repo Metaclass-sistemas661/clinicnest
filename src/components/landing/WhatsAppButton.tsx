@@ -28,11 +28,11 @@ export function WhatsAppButton() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-0">
       {/* Tooltip */}
       <div
         className={cn(
-          "bg-white rounded-xl shadow-lg px-4 py-2 text-sm text-gray-700 max-w-[200px]",
+          "bg-white rounded-xl shadow-lg px-4 py-2 text-sm text-gray-700 max-w-[200px] mb-2",
           "border border-gray-100 opacity-0 translate-y-2 transition-all duration-500",
           show && "opacity-100 translate-y-0",
           "animate-in fade-in slide-in-from-bottom-2 duration-700 delay-1000",
@@ -50,7 +50,7 @@ export function WhatsAppButton() {
         rel="noopener noreferrer"
         className={cn(
           "relative flex items-center justify-center",
-          "w-14 h-14 rounded-full shadow-xl transition-all duration-300",
+          "w-[3.5rem] h-[3.5rem] rounded-full shadow-xl transition-all duration-300",
           "bg-[#25D366] hover:bg-[#20BD5A] hover:scale-105 active:scale-95",
           "animate-in fade-in slide-in-from-bottom-3 duration-500",
         )}
