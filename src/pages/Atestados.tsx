@@ -550,7 +550,7 @@ export default function Atestados() {
   .signature-line { width: 220px; border-bottom: 1px solid #1e293b; margin-bottom: 6px; }
   .footer-right p { font-size: 11px; color: #1e293b; }
   .footer-right .small { font-size: 9px; color: #64748b; }
-  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg); font-size: 60px; font-weight: 900; color: ${borderColor}; opacity: 0.04; pointer-events: none; white-space: nowrap; z-index: 0; letter-spacing: 4px; }
+  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg); font-size: 60px; font-weight: 900; color: ${borderColor}; opacity: 0.06; pointer-events: none; white-space: nowrap; z-index: 0; letter-spacing: 4px; }
   .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 4mm; background: ${borderColor}; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
@@ -579,7 +579,14 @@ export default function Atestados() {
   ${c.notes ? `<div class="notes-section"><strong>Observações:</strong>${c.notes}</div>` : ""}
   <div class="footer">
     <div class="footer-grid">
-      <div class="footer-left"><p>Emitido em: ${issuedDate}</p></div>
+      <div class="footer-left">
+        <p>Emitido em: ${issuedDate}</p>
+        ${c.digital_signature ? `<div style="margin-top:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
+          <p style="font-size:8px;font-weight:600;color:#16a34a;margin-bottom:2px;">✓ ASSINADO DIGITALMENTE</p>
+          <p style="font-size:7px;color:#6b7280;">Hash: ${c.digital_signature.substring(0, 30)}...</p>
+          <p style="font-size:7px;color:${borderColor};">Verificar: ${typeof window !== 'undefined' ? window.location.origin : ''}/verificar/${c.digital_signature}</p>
+        </div>` : ''}
+      </div>
       <div class="footer-right">
         <div class="signature-line"></div>
         <p>${responsibleDoctor || c.professional_name}</p>

@@ -162,7 +162,7 @@ async function addProfessionalHeader(
 function addWatermark(doc: jsPDF, clinicName: string, accentColor: string) {
   const [r, g, b] = hexToRgb(accentColor);
   // @ts-expect-error — GState é suportado pelo jsPDF mas tipos podem não estar declarados
-  const gs = new doc.GState({ opacity: 0.04 });
+  const gs = new doc.GState({ opacity: 0.07 });
   doc.saveGraphicsState();
   doc.setGState(gs);
   doc.setFontSize(54);
@@ -326,16 +326,18 @@ export async function generateCertificatePdf(cert: CertificateData) {
     doc.text(cert.professional_specialty, sigX, y + 31, { align: "center" });
   }
 
-  // ── Assinatura digital com QR Code ──
+  // ── QR Code de verificação (sempre presente) ──
+  y += 40;
+
   if (cert.digital_signature && cert.signed_at) {
-    y += 40;
+    // Documento assinado digitalmente — selo verde
     doc.setFillColor(240, 253, 244);
     doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
 
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(22, 163, 74);
-    doc.text("DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 3);
+    doc.text("✓ DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 3);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
@@ -346,13 +348,54 @@ export async function generateCertificatePdf(cert: CertificateData) {
 
     doc.setFontSize(6);
     doc.setTextColor(80, 80, 80);
-    doc.text("Verifique a autenticidade:", MARGIN + 3, y + 16);
+    doc.text("Escaneie o QR Code para verificar a autenticidade:", MARGIN + 3, y + 16);
     doc.setTextColor(ar, ag, ab);
     doc.text(getVerificationUrl(cert.digital_signature), MARGIN + 3, y + 20);
 
     try {
-      const qrDataUrl = await generateQRCodeDataUrl(cert.digital_signature, 60);
-      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y - 1, 20, 20);
+      const qrDataUrl = await generateQRCodeDataUrl(cert.digital_signature, 80);
+      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 24, y - 2, 24, 24);
+    } catch (e) {
+      logger.error("Error generating QR code for PDF:", e);
+    }
+  } else {
+    // Documento ainda não assinado — gera hash do conteúdo para rastreabilidade
+    const contentForHash = `${cert.certificate_type}|${cert.patient_name || ""}|${cert.content}|${cert.issued_at}|${cert.professional_name}`;
+    let docHash: string;
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(contentForHash);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      docHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 40);
+    } catch {
+      docHash = btoa(contentForHash).substring(0, 40);
+    }
+
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(ar, ag, ab);
+    doc.text("DOCUMENTO IDENTIFICADO DIGITALMENTE", MARGIN + 3, y + 3);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Emitido em: ${format(new Date(cert.issued_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN + 3, y + 8);
+
+    doc.setFontSize(5);
+    doc.text(`ID: ${docHash}`, MARGIN + 3, y + 11);
+
+    doc.setFontSize(6);
+    doc.setTextColor(80, 80, 80);
+    doc.text("Escaneie para verificar:", MARGIN + 3, y + 16);
+    doc.setTextColor(ar, ag, ab);
+    doc.text(getVerificationUrl(docHash), MARGIN + 3, y + 20);
+
+    try {
+      const qrDataUrl = await generateQRCodeDataUrl(docHash, 80);
+      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 24, y - 2, 24, 24);
     } catch (e) {
       logger.error("Error generating QR code for PDF:", e);
     }
