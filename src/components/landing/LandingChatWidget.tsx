@@ -140,12 +140,12 @@ export function LandingChatWidget() {
       {open && (
         <div
           className={cn(
-            "fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)]",
+            "fixed bottom-[5rem] right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)]",
             "flex flex-col rounded-2xl shadow-2xl border border-border/50",
             "bg-background overflow-hidden",
             "animate-in slide-in-from-bottom-5 fade-in duration-300",
           )}
-          style={{ height: "min(500px, calc(100vh - 8rem))" }}
+          style={{ height: "min(500px, calc(100vh - 6rem))" }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 text-white">
@@ -240,9 +240,6 @@ export function LandingChatWidget() {
                 <Send className="w-4 h-4" />
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-              Powered by Nest IA • ClinicNest
-            </p>
           </div>
         </div>
       )}
