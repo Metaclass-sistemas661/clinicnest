@@ -6,41 +6,41 @@ import { logger } from "@/lib/logger";
 
 const MARGIN = 20;
 const PAGE_W = 210;
+const PAGE_H = 297;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
-function addHeader(doc: jsPDF, clinicName: string, professionalName: string) {
-  doc.setFillColor(13, 148, 136); // teal-600
-  doc.rect(0, 0, PAGE_W, 28, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text(clinicName || "Clínica", MARGIN, 13);
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Profissional: ${professionalName || "—"}`, MARGIN, 21);
-
-  doc.setTextColor(0, 0, 0);
+// ─── Helpers para conversão de cor hex → RGB ────────────────
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    parseInt(h.substring(0, 2), 16),
+    parseInt(h.substring(2, 4), 16),
+    parseInt(h.substring(4, 6), 16),
+  ];
 }
 
-function addFooter(doc: jsPDF) {
-  const pageH = doc.internal.pageSize.getHeight();
-  doc.setDrawColor(200, 200, 200);
-  doc.line(MARGIN, pageH - 18, PAGE_W - MARGIN, pageH - 18);
+// ─── Cores por tipo de documento ────────────────────────────
+const TYPE_COLORS: Record<string, string> = {
+  atestado: "#2563eb",
+  declaracao_comparecimento: "#059669",
+  laudo: "#d97706",
+  relatorio: "#7c3aed",
+};
 
-  doc.setFontSize(7);
-  doc.setTextColor(130, 130, 130);
-  doc.text(
-    `Documento gerado digitalmente em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
-    MARGIN,
-    pageH - 12
-  );
-  doc.text(
-    "Este documento não substitui o original assinado pelo profissional de saúde.",
-    MARGIN,
-    pageH - 8
-  );
+// ─── Carrega imagem de URL como base64 para jsPDF ───────────
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    const blob = await res.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 function addField(doc: jsPDF, label: string, value: string, y: number): number {
@@ -77,6 +77,8 @@ interface CertificateData {
   clinic_address?: string | null;
   clinic_phone?: string | null;
   clinic_cnpj?: string | null;
+  clinic_email?: string | null;
+  logo_url?: string | null;
   patient_name?: string | null;
   patient_cpf?: string | null;
   patient_birth_date?: string | null;
@@ -94,61 +96,175 @@ function certTypeLabel(t: string): string {
   }
 }
 
+/**
+ * Desenha o cabeçalho profissional com logo, nome da clínica, dados e faixa colorida.
+ * Retorna a posição Y após o cabeçalho.
+ */
+async function addProfessionalHeader(
+  doc: jsPDF,
+  cert: CertificateData,
+  accentColor: string,
+): Promise<number> {
+  const [r, g, b] = hexToRgb(accentColor);
+  let y = MARGIN;
+
+  // ── Logo + Nome da clínica (lado a lado) ──
+  let logoEndX = MARGIN;
+  if (cert.logo_url) {
+    try {
+      const logoB64 = await loadImageAsBase64(cert.logo_url);
+      if (logoB64) {
+        doc.addImage(logoB64, "PNG", MARGIN, y - 2, 18, 18);
+        logoEndX = MARGIN + 22;
+      }
+    } catch {
+      // sem logo — segue sem imagem
+    }
+  }
+
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(r, g, b);
+  doc.text(cert.clinic_name || "Clínica", logoEndX, y + 5);
+
+  // Subtitle: endereço · telefone · CNPJ · email
+  const infoParts: string[] = [];
+  if (cert.clinic_address) infoParts.push(cert.clinic_address);
+  if (cert.clinic_phone) infoParts.push(`Tel: ${cert.clinic_phone}`);
+  if (cert.clinic_cnpj) infoParts.push(`CNPJ: ${cert.clinic_cnpj}`);
+  if (cert.clinic_email) infoParts.push(cert.clinic_email);
+  if (infoParts.length > 0) {
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110, 110, 110);
+    const infoLines = doc.splitTextToSize(infoParts.join("  ·  "), CONTENT_W - (logoEndX - MARGIN));
+    doc.text(infoLines, logoEndX, y + 10);
+    y += 10 + infoLines.length * 3;
+  } else {
+    y += 12;
+  }
+
+  y = Math.max(y, MARGIN + 18);
+
+  // ── Linha separadora sutil ──
+  y += 3;
+  doc.setDrawColor(r, g, b);
+  doc.setLineWidth(0.6);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  doc.setLineWidth(0.2);
+
+  return y + 4;
+}
+
+/**
+ * Desenha a marca-d'água centralizada com o nome da clínica em diagonal.
+ */
+function addWatermark(doc: jsPDF, clinicName: string, accentColor: string) {
+  const [r, g, b] = hexToRgb(accentColor);
+  // @ts-expect-error — GState é suportado pelo jsPDF mas tipos podem não estar declarados
+  const gs = new doc.GState({ opacity: 0.04 });
+  doc.saveGraphicsState();
+  doc.setGState(gs);
+  doc.setFontSize(54);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(r, g, b);
+
+  // Texto centralizado e rotacionado -35°
+  const cx = PAGE_W / 2;
+  const cy = PAGE_H / 2;
+  doc.text(clinicName.toUpperCase(), cx, cy, {
+    align: "center",
+    angle: -35,
+  });
+
+  doc.restoreGraphicsState();
+}
+
+/**
+ * Rodapé profissional com cor do tipo de documento.
+ */
+function addProfessionalFooter(doc: jsPDF, accentColor: string) {
+  const [r, g, b] = hexToRgb(accentColor);
+  const y = PAGE_H - 18;
+
+  doc.setDrawColor(r, g, b);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  doc.setLineWidth(0.2);
+
+  doc.setFontSize(7);
+  doc.setTextColor(130, 130, 130);
+  doc.text(
+    `Documento gerado digitalmente em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+    MARGIN,
+    y + 5,
+  );
+  doc.text(
+    "Este documento não substitui o original assinado pelo profissional de saúde.",
+    MARGIN,
+    y + 9,
+  );
+
+  // Faixa fina de cor na base
+  doc.setFillColor(r, g, b);
+  doc.rect(0, PAGE_H - 3, PAGE_W, 3, "F");
+}
+
 export async function generateCertificatePdf(cert: CertificateData) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const title = certTypeLabel(cert.certificate_type);
-  const pageH = doc.internal.pageSize.getHeight();
+  const accentColor = TYPE_COLORS[cert.certificate_type] || "#2563eb";
+  const [ar, ag, ab] = hexToRgb(accentColor);
 
-  addHeader(doc, cert.clinic_name, cert.professional_name);
+  // ── Marca-d'água ──
+  addWatermark(doc, cert.clinic_name, accentColor);
 
-  let y = 40;
+  // ── Cabeçalho profissional com logo ──
+  let y = await addProfessionalHeader(doc, cert, accentColor);
 
-  doc.setFontSize(14);
+  // ── Faixa com tipo de documento ──
+  doc.setFillColor(ar, ag, ab);
+  doc.roundedRect(MARGIN, y, CONTENT_W, 9, 1.5, 1.5, "F");
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(13, 148, 136);
-  doc.text(title, MARGIN, y);
-  y += 10;
+  doc.setTextColor(255, 255, 255);
+  doc.text(title.toUpperCase(), PAGE_W / 2, y + 6.3, { align: "center" });
+  y += 14;
 
-  // Dados do estabelecimento (CFM recomenda)
-  if (cert.clinic_address || cert.clinic_phone || cert.clinic_cnpj) {
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    const clinicInfo: string[] = [];
-    if (cert.clinic_address) clinicInfo.push(cert.clinic_address);
-    if (cert.clinic_phone) clinicInfo.push(`Tel: ${cert.clinic_phone}`);
-    if (cert.clinic_cnpj) clinicInfo.push(`CNPJ: ${cert.clinic_cnpj}`);
-    doc.text(clinicInfo.join(" · "), MARGIN, y);
-    y += 6;
-  }
-
-  // Dados do paciente (obrigatório CFM)
+  // ── Dados do paciente ──
   if (cert.patient_name) {
+    // Borda lateral colorida
+    doc.setFillColor(ar, ag, ab);
+    const patientBoxH = (cert.patient_cpf || cert.patient_birth_date) ? 18 : 12;
+    doc.rect(MARGIN, y - 2, 1.2, patientBoxH, "F");
+
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(MARGIN, y - 2, CONTENT_W, cert.patient_cpf || cert.patient_birth_date ? 16 : 10, 2, 2, "F");
-    
+    doc.rect(MARGIN + 1.2, y - 2, CONTENT_W - 1.2, patientBoxH, "F");
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(71, 85, 105);
-    doc.text("PACIENTE", MARGIN + 3, y + 3);
-    
+    doc.setTextColor(ar, ag, ab);
+    doc.text("PACIENTE", MARGIN + 4, y + 3);
+
     doc.setFont("helvetica", "normal");
     doc.setTextColor(30, 41, 59);
-    doc.text(cert.patient_name, MARGIN + 25, y + 3);
-    
+    doc.setFontSize(10);
+    doc.text(cert.patient_name, MARGIN + 26, y + 3);
+
     if (cert.patient_cpf || cert.patient_birth_date) {
-      y += 6;
       const patientDetails: string[] = [];
       if (cert.patient_cpf) patientDetails.push(`CPF: ${cert.patient_cpf}`);
       if (cert.patient_birth_date) {
         patientDetails.push(`Nascimento: ${format(new Date(cert.patient_birth_date), "dd/MM/yyyy")}`);
       }
       doc.setFontSize(8);
-      doc.text(patientDetails.join("   "), MARGIN + 25, y + 3);
+      doc.setTextColor(100, 100, 100);
+      doc.text(patientDetails.join("     "), MARGIN + 26, y + 9);
     }
-    y += 12;
+    y += patientBoxH + 4;
   }
 
+  // ── Campos ──
   y = addField(doc, "Data de Emissão",
     format(new Date(cert.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y);
 
@@ -164,73 +280,76 @@ export async function generateCertificatePdf(cert: CertificateData) {
     y = addField(doc, "CID-10", cert.cid_code + " (com autorização do paciente)", y);
   }
 
+  // ── Separador ──
   y += 2;
   doc.setDrawColor(220, 220, 220);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
   y += 6;
 
+  // ── Conteúdo principal ──
   y = addField(doc, "Conteúdo", cert.content, y);
 
   if (cert.notes) {
     y = addField(doc, "Observações", cert.notes, y);
   }
 
-  // Área de assinatura do profissional (CFM obrigatório)
-  y = Math.max(y, pageH - 70);
+  // ── Área de assinatura ──
+  y = Math.max(y, PAGE_H - 75);
   y += 5;
   doc.setDrawColor(200, 200, 200);
   doc.line(MARGIN, y, PAGE_W - MARGIN, y);
   y += 8;
 
-  // Assinatura centralizada
   const sigX = PAGE_W / 2;
-  doc.setDrawColor(100, 100, 100);
+  doc.setDrawColor(ar, ag, ab);
+  doc.setLineWidth(0.4);
   doc.line(sigX - 40, y + 15, sigX + 40, y + 15);
-  
+  doc.setLineWidth(0.2);
+
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(30, 30, 30);
   doc.text(cert.professional_name, sigX, y + 21, { align: "center" });
-  
+
   if (cert.professional_crm) {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    const crmText = cert.professional_uf 
-      ? `${cert.professional_crm}/${cert.professional_uf}` 
+    const crmText = cert.professional_uf
+      ? `${cert.professional_crm}/${cert.professional_uf}`
       : cert.professional_crm;
     doc.text(crmText, sigX, y + 26, { align: "center" });
   }
-  
+
   if (cert.professional_specialty) {
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text(cert.professional_specialty, sigX, y + 31, { align: "center" });
   }
 
-  // Assinatura digital com QR Code (se disponível)
+  // ── Assinatura digital com QR Code ──
   if (cert.digital_signature && cert.signed_at) {
     y += 40;
     doc.setFillColor(240, 253, 244);
     doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
-    
+
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(22, 163, 74);
     doc.text("DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 3);
-    
+
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
     doc.text(`Assinado em: ${format(new Date(cert.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN + 3, y + 8);
-    
+
     doc.setFontSize(5);
     doc.text(`Hash: ${cert.digital_signature}`, MARGIN + 3, y + 11);
-    
+
     doc.setFontSize(6);
     doc.setTextColor(80, 80, 80);
     doc.text("Verifique a autenticidade:", MARGIN + 3, y + 16);
-    doc.setTextColor(13, 148, 136);
+    doc.setTextColor(ar, ag, ab);
     doc.text(getVerificationUrl(cert.digital_signature), MARGIN + 3, y + 20);
-    
+
     try {
       const qrDataUrl = await generateQRCodeDataUrl(cert.digital_signature, 60);
       doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y - 1, 20, 20);
@@ -239,7 +358,8 @@ export async function generateCertificatePdf(cert: CertificateData) {
     }
   }
 
-  addFooter(doc);
+  // ── Rodapé profissional ──
+  addProfessionalFooter(doc, accentColor);
 
   const filename = `${title.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(cert.issued_at), "yyyy-MM-dd")}.pdf`;
   doc.save(filename);

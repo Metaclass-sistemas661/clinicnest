@@ -550,10 +550,14 @@ export default function Atestados() {
   .signature-line { width: 220px; border-bottom: 1px solid #1e293b; margin-bottom: 6px; }
   .footer-right p { font-size: 11px; color: #1e293b; }
   .footer-right .small { font-size: 9px; color: #64748b; }
+  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg); font-size: 60px; font-weight: 900; color: ${borderColor}; opacity: 0.04; pointer-events: none; white-space: nowrap; z-index: 0; letter-spacing: 4px; }
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 4mm; background: ${borderColor}; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>
 <body>
+<div class="watermark">${clinicName.toUpperCase()}</div>
+<div class="bottom-bar"></div>
 <div class="page">
   <div class="header">
     <div class="header-logo">${logoHtml}</div>
@@ -618,6 +622,8 @@ export default function Atestados() {
       clinic_address: tenant?.address,
       clinic_phone: tenant?.phone,
       clinic_cnpj: tenantAny?.cnpj,
+      clinic_email: tenantAny?.email,
+      logo_url: tenantData?.logo_url,
       patient_name: patient?.name,
       patient_cpf: patient?.cpf,
       digital_signature: c.digital_signature,
