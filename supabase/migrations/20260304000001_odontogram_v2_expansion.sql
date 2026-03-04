@@ -391,6 +391,9 @@ GRANT EXECUTE ON FUNCTION public.compare_odontograms(UUID, UUID) TO authenticate
 -- 8. RPC expandida: get_odontogram_teeth com novos campos
 -- ============================================================
 
+-- Drop obrigatório: assinatura de retorno mudou (novos OUT params)
+DROP FUNCTION IF EXISTS public.get_odontogram_teeth(UUID);
+
 CREATE OR REPLACE FUNCTION public.get_odontogram_teeth(
   p_odontogram_id UUID
 )
