@@ -23,7 +23,13 @@ type TenantRow = {
 type SelectResult<T> = { data: T; error: unknown };
 
 function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
+  let digits = raw.replace(/\D/g, "");
+  // Remove leading 0 (ex: 011...)
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  // Add country code 55 if missing
+  if (!digits.startsWith("55") && digits.length <= 11) {
+    digits = "55" + digits;
+  }
   return digits;
 }
 
