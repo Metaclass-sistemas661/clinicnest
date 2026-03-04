@@ -28,7 +28,8 @@ interface ChatbotSettingsData {
   business_days: number[];
   auto_confirm_booking: boolean;
   transfer_phone: string;
-  offline_message: string;
+  outside_hours_message: string;
+  max_future_days: number;
 }
 
 const DEFAULT_SETTINGS: ChatbotSettingsData = {
@@ -42,8 +43,9 @@ const DEFAULT_SETTINGS: ChatbotSettingsData = {
   business_days: [1, 2, 3, 4, 5],
   auto_confirm_booking: false,
   transfer_phone: "",
-  offline_message:
+  outside_hours_message:
     "Nosso horário de atendimento é de segunda a sexta, das 08h às 18h. Deixe sua mensagem e retornaremos em breve! 😊",
+  max_future_days: 30,
 };
 
 const DAY_LABELS = [
@@ -91,7 +93,8 @@ export default function ChatbotSettings() {
           business_days: d.business_days || [1, 2, 3, 4, 5],
           auto_confirm_booking: d.auto_confirm_booking ?? false,
           transfer_phone: d.transfer_phone || "",
-          offline_message: d.offline_message || DEFAULT_SETTINGS.offline_message,
+          outside_hours_message: d.outside_hours_message || DEFAULT_SETTINGS.outside_hours_message,
+          max_future_days: d.max_future_days ?? DEFAULT_SETTINGS.max_future_days,
         });
       }
     } catch (err) {
@@ -115,7 +118,8 @@ export default function ChatbotSettings() {
         business_days: form.business_days,
         auto_confirm_booking: form.auto_confirm_booking,
         transfer_phone: form.transfer_phone || null,
-        offline_message: form.offline_message,
+        outside_hours_message: form.outside_hours_message,
+        max_future_days: form.max_future_days,
       };
 
       if (form.id) {
@@ -226,8 +230,8 @@ export default function ChatbotSettings() {
           <div className="space-y-2">
             <Label>Mensagem fora do horário</Label>
             <Textarea
-              value={form.offline_message}
-              onChange={(e) => setForm((p) => ({ ...p, offline_message: e.target.value }))}
+              value={form.outside_hours_message}
+              onChange={(e) => setForm((p) => ({ ...p, outside_hours_message: e.target.value }))}
               rows={3}
               placeholder="Nosso horário de atendimento é..."
             />
@@ -318,6 +322,28 @@ export default function ChatbotSettings() {
                 setForm((p) => ({ ...p, auto_confirm_booking: checked }))
               }
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Dias máximos para agendamento futuro</Label>
+            <Select
+              value={String(form.max_future_days)}
+              onValueChange={(v) => setForm((p) => ({ ...p, max_future_days: Number(v) }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">7 dias</SelectItem>
+                <SelectItem value="14">14 dias</SelectItem>
+                <SelectItem value="30">30 dias</SelectItem>
+                <SelectItem value="60">60 dias</SelectItem>
+                <SelectItem value="90">90 dias</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Limite de antecedência que o paciente pode agendar pelo chatbot
+            </p>
           </div>
 
           <div className="space-y-2">
