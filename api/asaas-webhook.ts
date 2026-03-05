@@ -152,20 +152,31 @@ function mapAsaasPlan(cycle: unknown, value: unknown): string | null {
 
   // Prefer safe tier detection based on exact known prices.
   if (Number.isFinite(v)) {
-    // Basic
+    // Legacy plans (pre-2026)
     if (interval === "monthly" && approx(v, 79.9)) return "basic_monthly";
     if (interval === "quarterly" && approx(v, 219.9)) return "basic_quarterly";
     if (interval === "annual" && approx(v, 719.0)) return "basic_annual";
 
-    // Pro
     if (interval === "monthly" && approx(v, 119.9)) return "pro_monthly";
     if (interval === "quarterly" && approx(v, 329.9)) return "pro_quarterly";
     if (interval === "annual" && approx(v, 1079.0)) return "pro_annual";
 
-    // Premium
     if (interval === "monthly" && approx(v, 169.9)) return "premium_monthly";
     if (interval === "quarterly" && approx(v, 469.9)) return "premium_quarterly";
     if (interval === "annual" && approx(v, 1499.0)) return "premium_annual";
+
+    // Current plans (2026+)
+    if (interval === "monthly" && approx(v, 89.9)) return "starter_monthly";
+    if (interval === "annual" && approx(v, 809.0)) return "starter_annual";
+
+    if (interval === "monthly" && approx(v, 159.9)) return "solo_monthly";
+    if (interval === "annual" && approx(v, 1439.1)) return "solo_annual";
+
+    if (interval === "monthly" && approx(v, 289.9)) return "clinic_monthly";
+    if (interval === "annual" && approx(v, 2609.1)) return "clinic_annual";
+
+    if (interval === "monthly" && approx(v, 399.9)) return "premium_monthly";
+    if (interval === "annual" && approx(v, 3599.0)) return "premium_annual";
   }
 
   // If we can't safely determine tier, do not map the plan.

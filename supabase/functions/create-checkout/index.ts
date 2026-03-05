@@ -57,12 +57,12 @@ const PRICING: Record<TierKey, Record<IntervalKey, number>> = {
     annual: 80900,
   },
   solo: {
-    monthly: 14990,
-    annual: 134900,
+    monthly: 15990,
+    annual: 143910,
   },
   clinic: {
-    monthly: 24990,
-    annual: 224900,
+    monthly: 28990,
+    annual: 260910,
   },
   premium: {
     monthly: 39990,

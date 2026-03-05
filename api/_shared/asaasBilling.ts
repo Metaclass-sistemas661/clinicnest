@@ -53,6 +53,7 @@ function mapAsaasPlan(cycle: unknown, value: unknown): string | null {
   if (!interval) return null;
 
   if (Number.isFinite(v)) {
+    // Legacy plans (pre-2026)
     if (interval === "monthly" && approx(v, 79.9)) return "basic_monthly";
     if (interval === "quarterly" && approx(v, 219.9)) return "basic_quarterly";
     if (interval === "annual" && approx(v, 719.0)) return "basic_annual";
@@ -64,6 +65,19 @@ function mapAsaasPlan(cycle: unknown, value: unknown): string | null {
     if (interval === "monthly" && approx(v, 169.9)) return "premium_monthly";
     if (interval === "quarterly" && approx(v, 469.9)) return "premium_quarterly";
     if (interval === "annual" && approx(v, 1499.0)) return "premium_annual";
+
+    // Current plans (2026+)
+    if (interval === "monthly" && approx(v, 89.9)) return "starter_monthly";
+    if (interval === "annual" && approx(v, 809.0)) return "starter_annual";
+
+    if (interval === "monthly" && approx(v, 159.9)) return "solo_monthly";
+    if (interval === "annual" && approx(v, 1439.1)) return "solo_annual";
+
+    if (interval === "monthly" && approx(v, 289.9)) return "clinic_monthly";
+    if (interval === "annual" && approx(v, 2609.1)) return "clinic_annual";
+
+    if (interval === "monthly" && approx(v, 399.9)) return "premium_monthly";
+    if (interval === "annual" && approx(v, 3599.0)) return "premium_annual";
   }
 
   return null;
