@@ -43,12 +43,12 @@ const PRICING: Record<TierKey, Record<IntervalKey, { label: string; amountCents:
     annual:  { label: "R$809,00", amountCents: 80900, perMonth: "R$67,42/mês", savings: "Economize R$269,80/ano" },
   },
   solo: {
-    monthly: { label: "R$149,90", amountCents: 14990 },
-    annual:  { label: "R$1.349,00", amountCents: 134900, perMonth: "R$112,42/mês", savings: "Economize R$450,80/ano" },
+    monthly: { label: "R$159,90", amountCents: 15990 },
+    annual:  { label: "R$1.439,10", amountCents: 143910, perMonth: "R$119,93/mês", savings: "Economize R$479,70/ano" },
   },
   clinic: {
-    monthly: { label: "R$249,90", amountCents: 24990 },
-    annual:  { label: "R$2.249,00", amountCents: 224900, perMonth: "R$187,42/mês", savings: "Economize R$749,80/ano" },
+    monthly: { label: "R$289,90", amountCents: 28990 },
+    annual:  { label: "R$2.609,10", amountCents: 260910, perMonth: "R$217,43/mês", savings: "Economize R$869,70/ano" },
   },
   premium: {
     monthly: { label: "R$399,90", amountCents: 39990 },

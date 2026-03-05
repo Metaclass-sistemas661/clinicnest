@@ -24,7 +24,7 @@ export function ROICalculatorSection() {
     const costPerHour = revenue / (appointments * 2); // Estimativa de valor por hora
     const timeValue = timeSaved * costPerHour;
     const totalBenefit = revenueIncrease + timeValue;
-    const monthlyCost = 149.90; // Plano mensal
+    const monthlyCost = 159.90; // Plano mensal
     const roi = ((totalBenefit - monthlyCost) / monthlyCost) * 100;
     const paybackMonths = monthlyCost / totalBenefit;
 

@@ -38,12 +38,12 @@ const PRICING = {
     annual:  { price: "809,00", perMonth: "R$67,42/mês", total: "R$809,00 cobrados anualmente", savings: "Economize R$269,80/ano" },
   },
   solo: {
-    monthly: { price: "149,90", perMonth: null, total: null },
-    annual:  { price: "1.349,00", perMonth: "R$112,42/mês", total: "R$1.349,00 cobrados anualmente", savings: "Economize R$450,80/ano" },
+    monthly: { price: "159,90", perMonth: null, total: null },
+    annual:  { price: "1.439,10", perMonth: "R$119,93/mês", total: "R$1.439,10 cobrados anualmente", savings: "Economize R$479,70/ano" },
   },
   clinic: {
-    monthly: { price: "249,90", perMonth: null, total: null },
-    annual:  { price: "2.249,00", perMonth: "R$187,42/mês", total: "R$2.249,00 cobrados anualmente", savings: "Economize R$749,80/ano" },
+    monthly: { price: "289,90", perMonth: null, total: null },
+    annual:  { price: "2.609,10", perMonth: "R$217,43/mês", total: "R$2.609,10 cobrados anualmente", savings: "Economize R$869,70/ano" },
   },
   premium: {
     monthly: { price: "399,90", perMonth: null, total: null },

@@ -230,8 +230,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
     tagline: 'Para profissionais autônomos',
     target: 'Médico, psicólogo, fisioterapeuta individual',
     price: {
-      monthly: 149.90,
-      annual: 1349.00,
+      monthly: 159.90,
+      annual: 1439.10,
     },
     limits: {
       professionals: 2,
@@ -326,8 +326,8 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
     tagline: 'Para clínicas em crescimento',
     target: 'Clínicas com equipe e múltiplos profissionais',
     price: {
-      monthly: 249.90,
-      annual: 2249.00,
+      monthly: 289.90,
+      annual: 2609.10,
     },
     limits: {
       professionals: 6,
