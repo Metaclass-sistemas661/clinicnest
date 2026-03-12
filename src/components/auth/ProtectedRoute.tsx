@@ -33,7 +33,12 @@ export function ProtectedRoute({
   const tenant = auth?.tenant;
   const location = useLocation();
 
-  if (isLoading) {
+  // Aguardar enquanto:
+  // 1. isLoading explícito (auth ainda inicializando), OU
+  // 2. user existe mas profile/userRole ainda não carregaram (race condition pós-login)
+  const isHydrating = isLoading || (!!user && !auth?.profile);
+
+  if (isHydrating) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
