@@ -54,7 +54,11 @@ export default function PlanosTratamento() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ title: "Plano de Tratamento", description: "", valid_until: "", payment_conditions: "", discount_percent: "0" });
 
-  useEffect(() => { if (profile?.tenant_id && patientSearch.length >= 2) searchPatients(); }, [patientSearch]);
+  useEffect(() => {
+    if (!profile?.tenant_id || patientSearch.length < 2) return;
+    const timer = setTimeout(() => { searchPatients(); }, 350);
+    return () => clearTimeout(timer);
+  }, [patientSearch]);
   useEffect(() => { if (selectedPatient) fetchPlans(); }, [selectedPatient, statusFilter]);
 
   const searchPatients = async () => {

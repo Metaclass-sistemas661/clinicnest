@@ -9,7 +9,13 @@
  * - Estatísticas resumidas
  */
 import jsPDF from "jspdf";
-import { TOOTH_CONDITIONS, UPPER_PERMANENT, LOWER_PERMANENT } from "@/components/odontograma/odontogramConstants";
+import {
+  TOOTH_CONDITIONS,
+  UPPER_PERMANENT,
+  LOWER_PERMANENT,
+  UPPER_DECIDUOUS,
+  LOWER_DECIDUOUS,
+} from "@/components/odontograma/odontogramConstants";
 
 interface OdontogramPdfData {
   patient_name: string;
@@ -69,86 +75,77 @@ export function generateOdontogramPdf(data: OdontogramPdfData) {
   const teethMap = new Map(data.teeth.map(t => [t.tooth_number, t]));
   const toothW = 14;
   const toothH = 12;
-  const startX = (pageWidth - UPPER_PERMANENT.length * toothW) / 2;
 
-  // Upper arch
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("Arcada Superior", pageWidth / 2, y, { align: "center" });
-  y += 4;
+  // Determine which arches to render based on dentition_type
+  const upperPermanent = data.dentition_type !== "deciduous" ? [...UPPER_PERMANENT] : [];
+  const lowerPermanent = data.dentition_type !== "deciduous" ? [...LOWER_PERMANENT] : [];
+  const upperDeciduous = data.dentition_type !== "permanent" ? [...UPPER_DECIDUOUS] : [];
+  const lowerDeciduous = data.dentition_type !== "permanent" ? [...LOWER_DECIDUOUS] : [];
 
-  for (let i = 0; i < UPPER_PERMANENT.length; i++) {
-    const num = UPPER_PERMANENT[i];
-    const x = startX + i * toothW;
-    const tooth = teethMap.get(num);
-    const info = getConditionInfo(tooth?.condition ?? "healthy");
-    const [r, g, b] = hexToRgb(info.color);
+  /** Helper: renders a single arch row */
+  const renderArch = (teethArr: number[], archLabel: string) => {
+    if (teethArr.length === 0) return;
+    const archStartX = (pageWidth - teethArr.length * toothW) / 2;
 
-    // Tooth box
-    if (tooth?.condition === "missing") {
-      doc.setDrawColor(180, 180, 180);
-      doc.setLineDashPattern([1, 1], 0);
-      doc.rect(x, y, toothW - 1, toothH);
-      doc.setLineDashPattern([], 0);
-      // X
-      doc.setDrawColor(180, 180, 180);
-      doc.line(x + 1, y + 1, x + toothW - 2, y + toothH - 1);
-      doc.line(x + toothW - 2, y + 1, x + 1, y + toothH - 1);
-    } else {
-      doc.setFillColor(r, g, b);
-      doc.setDrawColor(100, 100, 100);
-      doc.roundedRect(x, y, toothW - 1, toothH, 1, 1, "FD");
-    }
-
-    // Tooth number
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255);
-    doc.text(num.toString(), x + (toothW - 1) / 2, y + toothH / 2 + 2, { align: "center" });
-  }
-  doc.setTextColor(0, 0, 0);
+    doc.text(archLabel, pageWidth / 2, y, { align: "center" });
+    y += 4;
 
-  y += toothH + 6;
+    for (let i = 0; i < teethArr.length; i++) {
+      const num = teethArr[i];
+      const x = archStartX + i * toothW;
+      const tooth = teethMap.get(num);
+      const info = getConditionInfo(tooth?.condition ?? "healthy");
+      const [r, g, b] = hexToRgb(info.color);
+
+      if (tooth?.condition === "missing") {
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineDashPattern([1, 1], 0);
+        doc.rect(x, y, toothW - 1, toothH);
+        doc.setLineDashPattern([], 0);
+        doc.setDrawColor(180, 180, 180);
+        doc.line(x + 1, y + 1, x + toothW - 2, y + toothH - 1);
+        doc.line(x + toothW - 2, y + 1, x + 1, y + toothH - 1);
+      } else {
+        doc.setFillColor(r, g, b);
+        doc.setDrawColor(100, 100, 100);
+        doc.roundedRect(x, y, toothW - 1, toothH, 1, 1, "FD");
+      }
+
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255);
+      doc.text(num.toString(), x + (toothW - 1) / 2, y + toothH / 2 + 2, { align: "center" });
+    }
+    doc.setTextColor(0, 0, 0);
+    y += toothH + 4;
+  };
+
+  // Upper permanent arch
+  renderArch(upperPermanent, "Arcada Superior (Permanente)");
+
+  // Upper deciduous arch
+  if (upperDeciduous.length > 0) {
+    renderArch(upperDeciduous, data.dentition_type === "mixed" ? "Arcada Superior (Decídua)" : "Arcada Superior");
+  }
 
   // Separator
   doc.setDrawColor(200, 200, 200);
-  doc.line(startX, y, startX + UPPER_PERMANENT.length * toothW - 1, y);
+  const sepWidth = Math.max(upperPermanent.length, upperDeciduous.length, lowerPermanent.length, lowerDeciduous.length) * toothW;
+  const sepStartX = (pageWidth - sepWidth) / 2;
+  doc.line(sepStartX, y, sepStartX + sepWidth - 1, y);
   y += 4;
 
-  // Lower arch
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("Arcada Inferior", pageWidth / 2, y, { align: "center" });
-  y += 4;
+  // Lower permanent arch
+  renderArch(lowerPermanent, "Arcada Inferior (Permanente)");
 
-  for (let i = 0; i < LOWER_PERMANENT.length; i++) {
-    const num = LOWER_PERMANENT[i];
-    const x = startX + i * toothW;
-    const tooth = teethMap.get(num);
-    const info = getConditionInfo(tooth?.condition ?? "healthy");
-    const [r, g, b] = hexToRgb(info.color);
-
-    if (tooth?.condition === "missing") {
-      doc.setDrawColor(180, 180, 180);
-      doc.setLineDashPattern([1, 1], 0);
-      doc.rect(x, y, toothW - 1, toothH);
-      doc.setLineDashPattern([], 0);
-      doc.line(x + 1, y + 1, x + toothW - 2, y + toothH - 1);
-      doc.line(x + toothW - 2, y + 1, x + 1, y + toothH - 1);
-    } else {
-      doc.setFillColor(r, g, b);
-      doc.setDrawColor(100, 100, 100);
-      doc.roundedRect(x, y, toothW - 1, toothH, 1, 1, "FD");
-    }
-
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255, tooth?.condition === "missing" ? 150 : 255);
-    doc.text(num.toString(), x + (toothW - 1) / 2, y + toothH / 2 + 2, { align: "center" });
+  // Lower deciduous arch
+  if (lowerDeciduous.length > 0) {
+    renderArch(lowerDeciduous, data.dentition_type === "mixed" ? "Arcada Inferior (Decídua)" : "Arcada Inferior");
   }
-  doc.setTextColor(0, 0, 0);
 
-  y += toothH + 8;
+  y += 4;
 
   // ── Legend ──
   doc.setFontSize(7);

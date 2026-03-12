@@ -85,9 +85,13 @@ export default function Periograma() {
   const [riskClass, setRiskClass] = useState("");
 
   useEffect(() => {
-    if (profile?.tenant_id && patientSearch.length >= 2) {
+    if (!profile?.tenant_id || patientSearch.length < 2) return;
+
+    const timer = setTimeout(() => {
       void searchPatients();
-    }
+    }, 350);
+
+    return () => clearTimeout(timer);
   }, [patientSearch, profile?.tenant_id]);
 
   const searchPatients = async () => {

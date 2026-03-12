@@ -16,7 +16,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -111,13 +110,6 @@ function getDepthColor(depth: number | null): string {
   return "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300";
 }
 
-function getDepthBorderColor(depth: number | null): string {
-  if (depth === null) return "border-muted";
-  if (depth <= 3) return "border-green-300 dark:border-green-700";
-  if (depth <= 5) return "border-yellow-300 dark:border-yellow-700";
-  return "border-red-300 dark:border-red-700";
-}
-
 // ─── Periograma Component ────────────────────────────────────────────────────
 
 export function Periograma({ tenantId, patientId, professionalId, appointmentId, readOnly = false }: PeriogramaProps) {
@@ -136,8 +128,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
   const [history, setHistory] = useState<PeriogramEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // Active cell for keyboard navigation
-  const [activeCell, setActiveCell] = useState<{ tooth: number; site: Site; field: "depth" | "recession" } | null>(null);
+  // Input refs for keyboard navigation
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
   // ── Initialize teeth ──
@@ -444,7 +435,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
   };
 
   // ── Render tooth row ──
-  const renderToothRow = (teethArray: number[], label: string, isReversed?: boolean) => {
+  const renderToothRow = (teethArray: number[], label: string) => {
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] border-collapse min-w-[900px]">

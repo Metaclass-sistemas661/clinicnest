@@ -133,11 +133,15 @@ export default function Odontograma() {
   const [treatmentPlanSelectedTeeth, setTreatmentPlanSelectedTeeth] = useState<Set<number>>(new Set());
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
 
-  // ── Patient search ──
+  // ── Patient search (debounced) ──
   useEffect(() => {
-    if (profile?.tenant_id && patientSearch.length >= 2) {
+    if (!profile?.tenant_id || patientSearch.length < 2) return;
+
+    const timer = setTimeout(() => {
       void searchPatients();
-    }
+    }, 350);
+
+    return () => clearTimeout(timer);
   }, [patientSearch, profile?.tenant_id]);
 
   const searchPatients = async () => {
@@ -297,6 +301,7 @@ export default function Odontograma() {
           p_exam_date: new Date().toISOString().split("T")[0],
           p_notes: `Odontograma: ${teethArray.length} dente(s) — Dentição: ${dentitionType}`,
           p_teeth: teethArray,
+          p_dentition_type: dentitionType,
         });
 
       if (error) throw error;

@@ -141,7 +141,7 @@ export default function FaturasPacientes() {
     if (!tenantId) return;
     try {
       const { data } = await supabase
-        .from("clients")
+        .from("patients")
         .select("id, full_name")
         .eq("tenant_id", tenantId)
         .order("full_name");

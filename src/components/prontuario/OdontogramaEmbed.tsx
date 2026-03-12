@@ -46,12 +46,18 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (tenantId && patientId) {
-      void loadLatestOdontogram();
+      void loadLatestOdontogram(cancelled);
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [tenantId, patientId]);
 
-  const loadLatestOdontogram = async () => {
+  const loadLatestOdontogram = async (cancelled = false) => {
     setIsLoading(true);
     try {
       const { data: odontograms, error } = await (supabase
@@ -61,6 +67,8 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
         });
 
       if (error) throw error;
+
+      if (cancelled) return;
 
       if (odontograms && (odontograms as any[]).length > 0) {
         const latest = (odontograms as any[])[0];
@@ -148,6 +156,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
           p_exam_date: new Date().toISOString().split("T")[0],
           p_notes: `Odontograma: ${teethArray.length} dente(s) — Dentição: ${dentitionType}`,
           p_teeth: teethArray,
+          p_dentition_type: dentitionType,
         });
 
       if (error) throw error;
