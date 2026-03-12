@@ -175,6 +175,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
 
     if (session?.user) {
+      // Garante que isLoading = true enquanto os dados do perfil/role/tenant são carregados.
+      // Sem isso, ProtectedRoute avalia permissões antes de userRole estar disponível → 403 falso.
+      setIsLoading(true);
+
       const data = await fetchUserData(session.user.id);
       // Se outra chamada mais recente já disparou, descartar este resultado
       if (applyRef.current !== seq) {
