@@ -1,5 +1,6 @@
 import { Shield, Zap, CheckCircle2, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollReveal } from "./ScrollReveal";
 
 const certifications = [
   {
@@ -43,7 +44,7 @@ export function SocialProofSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Certifications */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {certifications.map((cert) => {
+          {certifications.map((cert, index) => {
             const Icon = cert.icon;
             const colorClasses: Record<string, string> = {
               green: "bg-green-100 text-green-600",
@@ -53,15 +54,17 @@ export function SocialProofSection() {
             };
 
             return (
-              <Card key={cert.title} className="text-center border-2 hover:border-teal-200 transition-all">
-                <CardContent className="p-6">
-                  <div className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4 ${colorClasses[cert.color]}`}>
-                    <Icon className="h-8 w-8" />
-                  </div>
-                  <h3 className="font-semibold mb-2">{cert.title}</h3>
-                  <p className="text-sm text-muted-foreground">{cert.description}</p>
-                </CardContent>
-              </Card>
+              <ScrollReveal key={cert.title} animation="up" stagger={index + 1}>
+                <Card className="text-center border-2 hover:border-teal-200 transition-all h-full">
+                  <CardContent className="p-6">
+                    <div className={`inline-flex h-16 w-16 items-center justify-center rounded-2xl mb-4 ${colorClasses[cert.color]}`}>
+                      <Icon className="h-8 w-8" />
+                    </div>
+                    <h3 className="font-semibold mb-2">{cert.title}</h3>
+                    <p className="text-sm text-muted-foreground">{cert.description}</p>
+                  </CardContent>
+                </Card>
+              </ScrollReveal>
             );
           })}
         </div>
@@ -84,26 +87,28 @@ export function SocialProofSection() {
         </div>
 
         {/* Trust Stats */}
-        <div className="flex flex-row items-start justify-center gap-1 sm:gap-4 md:gap-6 max-w-3xl mx-auto px-2">
-          <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
-              98%
+        <ScrollReveal animation="up">
+          <div className="flex flex-row items-start justify-center gap-1 sm:gap-4 md:gap-6 max-w-3xl mx-auto px-2">
+            <div className="flex-1 text-center min-w-0">
+              <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+                98%
+              </div>
+              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
             </div>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Taxa de Satisfação</p>
-          </div>
-          <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
-              4.9/5
+            <div className="flex-1 text-center min-w-0">
+              <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+                4.9/5
+              </div>
+              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
             </div>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Avaliação Média</p>
-          </div>
-          <div className="flex-1 text-center min-w-0">
-            <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
-              Seg-Sáb
+            <div className="flex-1 text-center min-w-0">
+              <div className="text-lg sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent mb-1 sm:mb-2">
+                Seg-Sáb
+              </div>
+              <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Humanizado</p>
             </div>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground leading-tight">Suporte Humanizado</p>
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import { UserPlus, Settings, CalendarCheck, TrendingUp, ArrowRight, Users, FileText, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const steps = [
   {
@@ -61,21 +62,23 @@ export function HowItWorksSection() {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-300 to-transparent" />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
-            <ArrowRight className="h-4 w-4 text-teal-600" />
-            <span className="text-sm font-medium text-teal-600">Primeiros Passos</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+              <ArrowRight className="h-4 w-4 text-teal-600" />
+              <span className="text-sm font-medium text-teal-600">Primeiros Passos</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              Comece em{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                6 passos simples
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Do cadastro ao primeiro atendimento em menos de 30 minutos. Nossa equipe ajuda na migração.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            Comece em{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              6 passos simples
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Do cadastro ao primeiro atendimento em menos de 30 minutos. Nossa equipe ajuda na migração.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="relative">
           <div className="hidden lg:block absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-200 via-cyan-200 via-blue-200 via-green-200 via-violet-200 to-pink-200 -translate-y-1/2" />
@@ -86,10 +89,12 @@ export function HowItWorksSection() {
               const colors = colorClasses[step.color];
 
               return (
-                <div
+                <ScrollReveal
                   key={step.step}
-                  className="relative group"
+                  animation="up"
+                  stagger={(index % 3) + 1}
                 >
+                  <div className="relative group">
                   <div className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 h-full flex flex-col">
                     <div className={cn(
                       "absolute -top-3 -right-3 h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm border-2 bg-white shadow-md",
@@ -115,7 +120,8 @@ export function HowItWorksSection() {
                       </p>
                     </div>
                   </div>
-                </div>
+                  </div>
+                </ScrollReveal>
               );
             })}
           </div>

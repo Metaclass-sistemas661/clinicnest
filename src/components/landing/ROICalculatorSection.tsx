@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calculator, TrendingUp, DollarSign, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 export function ROICalculatorSection() {
   const [monthlyRevenue, setMonthlyRevenue] = useState("");
@@ -45,7 +46,8 @@ export function ROICalculatorSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-12">
+          <ScrollReveal>
+            <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 border border-green-200 mb-6">
               <Calculator className="h-4 w-4 text-green-600" aria-hidden="true" />
               <span className="text-sm font-medium text-green-600">Calculadora de ROI</span>
@@ -59,10 +61,12 @@ export function ROICalculatorSection() {
             <p className="text-lg text-muted-foreground">
               Calcule o retorno sobre investimento do ClinicNest para a sua clínica.
             </p>
-          </div>
+            </div>
+          </ScrollReveal>
 
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Input Form */}
+            <ScrollReveal animation="left">
             <Card>
               <CardHeader>
                 <CardTitle>Informações da sua Clínica</CardTitle>
@@ -105,8 +109,10 @@ export function ROICalculatorSection() {
                 </div>
               </CardContent>
             </Card>
+            </ScrollReveal>
 
             {/* Results */}
+            <ScrollReveal animation="right">
             <Card className={cn("border-2", results && "border-green-200 bg-green-50/50")}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -176,6 +182,7 @@ export function ROICalculatorSection() {
                 )}
               </CardContent>
             </Card>
+            </ScrollReveal>
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-8">

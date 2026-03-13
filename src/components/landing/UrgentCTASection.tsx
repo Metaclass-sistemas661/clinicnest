@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap, Gift, Clock, Users } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ScrollReveal } from "./ScrollReveal";
 
 export function UrgentCTASection() {
   // Calculate time until end of day (23:59:59)
@@ -55,6 +56,7 @@ export function UrgentCTASection() {
           </div>
 
           <div className="relative z-10 py-16 sm:py-24 px-6 sm:px-12">
+            <ScrollReveal animation="scale">
             {/* Badge */}
             <div className="flex justify-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/30 text-white font-semibold text-sm">
@@ -123,6 +125,7 @@ export function UrgentCTASection() {
                 🔒 Sem cartão de crédito • Cancele quando quiser
               </p>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </div>

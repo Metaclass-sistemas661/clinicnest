@@ -25,6 +25,7 @@ import {
   Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const featureCategories = [
   {
@@ -232,36 +233,40 @@ export function FeaturesSection() {
   return (
     <section id="features" className="py-20 sm:py-32 bg-background relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
-            <Sparkles className="h-4 w-4 text-teal-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-teal-600">+80 Funcionalidades</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+              <Sparkles className="h-4 w-4 text-teal-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-teal-600">+80 Funcionalidades</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              O sistema mais{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">completo</span>{" "}
+              do mercado
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Único sistema híbrido do Brasil: médico + odontológico + multiprofissional em uma só plataforma.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            O sistema mais{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">completo</span>{" "}
-            do mercado
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Único sistema híbrido do Brasil: médico + odontológico + multiprofissional em uma só plataforma.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="space-y-16">
           {featureCategories.map((category, categoryIndex) => {
             const colors = colorClasses[category.color];
             return (
               <div key={category.title}>
-                <div className="flex items-center gap-4 mb-8">
-                  <div className={cn("h-1 flex-1 rounded-full bg-gradient-to-r", colors.gradient, "opacity-20")} />
-                  <div className="text-center">
-                    <h3 className={cn("font-display text-2xl font-bold", colors.text)}>
-                      {category.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{category.description}</p>
+                <ScrollReveal>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className={cn("h-1 flex-1 rounded-full bg-gradient-to-r", colors.gradient, "opacity-20")} />
+                    <div className="text-center">
+                      <h3 className={cn("font-display text-2xl font-bold", colors.text)}>
+                        {category.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{category.description}</p>
+                    </div>
+                    <div className={cn("h-1 flex-1 rounded-full bg-gradient-to-r", colors.gradient, "opacity-20")} />
                   </div>
-                  <div className={cn("h-1 flex-1 rounded-full bg-gradient-to-r", colors.gradient, "opacity-20")} />
-                </div>
+                </ScrollReveal>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {category.features.map((feature) => {
@@ -294,7 +299,8 @@ export function FeaturesSection() {
           })}
         </div>
 
-        <div className="mt-20 p-8 rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-500 text-white text-center">
+        <ScrollReveal animation="scale">
+          <div className="mt-20 p-8 rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-500 text-white text-center">
           <h3 className="font-display text-2xl sm:text-3xl font-bold mb-4">
             E muito mais...
           </h3>
@@ -317,7 +323,8 @@ export function FeaturesSection() {
               </span>
             ))}
           </div>
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

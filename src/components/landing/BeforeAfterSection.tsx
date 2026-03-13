@@ -14,6 +14,7 @@ import {
   Zap,
   Globe,
 } from "lucide-react";
+import { ScrollReveal } from "./ScrollReveal";
 
 const beforeItems = [
   { icon: FileText, text: "Prontuários em papel ou planilhas desorganizadas" },
@@ -37,23 +38,26 @@ export function BeforeAfterSection() {
   return (
     <section className="py-20 sm:py-32 bg-gradient-to-b from-teal-50/50 to-background relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
-            <TrendingUp className="h-4 w-4 text-teal-600" />
-            <span className="text-sm font-medium text-teal-600">Transformação Real</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+              <TrendingUp className="h-4 w-4 text-teal-600" />
+              <span className="text-sm font-medium text-teal-600">Transformação Real</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              A diferença de usar{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                ClinicNest
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Veja como o dia a dia da sua clínica muda completamente com o único sistema híbrido do Brasil.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            A diferença de usar{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              ClinicNest
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Veja como o dia a dia da sua clínica muda completamente com o único sistema híbrido do Brasil.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
+          <ScrollReveal animation="left">
           <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-red-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
               <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 font-semibold text-sm border border-red-200">
@@ -80,6 +84,9 @@ export function BeforeAfterSection() {
               <X className="h-6 w-6 text-red-500" />
             </div>
           </div>
+          </ScrollReveal>
+
+          <ScrollReveal animation="right">
 
           <div className="relative p-6 sm:p-8 rounded-2xl bg-white border-2 border-teal-200 shadow-lg h-full flex flex-col">
             <div className="absolute -top-4 left-6">
@@ -107,16 +114,19 @@ export function BeforeAfterSection() {
               <Check className="h-6 w-6 text-teal-600" />
             </div>
           </div>
+          </ScrollReveal>
         </div>
 
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-teal-100 to-cyan-100 border border-teal-200">
-            <Zap className="h-5 w-5 text-teal-600" />
-            <span className="font-semibold text-teal-700">
-              Resultado médio: +40% de eficiência operacional
-            </span>
+        <ScrollReveal animation="scale">
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-teal-100 to-cyan-100 border border-teal-200">
+              <Zap className="h-5 w-5 text-teal-600" />
+              <span className="font-semibold text-teal-700">
+                Resultado médio: +40% de eficiência operacional
+              </span>
+            </div>
           </div>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   );

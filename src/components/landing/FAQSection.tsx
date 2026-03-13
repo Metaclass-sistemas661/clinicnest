@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { HelpCircle, ChevronDown, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const faqs = [
   {
@@ -136,23 +137,26 @@ export function FAQSection() {
   return (
     <section id="faq" className="py-20 sm:py-32 bg-muted/30 relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
-            <HelpCircle className="h-4 w-4 text-teal-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-teal-600">Perguntas Frequentes</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+              <HelpCircle className="h-4 w-4 text-teal-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-teal-600">Perguntas Frequentes</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              Tire suas{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                dúvidas
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Reunimos as perguntas mais comuns sobre o ClinicNest. Não encontrou o que procura? Fale conosco!
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            Tire suas{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              dúvidas
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Reunimos as perguntas mais comuns sobre o ClinicNest. Não encontrou o que procura? Fale conosco!
-          </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="max-w-4xl mx-auto space-y-8">
+        <ScrollReveal>
+          <div className="max-w-4xl mx-auto space-y-8">
           {faqs.map((category) => (
             <div key={category.category}>
               <h3 className="font-display text-xl font-bold mb-4 text-teal-700">
@@ -196,9 +200,11 @@ export function FAQSection() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </ScrollReveal>
 
-        <div className="mt-16 max-w-2xl mx-auto">
+        <ScrollReveal animation="scale">
+          <div className="mt-16 max-w-2xl mx-auto">
           <div className="rounded-3xl bg-gradient-to-r from-teal-600 to-cyan-500 p-8 text-center text-white">
             <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-80" />
             <h3 className="font-display text-2xl font-bold mb-2">
@@ -224,7 +230,8 @@ export function FAQSection() {
               </a>
             </div>
           </div>
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

@@ -13,6 +13,7 @@ import {
   Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const integrations = [
   {
@@ -125,27 +126,30 @@ export function IntegrationsSection() {
   return (
     <section id="integracoes" className="py-20 sm:py-32 bg-background relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 border border-blue-200 mb-6">
-            <Zap className="h-4 w-4 text-blue-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-blue-600">Integrações & Segurança</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 border border-blue-200 mb-6">
+              <Zap className="h-4 w-4 text-blue-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-blue-600">Integrações & Segurança</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              Conectado e{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                seguro
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Integrações nativas com os principais sistemas e funcionalidades de segurança e compliance implementadas.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            Conectado e{" "}
-            <span className="bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-              seguro
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Integrações nativas com os principais sistemas e funcionalidades de segurança e compliance implementadas.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="mb-20">
           <h3 className="font-display text-2xl font-bold text-center mb-10">Integrações Disponíveis</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            {integrations.map((group) => (
-              <div key={group.category} className="p-6 rounded-2xl border bg-card">
+            {integrations.map((group, index) => (
+              <ScrollReveal key={group.category} animation="up" stagger={(index % 5) + 1}>
+                <div className="p-6 rounded-2xl border bg-card h-full">
                 <h4 className="font-semibold text-lg mb-4 text-center">{group.category}</h4>
                 <div className="space-y-3">
                   {group.items.map((item) => {
@@ -163,21 +167,24 @@ export function IntegrationsSection() {
                     );
                   })}
                 </div>
-              </div>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
 
         <div>
-          <h3 className="font-display text-2xl font-bold text-center mb-10">Segurança & Compliance</h3>
+          <ScrollReveal>
+            <h3 className="font-display text-2xl font-bold text-center mb-10">Segurança & Compliance</h3>
+          </ScrollReveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {complianceFeatures.map((feature) => {
+            {complianceFeatures.map((feature, index) => {
               const Icon = feature.icon;
               
               return (
-                <div
-                  key={feature.name}
-                  className="group p-6 rounded-2xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                <ScrollReveal key={feature.name} animation="up" stagger={(index % 4) + 1}>
+                  <div
+                    className="group p-6 rounded-2xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all duration-300 h-full"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
@@ -197,7 +204,8 @@ export function IntegrationsSection() {
                       </div>
                     ))}
                   </div>
-                </div>
+                  </div>
+                </ScrollReveal>
               );
             })}
           </div>

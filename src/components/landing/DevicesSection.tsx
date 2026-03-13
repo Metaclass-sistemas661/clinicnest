@@ -1,4 +1,5 @@
 import { Monitor, Tablet, Smartphone, Globe, Wifi } from "lucide-react";
+import { ScrollReveal } from "./ScrollReveal";
 
 const devices = [
   {
@@ -26,6 +27,7 @@ export function DevicesSection() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
         {/* Section Header */}
+        <ScrollReveal>
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
             <Globe className="h-4 w-4 text-teal-600" />
@@ -41,6 +43,7 @@ export function DevicesSection() {
             Acesse sua clínica de qualquer lugar, em qualquer dispositivo. 100% online, sem instalação.
           </p>
         </div>
+        </ScrollReveal>
 
         {/* Devices Display */}
         <div className="relative max-w-4xl mx-auto">
@@ -48,11 +51,11 @@ export function DevicesSection() {
           <div className="hidden md:block absolute top-1/2 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-teal-200 via-cyan-300 to-teal-200 -translate-y-1/2" />
 
           <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
-            {devices.map((device) => {
+            {devices.map((device, index) => {
               const Icon = device.icon;
               return (
+                <ScrollReveal key={device.name} animation="up" stagger={index + 1}>
                 <div
-                  key={device.name}
                   className="relative group"
                 >
                   <div className="flex flex-col items-center p-8 rounded-3xl bg-white border-2 border-teal-100 shadow-lg hover:shadow-2xl hover:border-teal-300 transition-all duration-300 hover:-translate-y-2 h-full">
@@ -82,12 +85,14 @@ export function DevicesSection() {
                     </div>
                   </div>
                 </div>
+                </ScrollReveal>
               );
             })}
           </div>
         </div>
 
         {/* Browser compatibility note */}
+        <ScrollReveal animation="up">
         <div className="mt-12 text-center">
           <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white border shadow-sm">
             <Globe className="h-5 w-5 text-teal-600" />
@@ -96,6 +101,7 @@ export function DevicesSection() {
             </span>
           </div>
         </div>
+        </ScrollReveal>
       </div>
     </section>
   );

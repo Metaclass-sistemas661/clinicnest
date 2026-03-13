@@ -1,5 +1,6 @@
 import { Shield, Clock, Lock, Award, Headphones, FileText, Zap, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const guarantees = [
   {
@@ -67,6 +68,7 @@ export function GuaranteeSection() {
   return (
     <section className="py-20 sm:py-32 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal>
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 border border-green-200 mb-6">
             <Award className="h-4 w-4 text-green-600" />
@@ -83,15 +85,16 @@ export function GuaranteeSection() {
             Compromissos que fazemos com você para garantir segurança, conformidade e satisfação.
           </p>
         </div>
+        </ScrollReveal>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto">
-          {guarantees.map((guarantee) => {
+          {guarantees.map((guarantee, index) => {
             const Icon = guarantee.icon;
             const colors = colorClasses[guarantee.color];
 
             return (
+              <ScrollReveal key={guarantee.title} animation="up" stagger={(index % 4) + 1}>
               <div
-                key={guarantee.title}
                 className="relative p-6 sm:p-8 rounded-2xl bg-white border shadow-sm hover:shadow-xl transition-all duration-300 text-center group hover:-translate-y-2 h-full flex flex-col"
               >
                 <div className="mx-auto mb-6 relative flex-shrink-0">
@@ -117,6 +120,7 @@ export function GuaranteeSection() {
                   </p>
                 </div>
               </div>
+              </ScrollReveal>
             );
           })}
         </div>

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { ScrollReveal } from "./ScrollReveal";
 
 type BillingKey = "monthly" | "annual";
 
@@ -171,24 +172,27 @@ export function PricingSection() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
 
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
-            <TrendingUp className="h-4 w-4 text-teal-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-teal-600">Planos e Preços</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-100 border border-teal-200 mb-6">
+              <TrendingUp className="h-4 w-4 text-teal-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-teal-600">Planos e Preços</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
+              Transparência que{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                você merece
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Sem surpresas, sem letras miúdas. Escolha o plano certo para o tamanho da sua clínica.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            Transparência que{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              você merece
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Sem surpresas, sem letras miúdas. Escolha o plano certo para o tamanho da sua clínica.
-          </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="flex flex-col items-center gap-4 mb-12">
-          <div className="relative inline-flex items-stretch rounded-2xl bg-teal-950/8 border-2 border-teal-200 p-1.5 gap-1.5 shadow-inner">
+        <ScrollReveal>
+          <div className="flex flex-col items-center gap-4 mb-12">
+            <div className="relative inline-flex items-stretch rounded-2xl bg-teal-950/8 border-2 border-teal-200 p-1.5 gap-1.5 shadow-inner">
             <button
               onClick={() => setBilling("monthly")}
               className={cn(
@@ -244,22 +248,23 @@ export function PricingSection() {
               </span>
             )}
           </p>
-        </div>
+          </div>
+        </ScrollReveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 max-w-7xl mx-auto items-start">
-          {TIERS.map((tier) => {
+          {TIERS.map((tier, index) => {
             const price = PRICING[tier.key][billing];
             const Icon = tier.icon;
 
             return (
-              <div
-                key={tier.key}
-                className={cn(
-                  "relative rounded-3xl border-2 transition-all duration-300 hover:shadow-2xl flex flex-col",
-                  tier.popular
-                    ? "border-teal-500 shadow-2xl shadow-teal-500/20 md:-translate-y-4 bg-gradient-to-b from-teal-800 to-teal-900 text-white"
-                    : "border-gray-200 bg-white shadow-lg hover:-translate-y-1"
-                )}
+              <ScrollReveal key={tier.key} animation="up" stagger={(index % 4) + 1}>
+                <div
+                  className={cn(
+                    "relative rounded-3xl border-2 transition-all duration-300 hover:shadow-2xl flex flex-col",
+                    tier.popular
+                      ? "border-teal-500 shadow-2xl shadow-teal-500/20 md:-translate-y-4 bg-gradient-to-b from-teal-800 to-teal-900 text-white"
+                      : "border-gray-200 bg-white shadow-lg hover:-translate-y-1"
+                  )}
               >
                 {tier.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -387,7 +392,8 @@ export function PricingSection() {
                     5 dias grátis · Sem cartão de crédito
                   </p>
                 </div>
-              </div>
+                </div>
+              </ScrollReveal>
             );
           })}
         </div>

@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const differentials = [
   {
@@ -163,30 +164,32 @@ export function DifferentialsSection() {
       <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent" />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-100 to-cyan-100 border border-teal-200 mb-6">
-            <HeartPulse className="h-4 w-4 text-teal-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-teal-600">Por que escolher o ClinicNest?</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-100 to-cyan-100 border border-teal-200 mb-6">
+              <HeartPulse className="h-4 w-4 text-teal-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-teal-600">Por que escolher o ClinicNest?</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              Diferenciais que{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                ninguém mais oferece
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Não somos apenas mais um sistema de gestão. Somos a plataforma mais completa e inovadora do mercado brasileiro de saúde.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            Diferenciais que{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              ninguém mais oferece
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Não somos apenas mais um sistema de gestão. Somos a plataforma mais completa e inovadora do mercado brasileiro de saúde.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {differentials.map((diff, index) => {
             const Icon = diff.icon;
             const colors = colorClasses[diff.color];
             return (
-              <div
-                key={diff.title}
-                className="group relative p-8 rounded-3xl border bg-card hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col"
+              <ScrollReveal key={diff.title} animation="up" stagger={(index % 3) + 1}>
+                <div
+                  className="group relative p-8 rounded-3xl border bg-card hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 flex flex-col h-full"
               >
                 <div className={cn(
                   "absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold text-white",
@@ -226,11 +229,13 @@ export function DifferentialsSection() {
                   ))}
                 </div>
               </div>
+            </ScrollReveal>
             );
           })}
         </div>
 
-        <div className="mt-16 text-center">
+        <ScrollReveal animation="up">
+          <div className="mt-16 text-center">
           <Link to="/cadastro">
             <Button
               size="lg"
@@ -243,7 +248,8 @@ export function DifferentialsSection() {
           <p className="text-sm text-muted-foreground mt-4">
             Sem cartão de crédito. Sem compromisso. Cancele quando quiser.
           </p>
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

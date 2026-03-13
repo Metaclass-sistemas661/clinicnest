@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Building2, CalendarCheck, Heart, DollarSign, TrendingDown, Users, Shield, Smile } from "lucide-react";
+import { ScrollReveal } from "./ScrollReveal";
 
 interface StatItemProps {
   icon: React.ElementType;
@@ -95,15 +96,17 @@ export function StatsSection() {
   return (
     <section className="py-16 sm:py-24 bg-gradient-to-b from-background to-teal-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2">
-            Números que comprovam nossa{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">excelência</span>
-          </h2>
-          <p className="text-muted-foreground">
-            O único sistema híbrido do Brasil com resultados comprovados
-          </p>
-        </div>
+        <ScrollReveal>
+          <div className="text-center mb-12">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold mb-2">
+              Números que comprovam nossa{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">excelência</span>
+            </h2>
+            <p className="text-muted-foreground">
+              O único sistema híbrido do Brasil com resultados comprovados
+            </p>
+          </div>
+        </ScrollReveal>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {stats.map((stat) => (
             <StatItem key={stat.label} {...stat} />

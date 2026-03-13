@@ -1,5 +1,6 @@
 import { Star, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollReveal } from "./ScrollReveal";
 
 const testimonials = [
   {
@@ -70,30 +71,32 @@ export function TestimonialsSection() {
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent" />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 border border-amber-200 mb-6">
-            <Star className="h-4 w-4 text-amber-600 fill-amber-600" aria-hidden="true" />
-            <span className="text-sm font-medium text-amber-700">+500 clínicas confiam no ClinicNest</span>
+        <ScrollReveal>
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 border border-amber-200 mb-6">
+              <Star className="h-4 w-4 text-amber-600 fill-amber-600" aria-hidden="true" />
+              <span className="text-sm font-medium text-amber-700">+500 clínicas confiam no ClinicNest</span>
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+              O que nossos{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
+                clientes dizem
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Profissionais de saúde de todo o Brasil já transformaram suas clínicas com o ClinicNest.
+            </p>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            O que nossos{" "}
-            <span className="bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">
-              clientes dizem
-            </span>
-          </h2>
-          <p className="text-lg text-muted-foreground">
-            Profissionais de saúde de todo o Brasil já transformaram suas clínicas com o ClinicNest.
-          </p>
-        </div>
+        </ScrollReveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {testimonials.map((testimonial, index) => (
-            <div
-              key={testimonial.name}
-              className={cn(
-                "group relative p-6 rounded-3xl border bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col",
-                index === 0 && "lg:col-span-1 lg:row-span-1"
-              )}
+            <ScrollReveal key={testimonial.name} animation="up" stagger={(index % 3) + 1}>
+              <div
+                className={cn(
+                  "group relative p-6 rounded-3xl border bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col h-full",
+                  index === 0 && "lg:col-span-1 lg:row-span-1"
+                )}
             >
               <div className="absolute top-6 right-6">
                 <Quote className="h-8 w-8 text-teal-100" />
@@ -126,11 +129,13 @@ export function TestimonialsSection() {
                 </div>
               </div>
             </div>
+            </ScrollReveal>
           ))}
         </div>
 
-        <div className="mt-16 grid sm:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
-          {[
+        <ScrollReveal animation="up">
+          <div className="mt-16 grid sm:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
+            {[
             { value: "500+", label: "Clínicas ativas" },
             { value: "4.9", label: "Avaliação média", suffix: "/5" },
             { value: "98%", label: "Taxa de renovação" },
@@ -144,7 +149,8 @@ export function TestimonialsSection() {
               <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
             </div>
           ))}
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );
