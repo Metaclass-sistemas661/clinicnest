@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2, ArrowLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
-import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
+import TurnstileWidget, { useTurnstile, isTurnstileEnabled } from "@/components/auth/TurnstileWidget";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -18,6 +18,10 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isTurnstileEnabled && !captchaToken) {
+      toast.error("Aguarde a verificação de segurança.");
+      return;
+    }
     setIsLoading(true);
 
     const { error } = await resetPassword(email, captchaToken ?? undefined);
@@ -91,10 +95,13 @@ export default function ForgotPassword() {
                   theme="light"
                   className="flex justify-center"
                 />
+                {isTurnstileEnabled && !captchaToken && (
+                  <p className="text-xs text-amber-600 text-center">Aguarde a verificação de segurança acima...</p>
+                )}
                 <Button
                   type="submit"
                   className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
-                  disabled={isLoading}
+                  disabled={isLoading || (isTurnstileEnabled && !captchaToken)}
                 >
                   {isLoading ? (
                     <>

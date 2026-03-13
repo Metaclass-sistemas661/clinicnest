@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
+import TurnstileWidget, { useTurnstile, isTurnstileEnabled } from "@/components/auth/TurnstileWidget";
 import {
   Eye,
   EyeOff,
@@ -53,6 +53,10 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isTurnstileEnabled && !captchaToken) {
+      toast.error("Aguarde a verificação de segurança.");
+      return;
+    }
     setIsLoading(true);
     const { error } = await signIn(email, password, captchaToken ?? undefined);
     if (error) {
@@ -238,11 +242,14 @@ export default function Login() {
               theme="light"
               className="flex justify-center"
             />
+            {isTurnstileEnabled && !captchaToken && (
+              <p className="text-xs text-amber-600 text-center">Aguarde a verificação de segurança acima...</p>
+            )}
 
             <Button
               type="submit"
               className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
-              disabled={isLoading || !email.trim() || !password}
+              disabled={isLoading || !email.trim() || !password || (isTurnstileEnabled && !captchaToken)}
             >
               {isLoading ? (
                 <>

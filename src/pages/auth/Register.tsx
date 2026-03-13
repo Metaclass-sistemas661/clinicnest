@@ -27,7 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
+import TurnstileWidget, { useTurnstile, isTurnstileEnabled } from "@/components/auth/TurnstileWidget";
 import type { ProfessionalType } from "@/types/database";
 import { COUNCIL_BY_TYPE, PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { BRAZILIAN_STATES } from "@/utils/brazilianStates";
@@ -106,7 +106,8 @@ export default function Register() {
     canContinueStep2 &&
     isPasswordValid &&
     isConfirmValid &&
-    legalAccepted;
+    legalAccepted &&
+    (!isTurnstileEnabled || !!captchaToken);
 
   const handleContinueStep1 = () => {
     if (!fullName.trim() || !clinicName.trim() || !phone.trim() || !email.trim()) {
@@ -674,6 +675,9 @@ export default function Register() {
                       theme="light"
                       className="flex justify-center"
                     />
+                    {isTurnstileEnabled && !captchaToken && (
+                      <p className="text-xs text-amber-600 text-center">Aguarde a verificação de segurança acima...</p>
+                    )}
 
                     <div className="grid grid-cols-2 gap-3">
                       <Button

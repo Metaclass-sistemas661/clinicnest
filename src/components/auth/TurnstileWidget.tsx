@@ -2,8 +2,11 @@ import { useEffect, useRef, useCallback, useState } from "react";
 
 // ─── Turnstile Site Key ────────────────────────────────────────────────────────
 // Em produção, defina VITE_TURNSTILE_SITE_KEY no .env
-// Para testes: use "1x00000000000000000000AA" (always passes)
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
+// Se não definida, o widget não será renderizado e o captcha será ignorado.
+const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
+
+/** Indica se o Turnstile está configurado (útil para condicionar canSubmit) */
+export const isTurnstileEnabled = !!SITE_KEY;
 
 // ─── Tipos do Turnstile ────────────────────────────────────────────────────────
 declare global {
@@ -88,7 +91,7 @@ export default function TurnstileWidget({
   const [isReady, setIsReady] = useState(false);
 
   const renderWidget = useCallback(() => {
-    if (!containerRef.current || !window.turnstile) return;
+    if (!SITE_KEY || !containerRef.current || !window.turnstile) return;
 
     // Remove previous widget if exists
     if (widgetIdRef.current) {
@@ -108,6 +111,7 @@ export default function TurnstileWidget({
   }, [onVerify, onExpire, onError, theme, size]);
 
   useEffect(() => {
+    if (!SITE_KEY) return;
     let cancelled = false;
 
     loadTurnstileScript()
@@ -118,7 +122,7 @@ export default function TurnstileWidget({
         }
       })
       .catch(() => {
-        // Silently fail — form still works, Supabase API will reject if CAPTCHA required
+        // Silently fail — form still works sem captcha
       });
 
     return () => {
@@ -129,6 +133,9 @@ export default function TurnstileWidget({
       }
     };
   }, [renderWidget]);
+
+  // Se não há SITE_KEY configurada, não renderiza o widget
+  if (!SITE_KEY) return null;
 
   return (
     <div
