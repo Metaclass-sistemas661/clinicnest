@@ -13,6 +13,9 @@ const PUBLIC_PATHS = [
   "/contato",
   "/canal-lgpd",
   "/agendar",
+  "/solucoes",
+  "/sobre",
+  "/agendar-demonstracao",
 ];
 
 /** Força tema claro em rotas públicas. Em rotas protegidas, aplica o tema escolhido (ThemeProvider). */
