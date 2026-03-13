@@ -55,7 +55,7 @@ export interface UsePlanFeaturesReturn {
 }
 
 export function usePlanFeatures(): UsePlanFeaturesReturn {
-  const { plan, isLoading: subscriptionLoading, has_access } = useSubscription();
+  const { plan, isLoading: subscriptionLoading, has_access, trialing } = useSubscription();
   const [overrides, setOverrides] = useState<TenantOverrides>({ features: [], limits: [] });
   const [overridesLoading, setOverridesLoading] = useState(true);
 
@@ -84,6 +84,9 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
   const isLoading = subscriptionLoading || overridesLoading;
 
   const currentTier = useMemo<SubscriptionTier>(() => {
+    // Durante o trial, libera todas as funcionalidades (equivalente ao premium)
+    if (trialing) return 'premium';
+
     if (!plan) return 'starter';
     
     const parsed = parsePlanKey(plan);
@@ -95,7 +98,7 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
     }
     
     return 'starter';
-  }, [plan]);
+  }, [plan, trialing]);
 
   const planConfig = useMemo(() => {
     return PLAN_CONFIG[currentTier];
