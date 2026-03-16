@@ -13,8 +13,11 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy to Firebase Hosting
+  # ──────────────────────────────────────────────────────────────
+  # Job 1 — Build: lint, test, compile and upload artifact
+  # ──────────────────────────────────────────────────────────────
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -51,6 +54,32 @@ jobs:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
           VITE_PRODUCTION_URL: ${{ secrets.VITE_PRODUCTION_URL }}
           VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 3
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 2 — Deploy: download artifact and publish to Firebase
+  # ──────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Firebase Hosting
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

@@ -6,6 +6,9 @@ on:
     - cron: "0 11 * * 0"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: weekly-summary
   cancel-in-progress: false
@@ -32,6 +35,7 @@ jobs:
           echo "Triggering weekly AI summary at $(date -u)"
 
           HTTP_STATUS=$(curl -L -sS \
+            --retry 3 --retry-delay 5 --retry-max-time 15 \
             -X POST "${SUPABASE_URL}/functions/v1/ai-weekly-summary" \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \

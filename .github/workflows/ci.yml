@@ -1,12 +1,12 @@
-name: CI
+name: CI — Quality Gate
 
 on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint and build
+    name: Lint, Test & Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

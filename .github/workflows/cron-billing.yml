@@ -7,6 +7,9 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: billing-cron
   cancel-in-progress: false
@@ -34,11 +37,8 @@ jobs:
             local path="$1"
             echo ""
             echo "=== POST $BASE_URL$path ==="
-            # -L follows redirects (common with http->https or domain canonicalization)
-            # -sS silent except errors
-            # -D - prints headers
-            # -o prints body
             curl -L -sS -D - \
+              --retry 3 --retry-delay 5 --retry-max-time 15 \
               -X POST "$BASE_URL$path" \
               -H "Authorization: Bearer $CRON_SECRET" \
               -H "Content-Type: application/json" \
