@@ -12,7 +12,6 @@ import {
   UserCog,
   Settings,
   LogOut,
-  CreditCard,
   Wallet,
   ChevronLeft,
   ChevronRight,
@@ -20,8 +19,6 @@ import {
   Menu,
   Clock,
   Target,
-  Bell,
-  BookOpen,
   Shield,
   Send,
   BarChart3,
@@ -254,9 +251,6 @@ const navCategories: NavCategory[] = [
     gradient: "from-cyan-500 to-teal-500",
     items: [
       { title: "Meu Financeiro", href: "/meu-financeiro", icon: Wallet, staffOnly: true },
-      { title: "Notificações", href: "/notificacoes", icon: Bell },
-      { title: "Assinatura", href: "/assinatura", icon: CreditCard, resource: "assinatura" },
-      { title: "Ajuda", href: "/ajuda", icon: BookOpen },
     ],
   },
 ];

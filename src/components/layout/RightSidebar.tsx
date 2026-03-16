@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings, PanelRightClose, Stethoscope } from "lucide-react";
+import { Settings, PanelRightClose, Stethoscope, CreditCard, Bell, BookOpen } from "lucide-react";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
@@ -154,6 +154,54 @@ export function RightSidebar() {
                 </TooltipContent>
               </Tooltip>
             )}
+
+            {/* Divider */}
+            <div className="mx-auto w-6 border-t border-border/50" />
+
+            {/* Assinatura */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/assinatura"
+                  className="flex items-center justify-center rounded-xl p-2 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                >
+                  <CreditCard className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>
+                Assinatura
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Notificações */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/notificacoes"
+                  className="flex items-center justify-center rounded-xl p-2 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                >
+                  <Bell className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>
+                Notificações
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Ajuda */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  to="/ajuda"
+                  className="flex items-center justify-center rounded-xl p-2 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                >
+                  <BookOpen className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="left" sideOffset={8}>
+                Ajuda
+              </TooltipContent>
+            </Tooltip>
 
             {/* Spacer */}
             <div className="flex-1" />
