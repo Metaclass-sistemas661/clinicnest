@@ -6,7 +6,7 @@
  * Responde sobre funcionalidades, preços e diferenciais do ClinicNest.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { chatCompletion, type BedrockMessage } from "../_shared/bedrock-client.ts";
+import { chatCompletion, type BedrockMessage } from "../_shared/vertex-ai-client.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 

@@ -59,7 +59,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useGamificationEnabled } from "@/hooks/useGamificationEnabled";
-import { AiNoShowBadge } from "@/components/ai";
+import { AiNoShowBadge, AiCancelPrediction } from "@/components/ai";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
@@ -595,6 +595,9 @@ export function AppointmentsTable({
                       </Badge>
                       {(appointment.status === "pending" || appointment.status === "confirmed") && (
                         <AiNoShowBadge appointmentId={appointment.id} tenantId={appointment.tenant_id} />
+                      )}
+                      {(appointment.status === "pending" || appointment.status === "confirmed") && (
+                        <AiCancelPrediction appointmentId={appointment.id} compact />
                       )}
                     </div>
                   </TableCell>

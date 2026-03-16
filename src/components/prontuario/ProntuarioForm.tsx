@@ -16,7 +16,8 @@ import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { AiCidSuggest, AiTranscribe } from "@/components/ai";
+import { AiCidSuggest, AiTranscribe, AiCopilotPanel, AiDrugInteractionAlert } from "@/components/ai";
+import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
 import { suggestReturn, suggestReturnMultiple, formatSuggestion, type ReturnSuggestion } from "@/lib/cid-return-suggestion";
 import { CalendarClock, Lightbulb } from "lucide-react";
@@ -228,6 +229,27 @@ export function ProntuarioForm({
   }, [checkCertificate]);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
+  const [showCopilot, setShowCopilot] = useState(false);
+
+  const copilotInput: CopilotInput = {
+    chief_complaint: base.chief_complaint || undefined,
+    anamnesis: base.anamnesis || undefined,
+    physical_exam: base.physical_exam || undefined,
+    diagnosis: base.diagnosis || undefined,
+    cid_code: base.cid_code || undefined,
+    treatment_plan: base.treatment_plan || undefined,
+    prescriptions: base.prescriptions || undefined,
+    allergies: vitals.allergies || undefined,
+    current_medications: vitals.current_medications || undefined,
+    medical_history: vitals.medical_history || undefined,
+    vitals: {
+      blood_pressure_systolic: vitals.blood_pressure_systolic,
+      blood_pressure_diastolic: vitals.blood_pressure_diastolic,
+      heart_rate: vitals.heart_rate,
+      temperature: vitals.temperature,
+      oxygen_saturation: vitals.oxygen_saturation,
+    },
+  };
 
   const populateVitalsFromTriage = (t: TriageData) => {
     setVitals({
@@ -643,11 +665,25 @@ export function ProntuarioForm({
         <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="gap-1.5">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
-        {canEdit && (
-          <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
-            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Salvar Prontuário"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button
+              type="button"
+              variant={showCopilot ? "secondary" : "outline"}
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowCopilot(!showCopilot)}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {showCopilot ? "Fechar Copilot" : "Copilot IA"}
+            </Button>
+          )}
+          {canEdit && (
+            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+              {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Salvar Prontuário"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {isEditing && !canEdit && (
@@ -818,6 +854,7 @@ export function ProntuarioForm({
         </div>
       </div>
 
+      <div className={showCopilot ? "grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4" : ""}>
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Queixa Principal *</Label>
@@ -896,11 +933,35 @@ export function ProntuarioForm({
         <div className="space-y-1.5">
           <Label>Prescrições</Label>
           <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />
+          <AiDrugInteractionAlert
+            prescriptions={base.prescriptions}
+            currentMedications={vitals.current_medications}
+            allergies={vitals.allergies}
+          />
         </div>
         <div className="space-y-1.5">
           <Label>Observações</Label>
           <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
         </div>
+      </div>
+
+      {showCopilot && (
+        <div className="lg:sticky lg:top-4 lg:self-start">
+          <AiCopilotPanel
+            input={copilotInput}
+            onSelectCid={(code, description) => {
+              set("cid_code", code);
+              set("diagnosis", description);
+            }}
+            onAppendPrescription={(text) => {
+              setBase((b) => ({ ...b, prescriptions: b.prescriptions ? b.prescriptions + "\n" + text : text }));
+            }}
+            onAppendPlan={(text) => {
+              setBase((b) => ({ ...b, treatment_plan: b.treatment_plan ? b.treatment_plan + "\n" + text : text }));
+            }}
+          />
+        </div>
+      )}
       </div>
 
       {/* ── Retorno do Paciente ── */}

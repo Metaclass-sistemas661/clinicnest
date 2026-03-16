@@ -41,9 +41,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Star,
+  Sparkles,
 } from "lucide-react";
 import { format, subDays, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AiWeeklySummaryCard } from "@/components/ai";
 import { TabProdutividade, TabPacientes, TabNoShow, TabSatisfacao } from "@/components/relatorios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -948,6 +950,10 @@ export default function Relatorios() {
               <Star className="h-3.5 w-3.5 hidden sm:block" />
               Satisfação
             </TabsTrigger>
+            <TabsTrigger value="resumo-ia" className="gap-1.5 text-xs sm:text-sm">
+              <Sparkles className="h-3.5 w-3.5 hidden sm:block" />
+              Resumo IA
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="visao-geral" className="mt-6">
@@ -980,6 +986,12 @@ export default function Relatorios() {
 
           <TabsContent value="satisfacao" className="mt-6">
             <TabSatisfacao tenantId={tenantId} periodStart={start} periodEnd={end} />
+          </TabsContent>
+
+          <TabsContent value="resumo-ia" className="mt-6">
+            <div className="max-w-md">
+              <AiWeeklySummaryCard />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

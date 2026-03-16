@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { chatCompletion, BedrockMessage } from "../_shared/bedrock-client.ts";
+import { chatCompletion, BedrockMessage } from "../_shared/vertex-ai-client.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";

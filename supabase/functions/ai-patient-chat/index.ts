@@ -15,7 +15,7 @@ import {
   type AgentMessage,
   type ContentBlock,
   type ContentBlockToolUse,
-} from "../_shared/bedrock-client.ts";
+} from "../_shared/vertex-ai-client.ts";
 import { PATIENT_TOOLS, executeTool } from "../_shared/agentTools.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";

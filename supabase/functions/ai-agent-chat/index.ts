@@ -5,7 +5,7 @@
  * - Buscar pacientes, prontuários, agenda, serviços, financeiro
  * - Agendar consultas
  * - Memória de conversa persistida em ai_conversations / ai_conversation_messages
- * - Usa Claude 3 Haiku via AWS Bedrock com tool use nativo
+ * - Usa Gemini 2.0 Flash via Google Vertex AI com tool use nativo
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -14,7 +14,7 @@ import {
   type AgentMessage,
   type ContentBlock,
   type ContentBlockToolUse,
-} from "../_shared/bedrock-client.ts";
+} from "../_shared/vertex-ai-client.ts";
 import { PROFESSIONAL_TOOLS, executeTool } from "../_shared/agentTools.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";

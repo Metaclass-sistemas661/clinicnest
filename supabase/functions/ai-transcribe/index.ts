@@ -65,8 +65,24 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    const allowedRoles = ["medico", "dentista", "enfermeiro", "admin"];
-    if (!profile || !allowedRoles.includes(profile.professional_type)) {
+    if (!profile) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: userRole } = await supabaseClient
+      .from("user_roles")
+      .select("is_admin")
+      .eq("user_id", user.id)
+      .eq("tenant_id", profile.tenant_id)
+      .single();
+
+    const clinicalRoles = ["medico", "dentista", "enfermeiro", "tec_enfermagem", "fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "admin"];
+    const isAdmin = userRole?.is_admin === true;
+    const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
+    if (!isAdmin && !hasClinicalRole) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

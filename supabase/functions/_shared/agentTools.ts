@@ -3,7 +3,7 @@
  * Cada ferramenta consulta o Supabase dentro do tenant do usuário.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import type { ToolDefinition } from "./bedrock-client.ts";
+import type { ToolDefinition } from "./vertex-ai-client.ts";
 
 // deno-lint-ignore no-explicit-any
 type SupabaseClient = ReturnType<typeof createClient>;

@@ -1,0 +1,48 @@
+name: Weekly AI Summary
+
+on:
+  schedule:
+    # Every Sunday at 11:00 UTC (08:00 BRT)
+    - cron: "0 11 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-summary
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Send weekly AI summaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Call ai-weekly-summary edge function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "Missing SUPABASE_URL secret" && exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET secret" && exit 1
+          fi
+
+          echo "Triggering weekly AI summary at $(date -u)"
+
+          HTTP_STATUS=$(curl -L -sS \
+            -X POST "${SUPABASE_URL}/functions/v1/ai-weekly-summary" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -o /tmp/resp.json \
+            -w "%{http_code}")
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response:"
+          cat /tmp/resp.json || true
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "Weekly summary failed with status $HTTP_STATUS"
+            exit 1
+          fi

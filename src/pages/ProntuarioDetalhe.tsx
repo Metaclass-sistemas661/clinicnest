@@ -23,7 +23,7 @@ import { DentalImagesGallery } from "@/components/prontuario/DentalImagesGallery
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import type { ClinicalEvolution, ClinicalEvolutionType } from "@/types/database";
 import { NotebookPen } from "lucide-react";
-import { AiPatientSummary } from "@/components/ai";
+import { AiPatientSummary, AiExplainToPatient } from "@/components/ai";
 
 interface RecordDetail {
   id: string; patient_id: string; client_name: string; record_date: string;
@@ -321,9 +321,24 @@ export default function ProntuarioDetalhe() {
                 <Field label="Queixa Principal" value={record.chief_complaint} />
                 <Field label="Anamnese" value={record.anamnesis} />
                 <Field label="Exame Físico" value={record.physical_exam} />
-                <Field label="Diagnóstico" value={record.diagnosis} />
-                <Field label="Plano Terapêutico" value={record.treatment_plan} />
-                <Field label="Prescrições" value={record.prescriptions} />
+                <div className="space-y-1">
+                  <Field label="Diagnóstico" value={record.diagnosis} />
+                  {record.diagnosis && (
+                    <AiExplainToPatient medicalText={record.diagnosis} context="diagnosis" label="Explicar diagnóstico ao paciente" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Field label="Plano Terapêutico" value={record.treatment_plan} />
+                  {record.treatment_plan && (
+                    <AiExplainToPatient medicalText={record.treatment_plan} context="treatment_plan" label="Explicar plano ao paciente" />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Field label="Prescrições" value={record.prescriptions} />
+                  {record.prescriptions && (
+                    <AiExplainToPatient medicalText={record.prescriptions} context="prescription" label="Explicar prescrição ao paciente" />
+                  )}
+                </div>
                 <Field label="Observações" value={record.notes} />
 
                 {(record.allergies || record.current_medications || record.medical_history) && (

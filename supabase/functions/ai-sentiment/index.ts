@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { completeText } from "../_shared/bedrock-client.ts";
+import { completeText } from "../_shared/vertex-ai-client.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
@@ -111,8 +111,24 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    const allowedRoles = ["admin", "secretaria"];
-    if (!profile || !allowedRoles.includes(profile.professional_type)) {
+    if (!profile) {
+      return new Response(JSON.stringify({ error: "Access denied" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: userRole } = await supabaseClient
+      .from("user_roles")
+      .select("is_admin")
+      .eq("user_id", user.id)
+      .eq("tenant_id", profile.tenant_id)
+      .single();
+
+    const sentimentRoles = ["admin", "secretaria"];
+    const isAdmin = userRole?.is_admin === true;
+    const hasSentimentRole = sentimentRoles.includes(profile.professional_type ?? "");
+    if (!isAdmin && !hasSentimentRole) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
