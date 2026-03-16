@@ -16,7 +16,7 @@ import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { AiCidSuggest, AiTranscribe, AiCopilotPanel, AiDrugInteractionAlert } from "@/components/ai";
+import { AiTranscribe, AiCopilotPanel, AiDrugInteractionAlert } from "@/components/ai";
 import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
 import { suggestReturn, suggestReturnMultiple, formatSuggestion, type ReturnSuggestion } from "@/lib/cid-return-suggestion";
@@ -918,14 +918,7 @@ export function ProntuarioForm({
           </div>
         </div>
 
-        {/* Sugestão de CID com IA */}
-        <AiCidSuggest
-          onSelect={(code, description) => {
-            set("cid_code", code);
-            set("diagnosis", description);
-          }}
-          className="border-dashed"
-        />
+
         <div className="space-y-1.5">
           <Label>Plano Terapêutico / Conduta</Label>
           <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
