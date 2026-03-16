@@ -87,17 +87,17 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
     // Durante o trial, libera todas as funcionalidades (equivalente ao premium)
     if (trialing) return 'premium';
 
-    if (!plan) return 'starter';
+    if (!plan) return 'free';
     
     const parsed = parsePlanKey(plan);
-    if (!parsed) return 'starter';
+    if (!parsed) return 'free';
     
     const { tier } = parsed;
-    if (tier === 'solo' || tier === 'clinica' || tier === 'premium') {
+    if (tier === 'free' || tier === 'starter' || tier === 'solo' || tier === 'clinica' || tier === 'premium') {
       return tier;
     }
     
-    return 'starter';
+    return 'free';
   }, [plan, trialing]);
 
   const planConfig = useMemo(() => {

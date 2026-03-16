@@ -25,6 +25,7 @@ import { Plus } from "lucide-react";
 import { GlobalSearch } from "@/components/header/GlobalSearch";
 import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
 import { RightSidebar } from "@/components/layout/RightSidebar";
+import { CopilotProntuarioProvider } from "@/contexts/CopilotProntuarioContext";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -72,6 +73,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
 
   return (
     <SubscriptionGuard>
+      <CopilotProntuarioProvider>
       {isAdmin && (
         <>
           <AdminCommissionReminderDialog />
@@ -173,9 +175,10 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           <AdverseEventButton />
         </main>
 
-        {/* Right Sidebar — Copilot Nest */}
+        {/* Right Sidebar — Copilot Nest + Copilot Clínico */}
         <RightSidebar />
       </div>
+      </CopilotProntuarioProvider>
     </SubscriptionGuard>
   );
 }

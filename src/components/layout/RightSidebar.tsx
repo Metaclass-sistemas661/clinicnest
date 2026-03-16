@@ -13,13 +13,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings, PanelRightClose } from "lucide-react";
+import { Settings, PanelRightClose, Stethoscope } from "lucide-react";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
+import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
+import { useCopilotProntuario } from "@/contexts/CopilotProntuarioContext";
 
 const RAIL_WIDTH = "w-14"; // 56px
 const PANEL_WIDTH = "w-[380px]";
+
+type SidebarTab = "nest" | "copilot";
 
 export function RightSidebar() {
   const isMobile = useIsMobile();
@@ -29,6 +33,8 @@ export function RightSidebar() {
   const { professionalType } = usePermissions();
   const { hasFeature } = usePlanFeatures();
   const [expanded, setExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<SidebarTab>("nest");
+  const copilot = useCopilotProntuario();
 
   // Close on Escape
   useEffect(() => {
@@ -44,6 +50,22 @@ export function RightSidebar() {
   if (isMobile) return null;
 
   const showNest = hasFeature("aiAgentChat");
+  const showCopilot = copilot.active;
+
+  // Auto-switch to copilot tab when prontuário becomes active
+  useEffect(() => {
+    if (showCopilot && !expanded) {
+      setActiveTab("copilot");
+    }
+    if (!showCopilot && activeTab === "copilot") {
+      setActiveTab("nest");
+    }
+  }, [showCopilot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const openTab = (tab: SidebarTab) => {
+    setActiveTab(tab);
+    setExpanded(true);
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -96,8 +118,11 @@ export function RightSidebar() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => setExpanded(true)}
-                    className="flex items-center justify-center rounded-xl p-1 transition-all hover:bg-primary/10 hover:ring-2 hover:ring-primary/30 active:scale-95"
+                    onClick={() => openTab("nest")}
+                    className={cn(
+                      "flex items-center justify-center rounded-xl p-1 transition-all hover:bg-primary/10 hover:ring-2 hover:ring-primary/30 active:scale-95",
+                      expanded && activeTab === "nest" && "ring-2 ring-primary/40 bg-primary/10",
+                    )}
                   >
                     <NestAvatar size={36} className="rounded-xl ring-2 ring-teal-500/20" />
                   </button>
@@ -105,6 +130,27 @@ export function RightSidebar() {
                 <TooltipContent side="left" sideOffset={8}>
                   <p className="font-medium">Copilot Nest</p>
                   <p className="text-xs text-muted-foreground">Assistente IA</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Copilot Clínico Button — only when prontuário is active */}
+            {showCopilot && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => openTab("copilot")}
+                    className={cn(
+                      "flex items-center justify-center rounded-xl p-2 transition-all hover:bg-primary/10 hover:ring-2 hover:ring-primary/30 active:scale-95 text-primary",
+                      expanded && activeTab === "copilot" && "ring-2 ring-primary/40 bg-primary/10",
+                    )}
+                  >
+                    <Stethoscope className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left" sideOffset={8}>
+                  <p className="font-medium">Copilot Clínico</p>
+                  <p className="text-xs text-muted-foreground">Sugestões do prontuário</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -140,10 +186,20 @@ export function RightSidebar() {
             {/* Panel Header */}
             <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <NestAvatar size={28} className="ring-1 ring-teal-500/30" />
+                {activeTab === "nest" ? (
+                  <NestAvatar size={28} className="ring-1 ring-teal-500/30" />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                  </div>
+                )}
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Copilot Nest</h3>
-                  <p className="text-[11px] text-muted-foreground">Assistente IA</p>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {activeTab === "nest" ? "Copilot Nest" : "Copilot Clínico"}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    {activeTab === "nest" ? "Assistente IA" : "Sugestões do prontuário"}
+                  </p>
                 </div>
               </div>
               <Button
@@ -157,9 +213,57 @@ export function RightSidebar() {
               </Button>
             </div>
 
-            {/* Chat Panel */}
+            {/* Tab Switcher — only when both tabs available */}
+            {showNest && showCopilot && (
+              <div className="flex border-b border-border/50">
+                <button
+                  onClick={() => setActiveTab("nest")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                    activeTab === "nest"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <NestAvatar size={16} />
+                  Nest
+                </button>
+                <button
+                  onClick={() => setActiveTab("copilot")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                    activeTab === "copilot"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  Clínico
+                </button>
+              </div>
+            )}
+
+            {/* Panel Content */}
             <div className="flex-1 overflow-hidden">
-              <AiAgentChatPanel />
+              {activeTab === "nest" && <AiAgentChatPanel />}
+              {activeTab === "copilot" && copilot.input && (
+                <div className="h-full overflow-y-auto p-3">
+                  <AiCopilotPanel
+                    input={copilot.input}
+                    onSelectCid={copilot.callbacks.onSelectCid}
+                    onAppendPrescription={copilot.callbacks.onAppendPrescription}
+                    onAppendExam={copilot.callbacks.onAppendExam}
+                    onAppendPlan={copilot.callbacks.onAppendPlan}
+                    className="border-0 shadow-none"
+                  />
+                </div>
+              )}
+              {activeTab === "copilot" && !copilot.input && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-6 text-muted-foreground gap-3">
+                  <Stethoscope className="h-10 w-10 opacity-30" />
+                  <p className="text-sm">Abra um prontuário para ativar o Copilot Clínico.</p>
+                </div>
+              )}
             </div>
 
             {/* User mini-bar at bottom */}

@@ -34,7 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { createPatientPackageV1, getPatientTimelineV1, revertPackageConsumptionForAppointmentV1, upsertPatientV2 } from "@/lib/supabase-typed-rpc";
-import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck, FileSignature, ClipboardList, Pill, FlaskConical, ArrowRightLeft, FileText, AlertTriangle, NotebookPen, ExternalLink, Lock, Sparkles, MessageCircle } from "lucide-react";
+import { Users, Plus, Loader2, Phone, Mail, Search, Pencil, Stethoscope, Package, DollarSign, Info, Clock, Copy, Check, KeyRound, MapPin, ShieldCheck, FileSignature, ClipboardList, Pill, FlaskConical, ArrowRightLeft, FileText, AlertTriangle, NotebookPen, ExternalLink, Lock, Sparkles, MessageCircle, FileSpreadsheet } from "lucide-react";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
 import { SendConsentLinkDialog } from "@/components/consent/SendConsentLinkDialog";
@@ -49,6 +49,8 @@ import { fetchPatientSpendingAllTime, type PatientSpendingRow } from "@/lib/pati
 import type { PatientTimelineEventRow } from "@/types/supabase-extensions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UsageIndicator } from "@/components/subscription/LimitGate";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
+import { CsvImportDialog } from "@/components/patient/CsvImportDialog";
 import { Link } from "react-router-dom";
 
 const formatCpf = (value: string) => {
@@ -148,6 +150,7 @@ export default function Pacientes() {
 
   const [contractsPatient, setContractsPatient] = useState<Patient | null>(null);
   const [sendLinkPatient, setSendLinkPatient] = useState<Patient | null>(null);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   const [clinicalHistory, setClinicalHistory] = useState<Array<{
     id: string; type: string; title: string; subtitle: string; date: string;
@@ -678,6 +681,16 @@ export default function Pacientes() {
               <UsageIndicator limit="patients" currentValue={patients.length} showLabel={false} size="sm" />
             </div>
           )}
+          <FeatureGate feature="csvImport" showUpgradePrompt={false}>
+            <Button
+              variant="outline"
+              className="gap-2 hidden sm:inline-flex"
+              onClick={() => setCsvImportOpen(true)}
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              Importar CSV
+            </Button>
+          </FeatureGate>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               {renderAddPatientButton()}
@@ -1399,6 +1412,14 @@ export default function Pacientes() {
         open={!!sendLinkPatient}
         onOpenChange={(open) => { if (!open) setSendLinkPatient(null); }}
         patient={sendLinkPatient}
+      />
+      {/* Dialog: Importar CSV */}
+      <CsvImportDialog
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        onSuccess={fetchPatients}
+        currentPatientCount={patients.length}
+        patientLimit={patientLimit}
       />
     </MainLayout>
   );

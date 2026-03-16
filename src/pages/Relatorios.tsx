@@ -46,6 +46,9 @@ import {
 import { format, subDays, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AiWeeklySummaryCard } from "@/components/ai";
+import { AiRevenueIntelligence } from "@/components/ai/AiRevenueIntelligence";
+import { AiBenchmarking } from "@/components/ai/AiBenchmarking";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 import { TabProdutividade, TabPacientes, TabNoShow, TabSatisfacao } from "@/components/relatorios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -954,6 +957,14 @@ export default function Relatorios() {
               <Sparkles className="h-3.5 w-3.5 hidden sm:block" />
               Resumo IA
             </TabsTrigger>
+            <TabsTrigger value="revenue-ia" className="gap-1.5 text-xs sm:text-sm">
+              <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
+              Revenue IA
+            </TabsTrigger>
+            <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm">
+              <BarChart3 className="h-3.5 w-3.5 hidden sm:block" />
+              Benchmarking
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="visao-geral" className="mt-6">
@@ -992,6 +1003,18 @@ export default function Relatorios() {
             <div className="max-w-md">
               <AiWeeklySummaryCard />
             </div>
+          </TabsContent>
+
+          <TabsContent value="revenue-ia" className="mt-6">
+            <FeatureGate feature="revenueIntelligence">
+              <AiRevenueIntelligence />
+            </FeatureGate>
+          </TabsContent>
+
+          <TabsContent value="benchmarking" className="mt-6">
+            <FeatureGate feature="benchmarking">
+              <AiBenchmarking />
+            </FeatureGate>
           </TabsContent>
         </Tabs>
       </div>

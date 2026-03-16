@@ -16,11 +16,14 @@ import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { AiTranscribe, AiCopilotPanel, AiDrugInteractionAlert } from "@/components/ai";
+import { AiTranscribe, AiDrugInteractionAlert } from "@/components/ai";
+import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
+import { FeatureGate } from "@/components/subscription/FeatureGate";
 import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
 import { suggestReturn, suggestReturnMultiple, formatSuggestion, type ReturnSuggestion } from "@/lib/cid-return-suggestion";
 import { CalendarClock, Lightbulb } from "lucide-react";
+import { useCopilotProntuario } from "@/contexts/CopilotProntuarioContext";
 
 interface Template {
   id: string;
@@ -229,7 +232,6 @@ export function ProntuarioForm({
   }, [checkCertificate]);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
-  const [showCopilot, setShowCopilot] = useState(false);
 
   const copilotInput: CopilotInput = {
     chief_complaint: base.chief_complaint || undefined,
@@ -250,6 +252,31 @@ export function ProntuarioForm({
       oxygen_saturation: vitals.oxygen_saturation,
     },
   };
+
+  // ── Copilot Clínico via Right Sidebar ──
+  const { register, updateInput, unregister } = useCopilotProntuario();
+
+  useEffect(() => {
+    if (!canEdit) return;
+    const callbacks = {
+      onSelectCid: (code: string, description: string) => {
+        set("cid_code", code);
+        set("diagnosis", description);
+      },
+      onAppendPrescription: (text: string) => {
+        setBase((b) => ({ ...b, prescriptions: b.prescriptions ? b.prescriptions + "\n" + text : text }));
+      },
+      onAppendPlan: (text: string) => {
+        setBase((b) => ({ ...b, treatment_plan: b.treatment_plan ? b.treatment_plan + "\n" + text : text }));
+      },
+    };
+    register(copilotInput, callbacks);
+    return () => unregister();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (canEdit) updateInput(copilotInput);
+  }, [base, vitals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const populateVitalsFromTriage = (t: TriageData) => {
     setVitals({
@@ -667,18 +694,6 @@ export function ProntuarioForm({
         </Button>
         <div className="flex items-center gap-2">
           {canEdit && (
-            <Button
-              type="button"
-              variant={showCopilot ? "secondary" : "outline"}
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={() => setShowCopilot(!showCopilot)}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {showCopilot ? "Fechar Copilot" : "Copilot IA"}
-            </Button>
-          )}
-          {canEdit && (
             <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Salvar Prontuário"}
             </Button>
@@ -854,7 +869,7 @@ export function ProntuarioForm({
         </div>
       </div>
 
-      <div className={showCopilot ? "grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4" : ""}>
+      <div>
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Queixa Principal *</Label>
@@ -918,6 +933,18 @@ export function ProntuarioForm({
           </div>
         </div>
 
+        {base.cid_code && (
+          <FeatureGate feature="clinicalProtocols" showUpgradePrompt={false}>
+            <AiClinicalProtocols
+              cidCode={base.cid_code}
+              cidDescription={base.diagnosis}
+              allergies={vitals.allergies}
+              currentMedications={vitals.current_medications}
+              compact
+            />
+          </FeatureGate>
+        )}
+
 
         <div className="space-y-1.5">
           <Label>Plano Terapêutico / Conduta</Label>
@@ -938,23 +965,6 @@ export function ProntuarioForm({
         </div>
       </div>
 
-      {showCopilot && (
-        <div className="lg:sticky lg:top-4 lg:self-start">
-          <AiCopilotPanel
-            input={copilotInput}
-            onSelectCid={(code, description) => {
-              set("cid_code", code);
-              set("diagnosis", description);
-            }}
-            onAppendPrescription={(text) => {
-              setBase((b) => ({ ...b, prescriptions: b.prescriptions ? b.prescriptions + "\n" + text : text }));
-            }}
-            onAppendPlan={(text) => {
-              setBase((b) => ({ ...b, treatment_plan: b.treatment_plan ? b.treatment_plan + "\n" + text : text }));
-            }}
-          />
-        </div>
-      )}
       </div>
 
       {/* ── Retorno do Paciente ── */}

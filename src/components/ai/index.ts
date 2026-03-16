@@ -12,3 +12,5 @@ export { AiDrugInteractionAlert } from "./AiDrugInteractionAlert";
 export { AiCancelPrediction } from "./AiCancelPrediction";
 export { AiExplainToPatient } from "./AiExplainToPatient";
 export { AiWeeklySummaryCard } from "./AiWeeklySummaryCard";
+export { AiRevenueIntelligence } from "./AiRevenueIntelligence";
+export { AiClinicalProtocols } from "./AiClinicalProtocols";
