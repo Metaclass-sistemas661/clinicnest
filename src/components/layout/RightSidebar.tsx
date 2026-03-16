@@ -36,6 +36,9 @@ export function RightSidebar() {
   const [activeTab, setActiveTab] = useState<SidebarTab>("nest");
   const copilot = useCopilotProntuario();
 
+  const showNest = hasFeature("aiAgentChat");
+  const showCopilot = copilot.active;
+
   // Close on Escape
   useEffect(() => {
     if (!expanded) return;
@@ -46,12 +49,6 @@ export function RightSidebar() {
     return () => document.removeEventListener("keydown", handler);
   }, [expanded]);
 
-  // Hide on mobile — the chat is accessible elsewhere
-  if (isMobile) return null;
-
-  const showNest = hasFeature("aiAgentChat");
-  const showCopilot = copilot.active;
-
   // Auto-switch to copilot tab when prontuário becomes active
   useEffect(() => {
     if (showCopilot && !expanded) {
@@ -61,6 +58,9 @@ export function RightSidebar() {
       setActiveTab("nest");
     }
   }, [showCopilot]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hide on mobile — the chat is accessible elsewhere
+  if (isMobile) return null;
 
   const openTab = (tab: SidebarTab) => {
     setActiveTab(tab);
