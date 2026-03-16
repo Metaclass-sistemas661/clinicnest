@@ -47,6 +47,7 @@ const navItems: NavItem[] = [
   { label: "Minhas Consultas", href: "/paciente/consultas", icon: Calendar },
   { label: "Teleconsulta", href: "/paciente/teleconsulta", icon: Video },
   { label: "Minha Saúde", href: "/paciente/saude", icon: Heart },
+  { label: "Questionários", href: "/paciente/proms", icon: ClipboardList },
   { label: "Mensagens", href: "/paciente/mensagens", icon: MessageCircle },
   { label: "Financeiro", href: "/paciente/financeiro", icon: Wallet },
   { label: "Exames", href: "/paciente/exames", icon: FileText },

@@ -18,6 +18,10 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { AiTranscribe, AiDrugInteractionAlert } from "@/components/ai";
 import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
+import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
+import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
+import { AiDeteriorationAlert } from "@/components/ai/AiDeteriorationAlert";
+import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
 import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
@@ -871,6 +875,37 @@ export function ProntuarioForm({
 
       <div>
       <div className="space-y-4">
+        {/* Voice-first dictation: grava → transcreve → auto-SOAP → preenche */}
+        {canEdit && (
+          <FeatureGate feature="aiTranscribe" showUpgradePrompt={false}>
+            <VoiceFirstDictation
+              onSoapReady={(soap) => {
+                setBase((b) => ({
+                  ...b,
+                  chief_complaint: soap.chief_complaint || b.chief_complaint,
+                  anamnesis: soap.anamnesis || b.anamnesis,
+                  physical_exam: soap.physical_exam || b.physical_exam,
+                  diagnosis: soap.diagnosis || b.diagnosis,
+                  treatment_plan: soap.treatment_plan || b.treatment_plan,
+                }));
+                if (soap.cid_code) set("cid_code", soap.cid_code);
+              }}
+              disabled={!canEdit}
+              className="mb-2"
+            />
+          </FeatureGate>
+        )}
+
+        {/* PROMs: desfechos relatados pelo paciente */}
+        {patientId && <PatientPromsViewer patientId={patientId} />}
+
+        {/* Alerta de deterioração clínica (IA) */}
+        {patientId && (
+          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+            <AiDeteriorationAlert patientId={patientId} />
+          </FeatureGate>
+        )}
+
         <div className="space-y-1.5">
           <Label>Queixa Principal *</Label>
           <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
@@ -950,6 +985,21 @@ export function ProntuarioForm({
           <Label>Plano Terapêutico / Conduta</Label>
           <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
         </div>
+
+        {/* Encaminhamento Inteligente */}
+        {canEdit && (base.diagnosis || base.chief_complaint) && (
+          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+            <AiSmartReferral
+              chiefComplaint={base.chief_complaint}
+              diagnosis={base.diagnosis}
+              treatmentPlan={base.treatment_plan}
+              cidCode={base.cid_code}
+              patientName={clients?.find((p) => p.id === patientId)?.name}
+              allergies={vitals.allergies}
+            />
+          </FeatureGate>
+        )}
+
         <div className="space-y-1.5">
           <Label>Prescrições</Label>
           <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />

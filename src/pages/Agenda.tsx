@@ -39,6 +39,7 @@ import { toastRpcError } from "@/lib/rpc-error";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
+import { NextPatientDashboard } from "@/components/agenda/NextPatientDashboard";
 import { CallNextButton } from "@/components/queue/CallNextButton";
 import type { Appointment, Patient, Procedure, Profile, AppointmentStatus, Product, InsurancePlan, ConsultationType } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
@@ -753,6 +754,21 @@ export default function Agenda() {
     ).length;
   };
 
+  // Next patient: first confirmed/arrived today
+  const nextPatient = useMemo(() => {
+    const now = new Date();
+    return appointments
+      .filter((apt) => {
+        const d = new Date(apt.scheduled_at);
+        return (
+          isSameDay(d, now) &&
+          (apt.status === "confirmed" || apt.status === "arrived") &&
+          apt.patient
+        );
+      })
+      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0] || null;
+  }, [appointments]);
+
   return (
     <MainLayout
       title="Agenda"
@@ -1094,6 +1110,9 @@ export default function Agenda() {
               <span className="text-xs text-emerald-600/70 dark:text-emerald-400/70 mt-1">atendimentos realizados</span>
             </div>
           </div>
+
+          {/* Next patient dashboard */}
+          {nextPatient && <NextPatientDashboard appointment={nextPatient} className="mb-5" />}
 
           {/* Navigation */}
           <div className="mb-4 md:mb-5 flex flex-col sm:flex-row items-center justify-between gap-3">
