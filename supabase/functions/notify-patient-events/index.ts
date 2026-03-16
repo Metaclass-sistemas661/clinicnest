@@ -23,12 +23,14 @@ type EventType =
   | "return_scheduled"
   | "return_reminder"
   | "exam_ready"
-  | "appointment_cancelled";
+  | "appointment_cancelled"
+  | "waitlist_slot_available";
 
 interface EventPayload {
   event_type: EventType;
   tenant_id: string;
-  client_id: string;
+  client_id?: string;
+  patient_id?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -147,6 +149,26 @@ function appointmentCancelledContent(clientName: string, date: string, time: str
   };
 }
 
+function waitlistSlotContent(clientName: string, serviceName: string, professionalName: string): { headline: string; icon: string; bodyHtml: string; bodyText: string; ctaLabel?: string; ctaUrl?: string } {
+  const siteUrl = Deno.env.get("SITE_URL") || "https://clinicnest.metaclass.com.br";
+  const items: Array<{ label: string; value: string }> = [];
+  if (serviceName) items.push({ label: "📌 Serviço", value: serviceName });
+  if (professionalName) items.push({ label: "👨\u200d⚕\ufe0f Profissional", value: professionalName });
+
+  return {
+    headline: "Vaga Disponível!",
+    icon: "🎉",
+    bodyHtml:
+      greeting(clientName) +
+      paragraph("<strong>Boas notícias!</strong> Uma vaga ficou disponível para o serviço que você aguardava na lista de espera.") +
+      (items.length > 0 ? infoBox(items, COLORS.SUCCESS) : "") +
+      paragraph("Acesse o portal do paciente para agendar ou entre em contato conosco."),
+    bodyText: `Olá, ${clientName}! Uma vaga ficou disponível${serviceName ? ` para ${serviceName}` : ""}. Acesse o portal para agendar.`,
+    ctaLabel: "Agendar Agora",
+    ctaUrl: `${siteUrl}/paciente/agendar`,
+  };
+}
+
 // ─── Edge Function ─────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -167,7 +189,9 @@ serve(async (req) => {
 
   try {
     const payload: EventPayload = await req.json();
-    const { event_type, tenant_id, client_id, metadata } = payload;
+    const { event_type, tenant_id, metadata } = payload;
+    // Support both client_id and patient_id (waitlist uses patient_id)
+    const client_id = payload.client_id || payload.patient_id;
 
     if (!event_type || !tenant_id || !client_id) {
       return new Response(
@@ -257,6 +281,16 @@ serve(async (req) => {
         subject = `❌ Consulta cancelada - ${clinicName}`;
         pushTitle = "Consulta Cancelada ❌";
         pushBody = `Sua consulta de ${serviceName} foi cancelada.`;
+        break;
+      }
+
+      case "waitlist_slot_available": {
+        const serviceName = String(metadata?.service_name ?? "Consulta");
+        const professionalName = String(metadata?.professional_name ?? "");
+        emailContent = waitlistSlotContent(clientName, serviceName, professionalName);
+        subject = `🎉 Vaga disponível - ${clinicName}`;
+        pushTitle = "Vaga Disponível! 🎉";
+        pushBody = `Uma vaga ficou disponível${serviceName ? ` para ${serviceName}` : ""}. Agende agora!`;
         break;
       }
     }

@@ -154,7 +154,28 @@ export default function ListaEspera() {
       if (status === "agendado") updates.scheduled_at = new Date().toISOString();
       const { error } = await supabase.from("waitlist").update(updates).eq("id", id);
       if (error) throw error;
-      toast.success(`Status atualizado para ${statusConfig[status]?.label || status}`);
+
+      // If notifying, send real WhatsApp/email via notify-patient-events
+      if (status === "notificado") {
+        const entry = entries.find((e) => e.id === id);
+        if (entry?.patient_id) {
+          supabase.functions.invoke("notify-patient-events", {
+            body: {
+              event_type: "waitlist_slot_available",
+              patient_id: entry.patient_id,
+              tenant_id: profile?.tenant_id,
+              metadata: {
+                waitlist_id: id,
+                service_name: entry.service_name || "Consulta",
+                professional_name: entry.professional_name || "",
+              },
+            },
+          }).catch((err) => logger.warn("Waitlist notify dispatch:", err));
+        }
+        toast.success("Paciente notificado por WhatsApp/e-mail!");
+      } else {
+        toast.success(`Status atualizado para ${statusConfig[status]?.label || status}`);
+      }
       fetchAll();
     } catch (err) {
       logger.error("Update waitlist:", err);

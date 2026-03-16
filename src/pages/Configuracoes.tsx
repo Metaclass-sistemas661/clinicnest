@@ -28,6 +28,7 @@ import { useSimpleMode } from "@/lib/simple-mode";
 import CertificateManager from "@/components/settings/CertificateManager";
 import SmsConfig from "@/components/settings/SmsConfig";
 import ChatbotSettings from "@/components/settings/ChatbotSettings";
+import { SmartConfirmationSettings } from "@/components/settings/SmartConfirmationSettings";
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
@@ -194,10 +195,14 @@ export default function Configuracoes() {
       subtitle="Dados da clínica e preferências do sistema"
     >
       <Tabs defaultValue="clinica" className="space-y-6">
-        <TabsList className="grid w-full max-w-3xl grid-cols-5">
+        <TabsList className="grid w-full max-w-4xl grid-cols-6">
           <TabsTrigger value="clinica" className="gap-2">
             <Building className="h-4 w-4" />
             Clínica
+          </TabsTrigger>
+          <TabsTrigger value="agendamento" className="gap-2">
+            <CalendarPlus className="h-4 w-4" />
+            Agendamento
           </TabsTrigger>
           <TabsTrigger value="certificados" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
@@ -318,7 +323,14 @@ export default function Configuracoes() {
         </TabsContent>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            Tab 2 — Certificados Digitais
+            Tab 2 — Agendamento Inteligente
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="agendamento">
+          <SmartConfirmationSettings />
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 3 — Certificados Digitais
         ═══════════════════════════════════════════════════════════════════ */}
         <TabsContent value="certificados">
           <CertificateManager />

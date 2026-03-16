@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "sistema-de-gestao-16e15"
+  },
+  "targets": {
+    "sistema-de-gestao-16e15": {
+      "hosting": {
+        "clinicnest": [
+          "sistema-de-gestao-16e15"
+        ]
+      }
+    }
+  }
+}

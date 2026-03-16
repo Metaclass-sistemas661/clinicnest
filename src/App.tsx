@@ -156,6 +156,7 @@ const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
 const RetornosPendentes = lazyWithRetry(() => import("@/pages/RetornosPendentes"));
 const PainelChamada = lazyWithRetry(() => import("@/pages/PainelChamada"));
 const PublicBooking = lazyWithRetry(() => import("@/pages/PublicBooking"));
+const WaitlistAutoBooking = lazyWithRetry(() => import("@/pages/WaitlistAutoBooking"));
 // FilaAtendimento merged into DashboardRecepcao (tabs)
 const DashboardRecepcao = lazyWithRetry(() => import("@/pages/recepcao/DashboardRecepcao"));
 const ConfirmarRetornoPublico = lazyWithRetry(() => import("@/pages/ConfirmarRetornoPublico"));
@@ -227,6 +228,7 @@ const App = () => (
                 <Route path="/auth/birdid/callback" element={<BirdIdCallback />} />
                 <Route path="/painel-chamada" element={<PainelChamada />} />
                 <Route path="/agendar/:slug" element={<PublicBooking />} />
+                <Route path="/waitlist-booking/:waitlistId" element={<WaitlistAutoBooking />} />
 
                 {/* 403 — Acesso Negado (precisa estar autenticado, mas sem resource) */}
                 <Route

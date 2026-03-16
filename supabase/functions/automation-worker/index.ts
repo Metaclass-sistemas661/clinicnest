@@ -45,6 +45,10 @@ type TenantSettings = {
   sms_provider: string | null;
   sms_api_key: string | null;
   sms_sender: string | null;
+  smart_confirmation_enabled?: boolean;
+  smart_confirmation_4h_channel?: string;
+  smart_confirmation_1h_channel?: string;
+  smart_confirmation_autorelease_minutes?: number;
 };
 
 type SelectResult<T> = { data: T; error: unknown };
@@ -983,6 +987,155 @@ async function processQueuedNotifications(
   return totals;
 }
 
+// ─── Smart Confirmation (4h → 1h → auto-release) ──────────────────────────────
+
+type SmartConfirmationResult = { sent_4h: number; sent_1h: number; released: number };
+
+async function processSmartConfirmation(
+  supabase: SupabaseClient,
+  publicUrl: string,
+  resendKey: string,
+): Promise<SmartConfirmationResult> {
+  const result: SmartConfirmationResult = { sent_4h: 0, sent_1h: 0, released: 0 };
+
+  // Fetch tenants with smart confirmation enabled
+  const { data: tenants, error: tErr } = (await supabase
+    .from("tenants")
+    .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender, smart_confirmation_enabled, smart_confirmation_4h_channel, smart_confirmation_1h_channel, smart_confirmation_autorelease_minutes")
+    .eq("smart_confirmation_enabled", true)) as unknown as SelectResult<TenantSettings[] | null>;
+
+  if (tErr || !tenants?.length) return result;
+
+  const now = new Date();
+
+  for (const tenant of tenants) {
+    const tenantId = tenant.id;
+    const channel4h = (tenant.smart_confirmation_4h_channel ?? "whatsapp") as Channel;
+    const channel1h = (tenant.smart_confirmation_1h_channel ?? "sms") as Channel;
+    const autoReleaseMin = tenant.smart_confirmation_autorelease_minutes ?? 30;
+
+    // ── 4h reminders: between 4h15m and 3h45m from now ──
+    const lo4h = new Date(now.getTime() + (4 * 60 - 15) * 60_000).toISOString();
+    const hi4h = new Date(now.getTime() + (4 * 60 + 15) * 60_000).toISOString();
+
+    const { data: appts4h } = (await supabase
+      .from("appointments")
+      .select("id, patient_id, procedure_id, professional_id, scheduled_at")
+      .eq("tenant_id", tenantId)
+      .in("status", ["pending", "confirmed"])
+      .eq("confirmation_sent_4h", false)
+      .gte("scheduled_at", lo4h)
+      .lte("scheduled_at", hi4h)
+      .is("confirmed_at", null)
+      .limit(100)) as unknown as SelectResult<AppointmentRow[] | null>;
+
+    for (const appt of appts4h ?? []) {
+      if (!appt.patient_id) continue;
+
+      const { data: client } = (await supabase
+        .from("patients")
+        .select("id, name, phone, email")
+        .eq("id", appt.patient_id)
+        .maybeSingle()) as unknown as SelectResult<ClientRow | null>;
+
+      if (!client) continue;
+
+      const { data: prof } = appt.professional_id
+        ? (await supabase.from("profiles").select("full_name").eq("id", appt.professional_id).maybeSingle()) as unknown as SelectResult<ProfileRow | null>
+        : { data: null };
+
+      const confirmLink = publicUrl
+        ? `${publicUrl}/confirmar/${appt.id}`
+        : "";
+
+      const message = `Olá ${client.name?.split(" ")[0] ?? ""}! 🏥\n\nSua consulta é hoje às ${formatTimeBR(appt.scheduled_at ?? "")}${prof?.full_name ? ` com ${prof.full_name}` : ""}.\n\n✅ Confirme sua presença: ${confirmLink}\n\nSe não puder comparecer, avise para liberarmos a vaga.\n\n${tenant.name ?? "Sua Clínica"}`;
+
+      let sent = false;
+      if (channel4h === "whatsapp" && client.phone) {
+        const r = await sendWhatsapp(tenant, normalizePhone(client.phone), message);
+        sent = r.ok;
+      } else if (channel4h === "sms" && client.phone) {
+        const r = await sendSms(tenant, normalizePhone(client.phone), message);
+        sent = r.ok;
+      } else if (channel4h === "email" && client.email) {
+        const html = buildEmailHtml(message, tenant.name ?? "");
+        const r = await sendEmail(resendKey, client.email, client.name ?? "", `⏰ Confirme sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
+        sent = r.ok;
+      }
+
+      if (sent) {
+        await supabase
+          .from("appointments")
+          .update({ confirmation_sent_4h: true })
+          .eq("id", appt.id);
+        result.sent_4h++;
+      }
+    }
+
+    // ── 1h reminders: between 1h10m and 50min from now ──
+    const lo1h = new Date(now.getTime() + 50 * 60_000).toISOString();
+    const hi1h = new Date(now.getTime() + 70 * 60_000).toISOString();
+
+    const { data: appts1h } = (await supabase
+      .from("appointments")
+      .select("id, patient_id, procedure_id, professional_id, scheduled_at")
+      .eq("tenant_id", tenantId)
+      .in("status", ["pending", "confirmed"])
+      .eq("confirmation_sent_4h", true)
+      .eq("confirmation_sent_1h", false)
+      .gte("scheduled_at", lo1h)
+      .lte("scheduled_at", hi1h)
+      .is("confirmed_at", null)
+      .limit(100)) as unknown as SelectResult<AppointmentRow[] | null>;
+
+    for (const appt of appts1h ?? []) {
+      if (!appt.patient_id) continue;
+
+      const { data: client } = (await supabase
+        .from("patients")
+        .select("id, name, phone, email")
+        .eq("id", appt.patient_id)
+        .maybeSingle()) as unknown as SelectResult<ClientRow | null>;
+
+      if (!client) continue;
+
+      const confirmLink = publicUrl
+        ? `${publicUrl}/confirmar/${appt.id}`
+        : "";
+
+      const message = `⚠️ Última chamada!\n\n${client.name?.split(" ")[0] ?? ""}, sua consulta é em 1 hora (${formatTimeBR(appt.scheduled_at ?? "")}).\n\nConfirme agora: ${confirmLink}\n\nSem confirmação, a vaga será liberada para outro paciente.\n\n${tenant.name ?? ""}`;
+
+      let sent = false;
+      if (channel1h === "sms" && client.phone) {
+        const r = await sendSms(tenant, normalizePhone(client.phone), message);
+        sent = r.ok;
+      } else if (channel1h === "whatsapp" && client.phone) {
+        const r = await sendWhatsapp(tenant, normalizePhone(client.phone), message);
+        sent = r.ok;
+      } else if (channel1h === "email" && client.email) {
+        const html = buildEmailHtml(message, tenant.name ?? "");
+        const r = await sendEmail(resendKey, client.email, client.name ?? "", `⚠️ Confirme AGORA sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
+        sent = r.ok;
+      }
+
+      if (sent) {
+        await supabase
+          .from("appointments")
+          .update({ confirmation_sent_1h: true })
+          .eq("id", appt.id);
+        result.sent_1h++;
+      }
+    }
+
+    // ── Auto-release: unconfirmed within autorelease window ──
+    const { data: releaseData } = (await supabase.rpc("auto_release_unconfirmed_appointments")) as unknown as SelectResult<{ released: number } | null>;
+    result.released += (releaseData as any)?.released ?? 0;
+  }
+
+  log("Smart confirmation processed", result);
+  return result;
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -1045,7 +1198,7 @@ serve(async (req: Request) => {
     log("Worker started", { total_rules: rules.length, since_minutes: sinceMinutes });
 
     // Process all trigger types in parallel
-    const [created, confirmed, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled] = await Promise.allSettled([
+    const [created, confirmed, r24h, r2h, completed, birthday, inactive, returnReminder, consentSigned, returnScheduled, smartConfirm] = await Promise.allSettled([
       processAppointmentTrigger(supabase, byType("appointment_created"), "appointment_created", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_confirmed"), "appointment_confirmed", sinceMinutes, publicUrl, resendKey),
       processAppointmentTrigger(supabase, byType("appointment_reminder_24h"), "appointment_reminder_24h", sinceMinutes, publicUrl, resendKey),
@@ -1056,6 +1209,7 @@ serve(async (req: Request) => {
       processReturnReminderTrigger(supabase, byType("return_reminder"), publicUrl, resendKey),
       processQueuedNotifications(supabase, byType("consent_signed"), "consent_signed", resendKey),
       processQueuedNotifications(supabase, byType("return_scheduled"), "return_scheduled", resendKey),
+      processSmartConfirmation(supabase, publicUrl, resendKey),
     ]);
 
     const extract = (r: PromiseSettledResult<DispatchResult>): DispatchResult =>
@@ -1069,9 +1223,11 @@ serve(async (req: Request) => {
       { sent: 0, skipped: 0, failed: 0 },
     );
 
-    log("Worker finished", totals);
+    const smartResult = smartConfirm.status === "fulfilled" ? smartConfirm.value : { sent_4h: 0, sent_1h: 0, released: 0 };
 
-    return new Response(JSON.stringify({ success: true, ...totals }), {
+    log("Worker finished", { ...totals, smart_confirmation: smartResult });
+
+    return new Response(JSON.stringify({ success: true, ...totals, smart_confirmation: smartResult }), {
       status: 200,
       headers: { ...cors, "Content-Type": "application/json" },
     });

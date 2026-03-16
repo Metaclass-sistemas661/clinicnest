@@ -27,6 +27,8 @@ import {
   CalendarClock,
   AlertTriangle,
   Loader2,
+  ClipboardCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabasePatient } from "@/integrations/supabase/client";
@@ -93,6 +95,10 @@ export default function PatientConsultas() {
   const [cancelTarget, setCancelTarget] = useState<PatientAppointment | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Check-in
+  const [checkinTarget, setCheckinTarget] = useState<PatientAppointment | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   // Reschedule dialog
   const [rescheduleTarget, setRescheduleTarget] = useState<PatientAppointment | null>(null);
@@ -206,6 +212,36 @@ export default function PatientConsultas() {
       toast.error(msg);
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  // ── Check-in Online ────────────────────────────────────────────────────────
+  const canCheckin = (appt: PatientAppointment): boolean => {
+    if (appt.status !== "pending" && appt.status !== "confirmed") return false;
+    const hoursUntil = (new Date(appt.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60);
+    return hoursUntil <= 24 && hoursUntil > -2;
+  };
+
+  const handleCheckin = async () => {
+    if (!checkinTarget) return;
+    setIsCheckingIn(true);
+    try {
+      const { data, error } = await (supabasePatient as any).rpc("patient_online_checkin", {
+        p_appointment_id: checkinTarget.id,
+      });
+      if (error) throw error;
+      const result = data as { success?: boolean; message?: string } | null;
+      if (result?.success) {
+        toast.success(result.message || "Check-in realizado com sucesso!");
+      } else {
+        toast.error(result?.message || "Erro ao fazer check-in");
+      }
+      setCheckinTarget(null);
+      void fetchAppointments();
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao fazer check-in");
+    } finally {
+      setIsCheckingIn(false);
     }
   };
 
@@ -404,6 +440,16 @@ export default function PatientConsultas() {
                             <XCircle className="h-3.5 w-3.5" />
                             Cancelar
                           </Button>
+                          {canCheckin(appt) && (
+                            <Button
+                              size="sm"
+                              className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={() => setCheckinTarget(appt)}
+                            >
+                              <ClipboardCheck className="h-3.5 w-3.5" />
+                              Check-in Online
+                            </Button>
+                          )}
                         </>
                       ) : (
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -519,6 +565,43 @@ export default function PatientConsultas() {
               disabled={isRescheduling || !selectedRescheduleSlot}
             >
               {isRescheduling ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reagendando...</> : "Confirmar Reagendamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Check-in Online ────────────────────────────────────────── */}
+      <Dialog open={!!checkinTarget} onOpenChange={(open) => { if (!open) setCheckinTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              Check-in Online
+            </DialogTitle>
+            <DialogDescription>
+              {checkinTarget && (
+                <>
+                  {format(new Date(checkinTarget.scheduled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} — {checkinTarget.service_name} com {checkinTarget.professional_name}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm space-y-2">
+            <p className="font-medium text-emerald-700 dark:text-emerald-300">Confirme sua presença</p>
+            <p className="text-xs text-muted-foreground">
+              Ao fazer check-in, você confirma que comparecerá à consulta. O profissional será notificado.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCheckinTarget(null)}>Voltar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+              onClick={() => void handleCheckin()}
+              disabled={isCheckingIn}
+            >
+              {isCheckingIn ? <><Loader2 className="h-4 w-4 animate-spin" />Confirmando...</> : <><ClipboardCheck className="h-4 w-4" />Fazer Check-in</>}
             </Button>
           </DialogFooter>
         </DialogContent>

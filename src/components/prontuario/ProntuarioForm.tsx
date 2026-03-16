@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -600,6 +601,41 @@ export function ProntuarioForm({
 
   const set = (k: keyof typeof emptyBase, v: string) => setBase((b) => ({ ...b, [k]: v }));
   const [showAiTranscribe, setShowAiTranscribe] = useState(false);
+  const [lastTranscript, setLastTranscript] = useState<string | null>(null);
+
+  const generateSoapMutation = useMutation({
+    mutationFn: async (transcript: string) => {
+      const { data, error } = await supabase.functions.invoke("ai-generate-soap", {
+        body: { transcript, specialty: base.chief_complaint || undefined },
+      });
+      if (error) throw error;
+      return data.soap as {
+        subjective: string;
+        objective: string;
+        assessment: string;
+        plan: string;
+        cid_suggestions: string[];
+        confidence: number;
+      };
+    },
+    onSuccess: (soap) => {
+      setBase((b) => ({
+        ...b,
+        anamnesis: soap.subjective || b.anamnesis,
+        physical_exam: soap.objective || b.physical_exam,
+        diagnosis: soap.assessment || b.diagnosis,
+        treatment_plan: soap.plan || b.treatment_plan,
+      }));
+      if (soap.cid_suggestions?.length > 0) {
+        set("cid_code", soap.cid_suggestions[0]);
+      }
+      setLastTranscript(null);
+      toast.success(`SOAP gerado automaticamente (confiança: ${Math.round((soap.confidence || 0) * 100)}%)`);
+    },
+    onError: () => {
+      toast.error("Não foi possível gerar o SOAP automaticamente.");
+    },
+  });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -799,10 +835,34 @@ export function ProntuarioForm({
             <AiTranscribe
               onTranscriptReady={(text) => {
                 setBase((b) => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis + "\n" + text : text }));
+                setLastTranscript(text);
                 setShowAiTranscribe(false);
               }}
               className="border-dashed mb-2"
             />
+          )}
+          {lastTranscript && (
+            <div className="flex items-center gap-2 p-2 rounded-md border border-dashed border-primary/40 bg-primary/5">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-xs text-muted-foreground flex-1">Transcrição recebida. Preencher campos SOAP automaticamente?</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                disabled={generateSoapMutation.isPending}
+                onClick={() => generateSoapMutation.mutate(lastTranscript)}
+              >
+                {generateSoapMutation.isPending ? (
+                  <><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</>
+                ) : (
+                  <><Sparkles className="h-3 w-3" /> Auto-SOAP</>
+                )}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setLastTranscript(null)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
           )}
           <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
         </div>

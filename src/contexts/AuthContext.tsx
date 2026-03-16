@@ -249,7 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       options: {
         emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
-        captchaToken,
+        ...(captchaToken ? { captchaToken } : {}),
         data: {
           full_name: fullName,
           clinic_name: clinicName,

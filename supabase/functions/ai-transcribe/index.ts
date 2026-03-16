@@ -1,21 +1,21 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  transcribeAudio,
-  getMedicalTranscriptionJob,
-} from "../_shared/transcribe-client.ts";
+  transcribeAudioBase64,
+  type MedicalSpecialty,
+} from "../_shared/vertex-transcribe-client.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
 interface TranscribeRequest {
-  action: "start" | "status";
-  // For "start" action
+  action: "transcribe" | "start" | "status";
+  // For "transcribe" / "start" action
   audio_base64?: string;
   file_name?: string;
   content_type?: string;
-  specialty?: "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
-  // For "status" action
+  specialty?: MedicalSpecialty;
+  // Legacy "status" action (kept for backward compat, returns immediately)
   job_name?: string;
 }
 
@@ -85,12 +85,13 @@ serve(async (req) => {
     const body: TranscribeRequest = await req.json();
     const { action } = body;
 
-    if (action === "start") {
+    // ── Primary path: synchronous transcription via Vertex AI ──
+    if (action === "transcribe" || action === "start") {
       const { audio_base64, file_name, content_type, specialty } = body;
 
-      if (!audio_base64 || !file_name || !content_type) {
+      if (!audio_base64 || !content_type) {
         return new Response(
-          JSON.stringify({ error: "audio_base64, file_name, and content_type are required" }),
+          JSON.stringify({ error: "audio_base64 and content_type are required" }),
           {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -110,48 +111,46 @@ serve(async (req) => {
         );
       }
 
-      // Decode base64 audio
-      const binaryString = atob(audio_base64);
-      const audioData = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        audioData[i] = binaryString.charCodeAt(i);
-      }
-
-      // Generate unique file name with tenant prefix
-      const uniqueFileName = `${profile.tenant_id}/${Date.now()}-${file_name}`;
-
-      // Start transcription
-      const result = await transcribeAudio(
-        audioData,
-        uniqueFileName,
-        content_type,
-        specialty || "PRIMARYCARE"
+      // Synchronous transcription via Google Cloud Speech-to-Text V2 (Chirp)
+      const result = await transcribeAudioBase64(
+        audio_base64,
+        content_type || "audio/webm",
+        specialty || "PRIMARYCARE",
       );
 
-      // Store job reference in database for tracking
+      // Log transcription in DB for analytics
+      const jobName = `vertex-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       await supabaseClient.from("transcription_jobs").insert({
-        job_name: result.jobName,
-        s3_uri: result.s3Uri,
+        job_name: jobName,
         user_id: user.id,
         tenant_id: profile.tenant_id,
-        status: "IN_PROGRESS",
+        status: "COMPLETED",
+        transcript: result.transcript,
         created_at: new Date().toISOString(),
-      });
+        completed_at: new Date().toISOString(),
+      }).then(() => {}, () => {}); // fire-and-forget, don't block response
 
-      console.log(`[ai-transcribe] Started job: ${result.jobName} for user: ${user.id}`);
+      console.log(
+        `[ai-transcribe] Vertex AI transcription complete for user: ${user.id}, ` +
+        `${result.durationSeconds.toFixed(1)}s audio, ${result.transcript.length} chars`
+      );
       logAiUsage(profile.tenant_id, user.id, "transcribe").catch(() => {});
 
       return new Response(
         JSON.stringify({
-          job_name: result.jobName,
-          status: "IN_PROGRESS",
-          message: "Transcrição iniciada. Use o job_name para verificar o status.",
+          status: "COMPLETED",
+          transcript: result.transcript,
+          confidence: result.confidence,
+          duration_seconds: result.durationSeconds,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
-    } else if (action === "status") {
+    }
+
+    // ── Legacy "status" action — returns completed for any existing job ──
+    if (action === "status") {
       const { job_name } = body;
 
       if (!job_name) {
@@ -161,7 +160,6 @@ serve(async (req) => {
         });
       }
 
-      // Verify job belongs to user's tenant
       const { data: job } = await supabaseClient
         .from("transcription_jobs")
         .select("*")
@@ -176,36 +174,25 @@ serve(async (req) => {
         });
       }
 
-      // Get status from AWS
-      const result = await getMedicalTranscriptionJob(job_name);
-
-      // Update local status
-      if (result.status !== job.status) {
-        await supabaseClient
-          .from("transcription_jobs")
-          .update({
-            status: result.status,
-            transcript: result.transcript,
-            error: result.error,
-            completed_at: result.status === "COMPLETED" ? new Date().toISOString() : null,
-          })
-          .eq("job_name", job_name);
-      }
-
-      console.log(`[ai-transcribe] Status check: ${job_name} = ${result.status}`);
-
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } else {
       return new Response(
-        JSON.stringify({ error: "Invalid action. Use 'start' or 'status'" }),
+        JSON.stringify({
+          status: job.status,
+          transcript: job.transcript,
+          error: job.error_message,
+        }),
         {
-          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    return new Response(
+      JSON.stringify({ error: "Invalid action. Use 'transcribe' or 'start'" }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("[ai-transcribe] Error:", error);
     return new Response(
