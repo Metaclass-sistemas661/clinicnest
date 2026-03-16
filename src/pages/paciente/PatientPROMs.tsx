@@ -152,14 +152,15 @@ export default function PatientPROMs() {
 
       // Get patient link
       const { data: link } = await supabasePatient
-        .from("patient_auth_link" as never)
-        .select("patient_id, tenant_id")
+        .from("patient_profiles" as never)
+        .select("client_id, tenant_id")
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .single();
 
       if (!link) return;
-      const l = link as { patient_id: string; tenant_id: string };
-      setPatientId(l.patient_id);
+      const l = link as { client_id: string; tenant_id: string };
+      setPatientId(l.client_id);
       setTenantId(l.tenant_id);
 
       // Load history

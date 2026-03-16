@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.patient_proms (
   tenant_id      uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
   patient_id     uuid NOT NULL REFERENCES public.patients(id) ON DELETE CASCADE,
   questionnaire  text NOT NULL DEFAULT 'general',   -- 'general', 'pain', 'phq9', 'gad7', 'eq5d'
-  answers        jsonb NOT NULL DEFAULT '{}',        -- respuestas estruturadas
+  answers        jsonb NOT NULL DEFAULT '{}',        -- respostas estruturadas
   total_score    integer,                            -- score calculado
   max_score      integer,                            -- score máximo possível
   severity       text,                               -- 'minimal', 'mild', 'moderate', 'severe'
@@ -28,22 +28,25 @@ CREATE POLICY "Profissionais leem PROMs do tenant" ON public.patient_proms
     tenant_id IN (SELECT tenant_id FROM public.profiles WHERE user_id = auth.uid())
   );
 
--- Pacientes inserem e leem seus próprios PROMs
+-- Pacientes inserem seus próprios PROMs
 CREATE POLICY "Pacientes inserem PROMs" ON public.patient_proms
   FOR INSERT WITH CHECK (
     patient_id IN (
-      SELECT id FROM public.patients 
-      WHERE access_code IS NOT NULL 
-        AND id = patient_id
+      SELECT pp.client_id FROM public.patient_profiles pp
+      WHERE pp.user_id = auth.uid() AND pp.is_active = true
+    )
+    AND tenant_id IN (
+      SELECT pp.tenant_id FROM public.patient_profiles pp
+      WHERE pp.user_id = auth.uid() AND pp.is_active = true
     )
   );
 
+-- Pacientes leem seus próprios PROMs
 CREATE POLICY "Pacientes leem seus PROMs" ON public.patient_proms
   FOR SELECT USING (
     patient_id IN (
-      SELECT p.id FROM public.patients p
-      INNER JOIN public.patient_auth_link pal ON pal.patient_id = p.id
-      WHERE pal.user_id = auth.uid()
+      SELECT pp.client_id FROM public.patient_profiles pp
+      WHERE pp.user_id = auth.uid() AND pp.is_active = true
     )
   );
 
