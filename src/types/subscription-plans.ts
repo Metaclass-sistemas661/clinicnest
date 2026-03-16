@@ -5,7 +5,7 @@
  * para cada tier de assinatura do ClinicNest.
  */
 
-export type SubscriptionTier = 'starter' | 'solo' | 'clinica' | 'premium';
+export type SubscriptionTier = 'free' | 'starter' | 'solo' | 'clinica' | 'premium';
 export type SubscriptionInterval = 'monthly' | 'annual';
 
 export type FeatureKey =
@@ -77,7 +77,16 @@ export type FeatureKey =
   | 'aiTranscribe'
   | 'aiSentiment'
   | 'aiAgentChat'
-  | 'aiPatientChat';
+  | 'aiPatientChat'
+  | 'aiCopilot'
+  | 'aiDrugInteractions'
+  | 'aiCancelPrediction'
+  | 'aiExplainPatient'
+  | 'aiWeeklySummary'
+  | 'revenueIntelligence'
+  | 'clinicalProtocols'
+  | 'benchmarking'
+  | 'csvImport';
 
 export type LimitKey =
   | 'professionals'
@@ -129,6 +138,101 @@ export interface PlanConfig {
 export const UNLIMITED = -1;
 
 export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
+  free: {
+    name: 'Free',
+    tagline: 'Gratuito para sempre',
+    target: 'Conheça o ClinicNest sem compromisso',
+    price: {
+      monthly: 0,
+      annual: 0,
+    },
+    limits: {
+      professionals: 1,
+      patients: 30,
+      appointmentsPerMonth: 50,
+      teleconsultasPerMonth: 0,
+      smsPerMonth: 0,
+      storageGb: 0.5,
+      historyMonths: 3,
+      automations: 0,
+      webhooks: 0,
+      units: 1,
+      customReports: 0,
+      aiRequestsPerDay: 5,
+      aiTranscribeMinutesPerMonth: 0,
+    },
+    features: {
+      agenda: true,
+      waitlist: false,
+      returnReminders: false,
+      availability: true,
+      callPanel: false,
+      patients: true,
+      triage: false,
+      medicalRecords: true,
+      soapEvolutions: false,
+      nursingEvolutions: false,
+      teleconsulta: false,
+      internalChat: false,
+      prescriptions: true,
+      certificates: false,
+      reports: false,
+      referrals: false,
+      contracts: false,
+      odontogram: false,
+      periogram: false,
+      treatmentPlans: false,
+      dentalImages: false,
+      basicFinancial: true,
+      advancedFinancial: false,
+      tissGuides: false,
+      tissBilling: false,
+      glossManagement: false,
+      insurancePlans: false,
+      basicReports: true,
+      advancedReports: false,
+      customReports: false,
+      inventory: false,
+      purchases: false,
+      suppliers: false,
+      onlineBooking: true,
+      campaigns: false,
+      automations: false,
+      team: false,
+      basicRbac: false,
+      advancedRbac: false,
+      multiUnit: false,
+      rooms: false,
+      procedures: true,
+      specialties: false,
+      recordTemplates: false,
+      integrations: false,
+      apiAccess: false,
+      compliance: false,
+      sngpc: false,
+      audit: false,
+      dataRetention: false,
+      onaDashboard: false,
+      commissions: false,
+      aiTriage: true,
+      aiCidSuggest: true,
+      aiSummary: false,
+      aiTranscribe: false,
+      aiSentiment: false,
+      aiAgentChat: false,
+      aiPatientChat: false,
+      aiCopilot: false,
+      aiDrugInteractions: false,
+      aiCancelPrediction: false,
+      aiExplainPatient: false,
+      aiWeeklySummary: false,
+      revenueIntelligence: false,
+      clinicalProtocols: false,
+      benchmarking: false,
+      csvImport: false,
+    },
+  },
+
   starter: {
     name: 'Starter',
     tagline: 'Para começar',
@@ -222,6 +326,15 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       aiSentiment: false,
       aiAgentChat: true,
       aiPatientChat: true,
+      aiCopilot: false,
+      aiDrugInteractions: false,
+      aiCancelPrediction: false,
+      aiExplainPatient: false,
+      aiWeeklySummary: false,
+      revenueIntelligence: false,
+      clinicalProtocols: false,
+      benchmarking: false,
+      csvImport: true,
     },
   },
 
@@ -318,6 +431,15 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       aiSentiment: true,
       aiAgentChat: true,
       aiPatientChat: true,
+      aiCopilot: false,
+      aiDrugInteractions: true,
+      aiCancelPrediction: false,
+      aiExplainPatient: true,
+      aiWeeklySummary: false,
+      revenueIntelligence: false,
+      clinicalProtocols: true,
+      benchmarking: false,
+      csvImport: true,
     },
   },
 
@@ -414,6 +536,15 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       aiSentiment: true,
       aiAgentChat: true,
       aiPatientChat: true,
+      aiCopilot: true,
+      aiDrugInteractions: true,
+      aiCancelPrediction: true,
+      aiExplainPatient: true,
+      aiWeeklySummary: true,
+      revenueIntelligence: false,
+      clinicalProtocols: true,
+      benchmarking: false,
+      csvImport: true,
     },
   },
 
@@ -510,11 +641,20 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       aiSentiment: true,
       aiAgentChat: true,
       aiPatientChat: true,
+      aiCopilot: true,
+      aiDrugInteractions: true,
+      aiCancelPrediction: true,
+      aiExplainPatient: true,
+      aiWeeklySummary: true,
+      revenueIntelligence: true,
+      clinicalProtocols: true,
+      benchmarking: true,
+      csvImport: true,
     },
   },
 };
 
-export const TIER_ORDER: SubscriptionTier[] = ['starter', 'solo', 'clinica', 'premium'];
+export const TIER_ORDER: SubscriptionTier[] = ['free', 'starter', 'solo', 'clinica', 'premium'];
 
 export function getTierIndex(tier: SubscriptionTier): number {
   return TIER_ORDER.indexOf(tier);
@@ -611,6 +751,15 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   aiSentiment: 'Análise de Sentimento',
   aiAgentChat: 'Assistente IA',
   aiPatientChat: 'Chat IA do Paciente',
+  aiCopilot: 'Copilot Clínico',
+  aiDrugInteractions: 'Interação Medicamentosa IA',
+  aiCancelPrediction: 'Predição de Cancelamento IA',
+  aiExplainPatient: 'Tradução Médico→Paciente',
+  aiWeeklySummary: 'Resumo Semanal IA',
+  revenueIntelligence: 'Revenue Intelligence',
+  clinicalProtocols: 'Protocolos Clínicos por CID',
+  benchmarking: 'Benchmarking Cross-Clínicas',
+  csvImport: 'Importação CSV de Pacientes',
 };
 
 export const LIMIT_LABELS: Record<LimitKey, string> = {

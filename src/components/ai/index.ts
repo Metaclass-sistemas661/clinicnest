@@ -4,6 +4,7 @@ export { AiPatientSummary } from "./AiPatientSummary";
 export { AiTranscribe } from "./AiTranscribe";
 export { AiNoShowPrediction, AiNoShowBadge } from "./AiNoShowPrediction";
 export { AiAgentChat } from "./AiAgentChat";
+export { AiAgentChatPanel } from "./AiAgentChatPanel";
 export { AiPatientChat } from "./AiPatientChat";
 export { AiCopilotPanel } from "./AiCopilotPanel";
 export type { CopilotInput } from "./AiCopilotPanel";

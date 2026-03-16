@@ -74,6 +74,8 @@ serve(async (req) => {
 
     // Check trial status
     const now = new Date();
+    const planKey = (subscriptionData?.plan ?? "").toLowerCase();
+    const isFree = planKey === "free";
     const trialEnd = subscriptionData?.trial_end ? new Date(subscriptionData.trial_end) : null;
     const periodEnd = subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end) : null;
     const isTrialing = subscriptionData?.status === 'trialing';
@@ -86,7 +88,8 @@ serve(async (req) => {
 
     const periodNotExpired = periodEnd ? now <= periodEnd : false;
     const subscribed = Boolean(periodNotExpired && (isActive || isInactive) && subscriptionData?.plan);
-    const hasAccess = subscribed || (isTrialing && !trialExpired);
+    // Free plan always has access (never expires)
+    const hasAccess = isFree || subscribed || (isTrialing && !trialExpired);
 
     logStep("Access check complete", {
       subscribed,

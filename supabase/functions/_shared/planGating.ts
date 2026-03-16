@@ -16,31 +16,41 @@ export type AiFeature =
   | "transcribe"
   | "sentiment"
   | "agent_chat"
-  | "patient_chat";
+  | "patient_chat"
+  | "copilot"
+  | "drug_interactions"
+  | "cancel_prediction"
+  | "explain_patient"
+  | "weekly_summary";
 
 /** Server-side AI plan config (mirrors frontend subscription-plans.ts) */
 const AI_PLAN_CONFIG: Record<
   string,
   { features: AiFeature[]; dailyLimit: number; transcribeMinPerMonth: number }
 > = {
+  free: {
+    features: ["triage", "cid_suggest"],
+    dailyLimit: 5,
+    transcribeMinPerMonth: 0,
+  },
   starter: {
     features: ["triage", "cid_suggest", "agent_chat", "patient_chat"],
     dailyLimit: 10,
     transcribeMinPerMonth: 0,
   },
   solo: {
-    features: ["triage", "cid_suggest", "agent_chat", "patient_chat", "summary", "sentiment"],
+    features: ["triage", "cid_suggest", "agent_chat", "patient_chat", "summary", "sentiment", "drug_interactions", "explain_patient"],
     dailyLimit: 25,
     transcribeMinPerMonth: 0,
   },
   clinica: {
-    features: ["triage", "cid_suggest", "agent_chat", "patient_chat", "summary", "sentiment", "transcribe"],
+    features: ["triage", "cid_suggest", "agent_chat", "patient_chat", "summary", "sentiment", "transcribe", "copilot", "drug_interactions", "cancel_prediction", "explain_patient", "weekly_summary"],
     dailyLimit: 60,
     transcribeMinPerMonth: 60,
   },
   premium: {
-    features: ["triage", "cid_suggest", "agent_chat", "summary", "sentiment", "transcribe", "patient_chat"],
-    dailyLimit: -1, // unlimited
+    features: ["triage", "cid_suggest", "agent_chat", "patient_chat", "summary", "sentiment", "transcribe", "copilot", "drug_interactions", "cancel_prediction", "explain_patient", "weekly_summary"],
+    dailyLimit: -1,
     transcribeMinPerMonth: -1,
   },
 };
@@ -63,8 +73,9 @@ function getAdminClient() {
 
 /** Parse tier from plan key, e.g. "clinica_monthly" → "clinica" */
 function parseTier(plan: string | null): string {
-  if (!plan) return "starter";
+  if (!plan) return "free";
   const lower = plan.toLowerCase();
+  if (lower === "free" || lower.startsWith("free_")) return "free";
   if (lower.startsWith("premium")) return "premium";
   if (lower.startsWith("clinica") || lower.startsWith("clinic")) return "clinica";
   if (lower.startsWith("solo")) return "solo";

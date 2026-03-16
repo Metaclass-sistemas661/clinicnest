@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { GlobalSearch } from "@/components/header/GlobalSearch";
 import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
-import { AiAgentChat } from "@/components/ai";
+import { RightSidebar } from "@/components/layout/RightSidebar";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -83,7 +83,8 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         <Sidebar onCollapsedChange={setSidebarCollapsed} />
         <main className={cn(
           "min-h-screen transition-all duration-300",
-          isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-72"
+          isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-72",
+          !isMobile && "mr-14"
         )}>
           <GoalsProgressBar />
           {/* Header: título + sino (staff) + actions */}
@@ -172,8 +173,8 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           <AdverseEventButton />
         </main>
 
-        {/* Agente IA flutuante */}
-        <AiAgentChat />
+        {/* Right Sidebar — Copilot Nest */}
+        <RightSidebar />
       </div>
     </SubscriptionGuard>
   );

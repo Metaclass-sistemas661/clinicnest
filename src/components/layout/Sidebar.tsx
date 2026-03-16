@@ -706,47 +706,8 @@ function SidebarContent({
         })}
       </nav>
 
-      {/* User section */}
+      {/* Logout section */}
       <div className="border-t border-border/50 p-3">
-        {!isCollapsed && (
-          <div className="mb-3 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 p-3">
-            <div className="flex items-center gap-3">
-              <Link
-                to="/minhas-configuracoes"
-                onClick={onNavigate}
-                onMouseEnter={() => prefetchRoute("/minhas-configuracoes")}
-                className="flex flex-1 items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
-                title="Meu Perfil"
-              >
-                {profile?.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.full_name || "Avatar"}
-                    className="h-10 w-10 rounded-xl object-cover shrink-0 ring-2 ring-primary/20"
-                  />
-                ) : (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 text-white font-bold shadow-lg shadow-cyan-500/25">
-                    {profile?.full_name?.charAt(0)?.toUpperCase() || "U"}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
-                    {profile?.full_name || "Usuário"}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {isAdmin ? "Administrador" : (PROFESSIONAL_TYPE_LABELS[professionalType] || "Profissional")}
-                  </p>
-                </div>
-              </Link>
-              <ThemeToggle />
-            </div>
-          </div>
-        )}
-        {isCollapsed && (
-          <div className="mb-3 flex justify-center">
-            <ThemeToggle />
-          </div>
-        )}
         <Button
           variant="ghost"
           className={cn(
