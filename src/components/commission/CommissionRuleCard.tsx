@@ -63,10 +63,10 @@ const ruleTypeConfig = {
     description: "Aplicada para atendimentos de um convênio específico",
   },
   service: {
-    label: "Por Serviço",
+    label: "Por Procedimento",
     icon: Stethoscope,
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
-    description: "Aplicada para um serviço específico",
+    description: "Aplicada para um procedimento específico",
   },
   procedure: {
     label: "Por Procedimento",
@@ -84,7 +84,7 @@ const ruleTypeConfig = {
     label: "Por Venda",
     icon: TrendingUp,
     color: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
-    description: "Comissão para quem vendeu o serviço",
+    description: "Comissão para quem vendeu o procedimento",
   },
 };
 

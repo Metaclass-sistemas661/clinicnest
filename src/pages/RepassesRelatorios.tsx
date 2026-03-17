@@ -243,7 +243,7 @@ export default function RepassesRelatorios() {
     const grouped = (data || []).reduce((acc, item) => {
       const apt = item.appointments as any;
       const procedureId = apt?.procedure_id || "unknown";
-      const serviceName = apt?.procedure?.name || "Serviço não identificado";
+      const serviceName = apt?.procedure?.name || "Procedimento não identificado";
       
       if (!acc[procedureId]) {
         acc[procedureId] = {

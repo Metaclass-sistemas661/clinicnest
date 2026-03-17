@@ -333,7 +333,7 @@ export default function PublicBooking() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Tag className="h-5 w-5 text-teal-600" />
-                  Escolha o serviço
+                  Escolha o procedimento
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -363,7 +363,7 @@ export default function PublicBooking() {
                 ))}
                 {services.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum serviço disponível no momento.
+                    Nenhum procedimento disponível no momento.
                   </p>
                 )}
               </CardContent>
@@ -469,7 +469,7 @@ export default function PublicBooking() {
             {/* Service summary */}
             <Card className="bg-teal-50 dark:bg-teal-950 border-teal-200 dark:border-teal-800">
               <CardContent className="pt-4 pb-3 space-y-1 text-sm">
-                <p><strong>Serviço:</strong> {selectedServiceObj?.name}</p>
+                <p><strong>Procedimento:</strong> {selectedServiceObj?.name}</p>
                 <p><strong>Profissional:</strong> {professionals.find((p) => p.id === selectedProfessional)?.full_name}</p>
                 <p><strong>Data/Hora:</strong> {format(new Date(selectedSlot), "EEEE, dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                 <Button variant="link" size="sm" className="px-0" onClick={() => setStep("select")}>

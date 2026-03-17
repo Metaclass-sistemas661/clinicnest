@@ -57,6 +57,7 @@ import {
   Sparkles,
   Lock,
   Plus,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -194,9 +195,7 @@ const navCategories: NavCategory[] = [
       { title: "Visão Geral", href: "/repasses", icon: Wallet, resource: "financeiro" },
       { title: "Comissões", href: "/repasses/comissoes", icon: Wallet, resource: "financeiro" },
       { title: "Salários", href: "/repasses/salarios", icon: DollarSign, resource: "financeiro" },
-      { title: "Relatórios", href: "/repasses/relatorios", icon: FileText, resource: "financeiro" },
       { title: "Regras de Comissão", href: "/repasses/regras", icon: Settings, resource: "financeiro" },
-      { title: "Captação e Indicações", href: "/repasses/captacao", icon: Users, resource: "financeiro" },
     ],
   },
   {
@@ -218,6 +217,7 @@ const navCategories: NavCategory[] = [
     items: [
       { title: "Campanhas", href: "/campanhas", icon: Send, resource: "campanhas", requiredFeature: "campaigns" },
       { title: "Automações", href: "/automacoes", icon: Zap, resource: "automacoes", requiredFeature: "automations" },
+      { title: "Clínica Autônoma", href: "/clinica-autonoma", icon: Bot, resource: "configuracoes" },
     ],
   },
   {
@@ -239,7 +239,6 @@ const navCategories: NavCategory[] = [
       { title: "Compliance & LGPD", href: "/compliance", icon: ShieldCheck, resource: "auditoria", requiredFeature: "compliance" },
       { title: "SNGPC/ANVISA", href: "/sngpc", icon: Shield, resource: "auditoria", requiredFeature: "sngpc" },
       { title: "Auditoria", href: "/auditoria", icon: Shield, resource: "auditoria", requiredFeature: "audit" },
-      { title: "Overrides Admin", href: "/admin/overrides", icon: Settings, resource: "configuracoes" },
       { title: "Retenção de Dados", href: "/retencao-dados", icon: Archive, resource: "auditoria", requiredFeature: "dataRetention" },
       { title: "Configurações", href: "/configuracoes", icon: Settings, resource: "configuracoes" },
     ],
@@ -279,9 +278,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/repasses": () => void import("@/pages/Repasses"),
   "/repasses/comissoes": () => void import("@/pages/RepassesComissoes"),
   "/repasses/salarios": () => void import("@/pages/RepassesSalarios"),
-  "/repasses/relatorios": () => void import("@/pages/RepassesRelatorios"),
   "/repasses/regras": () => void import("@/pages/repasses/ConfigurarRegras"),
-  "/repasses/captacao": () => void import("@/pages/RelatorioCaptacao"),
   "/produtos": () => void import("@/pages/Produtos"),
   "/compras": () => void import("@/pages/Compras"),
   "/fornecedores": () => void import("@/pages/Fornecedores"),
@@ -295,8 +292,6 @@ const prefetchByHref: Record<string, () => void> = {
   "/notificacoes": () => void import("@/pages/Notificacoes"),
   "/assinatura": () => void import("@/pages/Assinatura"),
   "/assinatura/gerenciar": () => void import("@/pages/GerenciarAssinatura"),
-  "/minhas-comissoes": () => void import("@/pages/MinhasComissoes"),
-  "/meus-salarios": () => void import("@/pages/MeusSalarios"),
   "/meu-financeiro": () => void import("@/pages/MeuFinanceiro"),
   "/campanhas": () => void import("@/pages/Campanhas"),
   "/automacoes": () => void import("@/pages/Automacoes"),

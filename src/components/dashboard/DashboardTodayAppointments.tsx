@@ -86,7 +86,7 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
                           </p>
                         </div>
 
-                        {/* Serviço + profissional */}
+                        {/* Procedimento + profissional */}
                         <div className="mt-1 flex items-center gap-2 flex-wrap">
                           {appointment.procedure?.name && (
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -41,7 +41,7 @@ interface CommissionPreviewProps {
 
 const ruleTypeLabels: Record<string, string> = {
   default: "Padrão",
-  service: "Por Serviço",
+  service: "Por Procedimento",
   insurance: "Por Convênio",
   procedure: "Por Procedimento",
   sale: "Por Venda",
@@ -222,7 +222,7 @@ export function CommissionPreview({
 
               {rule.rule_type === "service" && rule.procedure?.name && (
                 <p className="text-xs text-muted-foreground">
-                  Serviço: {rule.procedure.name}
+                  Procedimento: {rule.procedure.name}
                 </p>
               )}
 

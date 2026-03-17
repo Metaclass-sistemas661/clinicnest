@@ -53,7 +53,7 @@ export const PROFESSIONAL_TOOLS: ToolDefinition[] = [
   {
     name: "agenda_hoje",
     description:
-      "Lista os agendamentos de hoje da clínica com nome do paciente, serviço, profissional, horário e status. Pode filtrar por profissional.",
+      "Lista os agendamentos de hoje da clínica com nome do paciente, procedimento, profissional, horário e status. Pode filtrar por profissional.",
     input_schema: {
       type: "object",
       properties: {
@@ -79,12 +79,12 @@ export const PROFESSIONAL_TOOLS: ToolDefinition[] = [
   {
     name: "agendar_consulta",
     description:
-      "Cria um novo agendamento. SEMPRE confirme os dados com o profissional antes de agendar. Precisa de paciente, serviço, profissional e data/hora.",
+      "Cria um novo agendamento. SEMPRE confirme os dados com o profissional antes de agendar. Precisa de paciente, procedimento, profissional e data/hora.",
     input_schema: {
       type: "object",
       properties: {
         patient_id: { type: "string", description: "UUID do paciente" },
-        service_id: { type: "string", description: "UUID do serviço/procedimento" },
+        service_id: { type: "string", description: "UUID do procedimento" },
         professional_id: { type: "string", description: "UUID do profissional" },
         scheduled_at: { type: "string", description: "Data e hora ISO 8601 (ex: 2026-03-01T10:00:00)" },
         notes: { type: "string", description: "Observações (opcional)" },
@@ -95,7 +95,7 @@ export const PROFESSIONAL_TOOLS: ToolDefinition[] = [
   {
     name: "servicos_disponiveis",
     description:
-      "Lista todos os serviços/procedimentos ativos da clínica com nome, preço e duração.",
+      "Lista todos os procedimentos ativos da clínica com nome, preço e duração.",
     input_schema: {
       type: "object",
       properties: {},
@@ -120,7 +120,7 @@ export const PROFESSIONAL_TOOLS: ToolDefinition[] = [
 export const PATIENT_TOOLS: ToolDefinition[] = [
   {
     name: "meus_agendamentos",
-    description: "Lista os próximos agendamentos do paciente, incluindo serviço, profissional, data e status.",
+    description: "Lista os próximos agendamentos do paciente, incluindo procedimento, profissional, data e status.",
     input_schema: {
       type: "object",
       properties: {
@@ -130,7 +130,7 @@ export const PATIENT_TOOLS: ToolDefinition[] = [
   },
   {
     name: "servicos_clinica",
-    description: "Lista os serviços/procedimentos disponíveis na clínica com preço e duração.",
+    description: "Lista os procedimentos disponíveis na clínica com preço e duração.",
     input_schema: {
       type: "object",
       properties: {},
@@ -296,7 +296,7 @@ async function getTodayAppointments(
     status: a.status,
     valor: a.price,
     paciente: a.clients?.name ?? "—",
-    servico: a.services?.name ?? "—",
+    procedimento: a.services?.name ?? "—",
     profissional: a.profiles?.full_name ?? "—",
     observacoes: a.notes,
   }));
@@ -332,7 +332,7 @@ async function getPatientAppointments(
     duracao_min: a.duration_minutes,
     status: a.status,
     valor: a.price,
-    servico: a.services?.name ?? "—",
+    procedimento: a.services?.name ?? "—",
     profissional: a.profiles?.full_name ?? "—",
     observacoes: a.notes,
   }));
@@ -352,7 +352,7 @@ async function createAppointment(
     return JSON.stringify({ error: "Campos obrigatórios: patient_id, service_id, professional_id, scheduled_at" });
   }
 
-  // Buscar duração e preço do serviço
+  // Buscar duração e preço do procedimento
   const { data: svc } = await sb
     .from("services")
     .select("duration_minutes, price")
@@ -384,7 +384,7 @@ async function getServices(sb: SupabaseClient, tenantId: string): Promise<string
     .order("name");
 
   if (error) return JSON.stringify({ error: error.message });
-  if (!data?.length) return JSON.stringify({ message: "Nenhum serviço cadastrado.", services: [] });
+  if (!data?.length) return JSON.stringify({ message: "Nenhum procedimento cadastrado.", services: [] });
   return JSON.stringify({ total: data.length, services: data });
 }
 

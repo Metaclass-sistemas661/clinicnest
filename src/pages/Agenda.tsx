@@ -40,6 +40,7 @@ import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
 import { NextPatientDashboard } from "@/components/agenda/NextPatientDashboard";
+import { PendingPlanItemsSuggestion } from "@/components/agenda/PendingPlanItemsSuggestion";
 import { CallNextButton } from "@/components/queue/CallNextButton";
 import type { Appointment, Patient, Procedure, Profile, AppointmentStatus, Product, InsurancePlan, ConsultationType } from "@/types/database";
 import { isAdvancedReportsAllowed, useSubscription } from "@/hooks/useSubscription";
@@ -863,6 +864,16 @@ export default function Agenda() {
               </div>
             </FormDrawerSection>
 
+            {/* Sugestão de procedimentos pendentes do plano */}
+            {formData.patient_id && profile?.tenant_id && (
+              <PendingPlanItemsSuggestion
+                patientId={formData.patient_id}
+                tenantId={profile.tenant_id}
+                procedures={procedures}
+                onSelectProcedure={(id) => setFormData({ ...formData, procedure_id: id })}
+              />
+            )}
+
             <FormDrawerSection title="Profissional">
               {isAdmin ? (
                 <div className="space-y-2">
@@ -1253,7 +1264,7 @@ export default function Agenda() {
               ) : (
                 <AppointmentsTable
                   appointments={filteredAppointments}
-                  clients={patients}
+                  patients={patients}
                   procedures={procedures}
                   professionals={professionals}
                   allAppointments={allAppointments}

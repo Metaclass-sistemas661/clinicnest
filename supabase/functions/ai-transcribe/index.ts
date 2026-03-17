@@ -4,7 +4,7 @@ import {
   transcribeAudioBase64,
   type MedicalSpecialty,
 } from "../_shared/vertex-transcribe-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -49,8 +49,8 @@ serve(async (req) => {
       });
     }
 
-    // Rate limiting: 5 requests per minute per user (transcription is expensive)
-    const rl = await checkRateLimit(`ai-transcribe:${user.id}`, 5, 60);
+    // Rate limiting: transcription category (5 req/min)
+    const rl = await checkAiRateLimit(user.id, "ai-transcribe", "transcription");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
         status: 429,

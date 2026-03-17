@@ -171,8 +171,7 @@ export default function Dashboard() {
         void import("@/pages/Configuracoes");
         void import("@/pages/Assinatura");
       } else {
-        void import("@/pages/MinhasComissoes");
-        void import("@/pages/MeusSalarios");
+        void import("@/pages/MeuFinanceiro");
       }
 
       return undefined;
@@ -582,7 +581,7 @@ export default function Dashboard() {
               null
             ).then((r) => ({ data: r, error: null }))
           : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
-        // 10. Staff: desempenho do mês (serviços concluídos, valor gerado)
+        // 10. Staff: desempenho do mês (procedimentos concluídos, valor gerado)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")

@@ -740,7 +740,7 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
     // Commissions table
     autoTable(doc, {
       startY: Math.max(yPos, contentTop),
-      head: [["Data", "Profissional", "Tipo", "Valor Serviço", "Comissão", "Status"]],
+      head: [["Data", "Profissional", "Tipo", "Valor Procedimento", "Comissão", "Status"]],
       body: commissions.map((c) => [
         formatInAppTz(c.created_at, "dd/MM/yyyy"),
         c.professional?.full_name || "—",

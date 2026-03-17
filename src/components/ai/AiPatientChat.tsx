@@ -26,7 +26,7 @@ try {
 
 const PATIENT_QUICK_ACTIONS = [
   { label: "Meus agendamentos", message: "Quais são meus próximos agendamentos?" },
-  { label: "Serviços disponíveis", message: "Quais serviços a clínica oferece?" },
+  { label: "Procedimentos disponíveis", message: "Quais procedimentos a clínica oferece?" },
   { label: "Contato da clínica", message: "Qual o telefone e endereço da clínica?" },
   { label: "Preparação consulta", message: "Como devo me preparar para minha consulta?" },
 ];
@@ -49,7 +49,7 @@ export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps)
   const greetingMessage: AIChatMessage = {
     id: "greeting",
     role: "assistant",
-    content: "Olá! Eu sou a Nest, assistente virtual da clínica.\n\nPosso te ajudar com informações sobre seus agendamentos, serviços disponíveis e muito mais. Em que posso te ajudar?",
+    content: "Olá! Eu sou a Nest, assistente virtual da clínica.\n\nPosso te ajudar com informações sobre seus agendamentos, procedimentos disponíveis e muito mais. Em que posso te ajudar?",
     timestamp: new Date(),
   };
 

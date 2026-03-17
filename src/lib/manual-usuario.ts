@@ -101,7 +101,7 @@ Em caso de esquecimento da senha, utilize a opção "Esqueci minha senha" para r
 1. Acesse o menu "Agenda"
 2. Clique no botão "Novo Agendamento"
 3. Selecione o paciente (ou cadastre um novo)
-4. Escolha o serviço/procedimento
+4. Escolha o procedimento
 5. Selecione o profissional responsável
 6. Escolha a data e horário disponível
 7. Adicione observações se necessário
@@ -130,7 +130,7 @@ A mudança de status para "Finalizado" gera automaticamente o registro financeir
 • **Semana**: Visão semanal com todos os profissionais
 • **Mês**: Calendário mensal com indicadores
 
-Use os filtros para visualizar por profissional, serviço ou status.`,
+Use os filtros para visualizar por profissional, procedimento ou status.`,
       },
     ],
   },

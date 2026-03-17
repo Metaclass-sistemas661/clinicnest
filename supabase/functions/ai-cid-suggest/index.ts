@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { completeText } from "../_shared/vertex-ai-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -91,8 +91,8 @@ serve(async (req) => {
       });
     }
 
-    // Rate limiting: 10 requests per minute per user
-    const rl = await checkRateLimit(`ai-cid-suggest:${user.id}`, 10, 60);
+    // Rate limiting: interaction category (20 req/min)
+    const rl = await checkAiRateLimit(user.id, "ai-cid-suggest", "interaction");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
         status: 429,

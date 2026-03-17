@@ -66,7 +66,7 @@ export function ProfessionalGoalMotivationDialog() {
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Sem comissão configurada na Equipe para este serviço.
+                Sem comissão configurada na Equipe para este procedimento.
               </p>
             )}
           </div>

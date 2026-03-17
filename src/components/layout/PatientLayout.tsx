@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Search,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabasePatient } from "@/integrations/supabase/client";
@@ -47,14 +48,18 @@ const navItems: NavItem[] = [
   { label: "Minhas Consultas", href: "/paciente/consultas", icon: Calendar },
   { label: "Teleconsulta", href: "/paciente/teleconsulta", icon: Video },
   { label: "Minha Saúde", href: "/paciente/saude", icon: Heart },
+  { label: "Planos de Tratamento", href: "/paciente/planos", icon: ClipboardList },
   { label: "Questionários", href: "/paciente/proms", icon: ClipboardList },
+  { label: "Cartão de Saúde", href: "/paciente/cartao-saude", icon: CreditCard },
   { label: "Mensagens", href: "/paciente/mensagens", icon: MessageCircle },
   { label: "Financeiro", href: "/paciente/financeiro", icon: Wallet },
   { label: "Exames", href: "/paciente/exames", icon: FileText },
   { label: "Laudos", href: "/paciente/laudos", icon: Stethoscope },
   { label: "Receitas", href: "/paciente/receitas", icon: Pill },
+  { label: "Renovar Receita", href: "/paciente/renovar-receita", icon: Pill },
   { label: "Atestados", href: "/paciente/atestados", icon: ClipboardList },
   { label: "Dependentes", href: "/paciente/dependentes", icon: Users },
+  { label: "Créditos de Saúde", href: "/paciente/creditos", icon: Heart },
 ];
 
 const bottomItems: NavItem[] = [

@@ -90,7 +90,7 @@ export function makeDefaultState(templateId: TemplateId, clinicName: string): Bu
       ctaColor: "#1e293b",
       headline: "Novidades da Clínica",
       subheadline: "Fique por dentro das últimas novidades e tendências",
-      bodyText: "Temos muitas novidades para compartilhar com você este mês.\n\nNovos serviços, produtos e muito mais esperando por você.",
+      bodyText: "Temos muitas novidades para compartilhar com você este mês.\n\nNovos procedimentos, produtos e muito mais esperando por você.",
       ctaText: "Saiba Mais",
     };
   }

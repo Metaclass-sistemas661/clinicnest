@@ -128,7 +128,7 @@ function PatientAgendarInner() {
         setProcedures((data as ProcedureOption[]) || []);
       } catch (err) {
         logger.error("Error loading procedures:", err);
-        toast.error("Erro ao carregar serviços");
+        toast.error("Erro ao carregar procedimentos");
       } finally {
         setIsLoadingServices(false);
       }
@@ -286,7 +286,7 @@ function PatientAgendarInner() {
 
   // Steps indicator
   const steps = [
-    { key: "service", label: "Serviço", icon: Stethoscope },
+    { key: "service", label: "Procedimento", icon: Stethoscope },
     { key: "professional", label: "Profissional", icon: Stethoscope },
     { key: "datetime", label: "Data/Hora", icon: Calendar },
     { key: "confirm", label: "Confirmar", icon: Check },
@@ -351,7 +351,7 @@ function PatientAgendarInner() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
-              {currentStep === "service" && "Selecione o Serviço"}
+              {currentStep === "service" && "Selecione o Procedimento"}
               {currentStep === "professional" && "Selecione o Profissional"}
               {currentStep === "datetime" && "Escolha Data e Horário"}
               {currentStep === "confirm" && "Confirme seu Agendamento"}
@@ -377,8 +377,8 @@ function PatientAgendarInner() {
               ) : procedures.length === 0 ? (
                 <EmptyState
                   icon={Stethoscope}
-                  title="Nenhum serviço disponível"
-                  description="Não há serviços disponíveis para agendamento online no momento."
+                  title="Nenhum procedimento disponível"
+                  description="Não há procedimentos disponíveis para agendamento online no momento."
                 />
               ) : (
                 procedures.map((procedure) => (
@@ -427,7 +427,7 @@ function PatientAgendarInner() {
             <div>
               {selectedProcedure && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Serviço selecionado:</p>
+                  <p className="text-xs text-muted-foreground">Procedimento selecionado:</p>
                   <p className="font-medium">{selectedProcedure.name}</p>
                 </div>
               )}
@@ -446,7 +446,7 @@ function PatientAgendarInner() {
               {selectedProcedure && selectedProfessional && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Serviço:</span>
+                    <span className="text-muted-foreground">Procedimento:</span>
                     <span className="font-medium">{selectedProcedure.name}</span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -484,7 +484,7 @@ function PatientAgendarInner() {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Serviço:</span>
+                    <span className="text-muted-foreground">Procedimento:</span>
                     <span className="font-medium">{selectedProcedure.name}</span>
                   </div>
                   <div className="flex justify-between">

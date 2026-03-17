@@ -395,7 +395,7 @@ export default function RepassesComissoes() {
                         {commission.commission_type === "percentage" ? "Percentual" : "Fixo"}
                       </p>
                       <div className="flex justify-between text-sm">
-                        <span>Serviço: {formatCurrency(Number(commission.service_price))}</span>
+                        <span>Procedimento: {formatCurrency(Number(commission.service_price))}</span>
                         <span className="font-semibold text-primary">
                           {formatCurrency(Number(commission.amount))}
                         </span>
@@ -428,7 +428,7 @@ export default function RepassesComissoes() {
                         <TableHead>Data</TableHead>
                         <TableHead>Profissional</TableHead>
                         <TableHead>Tipo</TableHead>
-                        <TableHead>Valor do Serviço</TableHead>
+                        <TableHead>Valor do Procedimento</TableHead>
                         <TableHead>Comissão</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>

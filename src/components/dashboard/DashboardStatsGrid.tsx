@@ -26,7 +26,7 @@ export type DashboardStatsGridProps = {
   monthlyIncome?: number;
   monthlyExpenses?: number;
   productLossTotal?: number;
-  clientsCount?: number;
+  patientsCount?: number;
   commissionsPending?: number;
   commissionsPaid?: number;
   salariesToPay?: number;
@@ -38,7 +38,7 @@ export type DashboardStatsGridProps = {
   lastSalaryPayment?: { date: string | null; amount: number } | null;
   staffCompletedThisMonth?: number;
   staffValueGeneratedThisMonth?: number;
-  staffMyClientsCount?: number | null;
+  staffMyPatientsCount?: number | null;
   /** Shared */
   todayAppointments?: number;
   pendingAppointments?: number;
@@ -54,7 +54,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
   monthlyIncome = 0,
   monthlyExpenses = 0,
   productLossTotal = 0,
-  clientsCount = 0,
+  patientsCount = 0,
   commissionsPending = 0,
   commissionsPaid = 0,
   salariesToPay = 0,
@@ -65,7 +65,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
   lastSalaryPayment = null,
   staffCompletedThisMonth = 0,
   staffValueGeneratedThisMonth = 0,
-  staffMyClientsCount = null,
+  staffMyPatientsCount = null,
   todayAppointments = 0,
   pendingAppointments = 0,
   lowStockProducts = 0,
@@ -178,7 +178,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
               <div data-tour="dashboard-stat-clients-count">
                 <StatCard
                   title="Total de Pacientes"
-                  value={clientsCount}
+                  value={patientsCount}
                   icon={Users}
                   description="Pacientes cadastrados"
                 />
@@ -318,7 +318,7 @@ export const DashboardStatsGrid = memo(function DashboardStatsGrid({
               <div data-tour="dashboard-stat-my-clients-served">
                 <StatCard
                   title="Pacientes que atendi"
-                  value={staffMyClientsCount ?? 0}
+                  value={staffMyPatientsCount ?? 0}
                   icon={Users}
                   description="Pacientes únicos nos seus atendimentos"
                 />

@@ -238,13 +238,13 @@ serve(async (req) => {
         greeting(patientName) +
         paragraph(`Este é um lembrete de que você possui uma fatura que <strong style="color:${urgencyAccent};">${urgencyText}</strong>.`) +
         infoBox([
-          { label: "Descrição", value: invoice.description || "Serviços médicos" },
+          { label: "Descrição", value: invoice.description || "Procedimentos médicos" },
           { label: "Valor", value: `<span style="font-size:17px;font-weight:700;">${amount}</span>` },
           { label: "Vencimento", value: `<span style="color:${urgencyAccent};font-weight:600;">${dueDate}</span>` },
         ], urgencyAccent) +
         paragraph(`<span style="color:#64748b;font-size:13px;">Se você já realizou o pagamento, por favor desconsidere este email.</span>`);
 
-      const bodyText = `Olá, ${patientName}! Fatura de ${amount} ${urgencyText}. ${invoice.description || "Serviços médicos"} - Vencimento: ${dueDate}. Pague em: ${paymentUrl}`;
+      const bodyText = `Olá, ${patientName}! Fatura de ${amount} ${urgencyText}. ${invoice.description || "Procedimentos médicos"} - Vencimento: ${dueDate}. Pague em: ${paymentUrl}`;
 
       const emailResult = await sendClinicEmail({
         to: patient.email,

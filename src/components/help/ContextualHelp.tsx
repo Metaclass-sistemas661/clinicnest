@@ -122,7 +122,7 @@ export const HELP_TOPICS: Record<string, HelpTopic> = {
     description: "Gerencie consultas, horários e atendimentos da clínica.",
     steps: [
       "Clique em 'Novo Agendamento' para criar",
-      "Selecione paciente, serviço e profissional",
+      "Selecione paciente, procedimento e profissional",
       "Escolha data e horário disponível",
       "Confirme e finalize após o atendimento",
     ],

@@ -60,7 +60,7 @@ export function WelcomeModal() {
           </div>
         </DialogHeader>
         <p className="text-sm text-muted-foreground mb-4">
-          Comece cadastrando seus pacientes e profissionais, configure os serviços da clínica e utilize a agenda para organizar seus atendimentos.
+          Comece cadastrando seus pacientes e profissionais, configure os procedimentos da clínica e utilize a agenda para organizar seus atendimentos.
         </p>
         <div className="grid gap-2">
           {features.map(({ icon: Icon, label, href, desc }) => (

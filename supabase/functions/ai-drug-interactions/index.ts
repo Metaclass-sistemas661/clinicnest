@@ -9,7 +9,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { completeText } from "../_shared/vertex-ai-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -99,7 +99,7 @@ serve(async (req) => {
       });
     }
 
-    const rl = await checkRateLimit(`ai-drug-interactions:${user.id}`, 20, 60);
+    const rl = await checkAiRateLimit(user.id, "ai-drug-interactions", "interaction");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
         status: 429,

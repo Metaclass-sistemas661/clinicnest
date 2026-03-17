@@ -14,3 +14,5 @@ export { AiExplainToPatient } from "./AiExplainToPatient";
 export { AiWeeklySummaryCard } from "./AiWeeklySummaryCard";
 export { AiRevenueIntelligence } from "./AiRevenueIntelligence";
 export { AiClinicalProtocols } from "./AiClinicalProtocols";
+export { AiGpsNavigator } from "./AiGpsNavigator";
+export { AiFeedbackButtons } from "./AiFeedbackButtons";

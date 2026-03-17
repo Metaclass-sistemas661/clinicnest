@@ -214,7 +214,7 @@ function getEmailTemplate(
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding: 8px 0;">
-                      <span style="color: #6b7280; font-size: 14px;">Serviço:</span>
+                      <span style="color: #6b7280; font-size: 14px;">Procedimento:</span>
                       <span style="color: #1f2937; font-size: 14px; font-weight: 600; float: right;">${serviceName}</span>
                     </td>
                   </tr>
@@ -276,7 +276,7 @@ Olá, ${patientName}!
 ${t.message.replace(/<[^>]*>/g, "")}
 
 Detalhes:
-- Serviço: ${serviceName}
+- Procedimento: ${serviceName}
 - Profissional: ${professionalName}
 - Data: ${date}
 - Horário: ${time}

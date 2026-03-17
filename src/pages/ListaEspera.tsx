@@ -342,7 +342,7 @@ export default function ListaEspera() {
           <FormDrawerSection title="Preferências">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Serviço</Label>
+                <Label>Procedimento</Label>
                 <Select value={formData.procedure_id || undefined} onValueChange={(v) => setFormData({ ...formData, procedure_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
                   <SelectContent>

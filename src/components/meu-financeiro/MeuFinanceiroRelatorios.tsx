@@ -328,7 +328,7 @@ export function MeuFinanceiroRelatorios() {
 
     if (commissions.length > 0) {
       lines.push("=== COMISSÕES ===");
-      lines.push("Data;Paciente;Serviço;Valor Serviço;Comissão;Status;Data Pagamento");
+      lines.push("Data;Paciente;Procedimento;Valor Procedimento;Comissão;Status;Data Pagamento");
       
       let totalPending = 0;
       let totalPaid = 0;
@@ -466,7 +466,7 @@ export function MeuFinanceiroRelatorios() {
               <tr>
                 <th>Data</th>
                 <th>Paciente</th>
-                <th>Serviço</th>
+                <th>Procedimento</th>
                 <th class="text-right">Valor</th>
                 <th class="text-right">Comissão</th>
                 <th>Status</th>

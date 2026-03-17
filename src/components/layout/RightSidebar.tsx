@@ -18,6 +18,7 @@ import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
 import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
+import { AiGpsNavigator } from "@/components/ai/AiGpsNavigator";
 import { useCopilotProntuario } from "@/contexts/CopilotProntuarioContext";
 
 const RAIL_WIDTH = "w-14"; // 56px
@@ -295,15 +296,18 @@ export function RightSidebar() {
             <div className="flex-1 overflow-hidden">
               {activeTab === "nest" && <AiAgentChatPanel />}
               {activeTab === "copilot" && copilot.input && (
-                <div className="h-full overflow-y-auto p-3">
-                  <AiCopilotPanel
-                    input={copilot.input}
-                    onSelectCid={copilot.callbacks.onSelectCid}
-                    onAppendPrescription={copilot.callbacks.onAppendPrescription}
-                    onAppendExam={copilot.callbacks.onAppendExam}
-                    onAppendPlan={copilot.callbacks.onAppendPlan}
-                    className="border-0 shadow-none"
-                  />
+                <div className="h-full overflow-y-auto p-3 space-y-3">
+                  <AiGpsNavigator input={copilot.input} />
+                  <div className="border-t border-border/30 pt-2">
+                    <AiCopilotPanel
+                      input={copilot.input}
+                      onSelectCid={copilot.callbacks.onSelectCid}
+                      onAppendPrescription={copilot.callbacks.onAppendPrescription}
+                      onAppendExam={copilot.callbacks.onAppendExam}
+                      onAppendPlan={copilot.callbacks.onAppendPlan}
+                      className="border-0 shadow-none"
+                    />
+                  </div>
                 </div>
               )}
               {activeTab === "copilot" && !copilot.input && (

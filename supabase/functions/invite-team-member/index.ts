@@ -194,7 +194,7 @@ function getTeamMemberWelcomeEmailHtml(name: string, email: string, loginUrl: st
               
               <ul style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
                 <li>Gerenciar agendamentos</li>
-                <li>Visualizar clientes e serviços</li>
+                <li>Visualizar pacientes e procedimentos</li>
                 ${role === "admin" ? "<li>Acessar relatórios financeiros</li><li>Gerenciar produtos e equipe</li>" : ""}
                 <li>Acompanhar sua agenda pessoal</li>
               </ul>
@@ -237,7 +237,7 @@ Acesse o sistema em: ${loginUrl}
 
 O que você pode fazer:
 - Gerenciar agendamentos
-- Visualizar clientes e serviços
+- Visualizar pacientes e procedimentos
 ${role === "admin" ? "- Acessar relatórios financeiros\n- Gerenciar produtos e equipe\n" : ""}- Acompanhar sua agenda pessoal
 
 Precisa de ajuda? Entre em contato com o administrador do sistema.

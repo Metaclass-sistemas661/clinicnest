@@ -9,7 +9,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { completeText } from "../_shared/vertex-ai-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SYSTEM_PROMPT = `Você é um analista preditivo especializado em saúde brasileira.
@@ -98,7 +98,7 @@ serve(async (req) => {
       });
     }
 
-    const rl = await checkRateLimit(`ai-cancel-prediction:${user.id}`, 30, 60);
+    const rl = await checkAiRateLimit(user.id, "ai-cancel-prediction", "interaction");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
         status: 429,

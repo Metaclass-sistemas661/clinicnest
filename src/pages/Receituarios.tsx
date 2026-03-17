@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { RefillRequestsPanel } from "@/components/prontuario/RefillRequestsPanel";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -579,6 +580,8 @@ export default function Receituarios() {
           className="pl-10"
         />
       </div>
+
+      <RefillRequestsPanel />
 
       {isLoading ? (
         <div className="space-y-3">

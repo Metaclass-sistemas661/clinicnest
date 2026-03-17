@@ -140,7 +140,7 @@ export function RegisterPaymentDialog({
                 {appointment.procedure?.name ?? "Não informado"}
               </p>
               <p>
-                <span className="font-medium text-foreground">Valor do serviço:</span>{" "}
+                <span className="font-medium text-foreground">Valor do procedimento:</span>{" "}
                 <span className="text-primary font-bold">{formatCurrency(servicePrice)}</span>
               </p>
             </div>

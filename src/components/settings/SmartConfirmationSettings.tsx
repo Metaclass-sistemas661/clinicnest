@@ -256,7 +256,7 @@ export function SmartConfirmationSettings() {
 
           {settings.pre_consultation_enabled && (
             <p className="text-xs text-muted-foreground bg-muted/50 rounded-md p-3">
-              Configure os formulários em <strong>Agendamento → Pré-Consulta</strong> ou na tela de serviços.
+              Configure os formulários em <strong>Agendamento → Pré-Consulta</strong> ou na tela de procedimentos.
               Os campos suportados são: texto, texto longo, seleção, checkbox, número e data.
             </p>
           )}

@@ -479,13 +479,13 @@ async function startBookingFlow(
     .limit(10)) as unknown as SelectResult<ProcedureRow[] | null>;
 
   if (!procedures?.length) {
-    await sendWhatsAppMessage(tenant, conv.phone, "No momento não temos serviços disponíveis para agendamento online. Por favor, entre em contato diretamente com a clínica.");
+    await sendWhatsAppMessage(tenant, conv.phone, "No momento não temos procedimentos disponíveis para agendamento online. Por favor, entre em contato diretamente com a clínica.");
     await updateConversation(supabase, conv.id, STATE.MENU, {});
     return;
   }
 
   const sections = [{
-    title: "Serviços Disponíveis",
+    title: "Procedimentos Disponíveis",
     rows: procedures.map((s) => ({
       title: s.name.slice(0, 24),
       rowId: `svc_${s.id}`,
@@ -493,7 +493,7 @@ async function startBookingFlow(
     })),
   }];
 
-  await sendWhatsAppList(tenant, conv.phone, "📅 Agendamento", "Selecione o serviço desejado:", "Ver Serviços", sections);
+  await sendWhatsAppList(tenant, conv.phone, "📅 Agendamento", "Selecione o procedimento desejado:", "Ver Procedimentos", sections);
   await logMessage(supabase, conv.id, conv.tenant_id, "outbound", `[LIST] ${procedures.length} procedimentos`, "interactive");
   await updateConversation(supabase, conv.id, STATE.BOOKING_SERVICE, {
     services: procedures.map((s) => ({ id: s.id, name: s.name, duration: s.duration_minutes })),
@@ -525,7 +525,7 @@ async function handleBookingService(
   }
 
   if (!serviceId) {
-    await sendWhatsAppMessage(tenant, conv.phone, "Não encontrei esse serviço. Por favor, selecione da lista ou digite o número.");
+    await sendWhatsAppMessage(tenant, conv.phone, "Não encontrei esse procedimento. Por favor, selecione da lista ou digite o número.");
     return;
   }
 
@@ -774,7 +774,7 @@ async function handleBookingTime(
   const profName = conv.context.selected_professional_name as string;
 
   const summary = `📋 *Resumo do Agendamento*\n\n` +
-    `📌 Serviço: ${serviceName}\n` +
+    `📌 Procedimento: ${serviceName}\n` +
     `👨‍⚕️ Profissional: ${profName}\n` +
     `📅 Data: ${formatDateBR(dateStr + "T12:00:00")}\n` +
     `🕐 Horário: ${timeStr}\n` +

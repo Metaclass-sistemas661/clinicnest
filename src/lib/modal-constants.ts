@@ -132,7 +132,7 @@ export const MODAL_SIZE_LABELS: Record<ModalSize, string> = {
 export const MODAL_SIZE_DESCRIPTIONS: Record<ModalSize, string> = {
   confirmation: "Confirmações simples, alertas, diálogos de exclusão, mensagens de sucesso/erro",
   form_short: "Formulários simples: nome + descrição, configurações básicas, filtros",
-  form_medium: "Formulários médios: cadastro de serviço, agendamento, dados pessoais",
+  form_medium: "Formulários médios: cadastro de procedimento, agendamento, dados pessoais",
   form_long: "Formulários longos: cadastro completo de paciente, prontuário, configurações avançadas",
   wizard_preview: "Wizards multi-step, previews de documento, comparação lado a lado",
   fullscreen: "Tabelas de dados, dashboards em modal, visualização de relatórios",

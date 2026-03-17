@@ -22,6 +22,7 @@ import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
 import { AiDeteriorationAlert } from "@/components/ai/AiDeteriorationAlert";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
+import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
 import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
@@ -83,7 +84,7 @@ interface Props {
   professionalId: string;
   professionalName?: string;
   professionalCrm?: string;
-  clients: PatientOption[];
+  patients: PatientOption[];
   templates: Template[];
   initialPatientId?: string;
   initialAppointmentId?: string;
@@ -122,7 +123,7 @@ const emptyVitals = {
 
 export function ProntuarioForm({
   tenantId, professionalId, professionalName, professionalCrm,
-  clients, templates,
+  patients, templates,
   initialPatientId, initialAppointmentId, initialTriage,
   builtInFields, editRecord,
   onSaved, onCancel,
@@ -749,7 +750,7 @@ export function ProntuarioForm({
           <Select value={patientId || undefined} onValueChange={handlePatientChange}>
             <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
             <SelectContent>
-              {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              {patients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -994,7 +995,7 @@ export function ProntuarioForm({
               diagnosis={base.diagnosis}
               treatmentPlan={base.treatment_plan}
               cidCode={base.cid_code}
-              patientName={clients?.find((p) => p.id === patientId)?.name}
+              patientName={patients?.find((p) => p.id === patientId)?.name}
               allergies={vitals.allergies}
             />
           </FeatureGate>
@@ -1013,6 +1014,13 @@ export function ProntuarioForm({
           <Label>Observações</Label>
           <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
         </div>
+
+        {/* OCR de Exames */}
+        {canEdit && (
+          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+            <ExamOcrAnalyzer patientId={patientId} />
+          </FeatureGate>
+        )}
       </div>
 
       </div>

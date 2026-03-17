@@ -176,7 +176,7 @@ const featureCategories = [
       {
         icon: MessageSquare,
         title: "Chat IA do Paciente",
-        description: "Assistente virtual no portal do paciente que responde dúvidas sobre agendamentos, serviços e orientações da clínica 24/7.",
+        description: "Assistente virtual no portal do paciente que responde dúvidas sobre agendamentos, procedimentos e orientações da clínica 24/7.",
       },
       {
         icon: Brain,

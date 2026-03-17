@@ -81,7 +81,7 @@ export function MeuFinanceiroHistorico() {
 
       // Mapear comissões
       (commissions || []).forEach((c: any) => {
-        const serviceName = c.appointment?.procedure?.name || "Serviço";
+        const serviceName = c.appointment?.procedure?.name || "Procedimento";
         const clientName = c.appointment?.patient?.name || "";
         items.push({
           id: `comm-${c.id}`,

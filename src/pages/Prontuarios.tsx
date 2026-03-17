@@ -566,7 +566,7 @@ export default function Prontuarios() {
             professionalId={profile!.id}
             professionalName={profile!.full_name || undefined}
             professionalCrm={(profile as any)?.crm || undefined}
-            clients={patients}
+            patients={patients}
             templates={templates}
             initialPatientId={formState.patientId}
             initialAppointmentId={formState.appointmentId}

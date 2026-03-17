@@ -76,10 +76,10 @@ const Disponibilidade = lazyWithRetry(() => import("@/pages/Disponibilidade"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
 const GerenciarPermissoes = lazyWithRetry(() => import("@/pages/GerenciarPermissoes"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
+const ClinicaAutonoma = lazyWithRetry(() => import("@/pages/ClinicaAutonoma"));
 const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
 const GerenciarAssinatura = lazyWithRetry(() => import("@/pages/GerenciarAssinatura"));
-const MinhasComissoes = lazyWithRetry(() => import("@/pages/MinhasComissoes"));
-const MeusSalarios = lazyWithRetry(() => import("@/pages/MeusSalarios"));
+
 const MeuFinanceiro = lazyWithRetry(() => import("@/pages/MeuFinanceiro"));
 const Notificacoes = lazyWithRetry(() => import("@/pages/Notificacoes"));
 const MinhasConfiguracoes = lazyWithRetry(() => import("@/pages/MinhasConfiguracoes"));
@@ -117,6 +117,10 @@ const PatientProfile = lazyWithRetry(() => import("@/pages/paciente/PatientProfi
 const PatientSettings = lazyWithRetry(() => import("@/pages/paciente/PatientSettings"));
 const PatientDependentes = lazyWithRetry(() => import("@/pages/paciente/PatientDependentes"));
 const PatientPROMs = lazyWithRetry(() => import("@/pages/paciente/PatientPROMs"));
+const PatientHealthCard = lazyWithRetry(() => import("@/pages/paciente/PatientHealthCard"));
+const PatientRefillRequest = lazyWithRetry(() => import("@/pages/paciente/PatientRefillRequest"));
+const PatientHealthCredits = lazyWithRetry(() => import("@/pages/paciente/PatientHealthCredits"));
+const PatientTreatmentPlans = lazyWithRetry(() => import("@/pages/paciente/PatientTreatmentPlans"));
 
 const MensagensPacientes = lazyWithRetry(() => import("@/pages/MensagensPacientes"));
 
@@ -514,19 +518,11 @@ const App = () => (
                 />
                 <Route
                   path="/minhas-comissoes"
-                  element={
-                    <ProtectedRoute>
-                      <MinhasComissoes />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/meu-financeiro?tab=comissoes" replace />}
                 />
                 <Route
                   path="/meus-salarios"
-                  element={
-                    <ProtectedRoute>
-                      <MeusSalarios />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/meu-financeiro?tab=salarios" replace />}
                 />
                 <Route
                   path="/meu-financeiro"
@@ -817,6 +813,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/clinica-autonoma"
+                  element={
+                    <ProtectedRoute resource="configuracoes">
+                      <ClinicaAutonoma />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/exames-recebidos"
                   element={
                     <ProtectedRoute resource="pacientes">
@@ -977,6 +981,46 @@ const App = () => (
                     <PatientProtectedRoute>
                       <ConsentGate>
                         <PatientPROMs />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/cartao-saude"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientHealthCard />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/renovar-receita"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientRefillRequest />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/creditos"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientHealthCredits />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/planos"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientTreatmentPlans />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }

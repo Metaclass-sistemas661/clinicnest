@@ -66,7 +66,7 @@ import type { FinancialTransaction, TransactionType } from "@/types/database";
 import { useSimpleMode } from "@/lib/simple-mode";
 
 const categories = {
-  income: ["Serviço", "Venda de Produto", "Outros"],
+  income: ["Procedimento", "Venda de Produto", "Outros"],
   expense: ["Compra de Produto", "Fornecedores", "Aluguel", "Funcionários", "Materiais", "Manutenção", "Outros"],
 };
 

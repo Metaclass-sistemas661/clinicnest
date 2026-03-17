@@ -128,7 +128,7 @@ export function MeuFinanceiroMobile() {
       const payments: RecentPayment[] = [];
 
       (recentComm || []).forEach((c) => {
-        const serviceName = (c.appointment?.procedure as any)?.name || "Serviço";
+        const serviceName = (c.appointment?.procedure as any)?.name || "Procedimento";
         payments.push({
           id: c.id,
           type: "commission",

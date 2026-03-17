@@ -65,7 +65,8 @@
 
     --radius: 1rem;
 
-    /* Sidebar - Glass Effect */
+    /* Sidebar */
+    --sidebar-body: 174 25% 94%;
     --sidebar-background: 174 30% 97% / 0.85;
     --sidebar-foreground: 200 25% 15%;
     --sidebar-primary: 174 72% 38%;
@@ -130,6 +131,7 @@
     --input: 200 25% 18%;
     --ring: 174 70% 50%;
 
+    --sidebar-body: 200 25% 9%;
     --sidebar-background: 200 25% 8% / 0.9;
     --sidebar-foreground: 180 15% 90%;
     --sidebar-primary: 174 70% 50%;
@@ -168,6 +170,12 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold tracking-tight;
   }
+
+  /* Design System: Typography Scale */
+  .page-title    { @apply text-2xl md:text-3xl font-display font-bold tracking-tight; }
+  .section-title { @apply text-xl md:text-2xl font-display font-semibold; }
+  .sub-title     { @apply text-lg font-display font-semibold; }
+  .card-title    { @apply text-base font-semibold; }
 }
 
 @layer base {
@@ -184,6 +192,47 @@
 }
 
 @layer utilities {
+  /* Design System: Semantic Status Classes */
+  .status-success { @apply bg-success/10 text-success border-success/20; }
+  .status-error   { @apply bg-destructive/10 text-destructive border-destructive/20; }
+  .status-warning { @apply bg-warning/10 text-warning border-warning/20; }
+  .status-info    { @apply bg-info/10 text-info border-info/20; }
+
+  /* Design System: Seamless Tab Active — Sidebar fusion effect */
+  .seamless-tab-active {
+    @apply bg-background rounded-l-xl rounded-r-none relative z-10;
+    @apply text-foreground font-semibold;
+    @apply border-y border-l border-border/30 border-r-0;
+    margin-right: -1px;
+    transition: all 0.2s ease-out;
+  }
+
+  .seamless-tab-active::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -12px;
+    width: 12px;
+    height: 12px;
+    background: transparent;
+    border-bottom-right-radius: 12px;
+    box-shadow: 4px 4px 0 4px hsl(var(--background));
+    pointer-events: none;
+  }
+
+  .seamless-tab-active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: -12px;
+    width: 12px;
+    height: 12px;
+    background: transparent;
+    border-top-right-radius: 12px;
+    box-shadow: 4px -4px 0 4px hsl(var(--background));
+    pointer-events: none;
+  }
+
   .gradient-primary {
     background: var(--gradient-primary);
   }

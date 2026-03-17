@@ -2,7 +2,7 @@
  * AI Agent Chat — Agente conversacional para profissionais da clínica.
  *
  * Capacidades:
- * - Buscar pacientes, prontuários, agenda, serviços, financeiro
+ * - Buscar pacientes, prontuários, agenda, procedimentos, financeiro
  * - Agendar consultas
  * - Memória de conversa persistida em ai_conversations / ai_conversation_messages
  * - Usa Gemini 2.0 Flash via Google Vertex AI com tool use nativo
@@ -16,7 +16,7 @@ import {
   type ContentBlockToolUse,
 } from "../_shared/vertex-ai-client.ts";
 import { PROFESSIONAL_TOOLS, executeTool } from "../_shared/agentTools.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -30,7 +30,7 @@ CAPACIDADES:
 - Acessar prontuários médicos
 - Verificar a agenda do dia ou de um paciente
 - Agendar consultas
-- Listar serviços disponíveis
+- Listar procedimentos disponíveis
 - Consultar resumo financeiro
 
 REGRAS:
@@ -90,8 +90,8 @@ serve(async (req) => {
       });
     }
 
-    // --- Rate limit: 20 req/min per user ---
-    const rl = await checkRateLimit(`ai-agent:${user.id}`, 20, 60);
+    // --- Rate limit: navigation (40 req/min) ---
+    const rl = await checkAiRateLimit(user.id, "ai-agent", "navigation");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
         status: 429,

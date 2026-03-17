@@ -203,7 +203,7 @@ export default function ConfigurarRegras() {
   return (
     <MainLayout
       title="Configurar Regras de Comissão"
-      subtitle="Defina regras granulares por convênio, serviço ou procedimento"
+      subtitle="Defina regras granulares por convênio ou procedimento"
       actions={
         <Button variant="outline" asChild>
           <Link to="/repasses" className="gap-2">
@@ -359,7 +359,7 @@ export default function ConfigurarRegras() {
                         </p>
                         <ol className="list-decimal list-inside mt-2 space-y-1">
                           <li><strong>Procedimento TUSS</strong> (prioridade 30) - mais específica</li>
-                          <li><strong>Serviço</strong> (prioridade 20)</li>
+                          <li><strong>Procedimento</strong> (prioridade 20)</li>
                           <li><strong>Convênio</strong> (prioridade 10)</li>
                           <li><strong>Padrão</strong> (prioridade 0) - fallback</li>
                         </ol>

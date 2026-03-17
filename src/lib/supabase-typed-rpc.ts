@@ -177,7 +177,7 @@ export type CreateAppointmentV2Result = {
  * Cria agendamento com validações de conflito de horário e disponibilidade.
  * Infere tenant_id do JWT. Valida status e profissional automaticamente.
  * @param params.p_client_id - UUID do paciente (opcional para encaixe)
- * @param params.p_service_id - UUID do serviço/procedimento
+ * @param params.p_service_id - UUID do procedimento
  * @param params.p_professional_profile_id - UUID do profissional
  * @param params.p_scheduled_at - Data/hora ISO do agendamento
  * @param params.p_duration_minutes - Duração em minutos
@@ -341,7 +341,7 @@ export type UpsertProcedureV2Result = { success: boolean; procedure_id: string }
 export type UpsertServiceV2Result = UpsertProcedureV2Result;
 
 /**
- * Cria ou atualiza procedimento/serviço clínico.
+ * Cria ou atualiza procedimento clínico.
  * Se p_procedure_id fornecido, atualiza; senão, cria novo.
  * @param params.p_name - Nome do procedimento
  * @param params.p_duration_minutes - Duração padrão em minutos
@@ -419,7 +419,7 @@ export const upsertClientV2 = upsertPatientV2;
 /**
  * Cria pacote de sessões para paciente (ex: 10 sessões de fisioterapia).
  * @param params.p_patient_id - UUID do paciente
- * @param params.p_service_id - UUID do serviço vinculado
+ * @param params.p_service_id - UUID do procedimento vinculado
  * @param params.p_total_sessions - Número total de sessões
  * @param params.p_expires_at - Data de expiração ISO (opcional)
  */
@@ -593,7 +593,7 @@ export async function createWalkinOrderV1(params: {
 
 /**
  * Cria comanda vinculada a um agendamento existente.
- * Herda paciente, profissional e serviço do agendamento.
+ * Herda paciente, profissional e procedimento do agendamento.
  * @param params.p_appointment_id - UUID do agendamento
  */
 export async function createOrderForAppointmentV1(params: {
@@ -603,7 +603,7 @@ export async function createOrderForAppointmentV1(params: {
 }
 
 /**
- * Adiciona item (serviço ou produto) a um pedido aberto.
+ * Adiciona item (procedimento ou produto) a um pedido aberto.
  * @param params.p_order_id - UUID do pedido
  * @param params.p_kind - 'service' | 'product'
  * @param params.p_unit_price - Preço unitário

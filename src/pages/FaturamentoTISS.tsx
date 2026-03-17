@@ -890,7 +890,7 @@ export default function FaturamentoTISS() {
                         <TableHead className="w-8"></TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Paciente</TableHead>
-                        <TableHead>Serviço</TableHead>
+                        <TableHead>Procedimento</TableHead>
                         <TableHead>Convênio</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
                         <TableHead>Status</TableHead>

@@ -11,6 +11,29 @@ export type RateLimitResult =
   | { allowed: true }
   | { allowed: false; retryAfter?: number };
 
+// ── Rate limit presets por categoria de IA ─────────────────────
+// Navegação/GPS → alto throughput (assistente em tempo real)
+// Interação rápida → médio (sugestões pontuais)
+// Geração pesada → baixo (relatórios, OCR, sumarizações)
+export type AiCategory = "navigation" | "interaction" | "generation" | "transcription";
+
+export const AI_RATE_LIMITS: Record<AiCategory, { limit: number; windowSeconds: number }> = {
+  navigation:    { limit: 40, windowSeconds: 60 },  // GPS, copilot, agent-chat
+  interaction:   { limit: 20, windowSeconds: 60 },  // CID suggest, drug interactions, explain
+  generation:    { limit: 8,  windowSeconds: 60 },   // Summary, SOAP, OCR, revenue intel
+  transcription: { limit: 5,  windowSeconds: 60 },   // Voice transcription
+};
+
+/** Convenience: check rate limit using a preset AI category */
+export async function checkAiRateLimit(
+  userId: string,
+  featureKey: string,
+  category: AiCategory,
+): Promise<RateLimitResult> {
+  const preset = AI_RATE_LIMITS[category];
+  return checkRateLimit(`${featureKey}:${userId}`, preset.limit, preset.windowSeconds);
+}
+
 // ── Fallback in-memory (por Deno isolate) ──────────────────────
 // Cada edge function roda em isolates separados, então o Map é local,
 // mas já bloqueia abuso dentro do mesmo isolate (cold-start compartilhado).

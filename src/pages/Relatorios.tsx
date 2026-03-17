@@ -458,13 +458,13 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
       });
 
       // All patients
-      const { data: allClients } = await (supabase as any)
+      const { data: allPatients } = await (supabase as any)
         .from("patients")
         .select("id, name, phone, email")
         .eq("tenant_id", tenantId)
         .eq("is_active", true);
 
-      const result: InactivePatient[] = (allClients ?? [])
+      const result: InactivePatient[] = (allPatients ?? [])
         .filter((c: { id: string }) => !activeIds.has(c.id))
         .map((c: { id: string; name: string | null; phone: string | null; email: string | null }) => {
           const visit = visitMap.get(c.id);
@@ -499,7 +499,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
           : "Nunca",
         "Total Visitas": c.visitCount,
       })),
-      `clientes-inativos-${cutoff}d.csv`
+      `pacientes-inativos-${cutoff}d.csv`
     );
   }, [inactivePatients, cutoff]);
 
@@ -622,7 +622,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
   );
 }
 
-// ─── Serviços Tab ─────────────────────────────────────────────────────────────
+// ─── Procedimentos Tab ────────────────────────────────────────────────────────
 
 function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolean }) {
   const ranking = useMemo(() => buildProcedureRanking(appts), [appts]);
@@ -632,7 +632,7 @@ function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolea
     downloadCsv(
       ranking.map((s, i) => ({
         Posição: i + 1,
-        Serviço: s.name,
+        Procedimento: s.name,
         Atendimentos: s.count,
         Receita: s.revenue.toFixed(2).replace(".", ","),
         "Ticket Médio": s.count > 0 ? (s.revenue / s.count).toFixed(2).replace(".", ",") : "0,00",
@@ -931,7 +931,7 @@ export default function Relatorios() {
             </TabsTrigger>
             <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm">
               <Stethoscope className="h-3.5 w-3.5 hidden sm:block" />
-              Serviços
+              Procedimentos
             </TabsTrigger>
             <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm">
               <UserCog className="h-3.5 w-3.5 hidden sm:block" />

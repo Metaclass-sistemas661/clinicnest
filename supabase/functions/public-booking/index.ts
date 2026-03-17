@@ -184,7 +184,7 @@ ${input.tenantName} - Confirmação de agendamento
 Olá, ${input.clientName}.
 
 Seu agendamento foi registrado com sucesso:
-- Serviço: ${input.serviceName}
+- Procedimento: ${input.serviceName}
 - Profissional: ${input.professionalName}
 - Horário: ${input.scheduledAtLocal}
 
@@ -539,7 +539,7 @@ serve(async (req) => {
 
         const html = getBookingConfirmationEmailHtml({
           tenantName: String((tenant as any).name ?? "ClinicNest"),
-          serviceName: String((service as any)?.name ?? "Serviço"),
+          serviceName: String((service as any)?.name ?? "Procedimento"),
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,
           cancelUrl: cancelUrl || "",
@@ -549,7 +549,7 @@ serve(async (req) => {
 
         const text = getBookingConfirmationEmailText({
           tenantName: String((tenant as any).name ?? "ClinicNest"),
-          serviceName: String((service as any)?.name ?? "Serviço"),
+          serviceName: String((service as any)?.name ?? "Procedimento"),
           professionalName: String((prof as any)?.full_name ?? "Profissional"),
           scheduledAtLocal: scheduledLocal,
           cancelUrl: cancelUrl || "",

@@ -39,8 +39,6 @@ export default function Login() {
     void import("@/pages/Assinatura");
     void import("@/pages/Equipe");
     void import("@/pages/Configuracoes");
-    void import("@/pages/MinhasComissoes");
-    void import("@/pages/MeusSalarios");
   };
 
   const normalizeAuthError = (message: string) => {

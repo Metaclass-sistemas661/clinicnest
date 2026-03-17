@@ -63,7 +63,7 @@ import { AiNoShowBadge, AiCancelPrediction } from "@/components/ai";
 
 interface AppointmentsTableProps {
   appointments: Appointment[];
-  clients: Client[];
+  patients: Patient[];
   procedures: Procedure[];
   professionals: Profile[];
   allAppointments: Appointment[];
@@ -128,7 +128,7 @@ const statusConfig = {
 
 export function AppointmentsTable({
   appointments,
-  clients,
+  patients,
   procedures,
   professionals,
   allAppointments,
@@ -935,9 +935,9 @@ export function AppointmentsTable({
                     <SelectValue placeholder="Selecione o paciente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
+                    {patients.map((patient) => (
+                      <SelectItem key={patient.id} value={patient.id}>
+                        {patient.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

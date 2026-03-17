@@ -8,9 +8,9 @@ export interface PatientSpendingRow {
   services_count: number;
   products_count: number;
   total_amount: number;
-  /** Ticket médio = total / visitas (serviços realizados). Se 0 visitas, usa total. */
+  /** Ticket médio = total / visitas (procedimentos realizados). Se 0 visitas, usa total. */
   ticket_medio: number;
-  /** Serviços realizados (nome, valor, data) */
+  /** Procedimentos realizados (nome, valor, data) */
   services_detail: { name: string; amount: number; date: string }[];
   /** Produtos comprados (nome, valor, data) */
   products_detail: { name: string; amount: number; date: string }[];
@@ -89,10 +89,10 @@ export async function fetchPatientSpendingAllTime(
     const cur = byPatient.get(id)!;
     cur.total += amount;
 
-    if (row.category === "Serviço") {
+    if (row.category === "Procedimento") {
       cur.procedures += 1;
       cur.procedures_detail.push({
-        name: apt.procedure?.name ?? "Serviço",
+        name: apt.procedure?.name ?? "Procedimento",
         amount,
         date,
       });

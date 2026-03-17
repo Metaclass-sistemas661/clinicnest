@@ -170,7 +170,7 @@ export default function AssinarTermosPublico() {
         return;
       }
 
-      const result = data as { success: boolean; error?: string; all_done?: boolean; remaining?: number };
+      const result = data as { success: boolean; error?: string; all_done?: boolean; remaining?: number; consent_id?: string };
 
       if (!result.success) {
         toast.error(result.error || "Erro ao assinar termo");
@@ -179,6 +179,19 @@ export default function AssinarTermosPublico() {
       }
 
       toast.success(`Termo "${currentTemplate.title}" assinado com sucesso!`);
+
+      // 3) Trigger seal-consent-pdf Edge Function (fire & forget)
+      if (result.consent_id) {
+        supabase.functions
+          .invoke("seal-consent-pdf", { body: { consent_id: result.consent_id } })
+          .then(({ error: sealErr }) => {
+            if (sealErr) {
+              logger.warn("[AssinarTermos] seal-consent-pdf failed (non-blocking)", sealErr);
+            } else {
+              logger.info("[AssinarTermos] seal-consent-pdf triggered", { consent_id: result.consent_id });
+            }
+          });
+      }
 
       // Move to next or finish
       if (result.all_done) {

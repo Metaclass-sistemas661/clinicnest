@@ -112,7 +112,7 @@ export function AppointmentCard({
 
         {/* Service */}
         <p className="text-xs text-muted-foreground truncate mb-2">
-          {appointment.procedure?.name || "Serviço não informado"}
+          {appointment.procedure?.name || "Procedimento não informado"}
         </p>
 
         {/* Quick actions */}

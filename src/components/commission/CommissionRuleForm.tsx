@@ -62,13 +62,13 @@ interface CommissionRuleFormProps {
 const ruleTypeOptions = [
   { value: "default", label: "Padrão", description: "Regra base quando nenhuma específica se aplica" },
   { value: "insurance", label: "Por Convênio", description: "Comissão diferenciada por convênio" },
-  { value: "service", label: "Por Serviço", description: "Comissão diferenciada por serviço" },
+  { value: "service", label: "Por Procedimento", description: "Comissão diferenciada por procedimento" },
   { value: "procedure", label: "Por Procedimento TUSS", description: "Comissão por código TUSS" },
   { value: "referral", label: "Por Captação/Indicação", description: "Comissão para quem agendou ou indicou o paciente" },
 ] as const;
 
 const calculationTypeOptions = [
-  { value: "percentage", label: "Percentual (%)", description: "Porcentagem do valor do serviço" },
+  { value: "percentage", label: "Percentual (%)", description: "Porcentagem do valor do procedimento" },
   { value: "fixed", label: "Valor Fixo (R$)", description: "Valor fixo por atendimento" },
   { value: "tiered", label: "Escalonado", description: "Percentual varia conforme faturamento" },
 ] as const;
@@ -525,7 +525,7 @@ export function CommissionRuleForm({
           <div className="flex items-center gap-2">
             <Badge variant="outline">Prioridade: {priorityByType[ruleType] || 0}</Badge>
             <span className="text-xs text-muted-foreground">
-              (Procedimento &gt; Serviço &gt; Convênio &gt; Padrão)
+              (Procedimento TUSS &gt; Procedimento &gt; Convênio &gt; Padrão)
             </span>
           </div>
         </div>

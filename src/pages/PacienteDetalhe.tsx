@@ -18,7 +18,7 @@ import { toastRpcError } from "@/lib/rpc-error";
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
-import { fetchClientSpendingAllTime, type ClientSpendingRow } from "@/lib/patientSpending";
+import { fetchPatientSpendingAllTime, type PatientSpendingRow } from "@/lib/patientSpending";
 import type { ClientTimelineEventRow } from "@/types/supabase-extensions";
 import type { Client, ClinicalEvolution } from "@/types/database";
 import {
@@ -55,7 +55,7 @@ export default function PacienteDetalhe() {
   const [activeTab, setActiveTab] = useState("consumo");
 
   // Data states
-  const [clientSpending, setClientSpending] = useState<ClientSpendingRow | null>(null);
+  const [patientSpending, setPatientSpending] = useState<PatientSpendingRow | null>(null);
   const [clinicalHistory, setClinicalHistory] = useState<Array<{
     id: string; type: string; title: string; subtitle: string; date: string;
   }>>([]);
@@ -104,7 +104,7 @@ export default function PacienteDetalhe() {
     setIsLoadingExtras(true);
     try {
       const [spendingData, { data: timelineData, error: timelineError }, packagesRes, mktPrefRes] = await Promise.all([
-        fetchClientSpendingAllTime(profile.tenant_id),
+        fetchPatientSpendingAllTime(profile.tenant_id),
         getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
         supabase.from("patient_packages")
           .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
@@ -121,7 +121,7 @@ export default function PacienteDetalhe() {
       }
 
       const spending = spendingData.find((s) => s.patient_id === patientId);
-      setClientSpending(spending || null);
+      setPatientSpending(spending || null);
 
       if (timelineError) toastRpcError(toast, timelineError as any, "Erro ao carregar histórico");
       else setDetailTimeline((timelineData || []) as ClientTimelineEventRow[]);
@@ -129,7 +129,7 @@ export default function PacienteDetalhe() {
       if (!packagesRes.error) {
         setDetailPackages((packagesRes.data || []).map((p: any) => ({
           id: String(p.id), procedure_id: String(p.procedure_id),
-          service_name: String(p?.procedure?.name ?? "Serviço"),
+          service_name: String(p?.procedure?.name ?? "Procedimento"),
           total_sessions: Number(p.total_sessions ?? 0),
           remaining_sessions: Number(p.remaining_sessions ?? 0),
           status: String(p.status ?? ""), purchased_at: String(p.purchased_at ?? ""),
@@ -348,23 +348,23 @@ export default function PacienteDetalhe() {
           <>
             {/* Tab: Consumo */}
             <TabsContent value="consumo" className="space-y-4">
-              {!clientSpending ? (
+              {!patientSpending ? (
                 <EmptyState icon={DollarSign} title="Nenhum consumo registrado" description="Este paciente ainda não realizou procedimentos ou compras." />
               ) : (
                 <>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="text-sm">Total: {formatCurrency(clientSpending.total_amount)}</Badge>
-                    <Badge variant="outline" className="text-sm">Ticket médio: {formatCurrency(clientSpending.ticket_medio)}</Badge>
-                    <Badge variant="outline" className="text-sm">{clientSpending.services_count} serviço{clientSpending.services_count !== 1 ? "s" : ""}</Badge>
-                    <Badge variant="outline" className="text-sm">{clientSpending.products_count} produto{clientSpending.products_count !== 1 ? "s" : ""}</Badge>
+                    <Badge variant="secondary" className="text-sm">Total: {formatCurrency(patientSpending.total_amount)}</Badge>
+                    <Badge variant="outline" className="text-sm">Ticket médio: {formatCurrency(patientSpending.ticket_medio)}</Badge>
+                    <Badge variant="outline" className="text-sm">{patientSpending.services_count} procedimento{patientSpending.services_count !== 1 ? "s" : ""}</Badge>
+                    <Badge variant="outline" className="text-sm">{patientSpending.products_count} produto{patientSpending.products_count !== 1 ? "s" : ""}</Badge>
                   </div>
 
-                  {clientSpending.services_detail.length > 0 && (
+                  {patientSpending.services_detail.length > 0 && (
                     <Card>
                       <CardHeader><CardTitle className="text-base flex items-center gap-2"><Stethoscope className="h-4 w-4" />Procedimentos realizados</CardTitle></CardHeader>
                       <CardContent>
                         <div className="rounded-lg border divide-y text-sm">
-                          {clientSpending.services_detail.map((s, i) => (
+                          {patientSpending.services_detail.map((s, i) => (
                             <div key={i} className="flex justify-between items-center px-3 py-2">
                               <span>{s.name}</span>
                               <span className="text-muted-foreground">{formatDate(s.date)}</span>
@@ -376,12 +376,12 @@ export default function PacienteDetalhe() {
                     </Card>
                   )}
 
-                  {clientSpending.products_detail.length > 0 && (
+                  {patientSpending.products_detail.length > 0 && (
                     <Card>
                       <CardHeader><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" />Produtos comprados</CardTitle></CardHeader>
                       <CardContent>
                         <div className="rounded-lg border divide-y text-sm">
-                          {clientSpending.products_detail.map((p, i) => (
+                          {patientSpending.products_detail.map((p, i) => (
                             <div key={i} className="flex justify-between items-center px-3 py-2">
                               <span>{p.name}</span>
                               <span className="text-muted-foreground">{formatDate(p.date)}</span>

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FacialCapture } from "@/components/consent/FacialCapture";
+import { SignatureMethodSelector, type SignatureMethod } from "@/components/signature/SignatureMethodSelector";
+import { SignatureCanvas } from "@/components/signature/SignatureCanvas";
 import { toast } from "sonner";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -19,6 +21,7 @@ import {
   Lock,
   Camera,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 
 export default function PatientConsentSigning() {
@@ -31,6 +34,12 @@ export default function PatientConsentSigning() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [varsData, setVarsData] = useState<ConsentVariablesData>({});
+
+  // Hybrid signature state
+  type Step = "read" | "choose-method" | "capture";
+  const [step, setStep] = useState<Step>("read");
+  const [signatureMethod, setSignatureMethod] = useState<SignatureMethod | null>(null);
+  const [manualSignatureDataUrl, setManualSignatureDataUrl] = useState<string | null>(null);
 
   // Resolve the patient's patient_id from their auth user
   const resolveClientId = useCallback(async () => {
@@ -108,34 +117,74 @@ export default function PatientConsentSigning() {
   const handleSign = async () => {
     if (!patientId || !currentTemplate) return;
 
-    if (!capturedBlob) {
+    // Validate based on method
+    if (signatureMethod === "facial" && !capturedBlob) {
       toast.error("Capture sua foto facial antes de assinar");
+      return;
+    }
+    if (signatureMethod === "manual" && !manualSignatureDataUrl) {
+      toast.error("Desenhe sua assinatura antes de confirmar");
       return;
     }
 
     setIsSigning(true);
     try {
-      // 1) Upload facial photo to storage
-      const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.jpg`;
-      const { error: uploadError } = await supabasePatient.storage
-        .from("consent-photos")
-        .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
+      let facialPhotoPath: string | null = null;
+      let manualSignaturePath: string | null = null;
 
-      if (uploadError) {
-        logger.error("[PatientConsent] upload error", uploadError);
-        toast.error("Erro ao enviar foto facial. Tente novamente.");
-        setIsSigning(false);
-        return;
+      if (signatureMethod === "facial" && capturedBlob) {
+        // Upload facial photo
+        const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.jpg`;
+        const { error: uploadError } = await supabasePatient.storage
+          .from("consent-photos")
+          .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
+
+        if (uploadError) {
+          logger.error("[PatientConsent] upload facial error", uploadError);
+          toast.error("Erro ao enviar foto facial. Tente novamente.");
+          setIsSigning(false);
+          return;
+        }
+        facialPhotoPath = fileName;
+      } else if (signatureMethod === "manual" && manualSignatureDataUrl) {
+        // Convert data URL to blob and upload
+        const res = await fetch(manualSignatureDataUrl);
+        const blob = await res.blob();
+        const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.png`;
+        const { error: uploadError } = await supabasePatient.storage
+          .from("consent-signatures")
+          .upload(fileName, blob, { contentType: "image/png", upsert: false });
+
+        if (uploadError) {
+          logger.error("[PatientConsent] upload signature error", uploadError);
+          toast.error("Erro ao enviar assinatura. Tente novamente.");
+          setIsSigning(false);
+          return;
+        }
+        manualSignaturePath = fileName;
       }
 
-      // 2) Sign the consent via RPC
-      const { data, error } = await supabasePatient.rpc("sign_consent", {
-        p_client_id: patientId,
-        p_template_id: currentTemplate.id,
-        p_facial_photo_path: fileName,
-        p_ip_address: null,
-        p_user_agent: navigator.userAgent,
-      });
+      // Try v2 first (hybrid), fallback to v1
+      const rpcName = signatureMethod === "manual" ? "sign_consent_v2" : "sign_consent";
+      const rpcParams = signatureMethod === "manual"
+        ? {
+            p_client_id: patientId,
+            p_template_id: currentTemplate.id,
+            p_signature_method: "manual" as const,
+            p_facial_photo_path: null,
+            p_manual_signature_path: manualSignaturePath,
+            p_ip_address: null,
+            p_user_agent: navigator.userAgent,
+          }
+        : {
+            p_client_id: patientId,
+            p_template_id: currentTemplate.id,
+            p_facial_photo_path: facialPhotoPath,
+            p_ip_address: null,
+            p_user_agent: navigator.userAgent,
+          };
+
+      const { data, error } = await supabasePatient.rpc(rpcName as any, rpcParams as any);
 
       if (error) {
         logger.error("[PatientConsent] sign error", error);
@@ -152,6 +201,15 @@ export default function PatientConsentSigning() {
           .from("patient_consents")
           .update({ template_snapshot_html: filledHtml })
           .eq("id", consentId);
+
+        // 4) Trigger seal-consent-pdf Edge Function (fire & forget)
+        supabasePatient.functions
+          .invoke("seal-consent-pdf", { body: { consent_id: consentId } })
+          .then(({ error: sealErr }) => {
+            if (sealErr) {
+              logger.warn("[PatientConsent] seal-consent-pdf failed (non-blocking)", sealErr);
+            }
+          });
       }
 
       toast.success(`Termo "${currentTemplate.title}" assinado com sucesso!`);
@@ -160,6 +218,9 @@ export default function PatientConsentSigning() {
       if (currentIndex + 1 < pendingTemplates.length) {
         setCurrentIndex((i) => i + 1);
         setCapturedBlob(null);
+        setManualSignatureDataUrl(null);
+        setSignatureMethod(null);
+        setStep("read");
       } else {
         setAllDone(true);
       }
@@ -288,7 +349,9 @@ export default function PatientConsentSigning() {
                 <div>
                   <CardTitle className="text-base">{currentTemplate.title}</CardTitle>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Leia o termo abaixo com atenção antes de assinar
+                    {step === "read" && "Leia o termo abaixo com atenção antes de assinar"}
+                    {step === "choose-method" && "Escolha como deseja assinar este termo"}
+                    {step === "capture" && (signatureMethod === "facial" ? "Capture sua foto facial" : "Desenhe sua assinatura")}
                   </p>
                 </div>
                 <Badge className="ml-auto bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400">
@@ -298,57 +361,148 @@ export default function PatientConsentSigning() {
             </CardHeader>
             <Separator />
             <CardContent className="py-6">
-              {/* Term content */}
-              <div
-                className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
-                dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
-              />
-
-              <Separator className="my-6" />
-
-              {/* Facial capture */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Camera className="h-4 w-4 text-teal-600" />
-                  <h3 className="font-semibold text-sm">Assinatura com Reconhecimento Facial</h3>
+              {/* Step 1: Read the document */}
+              {step === "read" && (
+                <div className="space-y-6">
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
+                    dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
+                  />
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={() => setStep("choose-method")}
+                      className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                      size="lg"
+                    >
+                      Li e concordo — Prosseguir
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Para validar sua assinatura, capture uma foto do seu rosto usando a câmera.
-                  Esta foto será armazenada como prova de aceite junto com a data, hora e versão do termo.
-                </p>
+              )}
 
-                <FacialCapture
-                  onCapture={(blob) => setCapturedBlob(blob)}
-                  disabled={isSigning}
-                />
-              </div>
+              {/* Step 2: Choose signature method */}
+              {step === "choose-method" && (
+                <div className="space-y-6">
+                  <SignatureMethodSelector
+                    onSelect={(method) => {
+                      setSignatureMethod(method);
+                      setCapturedBlob(null);
+                      setManualSignatureDataUrl(null);
+                      setStep("capture");
+                    }}
+                    disabled={isSigning}
+                  />
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStep("read")}
+                      className="gap-2 text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Voltar ao termo
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-              <Separator className="my-6" />
+              {/* Step 3: Capture */}
+              {step === "capture" && signatureMethod === "facial" && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-teal-600" />
+                      <h3 className="font-semibold text-sm">Reconhecimento Facial</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Capture uma foto do seu rosto como prova de identidade.
+                    </p>
+                    <FacialCapture
+                      onCapture={(blob) => setCapturedBlob(blob)}
+                      disabled={isSigning}
+                    />
+                  </div>
 
-              {/* Sign button */}
-              <div className="flex flex-col items-center gap-3">
-                <p className="text-xs text-center text-muted-foreground max-w-md">
-                  Ao clicar em "Assinar Termo", declaro que li e compreendi o conteúdo acima
-                  e concordo com todos os termos descritos.
-                </p>
-                <Button
-                  onClick={handleSign}
-                  disabled={isSigning || !capturedBlob}
-                  className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
-                  size="lg"
-                >
-                  {isSigning ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando assinatura...</>
-                  ) : (
-                    <><ShieldCheck className="mr-2 h-4 w-4" />Assinar Termo</>
-                  )}
-                </Button>
-                {!capturedBlob && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Capture sua foto facial acima para habilitar a assinatura
-                  </p>
-                )}
-              </div>
+                  <Separator />
+
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-xs text-center text-muted-foreground max-w-md">
+                      Ao assinar, declaro que li e compreendi o conteúdo do termo e concordo com todos os termos descritos.
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setStep("choose-method"); setCapturedBlob(null); }}
+                        className="gap-2"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Trocar método
+                      </Button>
+                      <Button
+                        onClick={handleSign}
+                        disabled={isSigning || !capturedBlob}
+                        className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                        size="lg"
+                      >
+                        {isSigning ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</>
+                        ) : (
+                          <><ShieldCheck className="mr-2 h-4 w-4" />Assinar Termo</>
+                        )}
+                      </Button>
+                    </div>
+                    {!capturedBlob && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Capture sua foto facial acima para habilitar a assinatura
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {step === "capture" && signatureMethod === "manual" && (
+                <div className="space-y-6">
+                  <SignatureCanvas
+                    patientName={varsData.patient_name as string ?? "Paciente"}
+                    onComplete={(dataUrl) => setManualSignatureDataUrl(dataUrl)}
+                    onClear={() => setManualSignatureDataUrl(null)}
+                    disabled={isSigning}
+                  />
+
+                  <Separator />
+
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-xs text-center text-muted-foreground max-w-md">
+                      Ao assinar, declaro que li e compreendi o conteúdo do termo e concordo com todos os termos descritos.
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setStep("choose-method"); setManualSignatureDataUrl(null); }}
+                        className="gap-2"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Trocar método
+                      </Button>
+                      <Button
+                        onClick={handleSign}
+                        disabled={isSigning || !manualSignatureDataUrl}
+                        className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                        size="lg"
+                      >
+                        {isSigning ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</>
+                        ) : (
+                          <><ShieldCheck className="mr-2 h-4 w-4" />Assinar Termo</>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

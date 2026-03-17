@@ -73,7 +73,7 @@ interface InsurancePlan {
 
 const RULE_TYPE_LABELS: Record<CommissionRuleType, string> = {
   default: "Padrão",
-  service: "Por Serviço",
+  service: "Por Procedimento",
   insurance: "Por Convênio",
   procedure: "Por Procedimento TUSS",
   sale: "Por Venda",
@@ -210,7 +210,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     }
 
     if (formData.rule_type === "service" && !formData.procedure_id) {
-      toast.error("Selecione um serviço");
+      toast.error("Selecione um procedimento");
       return;
     }
     if (formData.rule_type === "insurance" && !formData.insurance_id) {
@@ -334,7 +334,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
               </Button>
               <Button onClick={() => openCreateForm("service")} size="sm" variant="outline" className="gap-1">
                 <Stethoscope className="h-4 w-4" />
-                Por Serviço
+                Por Procedimento
               </Button>
               <Button onClick={() => openCreateForm("insurance")} size="sm" variant="outline" className="gap-1">
                 <Building2 className="h-4 w-4" />
@@ -439,7 +439,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
           <div className="space-y-4 py-4">
             {formData.rule_type === "service" && (
               <div className="space-y-2">
-                <Label>Serviço *</Label>
+                <Label>Procedimento *</Label>
                 <Select value={formData.procedure_id} onValueChange={v => setFormData({...formData, procedure_id: v})}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
@@ -546,11 +546,11 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Serviço (opcional)</Label>
+              <Label>Procedimento (opcional)</Label>
               <Select value={simServiceId || "__any__"} onValueChange={(v) => setSimServiceId(v === "__any__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Qualquer procedimento" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__any__">Qualquer serviço</SelectItem>
+                  <SelectItem value="__any__">Qualquer procedimento</SelectItem>
                   {procedures.map(s => (
                     <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                   ))}
@@ -572,7 +572,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
             </div>
 
             <div className="space-y-2">
-              <Label>Valor do Serviço (R$)</Label>
+              <Label>Valor do Procedimento (R$)</Label>
               <Input 
                 type="number" 
                 step="0.01"

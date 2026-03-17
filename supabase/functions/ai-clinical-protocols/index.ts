@@ -14,7 +14,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { completeText } from "../_shared/vertex-ai-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -99,8 +99,8 @@ serve(async (req: Request) => {
 
     const tenantId = profile.tenant_id;
 
-    // Rate limit
-    const rl = await checkRateLimit(supabase, `ai-protocols:${user.id}`, 20, 3600);
+    // Rate limit: interaction category (20 req/min)
+    const rl = await checkAiRateLimit(user.id, "ai-protocols", "interaction");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,

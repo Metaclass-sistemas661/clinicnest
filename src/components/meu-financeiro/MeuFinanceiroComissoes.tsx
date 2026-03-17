@@ -157,7 +157,7 @@ export function MeuFinanceiroComissoes() {
   })();
 
   const exportCsv = () => {
-    const headers = ["Data", "Paciente", "Serviço", "Valor Serviço", "Comissão", "Status", "Pagamento"];
+    const headers = ["Data", "Paciente", "Procedimento", "Valor Procedimento", "Comissão", "Status", "Pagamento"];
     const rows = filteredCommissions.map((c) => [
       formatInAppTz(c.created_at, "dd/MM/yyyy HH:mm"),
       (c.appointment?.patient as any)?.name || "—",
@@ -313,7 +313,7 @@ export function MeuFinanceiroComissoes() {
                   <TableRow>
                     <TableHead>Data</TableHead>
                     <TableHead>Paciente</TableHead>
-                    <TableHead>Serviço</TableHead>
+                    <TableHead>Procedimento</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="text-right">Comissão</TableHead>
                     <TableHead>Status</TableHead>
@@ -414,7 +414,7 @@ export function MeuFinanceiroComissoes() {
               <div className="rounded-lg border p-3 bg-muted/50">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Valor do serviço:</span>
+                    <span className="text-muted-foreground">Valor do procedimento:</span>
                     <p className="font-medium">{formatCurrency(Number(selectedCommission.service_price || 0))}</p>
                   </div>
                   <div>

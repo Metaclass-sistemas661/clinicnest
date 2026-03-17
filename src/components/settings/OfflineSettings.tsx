@@ -158,7 +158,7 @@ export function OfflineSettings() {
                   <Briefcase className="h-8 w-8 text-emerald-500" />
                   <div>
                     <p className="text-2xl font-bold">{stats?.services.count || 0}</p>
-                    <p className="text-xs text-muted-foreground">Serviços</p>
+                    <p className="text-xs text-muted-foreground">Procedimentos</p>
                     <p className="text-xs text-muted-foreground">{formatLastSync(stats?.services.lastSync || null)}</p>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export function OfflineSettings() {
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
             <CheckCircle2 className="h-4 w-4 inline mr-2 text-green-500" />
-            <strong>Visualização:</strong> Você pode ver agendamentos, pacientes e serviços mesmo sem internet.
+            <strong>Visualização:</strong> Você pode ver agendamentos, pacientes e procedimentos mesmo sem internet.
           </p>
           <p>
             <CheckCircle2 className="h-4 w-4 inline mr-2 text-green-500" />

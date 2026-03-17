@@ -25,7 +25,7 @@ const TOOL_LABELS: Record<string, string> = {
   agenda_hoje: "Verificando agenda",
   agenda_paciente: "Buscando agendamentos",
   agendar_consulta: "Criando agendamento",
-  servicos_disponiveis: "Listando serviços",
+  servicos_disponiveis: "Listando procedimentos",
   resumo_financeiro: "Calculando financeiro",
 };
 
@@ -33,7 +33,7 @@ const QUICK_ACTIONS = [
   { label: "Agenda de hoje", message: "Qual a agenda de hoje?" },
   { label: "Buscar paciente", message: "Preciso buscar um paciente" },
   { label: "Resumo financeiro", message: "Resumo financeiro do mês" },
-  { label: "Serviços", message: "Quais serviços estão disponíveis?" },
+  { label: "Procedimentos", message: "Quais procedimentos estão disponíveis?" },
 ];
 
 export function AiAgentChatPanel() {

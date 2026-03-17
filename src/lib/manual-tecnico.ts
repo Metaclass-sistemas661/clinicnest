@@ -190,7 +190,7 @@ CREATE POLICY "tenant_isolation" ON tabela
 **Relacionamentos:**
 • Todas as tabelas referenciam tenant_id
 • Pacientes podem ter múltiplos prontuários
-• Agendamentos vinculam paciente, profissional e serviço
+• Agendamentos vinculam paciente, profissional e procedimento
 • Prontuários possuem versionamento`,
       },
       {

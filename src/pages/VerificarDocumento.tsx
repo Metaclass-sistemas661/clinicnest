@@ -27,6 +27,8 @@ interface VerificationResult {
   document_type?: string;
   doc_subtype?: string;
   signed_at?: string;
+  sealed_at?: string;
+  signature_method?: string;
   signer_name?: string;
   signer_crm?: string;
   signer_uf?: string;
@@ -43,6 +45,7 @@ const documentTypeLabels: Record<string, string> = {
   clinical_evolution: "Evolução Clínica",
   exam_request: "Solicitação de Exame",
   medical_report: "Laudo Médico",
+  consent: "Termo de Consentimento",
 };
 
 const certificateTypeLabels: Record<string, string> = {
@@ -177,16 +180,38 @@ export default function VerificarDocumento() {
 
                     <Separator />
 
-                    <div className="flex items-start gap-3">
-                      <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Profissional Responsável</p>
-                        <p className="font-medium">{result.signer_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          CRM {result.signer_crm}/{result.signer_uf}
-                        </p>
+                    {result.document_type === "consent" ? (
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Método de Assinatura</p>
+                          <p className="font-medium">
+                            {result.signature_method === "manual"
+                              ? "Assinatura Manual (Canvas)"
+                              : "Reconhecimento Facial"}
+                          </p>
+                          {result.sealed_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              PDF selado em{" "}
+                              {format(new Date(result.sealed_at), "dd/MM/yyyy 'às' HH:mm", {
+                                locale: ptBR,
+                              })}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Profissional Responsável</p>
+                          <p className="font-medium">{result.signer_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            CRM {result.signer_crm}/{result.signer_uf}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     <Separator />
 

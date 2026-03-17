@@ -140,7 +140,7 @@ function appointmentCancelledContent(clientName: string, date: string, time: str
       greeting(clientName) +
       paragraph("Informamos que sua consulta foi cancelada.") +
       infoBox([
-        { label: "📌 Serviço", value: serviceName },
+        { label: "📌 Procedimento", value: serviceName },
         { label: "📅 Data", value: date },
         { label: "🕐 Horário", value: time },
       ], COLORS.DANGER) +
@@ -152,7 +152,7 @@ function appointmentCancelledContent(clientName: string, date: string, time: str
 function waitlistSlotContent(clientName: string, serviceName: string, professionalName: string): { headline: string; icon: string; bodyHtml: string; bodyText: string; ctaLabel?: string; ctaUrl?: string } {
   const siteUrl = Deno.env.get("SITE_URL") || "https://clinicnest.metaclass.com.br";
   const items: Array<{ label: string; value: string }> = [];
-  if (serviceName) items.push({ label: "📌 Serviço", value: serviceName });
+  if (serviceName) items.push({ label: "📌 Procedimento", value: serviceName });
   if (professionalName) items.push({ label: "👨\u200d⚕\ufe0f Profissional", value: professionalName });
 
   return {
@@ -160,7 +160,7 @@ function waitlistSlotContent(clientName: string, serviceName: string, profession
     icon: "🎉",
     bodyHtml:
       greeting(clientName) +
-      paragraph("<strong>Boas notícias!</strong> Uma vaga ficou disponível para o serviço que você aguardava na lista de espera.") +
+      paragraph("<strong>Boas notícias!</strong> Uma vaga ficou disponível para o procedimento que você aguardava na lista de espera.") +
       (items.length > 0 ? infoBox(items, COLORS.SUCCESS) : "") +
       paragraph("Acesse o portal do paciente para agendar ou entre em contato conosco."),
     bodyText: `Olá, ${clientName}! Uma vaga ficou disponível${serviceName ? ` para ${serviceName}` : ""}. Acesse o portal para agendar.`,

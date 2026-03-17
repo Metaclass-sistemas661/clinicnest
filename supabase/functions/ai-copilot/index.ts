@@ -12,8 +12,8 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { completeText } from "../_shared/vertex-ai-client.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { invokeBedrockClaude } from "../_shared/vertex-ai-client.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -37,8 +37,16 @@ REGRAS:
 - Considere alergias e medicamentos atuais para evitar interações
 - Retorne APENAS o JSON, sem markdown ou texto adicional
 
+GROUNDING (Anti-Alucinação):
+- Sugira APENAS códigos CID-10 que existam oficialmente na classificação da OMS.
+- Sugira APENAS medicamentos com registro na ANVISA, usando NOME GENÉRICO oficial.
+- Se não tiver certeza de um código CID ou medicamento, NÃO sugira — omita.
+- Para cada sugestão, atribua um grau de confiança (0 a 1) baseado na evidência disponível.
+- Inclua um "confidence_score" geral de 0 a 100 na raiz do JSON.
+
 FORMATO (JSON estrito):
 {
+  "confidence_score": 82,
   "cid_suggestions": [
     { "code": "J06.9", "description": "Infecção aguda das vias aéreas superiores", "confidence": 0.85 }
   ],
@@ -56,7 +64,7 @@ FORMATO (JSON estrito):
   "conduct_suggestions": [
     { "text": "Encaminhar ao otorrinolaringologista se não houver melhora em 10 dias", "type": "referral" }
   ]
-}`;
+};
 
 interface CopilotRequest {
   chief_complaint?: string;
@@ -109,7 +117,7 @@ serve(async (req) => {
       });
     }
 
-    const rl = await checkRateLimit(`ai-copilot:${user.id}`, 30, 60);
+    const rl = await checkAiRateLimit(user.id, "ai-copilot", "navigation");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
         status: 429,
@@ -192,29 +200,90 @@ serve(async (req) => {
       });
     }
 
-    const prompt = `Analise os seguintes campos do prontuário e forneça sugestões clínicas:\n\n${parts.join("\n")}`;
+    // ── Grounding: Fetch internal DB data for validation ──
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
-    const result = await completeText(prompt, SYSTEM_PROMPT, {
-      maxTokens: 2048,
+    // Fetch tenant's active procedures/medications for grounding
+    const [{ data: tenantMeds }, { data: tenantProcs }] = await Promise.all([
+      adminClient.from("products").select("name").eq("tenant_id", profile.tenant_id).eq("category", "medication").eq("is_active", true).limit(100),
+      adminClient.from("procedures").select("name").eq("tenant_id", profile.tenant_id).eq("is_active", true).limit(100),
+    ]);
+
+    const groundingContext: string[] = [];
+    if (tenantMeds?.length) {
+      groundingContext.push(`Medicamentos cadastrados na clínica: ${tenantMeds.map((m: { name: string }) => m.name).join(", ")}`);
+    }
+    if (tenantProcs?.length) {
+      groundingContext.push(`Procedimentos cadastrados: ${tenantProcs.map((p: { name: string }) => p.name).join(", ")}`);
+    }
+
+    const groundingSuffix = groundingContext.length > 0
+      ? `\n\nDADOS INTERNOS DA CLÍNICA (use para validar sugestões):\n${groundingContext.join("\n")}`
+      : "";
+
+    const prompt = `Analise os seguintes campos do prontuário e forneça sugestões clínicas:\n\n${parts.join("\n")}${groundingSuffix}`;
+
+    const startTime = Date.now();
+    const aiResult = await invokeBedrockClaude({
+      messages: [{ role: "user", content: prompt }],
+      system: SYSTEM_PROMPT,
+      max_tokens: 2048,
       temperature: 0.2,
     });
+    const latencyMs = Date.now() - startTime;
 
     let parsed;
     try {
-      const cleaned = result.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      const cleaned = aiResult.text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
       parsed = {
+        confidence_score: 30,
         cid_suggestions: [],
         medication_suggestions: [],
         exam_suggestions: [],
         alerts: [],
         conduct_suggestions: [],
-        raw: result,
+        raw: aiResult.text,
       };
     }
 
-    await logAiUsage(profile.tenant_id, user.id, "copilot", { fieldsProvided: parts.length }).catch(() => {});
+    // ── Grounding validation: filter out CIDs that don't match pattern ──
+    if (parsed.cid_suggestions?.length) {
+      parsed.cid_suggestions = parsed.cid_suggestions.filter(
+        (c: { code?: string }) => c.code && /^[A-Z]\d{2}(\.\d{1,2})?$/.test(c.code)
+      );
+    }
+
+    // Ensure confidence_score exists and is bounded
+    parsed.confidence_score = Math.max(0, Math.min(100, parsed.confidence_score ?? 50));
+
+    // ── Log to ai_performance_metrics ──
+    adminClient.from("ai_performance_metrics").insert({
+      tenant_id: profile.tenant_id,
+      user_id: user.id,
+      module_name: "copilot",
+      prompt_tokens: aiResult.usage.input_tokens,
+      completion_tokens: aiResult.usage.output_tokens,
+      latency_ms: latencyMs,
+      confidence_score: parsed.confidence_score,
+      model_id: Deno.env.get("GEMINI_MODEL") || "gemini-2.0-flash",
+      request_payload: { fieldsProvided: parts.length, specialty: body.specialty },
+      response_summary: JSON.stringify({
+        cids: parsed.cid_suggestions?.length ?? 0,
+        meds: parsed.medication_suggestions?.length ?? 0,
+        alerts: parsed.alerts?.length ?? 0,
+      }),
+    }).then(() => {}).catch(() => {});
+
+    await logAiUsage(
+      profile.tenant_id, user.id, "copilot",
+      aiResult.usage.input_tokens, aiResult.usage.output_tokens,
+    ).catch(() => {});
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

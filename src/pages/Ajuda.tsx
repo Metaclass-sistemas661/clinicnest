@@ -44,7 +44,7 @@ const CATEGORIES: DocCategory[] = [
     href: "/configuracoes",
     articles: [
       "Configurar dados da clínica",
-      "Cadastrar serviços",
+      "Cadastrar procedimentos",
       "Adicionar profissionais",
       "Criar primeiro agendamento",
     ],
@@ -77,15 +77,15 @@ const CATEGORIES: DocCategory[] = [
   },
   {
     id: "servicos",
-    title: "Serviços",
+    title: "Procedimentos",
     icon: Stethoscope,
-    description: "Catálogo de serviços e preços",
+    description: "Catálogo de procedimentos e preços",
     href: "/servicos",
     articles: [
-      "Criar serviço",
+      "Criar procedimento",
       "Definir duração e preço",
-      "Categorias de serviços",
-      "Desativar serviços",
+      "Categorias de procedimentos",
+      "Desativar procedimentos",
     ],
   },
   {

@@ -3,7 +3,7 @@
  *
  * Capacidades:
  * - Consultar agendamentos do paciente
- * - Informar serviços disponíveis e preços
+ * - Informar procedimentos disponíveis e preços
  * - Fornecer dados de contato da clínica
  * - Orientações gerais pré/pós consulta
  * - Memória de conversa persistida
@@ -17,7 +17,7 @@ import {
   type ContentBlockToolUse,
 } from "../_shared/vertex-ai-client.ts";
 import { PATIENT_TOOLS, executeTool } from "../_shared/agentTools.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
 
@@ -27,7 +27,7 @@ const SYSTEM_PROMPT = `Você é o Nest, o assistente virtual da clínica para pa
 
 CAPACIDADES:
 - Informar sobre os próximos agendamentos do paciente
-- Listar serviços disponíveis com preços
+- Listar procedimentos disponíveis com preços
 - Fornecer dados de contato e endereço da clínica
 - Dar orientações gerais sobre preparação para consultas
 - Responder dúvidas frequentes
@@ -89,8 +89,8 @@ serve(async (req) => {
       });
     }
 
-    // --- Rate limit: 15 req/min per user ---
-    const rl = await checkRateLimit(`ai-patient-chat:${user.id}`, 15, 60);
+    // --- Rate limit: navigation category (40 req/min) ---
+    const rl = await checkAiRateLimit(user.id, "ai-patient-chat", "navigation");
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
         status: 429,

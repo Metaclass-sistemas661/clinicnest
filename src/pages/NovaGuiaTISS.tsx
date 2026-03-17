@@ -74,7 +74,7 @@ export default function NovaGuiaTISS() {
 
   const handleGenerate = async () => {
     if (!planId || !patientId || !procedureId) {
-      toast.error("Preencha convênio, paciente e serviço");
+      toast.error("Preencha convênio, paciente e procedimento");
       return;
     }
     if (!profile?.tenant_id) return;
@@ -242,7 +242,7 @@ export default function NovaGuiaTISS() {
             </div>
 
             <div className="space-y-2">
-              <Label>Serviço/Procedimento *</Label>
+              <Label>Procedimento *</Label>
               <Select value={procedureId} onValueChange={setProcedureId}>
                 <SelectTrigger><SelectValue placeholder="Selecione o procedimento" /></SelectTrigger>
                 <SelectContent>

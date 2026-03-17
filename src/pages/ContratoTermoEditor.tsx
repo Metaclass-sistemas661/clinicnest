@@ -22,8 +22,8 @@ const AVAILABLE_VARS = [
   { key: "nome_clinica", label: "Nome da clínica", example: "Clínica Exemplo" },
   { key: "cnpj_clinica", label: "CNPJ da clínica", example: "12.345.678/0001-00" },
   { key: "data_hoje", label: "Data atual", example: "23/02/2026" },
-  { key: "servico", label: "Nome do serviço", example: "Consulta Médica" },
-  { key: "valor", label: "Valor do serviço", example: "R$ 250,00" },
+  { key: "servico", label: "Nome do procedimento", example: "Consulta Médica" },
+  { key: "valor", label: "Valor do procedimento", example: "R$ 250,00" },
 ];
 
 function replaceVariables(html: string, vars: Record<string, string>): string {
@@ -160,7 +160,7 @@ export default function ContratoTermoEditor() {
   return (
     <MainLayout
       title={isNew ? "Novo Contrato/Termo" : "Editar Contrato"}
-      subtitle="Configure o modelo de contrato ou termo de serviço"
+      subtitle="Configure o modelo de contrato ou termo"
       actions={
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => navigate("/contratos-termos")}>

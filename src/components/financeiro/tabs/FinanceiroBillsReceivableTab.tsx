@@ -59,7 +59,7 @@ import { z } from "zod";
 import type { BillReceivable, BillReceivableStatus, Patient } from "@/types/database";
 
 const RECEIVABLE_CATEGORIES = [
-  "Serviço Avulso", "Pacote", "Adiantamento", "Reembolso", "Comissão", "Outros",
+  "Procedimento Avulso", "Pacote", "Adiantamento", "Reembolso", "Comissão", "Outros",
 ];
 
 const PAYMENT_METHODS = ["Dinheiro", "PIX", "Cartão de Débito", "Cartão de Crédito", "Transferência", "Boleto"];
@@ -115,7 +115,7 @@ export function FinanceiroBillsReceivableTab() {
 
   const billForm = useForm<BillFormValues>({
     resolver: zodResolver(billSchema),
-    defaultValues: { description: "", amount: 0, due_date: "", category: "Serviço Avulso" },
+    defaultValues: { description: "", amount: 0, due_date: "", category: "Procedimento Avulso" },
   });
 
   const receiveForm = useForm<ReceiveFormValues>({
@@ -162,7 +162,7 @@ export function FinanceiroBillsReceivableTab() {
   const totalOverdue = useMemo(() => overdue.reduce((s, b) => s + Number(b.amount), 0), [overdue]);
 
   const openCreate = () => {
-    billForm.reset({ description: "", amount: 0, due_date: "", category: "Serviço Avulso", patient_id: null, notes: "" });
+    billForm.reset({ description: "", amount: 0, due_date: "", category: "Procedimento Avulso", patient_id: null, notes: "" });
     setEditingBill(null);
     setIsCreateOpen(true);
   };
