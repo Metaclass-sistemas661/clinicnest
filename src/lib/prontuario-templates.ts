@@ -21,6 +21,8 @@ export interface BuiltInProntuarioTemplate {
   description: string;
   icon: LucideIcon;
   color: string;
+  /** Professional types this template is relevant to. Empty/undefined = all types. */
+  targetTypes?: string[];
   fields: TemplateField[];
 }
 
@@ -44,6 +46,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Prontuário padrão para clínica geral e atendimento ambulatorial",
     icon: Hospital,
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    targetTypes: [],
     fields: [],
   },
   {
@@ -52,6 +55,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Campos específicos para consulta cardiológica",
     icon: HeartPulse,
     color: "bg-red-500/10 text-red-600 border-red-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("pa_sistolica", "PA Sistólica (mmHg)", "number", { placeholder: "120" }),
       f("pa_diastolica", "PA Diastólica (mmHg)", "number", { placeholder: "80" }),
@@ -73,6 +77,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta ortopédica com avaliação musculoesquelética",
     icon: Bone,
     color: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+    targetTypes: ["medico", "fisioterapeuta"],
     fields: [
       f("regiao_acometida", "Região Acometida", "text", { placeholder: "Ex: Joelho direito, Coluna lombar..." }),
       f("mecanismo_lesao", "Mecanismo da Lesão", "textarea", { placeholder: "Como ocorreu a lesão..." }),
@@ -93,6 +98,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Acompanhamento oncológico com estadiamento e protocolo",
     icon: Ribbon,
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("tipo_neoplasia", "Tipo de Neoplasia", "text", { required: true, placeholder: "Ex: Carcinoma de mama, Linfoma..." }),
       f("localizacao_primaria", "Localização Primária", "text", { placeholder: "Ex: Mama esquerda QSE..." }),
@@ -115,6 +121,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta pediátrica com crescimento e desenvolvimento",
     icon: Baby,
     color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+    targetTypes: ["medico", "enfermeiro"],
     fields: [
       f("peso_kg", "Peso (kg)", "number", { placeholder: "0.0" }),
       f("altura_cm", "Altura/Comprimento (cm)", "number", { placeholder: "0" }),
@@ -135,6 +142,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta ginecológica e acompanhamento pré-natal",
     icon: Stethoscope,
     color: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+    targetTypes: ["medico", "enfermeiro"],
     fields: [
       f("dum", "DUM (Data Última Menstruação)", "date"),
       f("ciclo_menstrual", "Ciclo Menstrual", "text", { placeholder: "Ex: Regular, 28 dias" }),
@@ -156,6 +164,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Avaliação dermatológica com descrição de lesões",
     icon: Droplets,
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("localizacao_lesao", "Localização da Lesão", "text", { placeholder: "Ex: Face, dorso, antebraço D..." }),
       f("tipo_lesao", "Tipo de Lesão", "select", { options: "Mácula,Pápula,Placa,Nódulo,Vesícula,Bolha,Pústula,Úlcera,Erosão,Crosta,Escama,Tumor" }),
@@ -176,6 +185,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta neurológica com exame neurológico",
     icon: Brain,
     color: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("nivel_consciencia", "Nível de Consciência", "select", { options: "Alerta,Sonolento,Torporoso,Comatoso" }),
       f("glasgow", "Escala de Glasgow (3-15)", "number", { placeholder: "15" }),
@@ -197,6 +207,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Avaliação psiquiátrica com exame do estado mental",
     icon: Puzzle,
     color: "bg-teal-500/10 text-teal-600 border-teal-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("aparencia", "Aparência", "textarea", { placeholder: "Vestuário, higiene, postura..." }),
       f("consciencia", "Consciência", "select", { options: "Lúcido,Obnubilado,Confuso,Torporoso" }),
@@ -219,6 +230,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta oftalmológica com acuidade e fundoscopia",
     icon: Eye,
     color: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+    targetTypes: ["medico"],
     fields: [
       f("acuidade_od", "Acuidade Visual OD", "text", { placeholder: "Ex: 20/20" }),
       f("acuidade_oe", "Acuidade Visual OE", "text", { placeholder: "Ex: 20/40" }),
@@ -239,6 +251,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Consulta endocrinológica com perfil metabólico",
     icon: FlaskConical,
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    targetTypes: ["medico", "nutricionista"],
     fields: [
       f("peso_kg", "Peso (kg)", "number", { placeholder: "0.0" }),
       f("altura_cm", "Altura (cm)", "number", { placeholder: "0" }),
@@ -262,6 +275,7 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
     description: "Prontuário odontológico completo com anamnese específica",
     icon: CircleDot,
     color: "bg-sky-500/10 text-sky-600 border-sky-500/20",
+    targetTypes: ["dentista"],
     fields: [
       // Queixa Principal
       f("queixa_principal_odonto", "Queixa Principal", "textarea", { required: true, placeholder: "Motivo da consulta odontológica..." }),

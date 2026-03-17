@@ -74,6 +74,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useSimpleMode } from "@/lib/simple-mode";
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useEnabledModules } from "@/hooks/useEnabledModules";
 import { useUnreadChatCount } from "@/hooks/useUnreadChatCount";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { FeatureKey, PLAN_CONFIG, getMinimumTierForFeature as getMinTierForFeature } from "@/types/subscription-plans";
@@ -509,6 +510,7 @@ function SidebarContent({
   const isAdmin = auth?.isAdmin ?? false;
   const { can, professionalType } = usePermissions();
   const { hasFeature } = usePlanFeatures();
+  const { isFeatureEnabledByModule } = useEnabledModules();
   const { unreadCount: chatUnreadCount } = useUnreadChatCount();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const navRef = useRef<HTMLElement>(null);
@@ -661,6 +663,9 @@ function SidebarContent({
             
             if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
               lockedItems.push(item);
+            } else if (item.requiredFeature && !isFeatureEnabledByModule(item.requiredFeature)) {
+              // Module disabled by admin — hide completely (don't show as locked)
+              return;
             } else {
               const itemWithBadge = item.href === "/chat" && chatUnreadCount > 0
                 ? { ...item, badge: chatUnreadCount }

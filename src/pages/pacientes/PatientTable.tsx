@@ -88,7 +88,7 @@ export function PatientTable({
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{patient.name}</p>
                       {patient.allergies && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] gap-1 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">
+                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[11px] gap-1 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">
                           <AlertTriangle className="h-3 w-3" />Alergia
                         </Badge>
                       )}
@@ -165,7 +165,7 @@ export function PatientTable({
                         <div className="flex items-center gap-2">
                           {patient.name}
                           {patient.allergies && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] gap-1 shrink-0 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30" title={`Alergias: ${patient.allergies}`}>
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[11px] gap-1 shrink-0 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30" title={`Alergias: ${patient.allergies}`}>
                               <AlertTriangle className="h-3 w-3" />Alergia
                             </Badge>
                           )}

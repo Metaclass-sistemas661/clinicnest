@@ -23,6 +23,7 @@ import {
   CalendarPlus,
   Shield,
   Plug,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -35,6 +36,7 @@ import { SmartConfirmationSettings } from "@/components/settings/SmartConfirmati
 
 const LazyGerenciarPermissoes = lazy(() => import("@/pages/GerenciarPermissoes"));
 const LazyIntegracoes = lazy(() => import("@/pages/Integracoes"));
+const LazyModulePanel = lazy(() => import("@/components/settings/ModulePanel"));
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
@@ -246,6 +248,10 @@ export default function Configuracoes() {
           <TabsTrigger value="integracoes" className="gap-2">
             <Plug className="h-4 w-4" />
             Integrações
+          </TabsTrigger>
+          <TabsTrigger value="modulos" className="gap-2">
+            <Layers className="h-4 w-4" />
+            Módulos
           </TabsTrigger>
         </TabsList>
 
@@ -542,6 +548,15 @@ export default function Configuracoes() {
         <TabsContent value="integracoes">
           <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
             <LazyIntegracoes embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 9 — Módulos
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="modulos">
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
+            <LazyModulePanel />
           </Suspense>
         </TabsContent>
       </Tabs>

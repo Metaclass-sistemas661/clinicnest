@@ -22,6 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   FilePlus2,
@@ -104,6 +105,7 @@ const emptyForm = {
 
 export default function Receituarios() {
   const { profile, tenant } = useAuth();
+  const { isPrescriber } = usePermissions();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -557,16 +559,18 @@ export default function Receituarios() {
       subtitle="Emissão e controle de receitas médicas"
       actions={
         <div className="flex gap-2">
-          {memedEnabled && (
+          {memedEnabled && isPrescriber && (
             <Button variant="outline" onClick={handleMemedPrescription} disabled={memedLoading || !formData.patient_id}>
               {memedLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
               Prescrever via Memed
             </Button>
           )}
-          <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Receita
-          </Button>
+          {isPrescriber && (
+            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Receita
+            </Button>
+          )}
         </div>
       }
     >
@@ -591,11 +595,13 @@ export default function Receituarios() {
         <EmptyState
           icon={FilePlus2}
           title="Nenhum receituário encontrado"
-          description="Emita receitas médicas para seus pacientes."
+          description={isPrescriber ? "Emita receitas médicas para seus pacientes." : "Nenhuma receita encontrada. Apenas prescritores podem emitir receitas."}
           action={
-            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />Nova Receita
-            </Button>
+            isPrescriber ? (
+              <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />Nova Receita
+              </Button>
+            ) : undefined
           }
         />
       ) : (

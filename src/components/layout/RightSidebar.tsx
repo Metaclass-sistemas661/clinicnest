@@ -72,10 +72,10 @@ export function RightSidebar() {
     <TooltipProvider delayDuration={200}>
       <aside
         className={cn(
-          "fixed top-0 right-0 z-40 flex h-screen flex-col",
+          "fixed top-0 right-0 z-40 h-screen flex-col",
           "bg-background/95 backdrop-blur-xl border-l border-border/50 shadow-xl",
           "transition-all duration-300 ease-out",
-          expanded ? PANEL_WIDTH : RAIL_WIDTH,
+          expanded ? cn("flex", PANEL_WIDTH) : cn("hidden 2xl:flex", RAIL_WIDTH),
         )}
       >
         {/* ── Rail (always visible) ─────────────────────────── */}

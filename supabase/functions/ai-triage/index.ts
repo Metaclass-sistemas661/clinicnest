@@ -41,7 +41,7 @@ ESPECIALIDADES DISPONÍVEIS:
 - Urologia
 
 QUANDO TIVER INFORMAÇÕES SUFICIENTES (geralmente após 2-4 perguntas), finalize com um bloco JSON estrito:
-```json
+\`\`\`json
 {
   "triagem_completa": true,
   "score_urgencia": 72,
@@ -51,7 +51,7 @@ QUANDO TIVER INFORMAÇÕES SUFICIENTES (geralmente após 2-4 perguntas), finaliz
   "red_flags": [],
   "mensagem_paciente": "Com base nos seus sintomas, recomendo uma consulta com Cardiologista com prioridade AMARELA (atendimento em até 60 min). Procure atendimento em breve."
 }
-```
+\`\`\`
 
 REGRAS DO SCORE:
 - score_urgencia: 0 a 100 (0 = sem urgência, 100 = risco de vida iminente)

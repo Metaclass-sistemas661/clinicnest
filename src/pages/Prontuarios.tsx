@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useClinicalAudit } from "@/hooks/useClinicalAudit";
 import {
@@ -192,6 +193,7 @@ function VitalsDisplay({ record }: { record: MedicalRecord }) {
 
 export default function Prontuarios() {
   const { profile, isAdmin, tenant } = useAuth();
+  const { professionalType } = usePermissions();
   const { logAccess } = useClinicalAudit();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -875,7 +877,9 @@ export default function Prontuarios() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
-            {PRONTUARIO_TEMPLATES.map((tmpl) => (
+            {PRONTUARIO_TEMPLATES
+              .filter((tmpl) => !tmpl.targetTypes?.length || isAdmin || tmpl.targetTypes.includes(professionalType))
+              .map((tmpl) => (
               <Card
                 key={tmpl.key}
                 className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all"

@@ -64,7 +64,7 @@ FORMATO (JSON estrito):
   "conduct_suggestions": [
     { "text": "Encaminhar ao otorrinolaringologista se não houver melhora em 10 dias", "type": "referral" }
   ]
-};
+}`;
 
 interface CopilotRequest {
   chief_complaint?: string;

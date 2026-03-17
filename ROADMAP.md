@@ -18,17 +18,17 @@
 ---
 
 ## Sprint 1 — Limpeza Cirúrgica (Quick Wins)
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluído — 17/03/2026
 
 | # | Ação | Status |
 |---|---|---|
-| R1 | Eliminar pipeline duplicado de voz (remover AiTranscribe inline + botão Auto-SOAP do ProntuarioForm, manter VoiceFirstDictation) | ⬜ |
-| R2 | Unificar ai-generate-soap em 1 hook (useGenerateSoap) | ⬜ |
-| R4 | Deletar AiCidSuggest (componente morto + remover do index.ts) | ⬜ |
-| R7 | Gate de isPrescriber na página Receituários | ⬜ |
-| R8 | Filtrar templates de prontuário por specialty_id do profissional | ⬜ |
-| R26 | Mínimo 11px em badges do PatientTable | ⬜ |
-| R27 | AI sidebar toggleable em <=1536px | ⬜ |
+| R1 | Eliminar pipeline duplicado de voz (remover AiTranscribe inline + botão Auto-SOAP do ProntuarioForm, manter VoiceFirstDictation) | ✅ |
+| R2 | Unificar ai-generate-soap em 1 hook (useGenerateSoap) | ✅ |
+| R4 | Deletar AiCidSuggest (componente morto + remover do index.ts) | ✅ |
+| R7 | Gate de isPrescriber na página Receituários | ✅ |
+| R8 | Filtrar templates de prontuário por specialty_id do profissional | ✅ |
+| R26 | Mínimo 11px em badges do PatientTable | ✅ |
+| R27 | AI sidebar toggleable em <=1536px | ✅ |
 
 ---
 

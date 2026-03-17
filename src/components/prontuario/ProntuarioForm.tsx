@@ -1,13 +1,13 @@
 import { Spinner } from "@/components/ui/spinner";
-import { useState, useEffect, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useCallback, useMemo } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey, Sparkles, Mic, Settings } from "lucide-react";
+import { Loader2, X, ArrowLeft, Heart, Activity, Thermometer, Wind, Weight, Ruler, Lock, ShieldCheck, Upload, FileKey, Settings } from "lucide-react";
 import { TriageContextCard, type TriageData } from "./TriageContextCard";
 import { DynamicFieldsRenderer, type TemplateField } from "./DynamicFieldsRenderer";
 import { Cid10Combobox } from "@/components/ui/cid10-combobox";
@@ -15,9 +15,10 @@ import { generateRecordHash, buildSignaturePayload } from "@/lib/digital-signatu
 import { readPfxFile, parsePfxCertificateInfo, signWithCertificate, validateICPCertificate, type ICPCertificateInfo } from "@/lib/icp-brasil-signature";
 import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { AiTranscribe, AiDrugInteractionAlert } from "@/components/ai";
+import { AiDrugInteractionAlert } from "@/components/ai";
 import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
 import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
@@ -25,6 +26,7 @@ import { AiDeteriorationAlert } from "@/components/ai/AiDeteriorationAlert";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import type { CopilotInput } from "@/components/ai";
 import { ReturnSelector, defaultReturnConfig, type ReturnConfig } from "./ReturnSelector";
 import { suggestReturn, suggestReturnMultiple, formatSuggestion, type ReturnSuggestion } from "@/lib/cid-return-suggestion";
@@ -136,6 +138,16 @@ export function ProntuarioForm({
     ? (Date.now() - new Date(editRecord.created_at).getTime()) > 24 * 60 * 60 * 1000
     : false;
   const canEdit = isEditing ? !isLocked && !isOlderThan24h : true;
+
+  const { isPrescriber, professionalType } = usePermissions();
+  const isPsychologist = professionalType === "psicologo";
+  const isNurseType = professionalType === "enfermeiro" || professionalType === "tec_enfermagem";
+  const accordionDefaults = useMemo(() => {
+    const s = ["clinico"];
+    if (isPrescriber) s.push("prescricao");
+    if (isNurseType) s.push("vitais");
+    return s;
+  }, [isPrescriber, isNurseType]);
 
   const [patientId, setPatientId] = useState(editRecord?.patient_id || initialPatientId || "");
   const [templateId, setTemplateId] = useState(editRecord?.template_id || "none");
@@ -655,42 +667,6 @@ export function ProntuarioForm({
   };
 
   const set = (k: keyof typeof emptyBase, v: string) => setBase((b) => ({ ...b, [k]: v }));
-  const [showAiTranscribe, setShowAiTranscribe] = useState(false);
-  const [lastTranscript, setLastTranscript] = useState<string | null>(null);
-
-  const generateSoapMutation = useMutation({
-    mutationFn: async (transcript: string) => {
-      const { data, error } = await supabase.functions.invoke("ai-generate-soap", {
-        body: { transcript, specialty: base.chief_complaint || undefined },
-      });
-      if (error) throw error;
-      return data.soap as {
-        subjective: string;
-        objective: string;
-        assessment: string;
-        plan: string;
-        cid_suggestions: string[];
-        confidence: number;
-      };
-    },
-    onSuccess: (soap) => {
-      setBase((b) => ({
-        ...b,
-        anamnesis: soap.subjective || b.anamnesis,
-        physical_exam: soap.objective || b.physical_exam,
-        diagnosis: soap.assessment || b.diagnosis,
-        treatment_plan: soap.plan || b.treatment_plan,
-      }));
-      if (soap.cid_suggestions?.length > 0) {
-        set("cid_code", soap.cid_suggestions[0]);
-      }
-      setLastTranscript(null);
-      toast.success(`SOAP gerado automaticamente (confiança: ${Math.round((soap.confidence || 0) * 100)}%)`);
-    },
-    onError: () => {
-      toast.error("Não foi possível gerar o SOAP automaticamente.");
-    },
-  });
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -913,46 +889,7 @@ export function ProntuarioForm({
           <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
         </div>
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label>Anamnese</Label>
-            <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs h-7" onClick={() => setShowAiTranscribe(!showAiTranscribe)}>
-              <Mic className="h-3 w-3" />
-              {showAiTranscribe ? "Fechar Ditado" : "Ditar com IA"}
-            </Button>
-          </div>
-          {showAiTranscribe && (
-            <AiTranscribe
-              onTranscriptReady={(text) => {
-                setBase((b) => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis + "\n" + text : text }));
-                setLastTranscript(text);
-                setShowAiTranscribe(false);
-              }}
-              className="border-dashed mb-2"
-            />
-          )}
-          {lastTranscript && (
-            <div className="flex items-center gap-2 p-2 rounded-md border border-dashed border-primary/40 bg-primary/5">
-              <Sparkles className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs text-muted-foreground flex-1">Transcrição recebida. Preencher campos SOAP automaticamente?</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                disabled={generateSoapMutation.isPending}
-                onClick={() => generateSoapMutation.mutate(lastTranscript)}
-              >
-                {generateSoapMutation.isPending ? (
-                  <><Spinner size="sm" /> Gerando...</>
-                ) : (
-                  <><Sparkles className="h-3 w-3" /> Auto-SOAP</>
-                )}
-              </Button>
-              <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setLastTranscript(null)}>
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
+          <Label>Anamnese</Label>
           <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
         </div>
         <div className="space-y-1.5">
