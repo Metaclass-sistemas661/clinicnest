@@ -190,7 +190,7 @@ export default function Procedimentos() {
       actions={
         isAdmin ? (
           <>
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="procedures-new">
+            <Button variant="gradient" onClick={() => handleOpenDialog()} data-tour="procedures-new">
               <Plus className="mr-2 h-4 w-4" />
               Novo Procedimento
             </Button>
@@ -295,7 +295,7 @@ export default function Procedimentos() {
               title="Nenhum procedimento cadastrado"
               description={isAdmin ? "Cadastre os procedimentos e consultas oferecidos pela clínica para usar na agenda." : "Ainda não há procedimentos cadastrados."}
               action={isAdmin ? (
-                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="procedures-new-empty">
+                <Button variant="gradient" onClick={() => handleOpenDialog()} data-tour="procedures-new-empty">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Procedimento
                 </Button>

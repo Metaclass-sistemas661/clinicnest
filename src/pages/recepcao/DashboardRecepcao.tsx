@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -327,7 +328,7 @@ export default function DashboardRecepcao() {
             >
               <Volume2 className={`h-4 w-4 ${queueSoundEnabled ? "text-emerald-600" : "text-muted-foreground"}`} />
             </Button>
-            <CallNextButton className="gradient-primary text-primary-foreground" />
+            <CallNextButton variant="gradient" />
           </div>
         </div>
 
@@ -484,7 +485,7 @@ export default function DashboardRecepcao() {
                                 onClick={() => handleCheckin(apt.id, apt.patient?.name || "Paciente")}
                               >
                                 {checkinLoading === apt.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <Spinner size="sm" />
                                 ) : (
                                   <LogIn className="h-3.5 w-3.5" />
                                 )}

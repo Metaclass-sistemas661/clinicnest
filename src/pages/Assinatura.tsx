@@ -286,7 +286,7 @@ export default function Assinatura() {
             <div className="flex flex-wrap gap-2">
               {subscribed ? (
                 <>
-                  <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Ativo</Badge>
+                  <Badge className="bg-success/10 text-success border-success/20">Ativo</Badge>
                   <Button variant="outline" size="sm" onClick={handleManageSubscription} data-tour="subscription-manage">
                     <Settings className="mr-2 h-4 w-4" />
                     Gerenciar

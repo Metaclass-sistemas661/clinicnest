@@ -304,7 +304,7 @@ export default function Campanhas() {
       subtitle="Gerencie campanhas de email marketing"
       actions={
         <Button
-          className="gradient-primary text-primary-foreground"
+          variant="gradient"
           onClick={() => setIsDialogOpen(true)}
           data-tour="campaigns-new"
         >
@@ -326,7 +326,7 @@ export default function Campanhas() {
           description="Crie sua primeira campanha de email para engajar seus pacientes."
           action={
             <Button
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
               onClick={() => setIsDialogOpen(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -593,7 +593,7 @@ export default function Campanhas() {
 
               {/* Send button */}
               <Button
-                className="w-full gradient-primary text-primary-foreground"
+                variant="gradient" className="w-full"
                 onClick={runBatch}
                 disabled={isSending || (sendMode === "selected" && selectedIds.size === 0)}
               >

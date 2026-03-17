@@ -611,7 +611,7 @@ export default function RepassesSalarios() {
             <Button
               type="button"
               onClick={handlePaySalary}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             >
               Confirmar Pagamento
             </Button>

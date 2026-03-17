@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,7 +119,7 @@ function fmtDate(s: string) {
 }
 
 function StatusBadge({ status }: { status: "connected" | "disconnected" | "not_configured" }) {
-  if (status === "connected")     return <Badge className="bg-green-500/10 text-green-600 border-green-200">● Conectado</Badge>;
+  if (status === "connected")     return <Badge className="bg-success/10 text-success border-success/20">● Conectado</Badge>;
   if (status === "disconnected")  return <Badge variant="secondary">● Desconectado</Badge>;
   return <Badge variant="outline" className="text-muted-foreground">Não configurado</Badge>;
 }
@@ -234,7 +235,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex justify-center py-12"><Spinner className="text-muted-foreground" /></div>;
   }
 
   return (
@@ -516,7 +517,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-              <Button onClick={handleSave} disabled={isSaving} className="gradient-primary text-primary-foreground gap-2">
+              <Button onClick={handleSave} disabled={isSaving} variant="gradient" className="gap-2">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Registrar
               </Button>
@@ -527,7 +528,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
 
       {/* Webhooks list */}
       {isLoading ? (
-        <Card><CardContent className="flex h-32 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></CardContent></Card>
+        <Card><CardContent className="flex h-32 items-center justify-center"><Spinner size="sm" className="text-muted-foreground" /></CardContent></Card>
       ) : webhooks.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -561,7 +562,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
                         onCheckedChange={(v) => handleToggle(wh.id, v)}
                       />
                       <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => handleTest(wh)} disabled={isTesting === wh.id}>
-                        {isTesting === wh.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                        {isTesting === wh.id ? <Spinner size="sm" /> : <Send className="h-3 w-3" />}
                         Testar
                       </Button>
                       <Button
@@ -806,7 +807,7 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
 
         {/* List */}
         {isLoading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-6"><Spinner size="sm" className="text-muted-foreground" /></div>
         ) : apiKeys.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">Nenhuma chave gerada ainda.</p>
         ) : (
@@ -986,7 +987,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex justify-center py-12"><Spinner className="text-muted-foreground" /></div>;
   }
 
   const isConfigured = Boolean(gateway && apiKey);
@@ -1220,7 +1221,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex justify-center py-12"><Spinner className="text-muted-foreground" /></div>;
   }
 
   const isConfigured = Boolean(apiKey);
@@ -1629,7 +1630,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return <div className="flex justify-center py-12"><Spinner className="text-muted-foreground" /></div>;
   }
 
   const stateConfig = {
@@ -1690,7 +1691,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
                 disabled={isActioning}
               >
                 {isActioning ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Spinner size="sm" />
                 ) : (
                   <Wifi className="h-5 w-5" />
                 )}
@@ -1726,7 +1727,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
                 </div>
               ) : (
                 <div className="inline-flex items-center justify-center w-64 h-64 bg-muted rounded-2xl">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Spinner size="lg" className="text-muted-foreground" />
                 </div>
               )}
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -1908,7 +1909,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function Integracoes() {
+export default function Integracoes({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useAuth();
   const [tab, setTab] = useState("overview");
   const tenantId = profile?.tenant_id ?? "";
@@ -2008,114 +2009,120 @@ export default function Integracoes() {
     },
   ];
 
+  const content = (
+    <div className="space-y-6 pb-10">
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex flex-wrap">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>
+          <TabsTrigger value="pagamentos" className="text-xs sm:text-sm">Pagamentos</TabsTrigger>
+          <TabsTrigger value="nfse" className="text-xs sm:text-sm">NFS-e</TabsTrigger>
+          <TabsTrigger value="google" className="text-xs sm:text-sm">Google</TabsTrigger>
+          <TabsTrigger value="webhooks" className="gap-1.5 text-xs sm:text-sm">
+            Webhooks
+            {webhookCount != null && webhookCount > 0 && (
+              <Badge className="h-4 w-4 p-0 text-[10px] flex items-center justify-center">{webhookCount}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="api" className="text-xs sm:text-sm">API & Zapier</TabsTrigger>
+          <TabsTrigger value="maquininha" className="text-xs sm:text-sm">Maquininha</TabsTrigger>
+          <TabsTrigger value="rnds" className="text-xs sm:text-sm">RNDS</TabsTrigger>
+          <TabsTrigger value="hl7" className="text-xs sm:text-sm">HL7</TabsTrigger>
+        </TabsList>
+
+        {/* ── Overview ── */}
+        <TabsContent value="overview" className="mt-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {overviewCards.map((card) => (
+              <IntegrationCard
+                key={card.title}
+                icon={card.icon}
+                title={card.title}
+                description={card.description}
+                status={card.status}
+                onClick={() => setTab(card.tab)}
+                color={card.color}
+              />
+            ))}
+          </div>
+
+          {/* Integration tips */}
+          <Card className="mt-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" /> Como as integrações funcionam
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-3 text-sm">
+                {[
+                  { title: "Webhooks", desc: "Eventos em tempo real enviados para seus sistemas quando algo acontece no ClinicNest." },
+                  { title: "API Keys", desc: "Acesse dados do ClinicNest de forma programática via endpoints REST autenticados." },
+                  { title: "Zapier/Make", desc: "Conecte sem código a 5.000+ apps usando o módulo de Webhooks de cada plataforma." },
+                ].map((item) => (
+                  <div key={item.title} className="space-y-1">
+                    <p className="font-semibold text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Google Calendar ── */}
+        <TabsContent value="google" className="mt-6">
+          {tenantId && <TabGoogleCalendar tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── Pagamentos ── */}
+        <TabsContent value="pagamentos" className="mt-6">
+          {tenantId && <TabPaymentGateway tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── NFS-e ── */}
+        <TabsContent value="nfse" className="mt-6">
+          {tenantId && <NFSeConfig tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── Webhooks ── */}
+        <TabsContent value="webhooks" className="mt-6">
+          {tenantId && <TabWebhooks tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── API & Zapier ── */}
+        <TabsContent value="api" className="mt-6">
+          {tenantId && <TabApiZapier tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── Maquininha Stone ── */}
+        <TabsContent value="maquininha" className="mt-6">
+          {tenantId && <TabMaquininha tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── WhatsApp ── */}
+        <TabsContent value="whatsapp" className="mt-6">
+          {tenantId && <TabWhatsApp tenantId={tenantId} />}
+        </TabsContent>
+
+        {/* ── RNDS (eSUS) ── */}
+        <TabsContent value="rnds" className="mt-6">
+          {tenantId && <RNDSConfigTab />}
+        </TabsContent>
+
+        {/* ── HL7 (Laboratórios) ── */}
+        <TabsContent value="hl7" className="mt-6">
+          {tenantId && <HL7ConfigTab />}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+
+  if (embedded) return content;
+
   return (
     <MainLayout title="Integrações" subtitle="Conecte o ClinicNest a ferramentas externas">
-      <div className="space-y-6 pb-10">
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:inline-flex flex-wrap">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-            <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">WhatsApp</TabsTrigger>
-            <TabsTrigger value="pagamentos" className="text-xs sm:text-sm">Pagamentos</TabsTrigger>
-            <TabsTrigger value="nfse" className="text-xs sm:text-sm">NFS-e</TabsTrigger>
-            <TabsTrigger value="google" className="text-xs sm:text-sm">Google</TabsTrigger>
-            <TabsTrigger value="webhooks" className="gap-1.5 text-xs sm:text-sm">
-              Webhooks
-              {webhookCount != null && webhookCount > 0 && (
-                <Badge className="h-4 w-4 p-0 text-[10px] flex items-center justify-center">{webhookCount}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="api" className="text-xs sm:text-sm">API & Zapier</TabsTrigger>
-            <TabsTrigger value="maquininha" className="text-xs sm:text-sm">Maquininha</TabsTrigger>
-            <TabsTrigger value="rnds" className="text-xs sm:text-sm">RNDS</TabsTrigger>
-            <TabsTrigger value="hl7" className="text-xs sm:text-sm">HL7</TabsTrigger>
-          </TabsList>
-
-          {/* ── Overview ── */}
-          <TabsContent value="overview" className="mt-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {overviewCards.map((card) => (
-                <IntegrationCard
-                  key={card.title}
-                  icon={card.icon}
-                  title={card.title}
-                  description={card.description}
-                  status={card.status}
-                  onClick={() => setTab(card.tab)}
-                  color={card.color}
-                />
-              ))}
-            </div>
-
-            {/* Integration tips */}
-            <Card className="mt-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4" /> Como as integrações funcionam
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-3 text-sm">
-                  {[
-                    { title: "Webhooks", desc: "Eventos em tempo real enviados para seus sistemas quando algo acontece no ClinicNest." },
-                    { title: "API Keys", desc: "Acesse dados do ClinicNest de forma programática via endpoints REST autenticados." },
-                    { title: "Zapier/Make", desc: "Conecte sem código a 5.000+ apps usando o módulo de Webhooks de cada plataforma." },
-                  ].map((item) => (
-                    <div key={item.title} className="space-y-1">
-                      <p className="font-semibold text-foreground">{item.title}</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ── Google Calendar ── */}
-          <TabsContent value="google" className="mt-6">
-            {tenantId && <TabGoogleCalendar tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── Pagamentos ── */}
-          <TabsContent value="pagamentos" className="mt-6">
-            {tenantId && <TabPaymentGateway tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── NFS-e ── */}
-          <TabsContent value="nfse" className="mt-6">
-            {tenantId && <NFSeConfig tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── Webhooks ── */}
-          <TabsContent value="webhooks" className="mt-6">
-            {tenantId && <TabWebhooks tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── API & Zapier ── */}
-          <TabsContent value="api" className="mt-6">
-            {tenantId && <TabApiZapier tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── Maquininha Stone ── */}
-          <TabsContent value="maquininha" className="mt-6">
-            {tenantId && <TabMaquininha tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── WhatsApp ── */}
-          <TabsContent value="whatsapp" className="mt-6">
-            {tenantId && <TabWhatsApp tenantId={tenantId} />}
-          </TabsContent>
-
-          {/* ── RNDS (eSUS) ── */}
-          <TabsContent value="rnds" className="mt-6">
-            {tenantId && <RNDSConfigTab />}
-          </TabsContent>
-
-          {/* ── HL7 (Laboratórios) ── */}
-          <TabsContent value="hl7" className="mt-6">
-            {tenantId && <HL7ConfigTab />}
-          </TabsContent>
-        </Tabs>
-      </div>
+      {content}
     </MainLayout>
   );
 }

@@ -60,7 +60,7 @@ export const FinanceiroTransactionsTab = memo(function FinanceiroTransactionsTab
             description="Registre uma entrada ou saída para acompanhar o saldo e o fluxo de caixa."
             action={
               onNewTransaction ? (
-                <Button className="gradient-primary text-primary-foreground" onClick={onNewTransaction}>
+                <Button variant="gradient" onClick={onNewTransaction}>
                   <Plus className="mr-2 h-4 w-4" />
                   Nova transação
                 </Button>

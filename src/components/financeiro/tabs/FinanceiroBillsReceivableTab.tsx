@@ -345,7 +345,7 @@ export function FinanceiroBillsReceivableTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <Button onClick={openCreate} className="gradient-primary gap-2">
+        <Button onClick={openCreate} variant="gradient" className="gap-2">
           <Plus className="h-4 w-4" />Nova Conta
         </Button>
       </div>
@@ -440,7 +440,7 @@ export function FinanceiroBillsReceivableTab() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary">
+              <Button type="submit" disabled={isSaving} variant="gradient">
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}{editingBill ? "Salvar" : "Criar Conta"}
               </Button>
             </DialogFooter>
@@ -474,7 +474,7 @@ export function FinanceiroBillsReceivableTab() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setReceivingBill(null)}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary">
+                <Button type="submit" disabled={isSaving} variant="gradient">
                   {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Confirmar Recebimento
                 </Button>
               </DialogFooter>
@@ -514,7 +514,7 @@ export function FinanceiroBillsReceivableTab() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => { setPixBill(null); setPixData(null); }}>Cancelar</Button>
-                  <Button className="gradient-primary gap-2" disabled={isPixLoading || !pixCustomerName.trim()} onClick={handleCreatePixCharge}>
+                  <Button variant="gradient" className="gap-2" disabled={isPixLoading || !pixCustomerName.trim()} onClick={handleCreatePixCharge}>
                     {isPixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}Gerar QR Code PIX
                   </Button>
                 </DialogFooter>

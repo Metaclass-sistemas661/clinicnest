@@ -205,7 +205,7 @@ export default function ListaEspera() {
       title="Lista de Espera"
       subtitle={`${waitingCount} paciente(s) aguardando vaga`}
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+        <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />Adicionar à Lista
         </Button>
       }
@@ -238,7 +238,7 @@ export default function ListaEspera() {
           title="Lista de espera vazia"
           description="Adicione pacientes que aguardam vaga para atendimento."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />Adicionar
             </Button>
           }

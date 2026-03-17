@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ export default function PlanosTratamento() {
         </div>
       </CardContent></Card>
 
-      {isLoading ? <Card><CardContent className="py-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></CardContent></Card>
+      {isLoading ? <Card><CardContent className="py-8 flex justify-center"><Spinner /></CardContent></Card>
       : !selectedPatient ? <Card><CardContent className="py-12 text-center"><ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" /><h3 className="text-lg font-medium">Selecione um paciente</h3></CardContent></Card>
       : plans.length === 0 ? <Card><CardContent className="py-12 text-center"><ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" /><h3 className="text-lg font-medium mb-4">Nenhum plano encontrado</h3><Button onClick={() => setIsNewPlanOpen(true)}><Plus className="h-4 w-4 mr-2" />Criar Plano</Button></CardContent></Card>
       : <div className="grid gap-4">{plans.map(plan => {

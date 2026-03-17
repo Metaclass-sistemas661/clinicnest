@@ -373,7 +373,7 @@ export default function TermosConsentimento() {
             <span className="text-sm text-muted-foreground">{templates.length} termo(s) cadastrado(s)</span>
           </div>
           {isAdmin && (
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+            <Button variant="gradient" onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Termo
             </Button>
@@ -394,7 +394,7 @@ export default function TermosConsentimento() {
             description="Crie termos de consentimento para que seus pacientes assinem ao acessar o portal."
             action={
               isAdmin ? (
-                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()}>
+                <Button variant="gradient" onClick={() => handleOpenDialog()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Criar Primeiro Termo
                 </Button>
@@ -771,7 +771,7 @@ export default function TermosConsentimento() {
 
             <DialogFooter className="mt-4 pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+              <Button type="submit" disabled={isSaving} variant="gradient">
                 {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingTemplate ? "Atualizar Termo" : "Criar Termo"}
               </Button>
             </DialogFooter>

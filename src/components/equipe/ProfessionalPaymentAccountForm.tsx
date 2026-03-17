@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * Professional Payment Account Configuration
  * UI para configurar conta de recebimento do profissional
@@ -283,7 +284,7 @@ export function ProfessionalPaymentAccountForm({
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Spinner className="text-muted-foreground" />
           </div>
         ) : !gateway ? (
           <div className="py-8 text-center space-y-4">
@@ -370,7 +371,7 @@ export function ProfessionalPaymentAccountForm({
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex-1 gradient-primary text-primary-foreground"
+                variant="gradient" className="flex-1"
               >
                 {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Salvar

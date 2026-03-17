@@ -216,7 +216,7 @@ export default function Ajuda() {
           <Button
             size="sm"
             onClick={() => navigate("/agenda")}
-            className="gradient-primary text-primary-foreground"
+            variant="gradient"
           >
             <PlayCircle className="h-4 w-4 mr-2" />
             Ir para agenda

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
@@ -173,7 +174,7 @@ export function RbacWizard({ open, onOpenChange, onComplete }: RbacWizardProps) 
             </p>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : nonAdminTeam.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -315,7 +316,7 @@ export function RbacWizard({ open, onOpenChange, onComplete }: RbacWizardProps) 
               <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleSave} disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button onClick={handleSave} disabled={isSaving} variant="gradient">
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

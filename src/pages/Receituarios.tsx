@@ -563,7 +563,7 @@ export default function Receituarios() {
               Prescrever via Memed
             </Button>
           )}
-          <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+          <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Receita
           </Button>
@@ -593,7 +593,7 @@ export default function Receituarios() {
           title="Nenhum receituário encontrado"
           description="Emita receitas médicas para seus pacientes."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />Nova Receita
             </Button>
           }

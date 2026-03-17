@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -61,7 +62,7 @@ interface Profile {
   professional_type: string;
 }
 
-export default function RelatorioCaptacao() {
+export default function RelatorioCaptacao({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<ReferralData[]>([]);
@@ -229,17 +230,8 @@ export default function RelatorioCaptacao() {
     return labels[role] || role;
   };
 
-  return (
-    <MainLayout
-      title="Captação e Indicações"
-      subtitle="Acompanhe quem está trazendo pacientes para a clínica"
-      actions={
-        <Button variant="outline" onClick={handleExportCSV} disabled={data.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
-          Exportar CSV
-        </Button>
-      }
-    >
+  const content = (
+    <>
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <Card>
@@ -348,7 +340,7 @@ export default function RelatorioCaptacao() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : ranking.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
@@ -405,7 +397,7 @@ export default function RelatorioCaptacao() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : data.length === 0 ? (
               <EmptyState
@@ -468,6 +460,23 @@ export default function RelatorioCaptacao() {
           </CardContent>
         </Card>
       </div>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <MainLayout
+      title="Captação e Indicações"
+      subtitle="Acompanhe quem está trazendo pacientes para a clínica"
+      actions={
+        <Button variant="outline" onClick={handleExportCSV} disabled={data.length === 0}>
+          <Download className="mr-2 h-4 w-4" />
+          Exportar CSV
+        </Button>
+      }
+    >
+      {content}
     </MainLayout>
   );
 }

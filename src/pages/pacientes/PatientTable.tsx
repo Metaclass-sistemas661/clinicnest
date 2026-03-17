@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,9 +11,12 @@ import {
 import {
   Users, Plus, Phone, Mail, Pencil, Package, KeyRound,
   ShieldCheck, FileSignature, AlertTriangle, MessageCircle,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { ContractStatusBadge } from "@/components/consent/ContractStatusBadge";
 import type { Patient } from "@/types/database";
+
+const PAGE_SIZE = 50;
 
 interface Props {
   patients: Patient[];
@@ -33,6 +37,17 @@ export function PatientTable({
   onEdit, onNewPatient, onOpenPackage, onOpenContracts, onSendLink, onOpenDrawer,
 }: Props) {
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.ceil(patients.length / PAGE_SIZE);
+
+  // Reset page when patients list changes (search, filter)
+  useEffect(() => { setPage(0); }, [patients.length]);
+
+  const paginatedPatients = useMemo(() => {
+    const safeP = Math.min(page, Math.max(0, totalPages - 1));
+    return patients.slice(safeP * PAGE_SIZE, (safeP + 1) * PAGE_SIZE);
+  }, [patients, page, totalPages]);
 
   return (
     <Card>
@@ -56,7 +71,7 @@ export function PatientTable({
             description={searchQuery ? "Tente ajustar os termos da busca." : "Cadastre seu primeiro paciente para começar."}
             action={
               !searchQuery && (
-                <Button className="gradient-primary text-primary-foreground" onClick={onNewPatient} data-tour="patients-new-empty">
+                <Button variant="gradient" onClick={onNewPatient} data-tour="patients-new-empty">
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Paciente
                 </Button>
@@ -67,7 +82,7 @@ export function PatientTable({
           <>
             {/* Mobile: Card Layout */}
             <div className="block md:hidden space-y-3">
-              {patients.map((patient) => (
+              {paginatedPatients.map((patient) => (
                 <div key={patient.id} className="rounded-lg border p-4 space-y-2 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -144,7 +159,7 @@ export function PatientTable({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {patients.map((patient) => (
+                  {paginatedPatients.map((patient) => (
                     <TableRow key={patient.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -191,6 +206,24 @@ export function PatientTable({
                 </TableBody>
               </Table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4 mt-4">
+                <p className="text-sm text-muted-foreground">
+                  {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, patients.length)} de {patients.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">Página {page + 1} de {totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>

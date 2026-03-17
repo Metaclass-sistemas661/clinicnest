@@ -175,7 +175,7 @@ export function CommissionPreview({
           {isLoading ? (
             <div className="flex items-center gap-2 text-sm">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <span>Carregando...</span>
+              <span className="flex items-center gap-2"><Spinner size="sm" />Carregando...</span>
             </div>
           ) : rule ? (
             <div className="space-y-2">

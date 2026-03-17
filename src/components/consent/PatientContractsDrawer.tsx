@@ -190,14 +190,14 @@ export function PatientContractsDrawer({
         {/* Quick actions */}
         <div className="flex gap-2 mb-4">
           {onGenerateContracts && (
-            <Button size="sm" className="flex-1 gradient-primary text-primary-foreground" onClick={onGenerateContracts}>
+            <Button size="sm" variant="gradient" className="flex-1" onClick={onGenerateContracts}>
               <FileSignature className="mr-2 h-4 w-4" />
               Gerar Contrato
             </Button>
           )}
           {onSendLink && (
             <Button size="sm" variant="outline" className="flex-1" onClick={onSendLink}>
-              <MessageCircle className="mr-2 h-4 w-4 text-green-600" />
+              <MessageCircle className="mr-2 h-4 w-4 text-success" />
               Enviar Link
             </Button>
           )}
@@ -219,12 +219,12 @@ export function PatientContractsDrawer({
             <div className="flex gap-2">
               {signedCount > 0 && (
                 <Badge variant="secondary" className="gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <CheckCircle2 className="h-3 w-3 text-success" />
                   {signedCount} assinado{signedCount !== 1 ? "s" : ""}
                 </Badge>
               )}
               {pendingCount > 0 && (
-                <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400">
+                <Badge variant="outline" className="gap-1 border-warning/30 text-warning">
                   <AlertCircle className="h-3 w-3" />
                   {pendingCount} pendente{pendingCount !== 1 ? "s" : ""}
                 </Badge>
@@ -240,7 +240,7 @@ export function PatientContractsDrawer({
             {/* Pending section */}
             {pendingCount > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-warning flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
                   Pendentes ({pendingCount})
                 </h4>
@@ -257,7 +257,7 @@ export function PatientContractsDrawer({
                       <p className="text-[11px] text-muted-foreground">Aguardando assinatura do paciente</p>
                     </div>
                     {t.is_required && (
-                      <Badge variant="outline" className="text-[10px] border-red-300 text-red-600 shrink-0">
+                      <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive shrink-0">
                         Obrigatório
                       </Badge>
                     )}
@@ -278,8 +278,8 @@ export function PatientContractsDrawer({
                     key={c.id}
                     className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900 flex-shrink-0">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10 flex-shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{c.template_title}</p>
@@ -288,7 +288,7 @@ export function PatientContractsDrawer({
                           <Clock className="h-3 w-3" />
                           {format(new Date(c.signed_at), "dd/MM/yy HH:mm", { locale: ptBR })}
                         </span>
-                        <span className="flex items-center gap-1 text-green-600">
+                        <span className="flex items-center gap-1 text-success">
                           {getMethodIcon(c.signature_method)}
                           {getMethodLabel(c.signature_method)}
                         </span>

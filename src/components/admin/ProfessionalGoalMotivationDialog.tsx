@@ -121,7 +121,7 @@ export function ProfessionalGoalMotivationDialog() {
           )}
 
           <Button
-            className="w-full gradient-primary text-primary-foreground shrink-0"
+            variant="gradient" className="w-full shrink-0"
             onClick={() => closeMotivation?.()}
           >
             Continuar

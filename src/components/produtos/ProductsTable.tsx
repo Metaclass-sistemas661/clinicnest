@@ -84,7 +84,7 @@ export function ProductsTable({
             }
             action={
               isAdmin ? (
-                <Button className="gradient-primary text-primary-foreground" onClick={onAddProduct} data-tour="products-add-empty">
+                <Button variant="gradient" onClick={onAddProduct} data-tour="products-add-empty">
                   <Plus className="mr-2 h-4 w-4" />
                   Cadastrar produto
                 </Button>

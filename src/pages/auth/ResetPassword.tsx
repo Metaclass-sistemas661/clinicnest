@@ -245,7 +245,8 @@ export default function ResetPassword() {
             <CardFooter className="flex flex-col gap-5 pt-2">
               <Button
                 type="submit"
-                className="h-12 w-full rounded-xl gradient-primary text-white font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
+                variant="gradient"
+                className="h-12 w-full rounded-xl font-semibold shadow-glow hover:shadow-xl hover:scale-[1.02] transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (

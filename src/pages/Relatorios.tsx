@@ -1,4 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +44,10 @@ import {
   ArrowDownRight,
   Star,
   Sparkles,
+  FileBarChart2,
+  HandCoins,
+  Megaphone,
+  FileSpreadsheet,
 } from "lucide-react";
 import { format, subDays, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -50,6 +56,11 @@ import { AiRevenueIntelligence } from "@/components/ai/AiRevenueIntelligence";
 import { AiBenchmarking } from "@/components/ai/AiBenchmarking";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
 import { TabProdutividade, TabPacientes, TabNoShow, TabSatisfacao } from "@/components/relatorios";
+
+const LazyRelatorioFinanceiro = lazy(() => import("@/pages/RelatorioFinanceiro"));
+const LazyRepassesRelatorios = lazy(() => import("@/pages/RepassesRelatorios"));
+const LazyRelatorioCaptacao = lazy(() => import("@/pages/RelatorioCaptacao"));
+const LazyRelatoriosCustomizaveis = lazy(() => import("@/pages/RelatoriosCustomizaveis"));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -382,7 +393,7 @@ function TabVisaoGeral({ appts, prevAppts = [], period, isLoading }: { appts: Ap
         <CardContent>
           {isLoading ? (
             <div className="flex h-64 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Spinner className="text-muted-foreground" />
             </div>
           ) : chartData.length === 0 ? (
             <div className="flex h-64 items-center justify-center text-muted-foreground text-sm">
@@ -551,7 +562,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
       {loaded && isFetching && (
         <Card>
           <CardContent className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner size="sm" />
             <span>Identificando pacientes inativos…</span>
           </CardContent>
         </Card>
@@ -645,7 +656,7 @@ function TabServicos({ appts, isLoading }: { appts: ApptRow[]; isLoading: boolea
     return (
       <Card>
         <CardContent className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Spinner size="sm" />
         </CardContent>
       </Card>
     );
@@ -726,7 +737,7 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
     return (
       <Card>
         <CardContent className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Spinner size="sm" />
         </CardContent>
       </Card>
     );
@@ -800,8 +811,21 @@ function TabProfissionais({ appts, isLoading }: { appts: ApptRow[]; isLoading: b
 
 export default function Relatorios() {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [period, setPeriod] = useState<Period>("30d");
-  const [activeTab, setActiveTab] = useState("visao-geral");
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "visao-geral");
+
+  // Sync URL → activeTab on mount / back-forward navigation
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab");
+    if (tabFromUrl && tabFromUrl !== activeTab) setActiveTab(tabFromUrl);
+  }, [searchParams]);
+
+  // Persist tab choice in URL
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value }, { replace: true });
+  }, [setSearchParams]);
 
   const { start, end } = useMemo(() => getPeriodDates(period), [period]);
   
@@ -914,12 +938,12 @@ export default function Relatorios() {
                 </button>
               ))}
             </div>
-            {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {isFetching && <Spinner size="sm" className="text-muted-foreground" />}
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:grid-cols-7 sm:inline-flex overflow-x-auto">
             <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
               <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
@@ -964,6 +988,22 @@ export default function Relatorios() {
             <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm">
               <BarChart3 className="h-3.5 w-3.5 hidden sm:block" />
               Benchmarking
+            </TabsTrigger>
+            <TabsTrigger value="financeiro" className="gap-1.5 text-xs sm:text-sm">
+              <FileBarChart2 className="h-3.5 w-3.5 hidden sm:block" />
+              DRE
+            </TabsTrigger>
+            <TabsTrigger value="comissoes" className="gap-1.5 text-xs sm:text-sm">
+              <HandCoins className="h-3.5 w-3.5 hidden sm:block" />
+              Comissões
+            </TabsTrigger>
+            <TabsTrigger value="captacao" className="gap-1.5 text-xs sm:text-sm">
+              <Megaphone className="h-3.5 w-3.5 hidden sm:block" />
+              Captação
+            </TabsTrigger>
+            <TabsTrigger value="customizaveis" className="gap-1.5 text-xs sm:text-sm">
+              <FileSpreadsheet className="h-3.5 w-3.5 hidden sm:block" />
+              Customizáveis
             </TabsTrigger>
           </TabsList>
 
@@ -1015,6 +1055,30 @@ export default function Relatorios() {
             <FeatureGate feature="benchmarking">
               <AiBenchmarking />
             </FeatureGate>
+          </TabsContent>
+
+          <TabsContent value="financeiro" className="mt-6">
+            <Suspense fallback={<Spinner size="lg" className="mx-auto mt-12 text-muted-foreground" />}>
+              <LazyRelatorioFinanceiro embedded />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="comissoes" className="mt-6">
+            <Suspense fallback={<Spinner size="lg" className="mx-auto mt-12 text-muted-foreground" />}>
+              <LazyRepassesRelatorios embedded />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="captacao" className="mt-6">
+            <Suspense fallback={<Spinner size="lg" className="mx-auto mt-12 text-muted-foreground" />}>
+              <LazyRelatorioCaptacao embedded />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="customizaveis" className="mt-6">
+            <Suspense fallback={<Spinner size="lg" className="mx-auto mt-12 text-muted-foreground" />}>
+              <LazyRelatoriosCustomizaveis embedded />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

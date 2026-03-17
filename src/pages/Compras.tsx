@@ -695,7 +695,7 @@ export default function Compras() {
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="gradient-primary text-primary-foreground w-full sm:w-auto"
+                  variant="gradient" className="w-full sm:w-auto"
                 >
                   {isSaving ? (
                     <>
@@ -901,7 +901,7 @@ export default function Compras() {
               <Button
                 type="submit"
                 disabled={isSaving}
-                className="gradient-primary text-primary-foreground"
+                variant="gradient"
               >
                 {isSaving ? (
                   <>

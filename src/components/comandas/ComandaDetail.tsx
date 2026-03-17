@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -416,7 +417,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                         onClick={handleSaveDiscount}
                         disabled={isSavingDiscount}
                       >
-                        {isSavingDiscount ? <Loader2 className="h-3 w-3 animate-spin" /> : "OK"}
+                        {isSavingDiscount ? <Spinner size="sm" /> : "OK"}
                       </Button>
                     </div>
                   ) : (
@@ -433,7 +434,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
               {/* Finalize button */}
               {isEditable && items.length > 0 && (
                 <Button
-                  className="w-full gradient-primary text-primary-foreground"
+                  variant="gradient" className="w-full"
                   onClick={handleOpenFinalize}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
@@ -507,7 +508,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
             <Button
               onClick={handleAddItem}
               disabled={isAddingItem || !selectedItemId || !itemPrice}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             >
               {isAddingItem ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adicionando...</> : "Adicionar"}
             </Button>
@@ -570,7 +571,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
             <Button
               onClick={handleFinalize}
               disabled={isFinalizing || Math.abs(paymentSum - (order?.total_amount ?? 0)) > 0.01}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             >
               {isFinalizing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Finalizando...</> : "Confirmar Pagamento"}
             </Button>

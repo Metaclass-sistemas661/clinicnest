@@ -147,7 +147,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
             <CallNextButton 
               professionalId={profile?.id}
               size="lg"
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             />
           </div>
         </CardContent>

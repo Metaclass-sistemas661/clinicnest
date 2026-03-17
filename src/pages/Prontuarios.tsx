@@ -467,7 +467,7 @@ export default function Prontuarios() {
     }
   };
 
-  const handleExportFHIR = () => {
+  const handleExportFHIR = async () => {
     if (selectedPatientId === "all") {
       toast.error("Filtre por um paciente para exportar FHIR");
       return;
@@ -475,47 +475,72 @@ export default function Prontuarios() {
     const patient = patients.find(c => c.id === selectedPatientId);
     if (!patient) return;
 
-    const patientData: PatientData = {
-      id: client.id, name: client.name, phone: client.phone, email: client.email,
-    };
-    const resources = [buildFHIRPatient(patientData)];
+    try {
+      // Exportação completa via Edge Function (inclui prescrições, atestados, exames, etc.)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Sessão expirada"); return; }
 
-    for (const rec of patientRecords) {
-      resources.push(buildFHIREncounter({
-        id: rec.id, patientId: client.id, date: rec.appointment_date,
-        status: "finished", type: rec.chief_complaint,
-        professionalName: rec.professional_name,
-        clinicName: tenant?.name,
-      }));
-      const vitalMap: Record<string, number | null> = {
-        blood_pressure_systolic: rec.blood_pressure_systolic,
-        blood_pressure_diastolic: rec.blood_pressure_diastolic,
-        heart_rate: rec.heart_rate, temperature: rec.temperature,
-        oxygen_saturation: rec.oxygen_saturation, respiratory_rate: rec.respiratory_rate,
-        weight: rec.weight_kg, height: rec.height_cm,
+      const resp = await supabase.functions.invoke("export-patient-fhir", {
+        body: { patient_id: selectedPatientId },
+      });
+
+      if (resp.error) throw resp.error;
+      const bundle = resp.data;
+
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/fhir+json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fhir-${patient.name.replace(/\s+/g, "_")}-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Bundle FHIR exportado: ${bundle.total ?? bundle.entry?.length ?? 0} recursos`);
+    } catch (err) {
+      logger.error("FHIR export via Edge Function falhou, usando fallback local", err);
+      // Fallback: exportação cliente-side com dados já carregados
+      const patientData: PatientData = {
+        id: patient.id, name: patient.name, phone: patient.phone, email: patient.email,
       };
-      for (const [key, val] of Object.entries(vitalMap)) {
-        if (val != null && VITAL_SIGNS_LOINC[key]) {
-          const loinc = VITAL_SIGNS_LOINC[key];
-          resources.push(buildFHIRObservation({
-            id: crypto.randomUUID(), patientId: client.id, encounterId: rec.id,
-            date: rec.appointment_date, code: loinc.code, display: loinc.display,
-            value: val, unit: loinc.unit,
+      const resources = [buildFHIRPatient(patientData)];
+
+      for (const rec of patientRecords) {
+        resources.push(buildFHIREncounter({
+          id: rec.id, patientId: patient.id, date: rec.appointment_date,
+          status: "finished", type: rec.chief_complaint,
+          professionalName: rec.professional_name,
+          clinicName: tenant?.name,
+        }));
+        const vitalMap: Record<string, number | null> = {
+          blood_pressure_systolic: rec.blood_pressure_systolic,
+          blood_pressure_diastolic: rec.blood_pressure_diastolic,
+          heart_rate: rec.heart_rate, temperature: rec.temperature,
+          oxygen_saturation: rec.oxygen_saturation, respiratory_rate: rec.respiratory_rate,
+          weight: rec.weight_kg, height: rec.height_cm,
+        };
+        for (const [key, val] of Object.entries(vitalMap)) {
+          if (val != null && VITAL_SIGNS_LOINC[key]) {
+            const loinc = VITAL_SIGNS_LOINC[key];
+            resources.push(buildFHIRObservation({
+              id: crypto.randomUUID(), patientId: patient.id, encounterId: rec.id,
+              date: rec.appointment_date, code: loinc.code, display: loinc.display,
+              value: val, unit: loinc.unit,
+            }));
+          }
+        }
+        if (rec.cid_code && rec.diagnosis) {
+          resources.push(buildFHIRCondition({
+            id: crypto.randomUUID(), patientId: patient.id, encounterId: rec.id,
+            code: rec.cid_code, display: rec.diagnosis, clinicalStatus: "active",
+            onsetDate: rec.appointment_date,
           }));
         }
       }
-      if (rec.cid_code && rec.diagnosis) {
-        resources.push(buildFHIRCondition({
-          id: crypto.randomUUID(), patientId: client.id, encounterId: rec.id,
-          code: rec.cid_code, display: rec.diagnosis, clinicalStatus: "active",
-          onsetDate: rec.appointment_date,
-        }));
-      }
-    }
 
-    const bundle = buildFHIRBundle(resources);
-    downloadFHIRBundle(bundle, `fhir-${client.name.replace(/\s+/g, "_")}-${new Date().toISOString().split("T")[0]}.json`);
-    toast.success(`Bundle FHIR exportado: ${resources.length} recursos`);
+      const bundle = buildFHIRBundle(resources);
+      downloadFHIRBundle(bundle, `fhir-${patient.name.replace(/\s+/g, "_")}-${new Date().toISOString().split("T")[0]}.json`);
+      toast.success(`Bundle FHIR exportado (local): ${resources.length} recursos`);
+    }
   };
 
   const handleFhirImportParse = () => {
@@ -596,7 +621,7 @@ export default function Prontuarios() {
               <FileJson className="mr-2 h-4 w-4" />Exportar FHIR
             </Button>
           )}
-          <Button className="gradient-primary text-primary-foreground" onClick={openNewProntuario}>
+          <Button variant="gradient" onClick={openNewProntuario}>
             <Plus className="mr-2 h-4 w-4" /> Novo Prontuário
           </Button>
         </div>
@@ -684,7 +709,7 @@ export default function Prontuarios() {
         <EmptyState icon={ClipboardList} title="Nenhum prontuário encontrado"
           description="Crie o primeiro prontuário clínico ou atenda uma triagem pendente."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={openNewProntuario}>
+            <Button variant="gradient" onClick={openNewProntuario}>
               <Plus className="mr-2 h-4 w-4" /> Novo Prontuário
             </Button>
           } />

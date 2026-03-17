@@ -246,7 +246,7 @@ export default function RetornosPendentes() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p>Carregando...</p>
+            <div class="flex items-center gap-2"><Spinner size="sm" /><span className="text-muted-foreground">Carregando...</span></div>
           ) : returns && returns.length > 0 ? (
             <Table>
               <TableHeader>

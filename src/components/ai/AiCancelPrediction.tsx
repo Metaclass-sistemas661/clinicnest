@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,7 @@ export function AiCancelPrediction({ appointmentId, compact, className }: Props)
         disabled={loading}
       >
         {loading ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
+          <Spinner size="sm" />
         ) : (
           <><Sparkles className="h-3 w-3" /> Risco IA</>
         )}
@@ -119,7 +120,7 @@ export function AiCancelPrediction({ appointmentId, compact, className }: Props)
             disabled={loading}
           >
             {loading ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Analisando risco...</>
+              <><Spinner size="sm" /> Analisando risco...</>
             ) : (
               <><Sparkles className="h-3.5 w-3.5" /> Analisar Risco de Cancelamento com IA</>
             )}

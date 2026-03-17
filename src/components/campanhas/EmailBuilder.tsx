@@ -648,7 +648,7 @@ export default function EmailBuilder({ defaultClinicName, onSave, onCancel, isSa
             <Button variant="outline" className="flex-1" onClick={onCancel} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button className="flex-1 gradient-primary text-primary-foreground" onClick={handleSave} disabled={isSaving}>
+            <Button variant="gradient" className="flex-1" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : "Criar Campanha"}
             </Button>
           </div>
@@ -734,7 +734,7 @@ export default function EmailBuilder({ defaultClinicName, onSave, onCancel, isSa
             <Button variant="outline" size="sm" onClick={onCancel} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button size="sm" className="gradient-primary text-primary-foreground" onClick={handleSave} disabled={isSaving}>
+            <Button size="sm" variant="gradient" onClick={handleSave} disabled={isSaving}>
               {isSaving ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</>
               ) : (

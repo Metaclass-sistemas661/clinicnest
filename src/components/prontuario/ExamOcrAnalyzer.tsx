@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -188,7 +189,7 @@ export function ExamOcrAnalyzer({ patientId }: { patientId?: string }) {
             {preview && (
               <img src={preview} alt="Preview" className="h-32 rounded-lg object-contain opacity-50" />
             )}
-            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+            <Spinner size="lg" className="text-teal-600" />
             <p className="text-sm text-muted-foreground">Analisando exame com IA...</p>
           </div>
         )}

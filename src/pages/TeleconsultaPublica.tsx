@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -227,7 +228,7 @@ export default function TeleconsultaPublica() {
               >
                 {isJoining ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Spinner size="sm" />
                     Entrando...
                   </>
                 ) : (

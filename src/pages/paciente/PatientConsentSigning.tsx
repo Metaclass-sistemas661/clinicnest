@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,7 +244,7 @@ export default function PatientConsentSigning() {
         <Card className="w-full max-w-2xl">
           <CardContent className="py-12">
             <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+              <Spinner size="lg" className="text-teal-600" />
               <p className="text-sm text-muted-foreground">Verificando termos pendentes...</p>
             </div>
           </CardContent>

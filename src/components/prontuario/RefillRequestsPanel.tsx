@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,7 +147,7 @@ export function RefillRequestsPanel() {
                     onClick={() => reviewMutation.mutate({ id: req.id, status: "approved" })}
                     disabled={reviewMutation.isPending}
                   >
-                    {reviewMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                    {reviewMutation.isPending ? <Spinner size="sm" /> : <CheckCircle className="h-3.5 w-3.5" />}
                     Aprovar
                   </Button>
                   <Button

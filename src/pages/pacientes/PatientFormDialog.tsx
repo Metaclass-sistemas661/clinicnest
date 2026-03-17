@@ -246,7 +246,7 @@ export function PatientFormDialog({ open, onOpenChange, editingPatient, tenantId
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="patients-save">
+            <Button type="submit" disabled={isSaving} variant="gradient" data-tour="patients-save">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingPatient ? "Atualizar Paciente" : "Cadastrar Paciente"}
             </Button>
           </DialogFooter>

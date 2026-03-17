@@ -183,7 +183,7 @@ export function BulkCreateGoalsDialog({
             <Button
               type="submit"
               disabled={isSaving || selectedIds.size === 0 || !targetValue}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
               data-tour="goals-bulk-submit"
             >
               {isSaving ? (

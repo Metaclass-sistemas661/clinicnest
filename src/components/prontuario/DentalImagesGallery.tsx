@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -250,7 +251,7 @@ export function DentalImagesGallery({
     return (
       <Card>
         <CardContent className="py-8 flex items-center justify-center gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner size="sm" className="text-muted-foreground" />
           <span className="text-muted-foreground">Carregando imagens...</span>
         </CardContent>
       </Card>
@@ -529,7 +530,7 @@ function ImageCard({ image, onView, onDelete, readOnly }: {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <Spinner size="sm" className="text-muted-foreground" />
           </div>
         )}
         

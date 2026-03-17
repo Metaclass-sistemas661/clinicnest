@@ -356,7 +356,7 @@ export default function NovaGuiaTISS() {
               <p className="text-2xl font-bold">R$ {valorTotal.toFixed(2)}</p>
             </div>
 
-            <Button onClick={handleGenerate} disabled={isSaving} className="w-full gradient-primary text-primary-foreground">
+            <Button onClick={handleGenerate} disabled={isSaving} variant="gradient" className="w-full">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Gerando...</> : <><Calculator className="mr-2 h-4 w-4" />Gerar Guia TISS</>}
             </Button>
           </CardContent>

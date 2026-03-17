@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -360,7 +361,7 @@ export default function PatientProfile() {
                     disabled={isSaving}
                   >
                     {isSaving ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner size="sm" />
                     ) : (
                       <Save className="h-3.5 w-3.5" />
                     )}

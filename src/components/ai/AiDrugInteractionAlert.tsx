@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +115,7 @@ export function AiDrugInteractionAlert({ prescriptions, currentMedications, alle
           disabled={loading}
         >
           {loading ? (
-            <><Loader2 className="h-3 w-3 animate-spin" /> Verificando...</>
+            <><Spinner size="sm" /> Verificando...</>
           ) : (
             <><ArrowRightLeft className="h-3 w-3" /> Verificar Interações ({prescribed.length} med.)</>
           )}

@@ -142,7 +142,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
       <Button
         type="submit"
         disabled={isSubmitting || !targetValue}
-        className="gradient-primary text-primary-foreground w-full sm:w-auto"
+        variant="gradient" className="w-full sm:w-auto"
         data-tour="my-goals-suggest-submit"
       >
         {isSubmitting ? (

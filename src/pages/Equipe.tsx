@@ -811,7 +811,7 @@ export default function Equipe() {
       subtitle="Gerencie os membros da clínica"
       actions={
         <>
-          <Button className="gradient-primary text-primary-foreground" onClick={handleOpenInviteDialog} data-tour="team-invite-open">
+          <Button variant="gradient" onClick={handleOpenInviteDialog} data-tour="team-invite-open">
             <Plus className="mr-2 h-4 w-4" />
             Cadastrar profissional
           </Button>
@@ -1047,7 +1047,7 @@ export default function Equipe() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPermOverrideOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSavePermOverride} disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button onClick={handleSavePermOverride} disabled={isSaving} variant="gradient">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : "Salvar Permissões"}
             </Button>
           </DialogFooter>
@@ -1091,7 +1091,7 @@ export default function Equipe() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCloneOpen(false)}>Cancelar</Button>
-            <Button onClick={handleClonePermissions} disabled={isSaving || !cloneTarget} className="gradient-primary text-primary-foreground">
+            <Button onClick={handleClonePermissions} disabled={isSaving || !cloneTarget} variant="gradient">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Copiando...</> : "Copiar Permissões"}
             </Button>
           </DialogFooter>
@@ -1222,7 +1222,7 @@ export default function Equipe() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResetPwOpen(false)}>Cancelar</Button>
-            <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmNewPassword} className="gradient-primary text-primary-foreground">
+            <Button onClick={handleResetPassword} disabled={isResettingPw || !newPassword || !confirmNewPassword} variant="gradient">
               {isResettingPw ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Redefinindo...</> : <><RotateCcw className="mr-2 h-4 w-4" />Redefinir Senha</>}
             </Button>
           </DialogFooter>

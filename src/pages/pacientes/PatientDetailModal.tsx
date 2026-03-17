@@ -228,7 +228,7 @@ export function PatientDetailModal({
             {/* Tab: Pacotes */}
             <TabsContent value="pacotes" className="mt-4 space-y-4">
               {isAdmin && (
-                <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => onOpenPackageDialog(patient.id)}>
+                <Button size="sm" variant="gradient" onClick={() => onOpenPackageDialog(patient.id)}>
                   <Plus className="mr-2 h-4 w-4" />Novo Pacote
                 </Button>
               )}
@@ -296,7 +296,7 @@ export function PatientDetailModal({
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                   onClick={() => { onOpenChange(false); onOpenContracts(patient); }}
                 >
                   <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos

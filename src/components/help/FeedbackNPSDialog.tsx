@@ -174,7 +174,7 @@ export function FeedbackNPSDialog() {
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="gradient-primary text-primary-foreground"
+            variant="gradient"
           >
             {isSubmitting ? (
               <>

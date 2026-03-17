@@ -778,19 +778,17 @@ export default function Agenda() {
         <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center sm:justify-end">
           <div className="flex items-center rounded-lg border border-border bg-card text-foreground">
             <Button
-              variant={viewMode === "day" ? "default" : "ghost"}
+              variant={viewMode === "day" ? "gradient" : "ghost"}
               size="sm"
               onClick={() => setViewMode("day")}
-              className={viewMode === "day" ? "gradient-primary text-primary-foreground" : ""}
               data-tour="agenda-view-day"
             >
               Dia
             </Button>
             <Button
-              variant={viewMode === "week" ? "default" : "ghost"}
+              variant={viewMode === "week" ? "gradient" : "ghost"}
               size="sm"
               onClick={() => setViewMode("week")}
-              className={viewMode === "week" ? "gradient-primary text-primary-foreground" : ""}
               data-tour="agenda-view-week"
             >
               Semana
@@ -802,7 +800,7 @@ export default function Agenda() {
                         variant="outline"
                         size="sm"
                       />
-                      <Button className="gradient-primary text-primary-foreground text-sm" onClick={() => setIsDialogOpen(true)} data-tour="agenda-new-appointment">
+                      <Button variant="gradient" className="text-sm" onClick={() => setIsDialogOpen(true)} data-tour="agenda-new-appointment">
                 <Plus className="mr-1 md:mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Novo agendamento</span>
                 <span className="sm:hidden">Novo</span>
@@ -1080,7 +1078,7 @@ export default function Agenda() {
             <Button type="button" variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
               Voltar
             </Button>
-            <Button type="button" className="gradient-primary text-primary-foreground" onClick={confirmCancelAppointment}>
+            <Button type="button" variant="gradient" onClick={confirmCancelAppointment}>
               Confirmar cancelamento
             </Button>
           </DialogFooter>
@@ -1237,7 +1235,7 @@ export default function Agenda() {
                     action={
                       <div className="flex flex-wrap items-center justify-center gap-2">
                         <Button
-                          className="gradient-primary text-primary-foreground"
+                          variant="gradient"
                           onClick={() => setIsDialogOpen(true)}
                           data-tour="agenda-empty-new-appointment"
                         >

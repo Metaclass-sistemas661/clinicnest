@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -557,7 +558,7 @@ export default function PatientFinanceiro() {
                                   title="Gerar 2ª via do boleto"
                                 >
                                   {isGeneratingBoleto ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <Spinner size="sm" />
                                   ) : (
                                     <Barcode className="h-3.5 w-3.5" />
                                   )}
@@ -680,7 +681,7 @@ export default function PatientFinanceiro() {
                   disabled={isGeneratingPayment}
                 >
                   {isGeneratingPayment ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Spinner />
                   ) : (
                     <QrCode className="h-6 w-6 text-teal-600" />
                   )}
@@ -697,7 +698,7 @@ export default function PatientFinanceiro() {
                   disabled={isGeneratingPayment || isGeneratingBoleto}
                 >
                   {isGeneratingBoleto ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Spinner />
                   ) : (
                     <Barcode className="h-6 w-6 text-orange-600" />
                   )}
@@ -714,7 +715,7 @@ export default function PatientFinanceiro() {
                   disabled={isGeneratingPayment}
                 >
                   {isGeneratingPayment ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <Spinner />
                   ) : (
                     <CreditCard className="h-6 w-6 text-blue-600" />
                   )}

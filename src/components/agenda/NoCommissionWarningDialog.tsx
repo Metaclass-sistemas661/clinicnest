@@ -38,7 +38,7 @@ export function NoCommissionWarningDialog({
           você poderá acompanhar os valores na aba Minhas Comissões.
         </p>
         <Button
-          className="w-full gradient-primary text-primary-foreground"
+          variant="gradient" className="w-full"
           onClick={() => onOpenChange(false)}
         >
           Entendi

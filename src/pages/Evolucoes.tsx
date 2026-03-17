@@ -664,7 +664,7 @@ export default function Evolucoes() {
           </div>
           <div className="flex gap-2">
             {canCreateSOAP && (
-              <Button onClick={openCreate} className="gradient-primary gap-2">
+              <Button onClick={openCreate} variant="gradient" className="gap-2">
                 <Stethoscope className="h-4 w-4" />Nova SOAP
               </Button>
             )}

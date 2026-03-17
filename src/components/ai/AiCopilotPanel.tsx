@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -439,7 +440,7 @@ export function AiCopilotPanel({
 
               {loading && (
                 <div className="flex items-center gap-1.5 text-muted-foreground pt-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Spinner size="sm" />
                   <span className="text-[10px]">Atualizando...</span>
                 </div>
               )}

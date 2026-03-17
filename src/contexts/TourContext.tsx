@@ -409,7 +409,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
                   <SkipForward className="h-4 w-4 mr-2" />
                   Pular
                 </Button>
-                <Button className="gradient-primary text-primary-foreground" onClick={next}>
+                <Button variant="gradient" onClick={next}>
                   {stepIndex >= steps.length - 1 ? "Concluir" : "Avançar"}
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>

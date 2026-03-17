@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -242,7 +243,7 @@ export default function NovaCampanha() {
                   <div className="max-h-64 overflow-y-auto divide-y">
                     {isLoadingPatients ? (
                       <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        <Spinner size="sm" className="text-muted-foreground" />
                       </div>
                     ) : filteredPatients.length === 0 ? (
                       <div className="py-8 text-center text-sm text-muted-foreground">Nenhum paciente encontrado</div>
@@ -311,7 +312,7 @@ export default function NovaCampanha() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSave} disabled={isSaving} className="gradient-primary text-primary-foreground">
+              <Button onClick={handleSave} disabled={isSaving} variant="gradient">
                 {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : <><Send className="mr-2 h-4 w-4" />Criar Campanha</>}
               </Button>
             )}

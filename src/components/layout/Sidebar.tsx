@@ -128,7 +128,7 @@ const navCategories: NavCategory[] = [
       { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, resource: "dashboard" },
       { title: "Recepcao", href: "/recepcao", icon: MonitorPlay, resource: "agenda" },
       { title: "Agenda", href: "/agenda", icon: Calendar, resource: "agenda" },
-      { title: "Painel TV", href: "/painel-chamada", icon: Tv, resource: "agenda" },
+      { title: "Painel TV", href: "/painel-chamada", icon: Tv, resource: "agenda", requiredFeature: "callPanel" },
       { title: "Lista de Espera", href: "/lista-espera", icon: ClockArrowUp, resource: "lista_espera", requiredFeature: "waitlist" },
       { title: "Retornos Pendentes", href: "/retornos-pendentes", icon: CalendarClock, resource: "agenda", requiredFeature: "returnReminders" },
       { title: "Disponibilidade", href: "/disponibilidade", icon: Clock, resource: "disponibilidade" },
@@ -217,7 +217,7 @@ const navCategories: NavCategory[] = [
     items: [
       { title: "Campanhas", href: "/campanhas", icon: Send, resource: "campanhas", requiredFeature: "campaigns" },
       { title: "Automações", href: "/automacoes", icon: Zap, resource: "automacoes", requiredFeature: "automations" },
-      { title: "Clínica Autônoma", href: "/clinica-autonoma", icon: Bot, resource: "configuracoes" },
+      { title: "Clínica Autônoma", href: "/clinica-autonoma", icon: Bot, resource: "configuracoes", requiredFeature: "aiAgentChat" },
     ],
   },
   {
@@ -227,19 +227,16 @@ const navCategories: NavCategory[] = [
     gradient: "from-slate-500 to-gray-500",
     items: [
       { title: "Equipe", href: "/equipe", icon: UserCog, resource: "equipe", requiredFeature: "team" },
-      { title: "Permissões", href: "/gerenciar-permissoes", icon: Shield, requiredFeature: "advancedRbac" },
       { title: "Unidades", href: "/unidades", icon: Building, resource: "configuracoes", requiredFeature: "multiUnit" },
       { title: "Gestão de Salas", href: "/gestao-salas", icon: DoorOpen, resource: "gestao_salas", requiredFeature: "rooms" },
       { title: "Procedimentos", href: "/procedimentos", icon: Stethoscope, resource: "procedimentos" },
       { title: "Especialidades", href: "/especialidades", icon: HeartPulse, resource: "especialidades", requiredFeature: "specialties" },
       { title: "Modelos Prontuário", href: "/modelos-prontuario", icon: FileCode2, resource: "modelos_prontuario", requiredFeature: "recordTemplates" },
       { title: "Templates de Termos", href: "/termos-consentimento", icon: FileSignature, resource: "contratos_termos", requiredFeature: "contracts" },
-      { title: "Integrações", href: "/integracoes", icon: Plug, resource: "integracoes", requiredFeature: "integrations" },
       { title: "API Pública", href: "/api-docs", icon: Code2, resource: "api_docs", requiredFeature: "apiAccess" },
       { title: "Compliance & LGPD", href: "/compliance", icon: ShieldCheck, resource: "auditoria", requiredFeature: "compliance" },
       { title: "SNGPC/ANVISA", href: "/sngpc", icon: Shield, resource: "auditoria", requiredFeature: "sngpc" },
       { title: "Auditoria", href: "/auditoria", icon: Shield, resource: "auditoria", requiredFeature: "audit" },
-      { title: "Retenção de Dados", href: "/retencao-dados", icon: Archive, resource: "auditoria", requiredFeature: "dataRetention" },
       { title: "Configurações", href: "/configuracoes", icon: Settings, resource: "configuracoes" },
     ],
   },
@@ -284,7 +281,6 @@ const prefetchByHref: Record<string, () => void> = {
   "/fornecedores": () => void import("@/pages/Fornecedores"),
   "/auditoria": () => void import("@/pages/Auditoria"),
   "/equipe": () => void import("@/pages/Equipe"),
-  "/gerenciar-permissoes": () => void import("@/pages/GerenciarPermissoes"),
   "/configuracoes": () => void import("@/pages/Configuracoes"),
   "/termos-consentimento": () => void import("@/pages/TermosConsentimento"),
   "/contratos-termos": () => void import("@/pages/ContratosTermos"),
@@ -295,20 +291,16 @@ const prefetchByHref: Record<string, () => void> = {
   "/meu-financeiro": () => void import("@/pages/MeuFinanceiro"),
   "/campanhas": () => void import("@/pages/Campanhas"),
   "/automacoes": () => void import("@/pages/Automacoes"),
-  "/relatorio-financeiro": () => void import("@/pages/RelatorioFinanceiro"),
   "/relatorios": () => void import("@/pages/Relatorios"),
   "/ajuda": () => void import("@/pages/Ajuda"),
   "/suporte": () => void import("@/pages/Suporte"),
-  "/integracoes": () => void import("@/pages/Integracoes"),
   "/odontograma": () => void import("@/pages/Odontograma"),
   "/evolucoes": () => void import("@/pages/Evolucoes"),
   "/gestao-salas": () => void import("@/pages/GestaoSalas"),
   "/api-docs": () => void import("@/pages/ApiDocumentation"),
   "/sngpc": () => void import("@/pages/TransmissaoSNGPC"),
-  "/relatorios-customizaveis": () => void import("@/pages/RelatoriosCustomizaveis"),
   "/compliance": () => void import("@/pages/Compliance"),
   "/dashboard-ona": () => void import("@/pages/DashboardONA"),
-  "/retencao-dados": () => void import("@/pages/RetencaoDados"),
   "/retornos-pendentes": () => void import("@/pages/RetornosPendentes"),
   "/recepcao/fila": () => void import("@/pages/recepcao/FilaAtendimento"),
   "/recepcao": () => void import("@/pages/recepcao/DashboardRecepcao"),
@@ -459,15 +451,15 @@ function CategoryGroup({
                 onMouseEnter={() => prefetchRoute(item.href)}
                 data-tour={tourKey}
                 className={cn(
-                  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                  "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:h-6 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-primary"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    ? "seamless-tab-active"
+                    : "rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
               >
                 <item.icon className={cn(
                   "h-4 w-4 shrink-0 transition-all duration-200",
-                  isActive ? "text-primary" : category.color,
+                  isActive ? "text-foreground" : category.color,
                   "group-hover:scale-110"
                 )} />
                 <span className="truncate">{item.title}</span>
@@ -638,8 +630,8 @@ function SidebarContent({
                   className={cn(
                     "flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-all",
                     isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-background text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -874,7 +866,9 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-out",
-        "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl",
+        isCollapsed
+          ? "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl"
+          : "bg-[hsl(var(--sidebar-body))]",
         isCollapsed ? "w-20" : "w-72"
       )}
     >

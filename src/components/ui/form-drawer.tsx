@@ -145,7 +145,7 @@ export function FormDrawer({
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting || submitDisabled}
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                 >
                   {isSubmitting ? (
                     <>

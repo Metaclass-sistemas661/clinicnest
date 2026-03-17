@@ -137,7 +137,7 @@ export function AdminCommissionReminderDialog() {
           <Button variant="outline" onClick={handleDepois}>
             Deixar para depois
           </Button>
-          <Button className="gradient-primary text-primary-foreground" onClick={handleSim}>
+          <Button variant="gradient" onClick={handleSim}>
             <ArrowRight className="mr-2 h-4 w-4" />
             Sim, ir para Equipe
           </Button>

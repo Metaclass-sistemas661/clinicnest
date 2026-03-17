@@ -253,6 +253,97 @@ export function buildFHIRCondition(c: ConditionData): FHIRResource {
   return resource;
 }
 
+// ─── MedicationRequest (Prescriptions) ───────────────────────────────────────
+
+export interface MedicationRequestData {
+  id: string;
+  patientId: string;
+  encounterId?: string;
+  date: string;
+  prescriptionType: string;
+  medications: string;
+  instructions?: string;
+  status: string;
+  professionalName?: string;
+  professionalCRM?: string;
+}
+
+export function buildFHIRMedicationRequest(m: MedicationRequestData): FHIRResource {
+  const statusMap: Record<string, string> = {
+    ativo: "active", expirado: "completed", cancelado: "cancelled",
+  };
+  return {
+    resourceType: "MedicationRequest",
+    id: m.id,
+    status: statusMap[m.status] ?? "unknown",
+    intent: "order",
+    category: [{
+      coding: [{ system: "http://terminology.hl7.org/CodeSystem/medicationrequest-category", code: "outpatient" }],
+    }],
+    subject: { reference: `Patient/${m.patientId}` },
+    ...(m.encounterId ? { encounter: { reference: `Encounter/${m.encounterId}` } } : {}),
+    authoredOn: m.date,
+    ...(m.professionalName ? {
+      requester: {
+        display: m.professionalName,
+        ...(m.professionalCRM ? { identifier: { system: BR_NAMING_SYSTEMS.CRM, value: m.professionalCRM } } : {}),
+      },
+    } : {}),
+    note: [
+      { text: m.medications },
+      ...(m.instructions ? [{ text: m.instructions }] : []),
+    ],
+    extension: [{
+      url: "http://clinicaflow.com/fhir/extension/prescription-type",
+      valueString: m.prescriptionType,
+    }],
+  };
+}
+
+// ─── DocumentReference (Certificates, Reports, Referrals) ────────────────────
+
+export interface DocumentReferenceData {
+  id: string;
+  patientId: string;
+  date: string;
+  type: string;
+  title: string;
+  content: string;
+  professionalName?: string;
+}
+
+export function buildFHIRDocumentReference(d: DocumentReferenceData): FHIRResource {
+  const typeCodeMap: Record<string, { code: string; display: string }> = {
+    atestado: { code: "11488-4", display: "Consultation note" },
+    declaracao_comparecimento: { code: "11488-4", display: "Consultation note" },
+    laudo: { code: "18842-5", display: "Discharge summary" },
+    relatorio: { code: "28570-0", display: "Provider-unspecified Procedure note" },
+    encaminhamento: { code: "57133-1", display: "Referral note" },
+    evolucao: { code: "11506-3", display: "Provider-unspecified Progress note" },
+  };
+  const typeInfo = typeCodeMap[d.type] ?? { code: "55188-7", display: "Patient data Document" };
+
+  return {
+    resourceType: "DocumentReference",
+    id: d.id,
+    status: "current",
+    type: {
+      coding: [{ system: "http://loinc.org", code: typeInfo.code, display: typeInfo.display }],
+      text: d.title,
+    },
+    subject: { reference: `Patient/${d.patientId}` },
+    date: d.date,
+    ...(d.professionalName ? { author: [{ display: d.professionalName }] } : {}),
+    content: [{
+      attachment: {
+        contentType: "text/plain",
+        data: typeof btoa === "function" ? btoa(unescape(encodeURIComponent(d.content))) : Buffer.from(d.content).toString("base64"),
+        title: d.title,
+      },
+    }],
+  };
+}
+
 // ─── LOINC codes for vital signs ─────────────────────────────────────────────
 
 export const VITAL_SIGNS_LOINC: Record<string, { code: string; display: string; unit: string }> = {

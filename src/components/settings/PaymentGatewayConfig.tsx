@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * Payment Gateway Configuration Component
  * UI para clínica configurar gateway de pagamento com suporte a split
@@ -224,7 +225,7 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <Spinner className="text-muted-foreground" />
       </div>
     );
   }
@@ -512,7 +513,7 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
             <Button
               onClick={handleSave}
               disabled={!config.provider || !config.apiKey || isSaving}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             >
               {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
               Salvar Configurações

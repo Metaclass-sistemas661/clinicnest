@@ -454,7 +454,7 @@ export default function Produtos() {
             Nova Categoria
           </Button>
 
-          <Button className="gradient-primary text-primary-foreground" onClick={() => setIsProductDialogOpen(true)} data-tour="products-new">
+          <Button variant="gradient" onClick={() => setIsProductDialogOpen(true)} data-tour="products-new">
             <Plus className="mr-2 h-4 w-4" />
             Novo Produto
           </Button>

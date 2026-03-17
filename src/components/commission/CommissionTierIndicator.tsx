@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -132,7 +133,7 @@ export function CommissionTierIndicator({ className, compact = false }: TierIndi
     return (
       <Card className={className}>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner size="sm" className="text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -195,7 +196,7 @@ export function CommissionTierIndicator({ className, compact = false }: TierIndi
           <TrendingUp className="h-4 w-4 text-cyan-600" />
           Faixa de Comissão
           {tierInfo.isMaxTier && (
-            <Badge variant="outline" className="ml-auto bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700">
+            <Badge variant="outline" className="ml-auto bg-warning/10 text-warning border-warning/20">
               <Award className="h-3 w-3 mr-1" />
               Faixa Máxima
             </Badge>

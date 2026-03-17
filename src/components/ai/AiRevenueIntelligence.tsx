@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,7 @@ export function AiRevenueIntelligence() {
     return (
       <Card>
         <CardContent className="py-12 flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+          <Spinner size="lg" className="text-teal-600" />
           <p className="text-sm text-muted-foreground">Analisando dados dos últimos 3 meses...</p>
         </CardContent>
       </Card>

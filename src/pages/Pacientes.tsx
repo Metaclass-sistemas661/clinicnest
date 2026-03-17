@@ -346,7 +346,7 @@ export default function Pacientes() {
       );
     }
     return (
-      <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpenDialog()} data-tour="patients-new">
+      <Button variant="gradient" onClick={() => handleOpenDialog()} data-tour="patients-new">
         <Plus className="mr-2 h-4 w-4" />Novo Paciente
       </Button>
     );
@@ -380,10 +380,10 @@ export default function Pacientes() {
         </div>
         {!isAdmin && (
           <div className="flex rounded-lg border border-border bg-card">
-            <Button variant={patientFilter === "all" ? "default" : "ghost"} size="sm" className={patientFilter === "all" ? "gradient-primary text-primary-foreground" : ""} onClick={() => setPatientFilter("all")} data-tour="patients-filter-all">
+            <Button variant={patientFilter === "all" ? "gradient" : "ghost"} size="sm" onClick={() => setPatientFilter("all")} data-tour="patients-filter-all">
               Todos
             </Button>
-            <Button variant={patientFilter === "mine" ? "default" : "ghost"} size="sm" className={patientFilter === "mine" ? "gradient-primary text-primary-foreground" : ""} onClick={() => setPatientFilter("mine")} data-tour="patients-filter-mine">
+            <Button variant={patientFilter === "mine" ? "gradient" : "ghost"} size="sm" onClick={() => setPatientFilter("mine")} data-tour="patients-filter-mine">
               Meus pacientes ({myPatientIds.size})
             </Button>
           </div>
@@ -478,7 +478,7 @@ export default function Pacientes() {
             </p>
           </div>
           <DialogFooter>
-            <Button onClick={() => setAccessCodeDialog(false)} className="gradient-primary text-primary-foreground">Entendi</Button>
+            <Button onClick={() => setAccessCodeDialog(false)} variant="gradient">Entendi</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

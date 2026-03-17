@@ -82,7 +82,7 @@ export function WelcomeModal() {
           ))}
         </div>
         <DialogFooter>
-          <Button onClick={handleClose} className="gradient-primary text-primary-foreground">
+          <Button onClick={handleClose} variant="gradient">
             Começar a usar
           </Button>
         </DialogFooter>

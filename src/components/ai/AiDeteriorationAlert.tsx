@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,7 +93,7 @@ export function AiDeteriorationAlert({ patientId, className }: AiDeteriorationAl
             className="gap-1.5 text-xs"
           >
             {analysisMutation.isPending ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Analisando...</>
+              <><Spinner size="sm" /> Analisando...</>
             ) : (
               <><ShieldCheck className="h-3.5 w-3.5" /> Analisar</>
             )}

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * AiAgentChatPanel — Embeddable chat panel for the Right Sidebar.
  * Extracted from AiAgentChat, without floating/minimized behaviour.
@@ -136,7 +137,7 @@ export function AiAgentChatPanel() {
                 </div>
                 <div className="rounded-lg bg-muted px-4 py-3 max-w-[80%]">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Spinner size="sm" />
                     Processando...
                   </div>
                 </div>

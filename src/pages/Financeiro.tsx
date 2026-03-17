@@ -306,7 +306,7 @@ export default function Financeiro() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground" data-tour="finance-new-transaction">
+              <Button variant="gradient" data-tour="finance-new-transaction">
                 <Plus className="mr-2 h-4 w-4" />
                 Nova Transação
               </Button>
@@ -397,7 +397,7 @@ export default function Financeiro() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="finance-save-transaction">
+                <Button type="submit" disabled={isSaving} variant="gradient" data-tour="finance-save-transaction">
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

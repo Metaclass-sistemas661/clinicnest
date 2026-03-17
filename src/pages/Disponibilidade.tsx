@@ -323,8 +323,8 @@ export default function Disponibilidade() {
                     key={t}
                     type="button"
                     size="sm"
-                    variant={isSelected ? "default" : "ghost"}
-                    className={isSelected ? "gradient-primary text-primary-foreground" : "font-mono"}
+                    variant={isSelected ? "gradient" : "ghost"}
+                    className={!isSelected ? "font-mono" : ""}
                     onClick={() => onChange(`${t}:00`)}
                   >
                     {t}
@@ -412,8 +412,7 @@ export default function Disponibilidade() {
                         </div>
                         <Button
                           type="button"
-                          variant={draft.active ? "outline" : "default"}
-                          className={draft.active ? "" : "gradient-primary text-primary-foreground"}
+                          variant={draft.active ? "outline" : "gradient"}
                           onClick={() =>
                             setHoursDraftByDow((prev) => ({
                               ...prev,
@@ -431,7 +430,7 @@ export default function Disponibilidade() {
 
               <div className="flex justify-end">
                 <Button
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                   onClick={handleSaveWorkingHours}
                   disabled={isSavingHours || !selectedProfessionalId}
                 >
@@ -486,7 +485,7 @@ export default function Disponibilidade() {
 
               <div className="flex justify-end">
                 <Button
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                   onClick={handleCreateBlock}
                   disabled={isCreatingBlock || !blockStartAt || !blockEndAt}
                 >

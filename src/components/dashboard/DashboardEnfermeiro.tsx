@@ -163,7 +163,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
             <CallNextButton 
               professionalId={profile?.id}
               size="lg"
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             />
           </div>
         </CardContent>

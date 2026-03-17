@@ -59,7 +59,7 @@ export function ContractStatusBadge({ patientId, tenantId }: ContractStatusBadge
 
   if (status === "all-signed") {
     return (
-      <Badge variant="outline" className="gap-1 text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30">
+      <Badge variant="outline" className="gap-1 text-[10px] bg-success/10 text-success border-success/20">
         <CheckCircle2 className="h-3 w-3" />
         Termos OK
       </Badge>
@@ -67,7 +67,7 @@ export function ContractStatusBadge({ patientId, tenantId }: ContractStatusBadge
   }
 
   return (
-    <Badge variant="outline" className="gap-1 text-[10px] bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30">
+    <Badge variant="outline" className="gap-1 text-[10px] bg-warning/10 text-warning border-warning/20">
       <AlertCircle className="h-3 w-3" />
       {pendingCount} pendente{pendingCount !== 1 ? "s" : ""}
     </Badge>

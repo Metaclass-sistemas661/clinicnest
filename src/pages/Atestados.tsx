@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -652,7 +653,7 @@ export default function Atestados() {
       title="Atestados Médicos"
       subtitle="Emissão e gerenciamento de atestados, declarações e laudos"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={openNew}>
+        <Button variant="gradient" onClick={openNew}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Atestado
         </Button>
@@ -692,7 +693,7 @@ export default function Atestados() {
           title="Nenhum atestado encontrado"
           description="Emita atestados, declarações e laudos para seus pacientes."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={openNew}>
+            <Button variant="gradient" onClick={openNew}>
               <Plus className="mr-2 h-4 w-4" />Novo Atestado
             </Button>
           }
@@ -1077,7 +1078,7 @@ export default function Atestados() {
           <div className="py-4">
             {isVerifying ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Spinner size="lg" className="text-muted-foreground" />
               </div>
             ) : verifyResult ? (
               <div className={`rounded-lg p-4 ${verifyResult.valid ? "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800" : "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"}`}>

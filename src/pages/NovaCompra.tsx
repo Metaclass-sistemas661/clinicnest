@@ -319,7 +319,7 @@ export default function NovaCompra() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} disabled={isSaving} className="gradient-primary text-primary-foreground">
+                <Button onClick={handleSubmit} disabled={isSaving} variant="gradient">
                   {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</> : <><Package className="mr-2 h-4 w-4" />Registrar Compra</>}
                 </Button>
               )}

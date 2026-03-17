@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * Periograma — Componente profissional de ficha periodontal
  * 
@@ -781,7 +782,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
     return (
       <Card>
         <CardContent className="py-8 flex items-center justify-center gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner size="sm" className="text-muted-foreground" />
           <span className="text-muted-foreground">Carregando periograma...</span>
         </CardContent>
       </Card>
@@ -813,7 +814,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
               )}
               {!readOnly && !isViewingOld && (
                 <Button size="sm" onClick={handleSave} disabled={isSaving} className="gap-1">
-                  {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {isSaving ? <Spinner size="sm" /> : <Save className="h-3.5 w-3.5" />}
                   Salvar
                 </Button>
               )}

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,7 +137,7 @@ export function GlobalSearch() {
         <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-lg border bg-popover shadow-lg max-h-72 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <Spinner size="sm" className="text-muted-foreground" />
             </div>
           ) : results.length === 0 ? (
             <div className="py-4 text-center text-xs text-muted-foreground">

@@ -354,7 +354,7 @@ export default function Laudos() {
       title="Laudos & Exames"
       subtitle="Resultados de exames — TUSS integrado, com upload e edição"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={openNew}>
+        <Button variant="gradient" onClick={openNew}>
           <Plus className="mr-2 h-4 w-4" />
           Registrar Exame
         </Button>
@@ -422,7 +422,7 @@ export default function Laudos() {
           title="Nenhum exame encontrado"
           description="Registre resultados de exames com código TUSS, upload de arquivos e interpretação clínica."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={openNew}>
+            <Button variant="gradient" onClick={openNew}>
               <Plus className="mr-2 h-4 w-4" />Registrar Exame
             </Button>
           }

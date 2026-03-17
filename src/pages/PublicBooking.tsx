@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,7 +242,7 @@ export default function PublicBooking() {
         {step === "loading" && (
           <Card>
             <CardContent className="py-12 flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+              <Spinner size="lg" className="text-teal-600" />
               <p className="text-muted-foreground">Carregando informações da clínica...</p>
             </CardContent>
           </Card>

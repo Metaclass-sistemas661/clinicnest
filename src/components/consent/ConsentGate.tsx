@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabasePatient } from "@/integrations/supabase/client";
@@ -91,7 +92,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <Spinner size="lg" className="text-teal-600" />
       </div>
     );
   }

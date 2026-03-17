@@ -205,7 +205,7 @@ export default function Convenios() {
       title="Convênios & Planos de Saúde"
       subtitle="Gerencie os planos de saúde credenciados na clínica"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpen()}>
+        <Button variant="gradient" onClick={() => handleOpen()}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Convênio
         </Button>
@@ -277,7 +277,7 @@ export default function Convenios() {
               title="Nenhum convênio encontrado"
               description="Cadastre os planos de saúde credenciados na clínica."
               action={
-                <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpen()}>
+                <Button variant="gradient" onClick={() => handleOpen()}>
                   <Plus className="mr-2 h-4 w-4" />
                   Novo Convênio
                 </Button>

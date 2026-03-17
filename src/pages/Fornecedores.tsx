@@ -240,7 +240,7 @@ export default function Fornecedores() {
       subtitle="Cadastre e gerencie seus fornecedores"
       actions={
         <Button
-          className="gradient-primary text-primary-foreground"
+          variant="gradient"
           onClick={openCreate}
           disabled={isSaving}
           data-tour="suppliers-new"
@@ -262,7 +262,7 @@ export default function Fornecedores() {
           title="Nenhum fornecedor cadastrado"
           description="Cadastre seu primeiro fornecedor para vincular às compras de produtos."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={openCreate}>
+            <Button variant="gradient" onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Cadastrar Fornecedor
             </Button>

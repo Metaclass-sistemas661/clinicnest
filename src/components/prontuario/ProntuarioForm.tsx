@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -699,7 +700,7 @@ export function ProntuarioForm({
         </Button>
         <div className="flex items-center gap-2">
           {canEdit && (
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button type="submit" disabled={isSaving} variant="gradient">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Salvar Prontuário"}
             </Button>
           )}
@@ -942,7 +943,7 @@ export function ProntuarioForm({
                 onClick={() => generateSoapMutation.mutate(lastTranscript)}
               >
                 {generateSoapMutation.isPending ? (
-                  <><Loader2 className="h-3 w-3 animate-spin" /> Gerando...</>
+                  <><Spinner size="sm" /> Gerando...</>
                 ) : (
                   <><Sparkles className="h-3 w-3" /> Auto-SOAP</>
                 )}
@@ -1132,7 +1133,7 @@ export function ProntuarioForm({
           )}
           {icpMode && certState.isLoading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Spinner size="sm" />
               Buscando certificado cadastrado...
             </div>
           )}
@@ -1200,7 +1201,7 @@ export function ProntuarioForm({
 
       <div className="flex justify-end pt-2">
         {canEdit && (
-          <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+          <Button type="submit" disabled={isSaving} variant="gradient">
             {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : isEditing ? "Salvar Alterações" : "Salvar Prontuário"}
           </Button>
         )}

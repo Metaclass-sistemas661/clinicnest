@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -288,7 +289,7 @@ export default function Periograma() {
       {isLoading && (
         <Card className="mb-6">
           <CardContent className="py-8 flex items-center justify-center gap-2">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Spinner size="sm" />
             <span className="text-muted-foreground">Carregando...</span>
           </CardContent>
         </Card>

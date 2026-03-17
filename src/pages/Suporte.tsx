@@ -377,7 +377,7 @@ export default function Suporte() {
           </Tabs>
           <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
             <DialogTrigger asChild>
-              <Button className="gradient-primary text-primary-foreground" data-tour="support-new-ticket">
+              <Button variant="gradient" data-tour="support-new-ticket">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo ticket
               </Button>
@@ -461,7 +461,7 @@ export default function Suporte() {
                 >
                   Cancelar
                 </Button>
-                <Button onClick={handleCreateTicket} disabled={isSubmittingTicket} className="gradient-primary text-primary-foreground" data-tour="support-create-ticket">
+                <Button onClick={handleCreateTicket} disabled={isSubmittingTicket} variant="gradient" data-tour="support-create-ticket">
                   {isSubmittingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   <span className="ml-2">Criar</span>
                 </Button>
@@ -592,7 +592,7 @@ export default function Suporte() {
                     placeholder="Escreva uma atualização, dúvida ou detalhe adicional..."
                   />
                   <div className="flex justify-end">
-                    <Button onClick={handleSendReply} disabled={isSendingMessage} className="gradient-primary text-primary-foreground" data-tour="support-send-reply">
+                    <Button onClick={handleSendReply} disabled={isSendingMessage} variant="gradient" data-tour="support-send-reply">
                       {isSendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       <span className="ml-2">Enviar</span>
                     </Button>

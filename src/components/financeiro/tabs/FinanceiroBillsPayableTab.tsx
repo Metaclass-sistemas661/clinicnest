@@ -350,7 +350,7 @@ export function FinanceiroBillsPayableTab() {
     <div className="space-y-6">
       {/* Actions + Stats */}
       <div className="flex justify-end">
-        <Button onClick={openCreate} className="gradient-primary gap-2">
+        <Button onClick={openCreate} variant="gradient" className="gap-2">
           <Plus className="h-4 w-4" />Nova Conta
         </Button>
       </div>
@@ -467,7 +467,7 @@ export function FinanceiroBillsPayableTab() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary">
+              <Button type="submit" disabled={isSaving} variant="gradient">
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {editingBill ? "Salvar" : "Criar Conta"}
               </Button>
@@ -503,7 +503,7 @@ export function FinanceiroBillsPayableTab() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setPayingBill(null)}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving} className="gradient-primary">
+                <Button type="submit" disabled={isSaving} variant="gradient">
                   {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Confirmar Pagamento
                 </Button>
               </DialogFooter>

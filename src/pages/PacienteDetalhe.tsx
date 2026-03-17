@@ -481,7 +481,7 @@ export default function PacienteDetalhe() {
             {/* Tab: Pacotes */}
             <TabsContent value="pacotes" className="space-y-4">
               {isAdmin && (
-                <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => navigate(`/pacientes?package=${client.id}`)}>
+                <Button size="sm" variant="gradient" onClick={() => navigate(`/pacientes?package=${client.id}`)}>
                   <Plus className="mr-2 h-4 w-4" />Novo Pacote
                 </Button>
               )}
@@ -532,7 +532,7 @@ export default function PacienteDetalhe() {
 
             {/* Tab: Termos */}
             <TabsContent value="termos" className="space-y-4">
-              <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => setContractsDialogOpen(true)}>
+              <Button size="sm" variant="gradient" onClick={() => setContractsDialogOpen(true)}>
                 <FileSignature className="mr-2 h-4 w-4" />Gerar Contrato e Termos
               </Button>
               <PatientConsentsViewer patientId={client.id} patientName={client.name} tenantId={profile?.tenant_id ?? ""} />

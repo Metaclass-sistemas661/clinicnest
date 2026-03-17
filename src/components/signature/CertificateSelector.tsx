@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -297,7 +298,7 @@ export function CertificateSelector({
 
             {a1Loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : a1Certificates.length === 0 ? (
               <Alert>
@@ -354,7 +355,7 @@ export function CertificateSelector({
 
             {a3Loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : webPkiStatus === "not_installed" ? (
               <Alert variant="destructive">
@@ -439,7 +440,7 @@ export function CertificateSelector({
 
             {cloudLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Spinner className="text-muted-foreground" />
               </div>
             ) : !cloudAuthenticated ? (
               <div className="text-center py-6 space-y-4">

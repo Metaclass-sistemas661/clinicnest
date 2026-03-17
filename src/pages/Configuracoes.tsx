@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -20,22 +21,40 @@ import {
   Smartphone,
   Bot,
   CalendarPlus,
+  Shield,
+  Plug,
 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
 import CertificateManager from "@/components/settings/CertificateManager";
 import SmsConfig from "@/components/settings/SmsConfig";
 import ChatbotSettings from "@/components/settings/ChatbotSettings";
 import { SmartConfirmationSettings } from "@/components/settings/SmartConfirmationSettings";
 
+const LazyGerenciarPermissoes = lazy(() => import("@/pages/GerenciarPermissoes"));
+const LazyIntegracoes = lazy(() => import("@/pages/Integracoes"));
+
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { enabled: simpleModeEnabled, set: setSimpleModeEnabled } = useSimpleMode(tenant?.id);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingGamification, setIsSavingGamification] = useState(false);
+
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "clinica");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== activeTab) setActiveTab(tab);
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams(value === "clinica" ? {} : { tab: value }, { replace: true });
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -194,8 +213,8 @@ export default function Configuracoes() {
       title="Configurações"
       subtitle="Dados da clínica e preferências do sistema"
     >
-      <Tabs defaultValue="clinica" className="space-y-6">
-        <TabsList className="grid w-full max-w-4xl grid-cols-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="clinica" className="gap-2">
             <Building className="h-4 w-4" />
             Clínica
@@ -219,6 +238,14 @@ export default function Configuracoes() {
           <TabsTrigger value="preferencias" className="gap-2">
             <Sliders className="h-4 w-4" />
             Preferências
+          </TabsTrigger>
+          <TabsTrigger value="permissoes" className="gap-2">
+            <Shield className="h-4 w-4" />
+            Permissões
+          </TabsTrigger>
+          <TabsTrigger value="integracoes" className="gap-2">
+            <Plug className="h-4 w-4" />
+            Integrações
           </TabsTrigger>
         </TabsList>
 
@@ -302,7 +329,7 @@ export default function Configuracoes() {
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                   data-tour="settings-save"
                 >
                   {isSaving ? (
@@ -498,6 +525,24 @@ export default function Configuracoes() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 7 — Permissões
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="permissoes">
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
+            <LazyGerenciarPermissoes embedded />
+          </Suspense>
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 8 — Integrações
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="integracoes">
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
+            <LazyIntegracoes embedded />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </MainLayout>

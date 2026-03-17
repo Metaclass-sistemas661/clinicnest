@@ -211,7 +211,7 @@ export function GenerateContractsDialog({ open, onOpenChange, patient, onGenerat
               <DialogFooter className="pt-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button
-                  className="gradient-primary text-primary-foreground"
+                  variant="gradient"
                   onClick={handleGenerate}
                   disabled={isGenerating}
                 >

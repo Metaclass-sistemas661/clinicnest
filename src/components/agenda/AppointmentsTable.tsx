@@ -885,7 +885,7 @@ export function AppointmentsTable({
               </Button>
               <Button
                 type="submit"
-                className="gradient-primary text-primary-foreground"
+                variant="gradient"
                 disabled={isCompleting}
                 data-tour="agenda-complete-confirm"
               >
@@ -1105,7 +1105,7 @@ export function AppointmentsTable({
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground" data-tour="agenda-edit-save">
+              <Button type="submit" disabled={isSaving} variant="gradient" data-tour="agenda-edit-save">
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

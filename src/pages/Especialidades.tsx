@@ -176,7 +176,7 @@ export default function Especialidades() {
       title="Especialidades Médicas"
       subtitle="Gerencie as especialidades oferecidas pela clínica"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpen()}>
+        <Button variant="gradient" onClick={() => handleOpen()}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Especialidade
         </Button>
@@ -244,7 +244,7 @@ export default function Especialidades() {
           title="Nenhuma especialidade encontrada"
           description="Cadastre as especialidades médicas da clínica."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={() => handleOpen()}>
+            <Button variant="gradient" onClick={() => handleOpen()}>
               <Plus className="mr-2 h-4 w-4" />
               Nova Especialidade
             </Button>
@@ -374,7 +374,7 @@ export default function Especialidades() {
             </div>
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+              <Button type="submit" disabled={isSaving} variant="gradient">
                 {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : editingId ? "Atualizar" : "Cadastrar"}
               </Button>
             </DialogFooter>

@@ -181,7 +181,7 @@ export function ChangelogDialog() {
           </ScrollArea>
 
           <DialogFooter>
-            <Button onClick={handleClose} className="gradient-primary text-primary-foreground">
+            <Button onClick={handleClose} variant="gradient">
               <Check className="mr-2 h-4 w-4" />
               Entendi
             </Button>

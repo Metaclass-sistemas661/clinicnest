@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +126,7 @@ export function AppointmentCard({
               onClick={handleConfirm}
               disabled={isUpdating}
             >
-              {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : "Confirmar"}
+              {isUpdating ? <Spinner size="sm" /> : "Confirmar"}
             </Button>
           </div>
         )}
@@ -138,7 +139,7 @@ export function AppointmentCard({
             onClick={handleComplete}
             disabled={isUpdating}
           >
-            {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : "Concluir"}
+            {isUpdating ? <Spinner size="sm" /> : "Concluir"}
           </Button>
         )}
       </div>
@@ -252,7 +253,7 @@ export function AppointmentCard({
                   {appointment.status === "confirmed" && (
                     <Button
                       size="sm"
-                      className="gradient-primary text-primary-foreground"
+                      variant="gradient"
                       onClick={handleComplete}
                       disabled={isUpdating}
                     >

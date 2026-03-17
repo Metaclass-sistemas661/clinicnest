@@ -137,7 +137,7 @@ export default function ConfirmarRetornoPublico() {
         <Card className="w-full max-w-md">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-12 w-12 animate-spin text-teal-600 mb-4" />
-            <p className="text-muted-foreground">Carregando...</p>
+            <div class="flex items-center gap-2"><Spinner size="sm" /><span className="text-muted-foreground">Carregando...</span></div>
           </CardContent>
         </Card>
       </div>

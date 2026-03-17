@@ -77,7 +77,7 @@ const ACTION_LABELS: Record<PermissionAction, string> = {
   delete: "Excluir",
 };
 
-export default function GerenciarPermissoes() {
+export default function GerenciarPermissoes({ embedded = false }: { embedded?: boolean }) {
   const { profile, isAdmin } = useAuth();
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [editedTemplates, setEditedTemplates] = useState<Record<string, Record<string, ResourcePermission>>>({});
@@ -158,22 +158,23 @@ export default function GerenciarPermissoes() {
   };
 
   if (!isAdmin) {
+    const restricted = (
+      <Card>
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Apenas administradores podem gerenciar permissões.
+        </CardContent>
+      </Card>
+    );
+    if (embedded) return restricted;
     return (
       <MainLayout title="Gerenciar Permissões" subtitle="Acesso restrito">
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            Apenas administradores podem gerenciar permissões.
-          </CardContent>
-        </Card>
+        {restricted}
       </MainLayout>
     );
   }
 
-  return (
-    <MainLayout
-      title="Gerenciar Permissões"
-      subtitle="Configure os acessos padrão de cada tipo profissional"
-    >
+  const content = (
+    <>
       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-12 w-full" />
@@ -284,6 +285,17 @@ export default function GerenciarPermissoes() {
           </div>
         </CardContent>
       </Card>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <MainLayout
+      title="Gerenciar Permissões"
+      subtitle="Configure os acessos padrão de cada tipo profissional"
+    >
+      {content}
     </MainLayout>
   );
 }

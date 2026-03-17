@@ -80,7 +80,7 @@ interface ComparativoMensal {
   total_faturado: number;
 }
 
-export default function RepassesRelatorios() {
+export default function RepassesRelatorios({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState("profissional");
   const [isLoading, setIsLoading] = useState(false);
@@ -357,17 +357,8 @@ export default function RepassesRelatorios() {
     toast.success("Relatório exportado!");
   };
 
-  return (
-    <MainLayout
-      title="Relatórios de Repasse"
-      subtitle="Análise detalhada de comissões e repasses"
-      actions={
-        <Button onClick={exportCSV} variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </Button>
-      }
-    >
+  const content = (
+    <>
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="pt-6">
@@ -618,6 +609,23 @@ export default function RepassesRelatorios() {
           )}
         </TabsContent>
       </Tabs>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <MainLayout
+      title="Relatórios de Repasse"
+      subtitle="Análise detalhada de comissões e repasses"
+      actions={
+        <Button onClick={exportCSV} variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Exportar CSV
+        </Button>
+      }
+    >
+      {content}
     </MainLayout>
   );
 }

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useRef, useEffect } from "react";
 import { useAIAgentChat, type AIChatMessage } from "@/hooks/useAIAgentChat";
 import { Button } from "@/components/ui/button";
@@ -194,7 +195,7 @@ export function AiAgentChat() {
                 </div>
                 <div className="bg-muted rounded-lg px-4 py-3 max-w-[80%]">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Spinner size="sm" />
                     Processando...
                   </div>
                 </div>

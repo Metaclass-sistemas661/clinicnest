@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -158,7 +159,7 @@ export default function ChatbotSettings() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner className="text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -365,7 +366,7 @@ export default function ChatbotSettings() {
         <Button
           onClick={handleSave}
           disabled={isSaving}
-          className="gradient-primary text-primary-foreground"
+          variant="gradient"
         >
           {isSaving ? (
             <>

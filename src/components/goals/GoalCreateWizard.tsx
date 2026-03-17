@@ -254,7 +254,7 @@ export function GoalCreateWizard({
             <ChevronRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
-          <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+          <Button type="submit" disabled={isSaving} variant="gradient">
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar meta"}
           </Button>
         )}

@@ -237,7 +237,7 @@ export default function GestaoSalas() {
       title="Gestão de Salas"
       subtitle="Ocupação e disponibilidade em tempo real"
       actions={isAdmin ? (
-        <Button className="gradient-primary text-primary-foreground gap-2" onClick={() => setRoomDialog(true)}>
+        <Button variant="gradient" className="gap-2" onClick={() => setRoomDialog(true)}>
           <Plus className="h-4 w-4" /> Nova Sala
         </Button>
       ) : undefined}

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,8 +93,8 @@ export function OfflineSettings() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {isOnline ? (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <Wifi className="h-6 w-6 text-green-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+                  <Wifi className="h-6 w-6 text-success" />
                 </div>
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
@@ -109,7 +110,7 @@ export function OfflineSettings() {
                 </p>
               </div>
             </div>
-            <Badge variant={isOnline ? "default" : "secondary"} className={cn(isOnline ? "bg-green-500" : "bg-amber-500")}>
+            <Badge variant={isOnline ? "default" : "secondary"} className={cn(isOnline ? "bg-success" : "bg-amber-500")}>
               {isOnline ? <Cloud className="h-3 w-3 mr-1" /> : <CloudOff className="h-3 w-3 mr-1" />}
               {isOnline ? "Conectado" : "Offline"}
             </Badge>
@@ -131,7 +132,7 @@ export function OfflineSettings() {
           {/* Stats Grid */}
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Spinner size="lg" className="text-muted-foreground" />
             </div>
           ) : (
             <>

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -108,7 +109,7 @@ export function SmartConfirmationSettings() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner className="text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -120,7 +121,7 @@ export function SmartConfirmationSettings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10 text-info">
               <Bell className="h-5 w-5" />
             </div>
             <div>

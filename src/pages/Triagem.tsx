@@ -320,7 +320,7 @@ export default function Triagem() {
       title="Triagem & Anamnese"
       subtitle="Avaliação inicial e sinais vitais dos pacientes"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+        <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Triagem
         </Button>
@@ -360,7 +360,7 @@ export default function Triagem() {
           title="Nenhuma triagem registrada"
           description="Registre a triagem dos pacientes com sinais vitais e queixas."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />Nova Triagem
             </Button>
           }
@@ -484,7 +484,7 @@ export default function Triagem() {
                       {t.status === "pendente" && (
                         <Button
                           size="sm"
-                          className="gradient-primary text-primary-foreground"
+                          variant="gradient"
                           onClick={() => handleStartAtendimento(t)}
                         >
                           <Stethoscope className="mr-2 h-4 w-4" />

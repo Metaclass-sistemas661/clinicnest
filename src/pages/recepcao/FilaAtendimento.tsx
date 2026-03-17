@@ -158,7 +158,7 @@ export default function FilaAtendimento() {
                 Abrir Painel TV
               </Link>
             </Button>
-            <CallNextButton className="gradient-primary text-primary-foreground" />
+            <CallNextButton variant="gradient" />
           </div>
         </div>
 

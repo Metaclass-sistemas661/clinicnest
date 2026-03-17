@@ -143,7 +143,7 @@ export function NextPatientDashboard({ appointment, className }: NextPatientDash
 
         {/* Alerts */}
         {hasAllergies && (
-          <div className="flex items-center gap-2 p-2 rounded bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             <span><strong>Alergias:</strong> {patient.allergies}</span>
           </div>
@@ -153,7 +153,7 @@ export function NextPatientDashboard({ appointment, className }: NextPatientDash
           <div className={cn(
             "flex items-center gap-2 p-2 rounded text-sm border",
             latestProm.severity === "severe"
-              ? "bg-red-50 border-red-200 text-red-700"
+              ? "bg-destructive/10 border-destructive/20 text-destructive"
               : "bg-amber-50 border-amber-200 text-amber-700"
           )}>
             <TrendingDown className="h-4 w-4 shrink-0" />

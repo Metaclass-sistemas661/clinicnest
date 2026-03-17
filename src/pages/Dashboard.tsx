@@ -18,14 +18,11 @@ import { fetchPatientSpendingByPeriod } from "@/lib/patientSpending";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
-import type { SalaryPaymentRow } from "@/types/supabase-extensions";
 import {
-  getDashboardSalaryTotals,
   getDashboardCommissionTotals,
   getDashboardProductLossTotal,
   getDashboardPatientsCount,
   getOpenCashSessionSummaryV1,
-  getProfessionalsWithSalary,
   getSalaryPayments,
 } from "@/lib/supabase-typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -121,8 +118,6 @@ export default function Dashboard() {
   const [productLossTotal, setProductLossTotal] = useState(0);
   const [patientsCount, setPatientsCount] = useState(0);
   const [staffMyPatientsCount, setStaffMyPatientsCount] = useState<number | null>(null);
-  const [commissionsPending, setCommissionsPending] = useState(0);
-  const [commissionsPaid, setCommissionsPaid] = useState(0);
   const [professionalCommissionsToReceive, setProfessionalCommissionsToReceive] = useState(0);
   const [professionalCommissionsReceived, setProfessionalCommissionsReceived] = useState(0);
   const [clientRanking, setClientRanking] = useState<
@@ -133,11 +128,18 @@ export default function Dashboard() {
   const [professionalGoalsRanking, setProfessionalGoalsRanking] = useState<
     { professional_id: string; professional_name: string; goal_name: string; goal_type: string; current_value: number; target_value: number; progress_pct: number }[]
   >([]);
-  const [salariesToPay, setSalariesToPay] = useState(0);
-  const [salariesPaid, setSalariesPaid] = useState(0);
   const [mySalaryAmount, setMySalaryAmount] = useState<number | null>(null);
   const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
   const [bannerSlide, setBannerSlide] = useState(0);
+
+  // Banner só aparece para usuários novos (< 7 dias) e que não dispensaram
+  const showBanner = useMemo(() => {
+    if (!user?.created_at) return false;
+    const key = `banner_dismissed_${tenant?.id ?? "global"}`;
+    try { if (localStorage.getItem(key)) return false; } catch { /* noop */ }
+    const daysSinceCreation = (Date.now() - new Date(user.created_at).getTime()) / 86_400_000;
+    return daysSinceCreation < 7;
+  }, [user?.created_at, tenant?.id]);
 
   // 12G.5 — Check if RBAC wizard should be shown for admin
   useEffect(() => {
@@ -149,11 +151,12 @@ export default function Dashboard() {
     }
   }, [isAdmin, tenant?.id]);
 
-  // Auto-advance promotional banner carousel
+  // Auto-advance promotional banner carousel (só se visível)
   useEffect(() => {
+    if (!showBanner) return;
     const t = setInterval(() => setBannerSlide((p) => (p + 1) % 5), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [showBanner]);
 
   useEffect(() => {
     if (!profile?.tenant_id) return;
@@ -357,80 +360,6 @@ export default function Dashboard() {
     return { pending: 0, paid: 0 };
   };
 
-  const fetchSalaryTotals = async (
-    tenantId: string,
-    asAdmin: boolean,
-    professionalUserId: string | null
-  ): Promise<{ pending: number; paid: number }> => {
-    try {
-      const { data, error } = await getDashboardSalaryTotals({
-        p_tenant_id: tenantId,
-        p_is_admin: asAdmin,
-        p_professional_user_id: asAdmin ? null : professionalUserId,
-      });
-      if (error) throw error;
-      
-      // Garantir que data seja um objeto válido
-      if (!data || typeof data !== 'object') {
-        throw new Error("Invalid RPC response format");
-      }
-      
-      const result = data as { pending?: number | string; paid?: number | string } | null;
-      const p = Number(result?.pending ?? 0) || 0;
-      const paid = Number(result?.paid ?? 0) || 0;
-      return { pending: p, paid };
-    } catch (error) {
-      logger.error("Error fetching salary totals:", error);
-      // Fallback: calcular manualmente
-      if (asAdmin) {
-        try {
-          const currentMonth = new Date().getMonth() + 1;
-          const currentYear = new Date().getFullYear();
-          
-          // Buscar profissionais com salário configurado
-          const profResult = await supabase
-            .from("professional_commissions")
-            .select("user_id, salary_amount")
-            .eq("tenant_id", tenantId)
-            .eq("payment_type", "salary")
-            .not("salary_amount", "is", null)
-            .gt("salary_amount", 0) as { data: Array<{ user_id: string; salary_amount: number }> | null; error: any };
-          const professionalsData = profResult.data;
-          const profError = profResult.error;
-          
-          if (profError) throw profError;
-          
-          // Buscar salários pagos no mês (via RPC tipado)
-          const paidResult = await getSalaryPayments({
-            p_tenant_id: tenantId,
-            p_professional_id: null,
-            p_year: currentYear,
-            p_month: currentMonth,
-          });
-          const paidSalaries = paidResult.data;
-          const paidError = paidResult.error;
-          
-          if (paidError) throw paidError;
-          
-          const paidSalariesArray = Array.isArray(paidSalaries) ? paidSalaries : [];
-          const professionalsDataArray = Array.isArray(professionalsData) ? professionalsData : [];
-          const paidIds = new Set(paidSalariesArray.map((s: SalaryPaymentRow) => s.professional_id).filter(Boolean));
-          const pending = professionalsDataArray
-            .filter((p: { user_id: string; salary_amount: number }) => p.user_id && !paidIds.has(p.user_id))
-            .reduce((sum: number, p: { user_id: string; salary_amount: number }) => sum + Number(p.salary_amount || 0), 0);
-          const paid = paidSalariesArray
-            .reduce((sum: number, s: SalaryPaymentRow) => sum + Number(s.amount || 0), 0);
-          return { pending, paid };
-        } catch (fallbackError) {
-          logger.error("Error in salary totals fallback:", fallbackError);
-          return { pending: 0, paid: 0 };
-        }
-      } else {
-        return { pending: 0, paid: 0 };
-      }
-    }
-  };
-
   const fetchDashboardData = async () => {
     if (!profile?.tenant_id) return;
     const staffUserId = profile?.user_id ?? user?.id;
@@ -458,11 +387,8 @@ export default function Dashboard() {
         commissionsResult,
         productLossesResult,
         patientsResult,
-        salaryTotalsResult,
         staffPerformanceResult,
         staffMypatientsResult,
-        _professionalsWithSalaryResult,
-        _salariesPaidResult,
         mySalaryConfigResult,
         mySalaryPaymentsResult,
         pendingTriagesResult,
@@ -520,12 +446,14 @@ export default function Dashboard() {
               .eq("tenant_id", profile.tenant_id)
               .eq("is_active", true)
           : Promise.resolve({ data: null }),
-        // 6. Comissões do mês (RPC com fallback para query direta)
-        fetchCommissionTotals(
-          profile.tenant_id,
-          isAdmin,
-          isAdmin ? null : staffUserId ?? null
-        ).then((r) => ({ data: r, error: null })),
+        // 6. Comissões do mês (staff only — admin não exibe no dashboard)
+        !isAdmin && staffUserId
+          ? fetchCommissionTotals(
+              profile.tenant_id,
+              false,
+              staffUserId
+            ).then((r) => ({ data: r, error: null }))
+          : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
         // 7. Perdas de produtos (baixas danificadas) do mês - usar processNumericRpc (Seção 2.3)
         isAdmin
           ? (async (): Promise<{ data: number; error: any }> => {
@@ -573,15 +501,7 @@ export default function Dashboard() {
           );
           return { data: val, error: null };
         })(),
-        // 9. Salários do mês (RPC similar ao de comissões)
-        isAdmin
-          ? fetchSalaryTotals(
-              profile.tenant_id,
-              isAdmin,
-              null
-            ).then((r) => ({ data: r, error: null }))
-          : Promise.resolve({ data: { pending: 0, paid: 0 }, error: null }),
-        // 10. Staff: desempenho do mês (procedimentos concluídos, valor gerado)
+        // 9. Staff: desempenho do mês (procedimentos concluídos, valor gerado)
         !isAdmin && profile?.id
           ? supabase
               .from("appointments")
@@ -601,22 +521,7 @@ export default function Dashboard() {
               .eq("professional_id", profile.id)
               .not("patient_id", "is", null)
           : Promise.resolve({ data: null }),
-        // 12. Admin: profissionais com salário fixo configurado (para calcular total a pagar)
-        isAdmin
-          ? getProfessionalsWithSalary({
-              p_tenant_id: profile.tenant_id,
-            })
-          : Promise.resolve({ data: null }),
-        // 13. Admin: salários pagos no mês
-        isAdmin
-          ? getSalaryPayments({
-              p_tenant_id: profile.tenant_id,
-              p_professional_id: null,
-              p_year: new Date().getFullYear(),
-              p_month: new Date().getMonth() + 1,
-            })
-          : Promise.resolve({ data: null }),
-        // 14. Staff: configuração de salário fixo
+        // 10. Staff: configuração de salário fixo
         !isAdmin && profile?.user_id
           ? new Promise<{ data: { salary_amount?: number; payment_type?: string } | null; error: unknown }>((resolve) => {
               supabase
@@ -657,7 +562,6 @@ export default function Dashboard() {
       const pendingCount = pendingResult.count ?? 0;
       const productsData = productsResult.data;
       const commissionsData = commissionsResult.data as { pending?: number; paid?: number } | null;
-      const salaryTotalsData = salaryTotalsResult?.data as { pending?: number; paid?: number } | null;
       // Perdas de produtos e pacientes: processNumericRpc já aplica fallback (Seção 2.3)
       const productLossTotalValue = productLossesResult?.data ?? 0;
       const patientsCountResult = patientsResult?.data ?? 0;
@@ -709,13 +613,10 @@ export default function Dashboard() {
       const validProductLoss = isNaN(productLossTotalValue) || productLossTotalValue < 0 ? 0 : productLossTotalValue;
       setProductLossTotal(validProductLoss);
 
-      // Comissões: RPC retorna { pending, paid } diretamente
-      const pendingCommissions = Number(commissionsData?.pending ?? 0);
-      const paidCommissions = Number(commissionsData?.paid ?? 0);
-      if (isAdmin) {
-        setCommissionsPending(pendingCommissions);
-        setCommissionsPaid(paidCommissions);
-      } else if (staffUserId) {
+      // Comissões: staff only (admin não exibe no dashboard)
+      if (!isAdmin && staffUserId) {
+        const pendingCommissions = Number(commissionsData?.pending ?? 0);
+        const paidCommissions = Number(commissionsData?.paid ?? 0);
         setProfessionalCommissionsToReceive(pendingCommissions);
         setProfessionalCommissionsReceived(paidCommissions);
       }
@@ -731,17 +632,6 @@ export default function Dashboard() {
         setStaffMyPatientsCount(0);
       } else {
         setStaffMyPatientsCount(null);
-      }
-
-      // Salários: usar RPC similar ao de comissões (mais confiável)
-      if (isAdmin && salaryTotalsData) {
-        const pendingSalaries = Number(salaryTotalsData?.pending ?? 0);
-        const paidSalaries = Number(salaryTotalsData?.paid ?? 0);
-        setSalariesToPay(pendingSalaries);
-        setSalariesPaid(paidSalaries);
-      } else {
-        setSalariesToPay(0);
-        setSalariesPaid(0);
       }
 
       // Salários: Staff - valor do salário configurado
@@ -879,7 +769,7 @@ export default function Dashboard() {
       title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
       subtitle={`Bem-vindo ao ${tenant?.name || "ClinicNest"}`}
       actions={
-        <Button asChild className="gradient-primary text-primary-foreground text-sm md:text-base">
+        <Button asChild variant="gradient" className="text-sm md:text-base">
           <Link to="/agenda" data-tour="dashboard-new-appointment">
             <Plus className="mr-1 md:mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Novo agendamento</span>
@@ -902,8 +792,8 @@ export default function Dashboard() {
       <TooltipProvider>
         <div className="space-y-6">
 
-          {/* ===== PROMOTIONAL BANNER CAROUSEL ===== */}
-          {/* Outer wrapper is relative for arrows; inner has overflow-hidden for slide clipping */}
+          {/* ===== PROMOTIONAL BANNER CAROUSEL (only for new users < 7 days) ===== */}
+          {showBanner && (
           <div className="relative">
             <div className="relative overflow-hidden rounded-2xl shadow-xl">
               {/* Slide track */}
@@ -1172,6 +1062,7 @@ export default function Dashboard() {
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
+          )}
 
           {/* ===== KPI METRICS GRID ===== */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -1307,40 +1198,12 @@ export default function Dashboard() {
                           Movimentar estoque
                         </Link>
                       </Button>
-                      {isAdmin && !simpleModeEnabled && (
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/financeiro?tab=transactions" data-tour="dashboard-quick-new-transaction">
-                            <DollarSign className="mr-2 h-4 w-4" />
-                            Nova transação
-                          </Link>
-                        </Button>
-                      )}
-                      {isAdmin && !simpleModeEnabled && (
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/financeiro?tab=commissions" data-tour="dashboard-quick-pay-commissions">
-                            <Wallet className="mr-2 h-4 w-4" />
-                            Comissões
-                            {commissionsPending > 0 ? (
-                              <span className="ml-2 inline-flex items-center rounded-md bg-warning/20 px-2 py-0.5 text-xs text-warning">
-                                {Math.round(commissionsPending)}
-                              </span>
-                            ) : null}
-                          </Link>
-                        </Button>
-                      )}
-                      {isAdmin && !simpleModeEnabled && (
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/financeiro?tab=salaries" data-tour="dashboard-quick-pay-salaries">
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Salários
-                            {salariesToPay > 0 ? (
-                              <span className="ml-2 inline-flex items-center rounded-md bg-warning/20 px-2 py-0.5 text-xs text-warning">
-                                {Math.round(salariesToPay)}
-                              </span>
-                            ) : null}
-                          </Link>
-                        </Button>
-                      )}
+                      <Button asChild variant="outline" className="justify-start">
+                        <Link to="/agenda" data-tour="dashboard-quick-start-visit">
+                          <Stethoscope className="mr-2 h-4 w-4" />
+                          Iniciar atendimento
+                        </Link>
+                      </Button>
                       {!isAdmin && (
                         <Button asChild variant="outline" className="justify-start">
                           <Link to="/meu-financeiro" data-tour="dashboard-quick-my-commissions">
@@ -1574,24 +1437,14 @@ export default function Dashboard() {
 
                     {/* Secondary stats */}
                     <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                      {isAdmin && !simpleModeEnabled && (
+                      {isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Link to="/financeiro?tab=commissions" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-commissions-pending">
-                              <StatCard title="Comissões pendentes" value={formatCurrency(commissionsPending)} icon={Wallet} variant={commissionsPending > 0 ? "warning" : "default"} description="Clique para gerenciar" />
+                            <Link to="/pacientes" className="block [&:hover]:no-underline">
+                              <StatCard title="Pacientes ativos" value={String(patientsCount)} icon={Users} description="Total cadastrado" />
                             </Link>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">Comissões geradas no mês e ainda não pagas.</TooltipContent>
-                        </Tooltip>
-                      )}
-                      {isAdmin && !simpleModeEnabled && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/financeiro?tab=salaries" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-salaries-pending">
-                              <StatCard title="Salários a pagar" value={formatCurrency(salariesToPay)} icon={CreditCard} variant={salariesToPay > 0 ? "warning" : "default"} description="Clique para gerenciar" />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Salários configurados que ainda não foram pagos no mês.</TooltipContent>
+                          <TooltipContent side="bottom">Total de pacientes cadastrados na clínica.</TooltipContent>
                         </Tooltip>
                       )}
                       {!isAdmin && (

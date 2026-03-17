@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,7 +128,7 @@ export function AiSmartReferral({
             className="gap-1.5 text-xs"
           >
             {referralMutation.isPending ? (
-              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
+              <><Spinner size="sm" /> Gerando...</>
             ) : (
               <><Forward className="h-3.5 w-3.5" /> Sugerir Encaminhamento</>
             )}

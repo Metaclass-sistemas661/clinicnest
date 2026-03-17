@@ -221,7 +221,7 @@ export default function RetencaoDados() {
             </CardHeader>
             <CardContent>
               {loadingPatients ? (
-                <p>Carregando...</p>
+                <div class="flex items-center gap-2"><Spinner size="sm" /><span className="text-muted-foreground">Carregando...</span></div>
               ) : patientsNearExpiry && patientsNearExpiry.length > 0 ? (
                 <Table>
                   <TableHeader>

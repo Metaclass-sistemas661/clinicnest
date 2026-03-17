@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -350,7 +351,7 @@ export default function PatientSettings() {
                     onClick={() => void push.enableNotifications()}
                   >
                     {push.isLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Spinner size="sm" />
                     ) : (
                       <Bell className="h-3.5 w-3.5" />
                     )}

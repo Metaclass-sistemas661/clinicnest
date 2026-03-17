@@ -92,7 +92,7 @@ type PeriodPreset = "this_month" | "last_month" | "last_3" | "custom";
 
 /* ── Component ─────────────────────────────────────── */
 
-export default function RelatorioFinanceiro() {
+export default function RelatorioFinanceiro({ embedded = false }: { embedded?: boolean }) {
   const { isAdmin } = useAuth();
 
   const thisMonth = getMonthRange(0);
@@ -154,24 +154,24 @@ export default function RelatorioFinanceiro() {
   /* ── Guard ── */
 
   if (!isAdmin) {
+    const guard = (
+      <EmptyState
+        icon={BarChart3}
+        title="Acesso restrito"
+        description="Apenas administradores podem visualizar relatórios financeiros."
+      />
+    );
+    if (embedded) return guard;
     return (
       <MainLayout title="Relatório Financeiro" subtitle="Acesso restrito">
-        <EmptyState
-          icon={BarChart3}
-          title="Acesso restrito"
-          description="Apenas administradores podem visualizar relatórios financeiros."
-        />
+        {guard}
       </MainLayout>
     );
   }
 
   /* ── Render ── */
 
-  return (
-    <MainLayout
-      title="Relatório Financeiro"
-      subtitle="DRE simplificada — Demonstração do Resultado"
-    >
+  const content = (
       <div className="space-y-6">
         {/* ── Period Selector ── */}
         <Card>
@@ -195,10 +195,9 @@ export default function RelatorioFinanceiro() {
               ]).map((p) => (
                 <Button
                   key={p.key}
-                  variant={preset === p.key ? "default" : "outline"}
+                  variant={preset === p.key ? "gradient" : "outline"}
                   size="sm"
                   onClick={() => setPreset(p.key)}
-                  className={preset === p.key ? "gradient-primary text-primary-foreground" : ""}
                 >
                   {p.label}
                 </Button>
@@ -230,7 +229,7 @@ export default function RelatorioFinanceiro() {
             <Button
               onClick={fetchDre}
               disabled={isLoading}
-              className="gradient-primary text-primary-foreground"
+              variant="gradient"
             >
               {isLoading ? (
                 <>
@@ -512,6 +511,16 @@ export default function RelatorioFinanceiro() {
           </>
         )}
       </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <MainLayout
+      title="Relatório Financeiro"
+      subtitle="DRE simplificada — Demonstração do Resultado"
+    >
+      {content}
     </MainLayout>
   );
 }

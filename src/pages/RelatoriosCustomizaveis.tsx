@@ -47,7 +47,7 @@ const iconMap: Record<string, any> = {
   UserX, TrendingUp, FileText, Clock, BarChart3, PieChart, LineChart
 };
 
-export default function RelatoriosCustomizaveis() {
+export default function RelatoriosCustomizaveis({ embedded = false }: { embedded?: boolean }) {
   const { profile } = useAuth();
   const {
     isLoading, templates, savedReports, fetchTemplates, fetchSavedReports,
@@ -117,8 +117,8 @@ export default function RelatoriosCustomizaveis() {
     return iconMap[iconName] || FileText;
   };
 
-  return (
-    <MainLayout title="Relatórios" subtitle="Crie, customize e exporte relatórios do seu negócio">
+  const content = (
+    <>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
@@ -460,6 +460,14 @@ export default function RelatoriosCustomizaveis() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <MainLayout title="Relatórios" subtitle="Crie, customize e exporte relatórios do seu negócio">
+      {content}
     </MainLayout>
   );
 }

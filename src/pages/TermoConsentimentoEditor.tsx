@@ -312,7 +312,7 @@ export default function TermoConsentimentoEditor() {
           </Card>
 
           <div className="flex justify-end mt-6">
-            <Button type="submit" disabled={isSaving} className="gradient-primary text-primary-foreground">
+            <Button type="submit" disabled={isSaving} variant="gradient">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Salvando...</> : <><Save className="mr-2 h-4 w-4" />{isNew ? "Criar Termo" : "Salvar Alterações"}</>}
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -304,7 +305,7 @@ export default function Teleconsulta() {
                       disabled={generatingLinkId === appt.id || appt.status === "completed"}
                     >
                       {generatingLinkId === appt.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Spinner size="sm" />
                       ) : copiedId === appt.id ? (
                         <Check className="h-3.5 w-3.5 text-green-600" />
                       ) : (

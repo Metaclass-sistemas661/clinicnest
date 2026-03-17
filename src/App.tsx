@@ -59,8 +59,6 @@ const Financeiro = lazyWithRetry(() => import("@/pages/Financeiro"));
 const Repasses = lazyWithRetry(() => import("@/pages/Repasses"));
 const RepassesComissoes = lazyWithRetry(() => import("@/pages/RepassesComissoes"));
 const RepassesSalarios = lazyWithRetry(() => import("@/pages/RepassesSalarios"));
-const RepassesRelatorios = lazyWithRetry(() => import("@/pages/RepassesRelatorios"));
-const RelatorioCaptacao = lazyWithRetry(() => import("@/pages/RelatorioCaptacao"));
 const ConfigurarRegras = lazyWithRetry(() => import("@/pages/repasses/ConfigurarRegras"));
 const Produtos = lazyWithRetry(() => import("@/pages/Produtos"));
 const Compras = lazyWithRetry(() => import("@/pages/Compras"));
@@ -74,7 +72,6 @@ const Chat = lazyWithRetry(() => import("@/pages/Chat"));
 const Unidades = lazyWithRetry(() => import("@/pages/Unidades"));
 const Disponibilidade = lazyWithRetry(() => import("@/pages/Disponibilidade"));
 const Equipe = lazyWithRetry(() => import("@/pages/Equipe"));
-const GerenciarPermissoes = lazyWithRetry(() => import("@/pages/GerenciarPermissoes"));
 const Configuracoes = lazyWithRetry(() => import("@/pages/Configuracoes"));
 const ClinicaAutonoma = lazyWithRetry(() => import("@/pages/ClinicaAutonoma"));
 const Assinatura = lazyWithRetry(() => import("@/pages/Assinatura"));
@@ -89,10 +86,7 @@ const Auditoria = lazyWithRetry(() => import("@/pages/Auditoria"));
 const AdminOverrides = lazyWithRetry(() => import("@/pages/AdminOverrides"));
 const DiagnosticoSeguranca = lazyWithRetry(() => import("@/pages/DiagnosticoSeguranca"));
 const Campanhas = lazyWithRetry(() => import("@/pages/Campanhas"));
-const RelatorioFinanceiro = lazyWithRetry(() => import("@/pages/RelatorioFinanceiro"));
 const Relatorios = lazyWithRetry(() => import("@/pages/Relatorios"));
-const Integracoes = lazyWithRetry(() => import("@/pages/Integracoes"));
-
 const Automacoes = lazyWithRetry(() => import("@/pages/Automacoes"));
 const NpsPublico = lazyWithRetry(() => import("@/pages/NpsPublico"));
 const ExamesRecebidos = lazyWithRetry(() => import("@/pages/ExamesRecebidos"));
@@ -154,7 +148,6 @@ const TermoConsentimentoEditor = lazyWithRetry(() => import("@/pages/TermoConsen
 const NovaGuiaTISS = lazyWithRetry(() => import("@/pages/NovaGuiaTISS"));
 const ContratoTermoEditor = lazyWithRetry(() => import("@/pages/ContratoTermoEditor"));
 const TransmissaoSNGPC = lazyWithRetry(() => import("@/pages/TransmissaoSNGPC"));
-const RelatoriosCustomizaveis = lazyWithRetry(() => import("@/pages/RelatoriosCustomizaveis"));
 const Compliance = lazyWithRetry(() => import("@/pages/Compliance"));
 const DashboardONA = lazyWithRetry(() => import("@/pages/DashboardONA"));
 const RetencaoDados = lazyWithRetry(() => import("@/pages/RetencaoDados"));
@@ -460,11 +453,7 @@ const App = () => (
                 />
                 <Route
                   path="/repasses/relatorios"
-                  element={
-                    <ProtectedRoute resource="financeiro">
-                      <RepassesRelatorios />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/relatorios?tab=comissoes" replace />}
                 />
                 <Route
                   path="/repasses/regras"
@@ -476,11 +465,7 @@ const App = () => (
                 />
                 <Route
                   path="/repasses/captacao"
-                  element={
-                    <ProtectedRoute resource="financeiro">
-                      <RelatorioCaptacao />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/relatorios?tab=captacao" replace />}
                 />
 
 
@@ -534,11 +519,7 @@ const App = () => (
                 />
                 <Route
                   path="/relatorio-financeiro"
-                  element={
-                    <ProtectedRoute resource="relatorios">
-                      <RelatorioFinanceiro />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/relatorios?tab=financeiro" replace />}
                 />
                 <Route
                   path="/relatorios"
@@ -550,11 +531,7 @@ const App = () => (
                 />
                 <Route
                   path="/relatorios-customizaveis"
-                  element={
-                    <ProtectedRoute resource="relatorios">
-                      <RelatoriosCustomizaveis />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/relatorios?tab=customizaveis" replace />}
                 />
 
                 {/* Estoque */}
@@ -602,11 +579,7 @@ const App = () => (
                 />
                 <Route
                   path="/gerenciar-permissoes"
-                  element={
-                    <ProtectedRoute requireAdmin>
-                      <GerenciarPermissoes />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/configuracoes?tab=permissoes" replace />}
                 />
                 <Route
                   path="/unidades"
@@ -722,11 +695,7 @@ const App = () => (
                 {/* Administração */}
                 <Route
                   path="/integracoes"
-                  element={
-                    <ProtectedRoute resource="integracoes">
-                      <Integracoes />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/configuracoes?tab=integracoes" replace />}
                 />
                 <Route
                   path="/api-docs"

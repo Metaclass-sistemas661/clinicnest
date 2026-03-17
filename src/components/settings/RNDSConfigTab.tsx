@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * Componente de Configuração RNDS
  * 
@@ -229,7 +230,7 @@ export function RNDSConfigTab() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Spinner size="lg" className="text-muted-foreground" />
         </CardContent>
       </Card>
     );

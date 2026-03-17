@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 /**
  * OdontogramaEmbed — Widget compacto do odontograma para prontuário
  * 
@@ -186,7 +187,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
     return (
       <Card>
         <CardContent className="py-8 flex items-center justify-center gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Spinner size="sm" className="text-muted-foreground" />
           <span className="text-muted-foreground">Carregando odontograma...</span>
         </CardContent>
       </Card>

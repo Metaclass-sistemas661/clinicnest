@@ -91,9 +91,9 @@ export function AgendaFilters({
           return (
             <Button
               key={option.value}
-              variant={isActive ? "default" : "outline"}
+              variant={isActive ? "gradient" : "outline"}
               size="sm"
-              className={`gap-2 ${isActive ? "gradient-primary text-primary-foreground" : ""}`}
+              className="gap-2"
               onClick={() => onStatusFilterChange(option.value)}
               data-tour={`agenda-filter-status-${option.value}`}
             >

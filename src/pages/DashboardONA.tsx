@@ -532,7 +532,7 @@ export default function DashboardONA() {
             </CardHeader>
             <CardContent>
               {loadingEvents ? (
-                <p>Carregando...</p>
+                <div class="flex items-center gap-2"><Spinner size="sm" /><span className="text-muted-foreground">Carregando...</span></div>
               ) : adverseEvents && adverseEvents.length > 0 ? (
                 <Table>
                   <TableHeader>

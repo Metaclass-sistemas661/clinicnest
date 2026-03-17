@@ -215,7 +215,7 @@ export default function Encaminhamentos() {
       title="Encaminhamentos"
       subtitle="Encaminhamento entre profissionais e especialidades"
       actions={
-        <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+        <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />Novo Encaminhamento
         </Button>
       }
@@ -249,7 +249,7 @@ export default function Encaminhamentos() {
           title="Nenhum encaminhamento"
           description="Crie encaminhamentos entre profissionais e especialidades."
           action={
-            <Button className="gradient-primary text-primary-foreground" onClick={() => setIsDialogOpen(true)}>
+            <Button variant="gradient" onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />Novo Encaminhamento
             </Button>
           }

@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -179,7 +180,7 @@ export function TabPacientes({ appts, allAppts, isLoading, periodStart }: Props)
     return (
       <Card>
         <CardContent className="flex h-48 items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Spinner size="sm" />
         </CardContent>
       </Card>
     );

@@ -185,11 +185,10 @@ export function TimeSlotPicker({
               <Button
                 key={slot}
                 type="button"
-                variant={isSelected ? "default" : "outline"}
+                variant={isSelected ? "gradient" : "outline"}
                 size="sm"
                 className={cn(
                   "relative h-10 font-mono text-sm transition-all",
-                  isSelected && "gradient-primary text-primary-foreground",
                   hasConflict && !isSelected && "border-warning/50 bg-warning/10 text-warning",
                   hasConflict && hasAlternatives && !isSelected && "hover:border-success/50"
                 )}

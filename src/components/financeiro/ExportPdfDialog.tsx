@@ -199,7 +199,7 @@ export function ExportPdfDialog({ onExport, isLoading }: ExportPdfDialogProps) {
           <Button
             onClick={handleExport}
             disabled={isExporting}
-            className="gradient-primary text-primary-foreground"
+            variant="gradient"
           >
             {isExporting ? (
               <>

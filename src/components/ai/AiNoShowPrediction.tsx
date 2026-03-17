@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useQuery } from "@tanstack/react-query";
 import { predictNoShow, NoShowPrediction } from "@/lib/no-show-predictor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,7 @@ export function AiNoShowPrediction({
     return (
       <Card className={cn("", className)}>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <Spinner className="text-muted-foreground" />
         </CardContent>
       </Card>
     );

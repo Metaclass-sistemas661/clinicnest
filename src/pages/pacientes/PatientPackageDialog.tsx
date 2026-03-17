@@ -79,7 +79,7 @@ export function PatientPackageDialog({ open, onOpenChange, procedures, isSaving,
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isSaving}>
+            <Button type="submit" variant="gradient" disabled={isSaving}>
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Criando...</> : "Criar Pacote"}
             </Button>
           </DialogFooter>

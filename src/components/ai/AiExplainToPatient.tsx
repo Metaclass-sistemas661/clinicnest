@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,7 +89,7 @@ export function AiExplainToPatient({
         disabled={loading}
       >
         {loading ? (
-          <><Loader2 className="h-3 w-3 animate-spin" /> Traduzindo...</>
+          <><Spinner size="sm" /> Traduzindo...</>
         ) : (
           <><MessageSquareText className="h-3 w-3" /> {label}</>
         )}
