@@ -1262,6 +1262,7 @@ export type Database = {
           created_at: string
           default_commission_percent: number | null
           email: string | null
+          enabled_modules: string[] | null
           id: string
           logo_url: string | null
           medical_license: string | null
@@ -1275,11 +1276,13 @@ export type Database = {
           address?: string | null
           anvisa_license?: string | null
           clinic_type?: string | null
+          enabled_modules?: string[] | null
           cnes_code?: string | null
           cnpj?: string | null
           created_at?: string
           default_commission_percent?: number | null
           email?: string | null
+          enabled_modules?: string[] | null
           id?: string
           logo_url?: string | null
           medical_license?: string | null
@@ -1294,6 +1297,7 @@ export type Database = {
           anvisa_license?: string | null
           clinic_type?: string | null
           cnes_code?: string | null
+          enabled_modules?: string[] | null
           cnpj?: string | null
           created_at?: string
           default_commission_percent?: number | null

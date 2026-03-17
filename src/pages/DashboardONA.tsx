@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { Spinner } from "@/components/ui/spinner";
 import { ptBR } from "date-fns/locale";
 import {
   Activity,

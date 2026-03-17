@@ -302,7 +302,7 @@ export default function Pacientes() {
       });
       if (error) { toastRpcError(toast, error as any, "Erro ao estornar pacote"); return; }
       if (!data?.success) { toast.error("Não foi possível estornar"); return; }
-      data.reverted ? toast.success("Sessão estornada com sucesso") : toast.message("Nenhum consumo para estornar");
+      if (data.reverted) { toast.success("Sessão estornada com sucesso"); } else { toast.message("Nenhum consumo para estornar"); }
 
       if (detailPatient?.id) {
         setIsDetailLoadingExtras(true);

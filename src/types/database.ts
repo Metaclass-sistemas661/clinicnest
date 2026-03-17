@@ -76,6 +76,8 @@ export interface Tenant {
   patient_booking_min_hours_advance?: number;
   patient_booking_max_days_advance?: number;
   patient_booking_max_pending_per_patient?: number;
+  clinic_type?: string | null;
+  enabled_modules?: string[] | null;
   created_at: string;
   updated_at: string;
 }
