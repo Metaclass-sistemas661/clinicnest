@@ -53,6 +53,7 @@ import {
   type ToothConditionKey,
 } from "@/components/odontograma/odontogramConstants";
 import { generateOdontogramPdf } from "@/utils/odontogramPdf";
+import { runInBackground } from "@/utils/pdfWorker";
 import { exportOdontogramFhir, downloadFhirBundle } from "@/utils/fhirExport";
 import { getTussPrice } from "@/data/tussOdontoTable";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
@@ -697,7 +698,7 @@ export default function Odontograma() {
                     className="gap-1"
                     onClick={() => {
                       const patientName = selectedPatientName || "Paciente";
-                      generateOdontogramPdf({
+                      void runInBackground(() => generateOdontogramPdf({
                         patient_name: patientName,
                         exam_date: historyEntries[historyIndex]?.exam_date ?? new Date().toISOString().slice(0, 10),
                         professional_name: profile?.full_name ?? "Profissional",
@@ -712,7 +713,7 @@ export default function Odontograma() {
                           mobility_grade: r.mobility_grade,
                           priority: r.priority,
                         })),
-                      });
+                      }));
                     }}
                   >
                     <FileDown className="h-3.5 w-3.5" />
@@ -1125,6 +1126,7 @@ export default function Odontograma() {
                   <TableHead className="w-16">Dente</TableHead>
                   <TableHead>Condição</TableHead>
                   <TableHead>Procedimento Sugerido</TableHead>
+                  <TableHead className="w-24 text-right">Preço TUSS</TableHead>
                   <TableHead className="w-20">Faces</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1132,6 +1134,7 @@ export default function Odontograma() {
                 {treatableTeeth.map(tooth => {
                   const info = getConditionInfo(tooth.condition);
                   const proc = CONDITION_PROCEDURE_MAP[tooth.condition] ?? { name: info.label };
+                  const tuss = getTussPrice(tooth.condition);
                   const checked = treatmentPlanSelectedTeeth.has(tooth.tooth_number);
                   return (
                     <TableRow key={tooth.tooth_number} className={!checked ? "opacity-50" : ""}>
@@ -1154,6 +1157,9 @@ export default function Odontograma() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{proc.name}</TableCell>
+                      <TableCell className="text-sm text-right font-mono">
+                        {tuss ? `R$ ${tuss.price.toFixed(2)}` : "—"}
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{tooth.surfaces || "—"}</TableCell>
                     </TableRow>
                   );

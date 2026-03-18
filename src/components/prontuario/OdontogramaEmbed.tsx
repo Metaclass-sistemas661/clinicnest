@@ -73,10 +73,13 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
 
       if (odontograms && (odontograms as any[]).length > 0) {
         const latest = (odontograms as any[])[0];
+        if (cancelled) return;
         setDentitionType((latest.dentition_type as DentitionType) || "permanent");
 
         const { data: teethData } = await (supabase
           .rpc as any)("get_odontogram_teeth", { p_odontogram_id: latest.id });
+
+        if (cancelled) return;
 
         const map = new Map<number, ToothRecord>();
         for (const t of (teethData as any[]) || []) {

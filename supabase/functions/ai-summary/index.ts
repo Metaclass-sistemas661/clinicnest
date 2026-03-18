@@ -144,7 +144,7 @@ serve(async (req) => {
       .from("patients")
       .select(`
         id,
-        full_name,
+        name,
         birth_date,
         gender,
         cpf,
@@ -168,7 +168,7 @@ serve(async (req) => {
 
     // Build patient data object
     const patientData: Record<string, unknown> = {
-      nome: client.full_name,
+      nome: client.name,
       data_nascimento: client.birth_date,
       sexo: client.gender,
       tipo_sanguineo: client.blood_type,
@@ -189,7 +189,7 @@ serve(async (req) => {
           cid_code,
           professional:profiles!appointments_professional_id_fkey(full_name)
         `)
-        .eq("patient_id", client_id)
+        .eq("patient_id", resolvedClientId)
         .eq("tenant_id", profile.tenant_id)
         .eq("status", "completed")
         .order("start_time", { ascending: false })
@@ -216,7 +216,7 @@ serve(async (req) => {
           end_date,
           notes
         `)
-        .eq("patient_id", client_id)
+        .eq("patient_id", resolvedClientId)
         .eq("tenant_id", profile.tenant_id)
         .or(`end_date.is.null,end_date.gte.${new Date().toISOString().split("T")[0]}`)
         .order("start_date", { ascending: false });
@@ -234,7 +234,7 @@ serve(async (req) => {
           result_summary,
           is_abnormal
         `)
-        .eq("patient_id", client_id)
+        .eq("patient_id", resolvedClientId)
         .eq("tenant_id", profile.tenant_id)
         .order("result_date", { ascending: false })
         .limit(10);
@@ -251,12 +251,12 @@ serve(async (req) => {
     });
 
     logAiUsage(profile.tenant_id, user.id, "summary").catch(() => {});
-    console.log(`[ai-summary] User: ${user.id}, Client: ${client_id}`);
+    console.log(`[ai-summary] User: ${user.id}, Patient: ${resolvedClientId}`);
 
     return new Response(
       JSON.stringify({
         summary,
-        patient_name: client.full_name,
+        patient_name: client.name,
         generated_at: new Date().toISOString(),
       }),
       {

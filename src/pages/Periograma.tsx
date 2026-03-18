@@ -16,14 +16,15 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Search, Loader2, Save, History, ChevronLeft, ChevronRight,
-  AlertTriangle, Download, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon,
+  Loader2, Save, History, ChevronLeft, ChevronRight,
+  AlertTriangle, Download, LineChart as LineChartIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { generatePeriogramPdf } from "@/utils/periogramPdf";
+import { runInBackground } from "@/utils/pdfWorker";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -240,7 +241,7 @@ export default function Periograma() {
     const current = historyEntries[historyIndex];
     const measurementsArray = Array.from(measurements.values()).filter(m => m.probing_depth !== null);
     
-    generatePeriogramPdf({
+    void runInBackground(() => generatePeriogramPdf({
       client_name: patientName,
       exam_date: current?.exam_date || new Date().toISOString().split("T")[0],
       professional_name: current?.professional_name || profile?.full_name || "Profissional",
@@ -255,7 +256,7 @@ export default function Periograma() {
       risk_classification: riskClass || current?.risk_classification || null,
       notes: notes || null,
       measurements: measurementsArray,
-    });
+    }));
   };
 
   return (

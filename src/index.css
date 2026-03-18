@@ -244,7 +244,7 @@
   .seamless-tab-active {
     @apply bg-background relative z-10;
     @apply text-foreground font-semibold;
-    margin-right: -1px;
+    margin-right: 0;
     padding-right: 0.75rem;
     border-radius: 0.75rem 0 0 0.75rem;
     transition: all 0.2s ease-out;
@@ -258,19 +258,16 @@
     right: 0;
     width: 12px;
     height: 12px;
-    background: transparent;
   }
 
   .seamless-tab-active::before {
     top: -12px;
-    border-bottom-right-radius: 12px;
-    box-shadow: 4px 4px 0 4px hsl(var(--background));
+    background: radial-gradient(circle at 0% 100%, transparent 12px, hsl(var(--background)) 12px);
   }
 
   .seamless-tab-active::after {
     bottom: -12px;
-    border-top-right-radius: 12px;
-    box-shadow: 4px -4px 0 4px hsl(var(--background));
+    background: radial-gradient(circle at 0% 0%, transparent 12px, hsl(var(--background)) 12px);
   }
 
   .gradient-primary {

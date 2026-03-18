@@ -641,7 +641,7 @@ function SidebarContent({
       )}
 
       {/* Navigation */}
-      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto overflow-x-visible pl-2 pr-0 pb-2 scrollbar-hide">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto pl-2 pr-0 pb-2 scrollbar-hide">
         {navCategories.map((category) => {
           const accessibleItems: NavItem[] = [];
           const lockedItems: NavItem[] = [];
