@@ -240,14 +240,37 @@
   .accent-warning { @apply bg-warning/15 text-warning; }
   .accent-info    { @apply bg-info/15 text-info; }
 
-  /* Design System: Seamless Tab Active — Sidebar floating card highlight */
+  /* Design System: Seamless Tab Active — Sidebar curved tab that blends into main content */
   .seamless-tab-active {
-    @apply bg-background rounded-xl relative z-10;
+    @apply bg-background relative z-10;
     @apply text-foreground font-semibold;
-    margin-right: 0.5rem;
+    margin-right: -1px;
     padding-right: 0.75rem;
+    border-radius: 0.75rem 0 0 0.75rem;
     transition: all 0.2s ease-out;
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06);
+  }
+
+  .seamless-tab-active::before,
+  .seamless-tab-active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    background: transparent;
+  }
+
+  .seamless-tab-active::before {
+    top: -12px;
+    border-bottom-right-radius: 12px;
+    box-shadow: 4px 4px 0 4px hsl(var(--background));
+  }
+
+  .seamless-tab-active::after {
+    bottom: -12px;
+    border-top-right-radius: 12px;
+    box-shadow: 4px -4px 0 4px hsl(var(--background));
   }
 
   .gradient-primary {

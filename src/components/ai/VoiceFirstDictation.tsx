@@ -75,10 +75,14 @@ export function VoiceFirstDictation({
       return data;
     },
     onSuccess: (data) => {
-      if (data.transcript) {
+      if (data.transcript && data.transcript.trim().length >= 20) {
         setTranscript(data.transcript);
         setStep("generating");
         soapMutation.mutate(data.transcript);
+      } else if (data.transcript && data.transcript.trim().length > 0) {
+        setTranscript(data.transcript);
+        toast.error("Transcrição muito curta para gerar SOAP automaticamente. Fale por mais tempo ou preencha manualmente.");
+        setStep("idle");
       } else {
         toast.error("Transcrição vazia. Tente falar mais alto ou mais perto do microfone.");
         setStep("idle");
@@ -117,8 +121,9 @@ export function VoiceFirstDictation({
         `Prontuário SOAP preenchido automaticamente (confiança: ${Math.round(soap.confidence * 100)}%)`
       );
     },
-    onError: () => {
-      toast.error("Falha ao gerar SOAP. A transcrição foi salva — preencha manualmente.");
+    onError: (err: any) => {
+      const msg = err?.context?.body ? "Transcrição muito curta para gerar SOAP." : "Falha ao gerar SOAP.";
+      toast.error(`${msg} A transcrição foi salva — preencha manualmente.`);
       setStep("idle");
     },
   });

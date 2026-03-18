@@ -142,6 +142,7 @@ function ToothDiagramInner({
   };
 
   const isMissing = condition === "missing";
+  const isSupernumerary = condition === "supernumerary";
   const isSpecial = ["impacted", "unerupted", "semi_erupted", "agenesis", "supernumerary"].includes(condition);
 
   // Colors for each face
@@ -218,8 +219,31 @@ function ToothDiagramInner({
               </>
             )}
             {/* Circle for impacted/unerupted */}
-            {isSpecial && !isMissing && (
+            {isSpecial && !isMissing && !isSupernumerary && (
               <circle cx={size / 2} cy={size / 2} r={size / 2 - pad - 4} fill={getColor(condition)} fillOpacity={0.3} stroke={getColor(condition)} strokeWidth={1.5} strokeDasharray="4,2" />
+            )}
+            {/* F11: Supernumerary — diamond shape with "+" marker */}
+            {isSupernumerary && (
+              <>
+                <polygon
+                  points={`${size/2},${pad+2} ${size-pad-4},${size/2} ${size/2},${size-pad-2} ${pad+4},${size/2}`}
+                  fill={getColor(condition)}
+                  fillOpacity={0.3}
+                  stroke={getColor(condition)}
+                  strokeWidth={1.5}
+                />
+                <text
+                  x={size / 2}
+                  y={size / 2 + 1}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={compact ? 12 : 16}
+                  fontWeight="bold"
+                  fill={getColor(condition)}
+                >
+                  +
+                </text>
+              </>
             )}
           </g>
         ) : (

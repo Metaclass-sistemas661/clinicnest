@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -8,12 +8,19 @@ import { NestAvatar } from "@/components/patient/NestAvatar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings, PanelRightClose, Stethoscope, CreditCard, Bell, BookOpen } from "lucide-react";
+import { Settings, PanelRightClose, Stethoscope, CreditCard, Bell, BookOpen, Plus, Calendar, Users, DollarSign, Package } from "lucide-react";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
@@ -38,6 +45,7 @@ export function RightSidebar() {
   const [activeTab, setActiveTab] = useState<SidebarTab>("nest");
   const copilot = useCopilotProntuario();
   const { isAnyActive: aiActive } = useAiActivity();
+  const navigate = useNavigate();
 
   const showNest = hasFeature("aiAgentChat");
   const showCopilot = copilot.active;
@@ -115,6 +123,43 @@ export function RightSidebar() {
 
             {/* Divider */}
             <div className="mx-auto w-6 border-t border-border/50" />
+
+            {/* Quick Create Button */}
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="flex items-center justify-center rounded-xl p-2 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="left" sideOffset={8}>
+                  <p className="font-medium">Criar</p>
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end" side="left" sideOffset={8}>
+                <DropdownMenuItem onClick={() => navigate("/agenda")}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Novo agendamento
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/pacientes")}>
+                  <Users className="mr-2 h-4 w-4" />
+                  Novo paciente
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/procedimentos")}>
+                  <Stethoscope className="mr-2 h-4 w-4" />
+                  Novo procedimento
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/produtos")}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Movimentar estoque
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Nest AI Button */}
             {showNest && (

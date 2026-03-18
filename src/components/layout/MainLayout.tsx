@@ -12,16 +12,6 @@ import { AdverseEventButton } from "@/components/quality/AdverseEventButton";
 import { ModuleErrorBoundary } from "@/components/ModuleErrorBoundary";
 import { useAppStatus, usePersistedLastRefresh } from "@/contexts/AppStatusContext";
 import { formatInAppTz } from "@/lib/date";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Plus } from "lucide-react";
 import { GlobalSearch } from "@/components/header/GlobalSearch";
 import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
 import { RightSidebar } from "@/components/layout/RightSidebar";
@@ -134,29 +124,6 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
                   <span className="tabular-nums">{headerClock}</span>
                   {lastRefreshLabel ? <span>{lastRefreshLabel}</span> : null}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      <span className="hidden sm:inline">Criar</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link to="/agenda">Novo agendamento</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/pacientes">Novo paciente</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/servicos">Novo procedimento</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/produtos">Movimentar estoque</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
                 {!isAdmin && <NotificationsBell />}
                 {actions}
               </div>

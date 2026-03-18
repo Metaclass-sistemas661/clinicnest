@@ -50,7 +50,6 @@ import {
   NotebookPen,
   Archive,
   CalendarClock,
-  Search,
   MonitorPlay,
   Tv,
   FileText,
@@ -585,7 +584,7 @@ function SidebarContent({
   return (
     <>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4 mt-2">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
@@ -608,26 +607,6 @@ function SidebarContent({
           </div>
         )}
       </div>
-
-      {/* Quick Search */}
-      {!isCollapsed && (
-        <div className="px-3 py-3">
-          <button
-            type="button"
-            onClick={() => {
-              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-              document.dispatchEvent(event);
-            }}
-            className="flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground transition-all hover:border-primary/50 hover:bg-muted/50"
-          >
-            <Search className="h-4 w-4" />
-            <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
-              ⌘K
-            </kbd>
-          </button>
-        </div>
-      )}
 
       {/* Quick Access */}
       {!isCollapsed && (
@@ -662,7 +641,7 @@ function SidebarContent({
       )}
 
       {/* Navigation */}
-      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto pl-2 pr-2 pb-2 scrollbar-hide">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto overflow-x-visible pl-2 pr-0 pb-2 scrollbar-hide">
         {navCategories.map((category) => {
           const accessibleItems: NavItem[] = [];
           const lockedItems: NavItem[] = [];

@@ -38,7 +38,7 @@ import {
 import {
   Smile, Trash2, Search, Loader2, History, ChevronLeft, ChevronRight,
   AlertTriangle, Plus, GitCompare, FileDown, ClipboardList,
-  Undo2, Redo2, Filter, Zap, LayoutTemplate,
+  Undo2, Redo2, Filter, Zap, LayoutTemplate, Share2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +53,8 @@ import {
   type ToothConditionKey,
 } from "@/components/odontograma/odontogramConstants";
 import { generateOdontogramPdf } from "@/utils/odontogramPdf";
+import { exportOdontogramFhir, downloadFhirBundle } from "@/utils/fhirExport";
+import { getTussPrice } from "@/data/tussOdontoTable";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
 import { cn } from "@/lib/utils";
 /** Condições que requerem tratamento e devem ser sugeridas no plano */
@@ -600,18 +602,20 @@ export default function Odontograma() {
 
       if (planError || !plan) throw planError ?? new Error("Falha ao criar plano");
 
-      // 2. Inserir os itens (1 por dente)
+      // 2. Inserir os itens (1 por dente) com preço TUSS automático
       const items = selected.map(tooth => {
         const proc = CONDITION_PROCEDURE_MAP[tooth.condition] ?? { name: getConditionInfo(tooth.condition).label };
+        const tuss = getTussPrice(tooth.condition);
+        const price = tuss?.price ?? 0;
         return {
           plan_id: plan.id,
           tooth_number: tooth.tooth_number,
           surface: tooth.surfaces || null,
           procedure_name: proc.name,
-          procedure_code: proc.code || null,
-          unit_price: 0,
+          procedure_code: tuss?.code ?? proc.code ?? null,
+          unit_price: price,
           quantity: 1,
-          total_price: 0,
+          total_price: price,
         };
       });
 
@@ -713,6 +717,29 @@ export default function Odontograma() {
                   >
                     <FileDown className="h-3.5 w-3.5" />
                     PDF
+                  </Button>
+                )}
+                {records.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    title="Exportar HL7/FHIR (JSON)"
+                    onClick={() => {
+                      const bundle = exportOdontogramFhir(records, {
+                        patientId: selectedPatient,
+                        patientName: selectedPatientName || "Paciente",
+                        practitionerId: profile?.id ?? "",
+                        practitionerName: profile?.full_name ?? "Profissional",
+                        organizationName: tenant?.name ?? "Clínica",
+                        examDate: historyEntries[historyIndex]?.exam_date ?? new Date().toISOString().slice(0, 10),
+                      });
+                      downloadFhirBundle(bundle, `odontograma_fhir_${selectedPatientName || "paciente"}.json`);
+                      toast.success("FHIR exportado com sucesso");
+                    }}
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                    FHIR
                   </Button>
                 )}
                 {treatableTeeth.length > 0 && (
