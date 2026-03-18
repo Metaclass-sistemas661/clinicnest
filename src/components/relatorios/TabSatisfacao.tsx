@@ -109,7 +109,7 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
             patient_id,
             procedure_id,
             professional_id,
-            patient:patients(full_name),
+            patient:patients(name),
             procedure:procedures(name),
             profiles!appointments_professional_id_fkey(full_name)
           )
@@ -127,7 +127,7 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
             rating: r.rating,
             comment: r.comment,
             created_at: r.created_at,
-            patient_name: r.appointments?.patient?.full_name ?? "—",
+            patient_name: r.appointments?.patient?.name ?? "—",
             service_name: r.appointments?.procedure?.name ?? "—",
             professional_name: r.appointments?.profiles?.full_name ?? "—",
           }))

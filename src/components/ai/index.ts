@@ -15,3 +15,4 @@ export { AiRevenueIntelligence } from "./AiRevenueIntelligence";
 export { AiClinicalProtocols } from "./AiClinicalProtocols";
 export { AiGpsNavigator } from "./AiGpsNavigator";
 export { AiFeedbackButtons } from "./AiFeedbackButtons";
+export { AiDeteriorationAlert } from "./AiDeteriorationAlert";

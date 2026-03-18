@@ -25,7 +25,7 @@ import { DentalImagesGallery } from "@/components/prontuario/DentalImagesGallery
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import type { ClinicalEvolution, ClinicalEvolutionType } from "@/types/database";
 import { NotebookPen } from "lucide-react";
-import { AiPatientSummary, AiExplainToPatient } from "@/components/ai";
+import { AiPatientSummary, AiExplainToPatient, AiDeteriorationAlert } from "@/components/ai";
 
 interface RecordDetail {
   id: string; patient_id: string; client_name: string; record_date: string;
@@ -654,11 +654,12 @@ export default function ProntuarioDetalhe() {
             )}
           </TabsContent>
 
-          <TabsContent value="ia" className="mt-4">
+          <TabsContent value="ia" className="mt-4 space-y-4">
             <AiPatientSummary
               patientId={record.patient_id}
               patientName={record.client_name}
             />
+            <AiDeteriorationAlert patientId={record.patient_id} />
           </TabsContent>
         </Tabs>
       </div>

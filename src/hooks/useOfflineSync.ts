@@ -35,7 +35,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
       const [appointmentsRes, patientsRes, servicesRes, professionalsRes] = await Promise.all([
         supabase
           .from("appointments")
-          .select("*, patient:patients(id, full_name, phone), procedure:procedures(id, name), professional:profiles!professional_id(id, full_name)")
+          .select("*, patient:patients(id, name, phone), procedure:procedures(id, name), professional:profiles!professional_id(id, full_name)")
           .eq("tenant_id", tenantId)
           .gte("scheduled_at", today.toISOString().split("T")[0])
           .lte("scheduled_at", tomorrow.toISOString().split("T")[0] + "T23:59:59")

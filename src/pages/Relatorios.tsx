@@ -944,10 +944,10 @@ export default function Relatorios() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="relative">
+          <div className="relative overflow-hidden">
             {/* Gradient fade on right edge to indicate scroll */}
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:block hidden" />
-            <TabsList className="w-full flex overflow-x-auto scrollbar-hide pb-0.5 sm:w-auto sm:inline-flex">
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
+            <TabsList className="w-full flex overflow-x-auto scrollbar-hide pb-0.5">
             <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
               Visão Geral

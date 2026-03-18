@@ -1,5 +1,5 @@
 import { Spinner } from "@/components/ui/spinner";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Loader2, Save, History, ChevronLeft, ChevronRight,
-  AlertTriangle, Download, TrendingUp, TrendingDown, Minus
+  AlertTriangle, Download, TrendingUp, TrendingDown, Minus, LineChart as LineChartIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,10 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { generatePeriogramPdf } from "@/utils/periogramPdf";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, Legend as RechartsLegend, ResponsiveContainer,
+} from "recharts";
 
 // Constantes
 const UPPER_TEETH = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
@@ -84,6 +88,7 @@ export default function Periograma() {
   const [notes, setNotes] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [riskClass, setRiskClass] = useState("");
+  const [showEvolutionChart, setShowEvolutionChart] = useState(false); // F4
 
   const handleSelectPatient = async (patientId: string) => {
     setSelectedPatient(patientId);
@@ -215,13 +220,16 @@ export default function Periograma() {
 
   const calcIndices = useCallback(() => {
     const arr = Array.from(measurements.values()).filter(m => m.probing_depth !== null);
-    if (arr.length === 0) return { plaque: 0, bleeding: 0, avgDepth: 0, over4: 0, over6: 0 };
+    if (arr.length === 0) return { plaque: 0, bleeding: 0, avgDepth: 0, over4: 0, over6: 0, avgCal: 0 };
     const plaque = (arr.filter(m => m.plaque).length / arr.length) * 100;
     const bleeding = (arr.filter(m => m.bleeding).length / arr.length) * 100;
     const avgDepth = arr.reduce((s, m) => s + (m.probing_depth || 0), 0) / arr.length;
     const over4 = arr.filter(m => (m.probing_depth || 0) > 4).length;
     const over6 = arr.filter(m => (m.probing_depth || 0) > 6).length;
-    return { plaque, bleeding, avgDepth, over4, over6 };
+    // F3: NIC/CAL = probing_depth + recession
+    const calValues = arr.filter(m => m.recession != null).map(m => (m.probing_depth || 0) + (m.recession || 0));
+    const avgCal = calValues.length > 0 ? calValues.reduce((s, v) => s + v, 0) / calValues.length : 0;
+    return { plaque, bleeding, avgDepth, over4, over6, avgCal };
   }, [measurements]);
 
   const indices = calcIndices();
@@ -291,6 +299,23 @@ export default function Periograma() {
       {selectedPatient && !isLoading && (
         <>
           <IndicesCard indices={indices} />
+          {/* F4: Evolution chart toggle */}
+          {historyEntries.length >= 2 && (
+            <div className="mb-4 flex justify-end">
+              <Button
+                variant={showEvolutionChart ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowEvolutionChart(v => !v)}
+              >
+                <LineChartIcon className="h-4 w-4" />
+                {showEvolutionChart ? "Ocultar Evolução" : "Ver Evolução"}
+              </Button>
+            </div>
+          )}
+          {showEvolutionChart && historyEntries.length >= 2 && (
+            <EvolutionChart entries={historyEntries} />
+          )}
           <PeriogramChart
             measurements={measurements}
             onUpdate={updateMeasurement}
@@ -379,14 +404,14 @@ function HistoryNav({ entries, index, onNavigate }: { entries: PeriogramSummary[
   );
 }
 
-function IndicesCard({ indices }: { indices: { plaque: number; bleeding: number; avgDepth: number; over4: number; over6: number } }) {
+function IndicesCard({ indices }: { indices: { plaque: number; bleeding: number; avgDepth: number; over4: number; over6: number; avgCal: number } }) {
   return (
     <Card className="mb-6">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Índices Periodontais</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center p-3 rounded-lg border bg-muted/30">
             <p className="text-xs text-muted-foreground">Índice de Placa</p>
             <p className="text-xl font-bold">{indices.plaque.toFixed(1)}%</p>
@@ -398,6 +423,10 @@ function IndicesCard({ indices }: { indices: { plaque: number; bleeding: number;
           <div className="text-center p-3 rounded-lg border bg-muted/30">
             <p className="text-xs text-muted-foreground">Prof. Média</p>
             <p className="text-xl font-bold">{indices.avgDepth.toFixed(1)}mm</p>
+          </div>
+          <div className="text-center p-3 rounded-lg border bg-muted/30">
+            <p className="text-xs text-muted-foreground">NIC/CAL Médio</p>
+            <p className="text-xl font-bold">{indices.avgCal.toFixed(1)}mm</p>
           </div>
           <div className="text-center p-3 rounded-lg border bg-muted/30">
             <p className="text-xs text-muted-foreground">Sítios &gt;4mm</p>
@@ -445,10 +474,12 @@ function ToothColumn({ tooth, measurements, onUpdate, readOnly, isUpper }: { too
   return (
     <div className="flex flex-col items-center gap-0.5 p-1 border rounded-lg bg-muted/20 min-w-[40px]">
       <span className="text-[10px] font-mono font-bold text-muted-foreground">{tooth}</span>
-      {sites.map(site => {
+      {sites.map((site, idx) => {
         const key = `${tooth}-${site}`;
         const m = measurements.get(key);
         const depth = m?.probing_depth;
+        const nextSite = sites[idx + 1];
+        const nextCellId = nextSite ? `${tooth}-${nextSite}` : undefined;
         return (
           <SiteCell
             key={key}
@@ -456,10 +487,13 @@ function ToothColumn({ tooth, measurements, onUpdate, readOnly, isUpper }: { too
             depth={depth}
             bleeding={m?.bleeding || false}
             plaque={m?.plaque || false}
-            onDepthChange={(v) => onUpdate(key, "probing_depth", v)}
+            recession={m?.recession}
+            onDepthChange={(v: number | null) => onUpdate(key, "probing_depth", v)}
+            onRecessionChange={(v: number | null) => onUpdate(key, "recession", v)}
             onBleedingToggle={() => onUpdate(key, "bleeding", !m?.bleeding)}
             onPlaqueToggle={() => onUpdate(key, "plaque", !m?.plaque)}
             readOnly={readOnly}
+            cellId={nextCellId}
           />
         );
       })}
@@ -467,27 +501,49 @@ function ToothColumn({ tooth, measurements, onUpdate, readOnly, isUpper }: { too
   );
 }
 
-function SiteCell({ site, depth, bleeding, plaque, onDepthChange, onBleedingToggle, onPlaqueToggle, readOnly }: any) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(depth?.toString() || "");
+function SiteCell({ site, depth, bleeding, plaque, recession, onDepthChange, onRecessionChange, onBleedingToggle, onPlaqueToggle, readOnly, cellId }: any) {
+  const [editing, setEditing] = useState<"depth" | "recession" | null>(null);
+  const [value, setValue] = useState("");
+
+  const handleStartEdit = (field: "depth" | "recession") => {
+    if (readOnly) return;
+    setEditing(field);
+    setValue(field === "depth" ? (depth?.toString() || "") : (recession?.toString() || ""));
+  };
 
   const handleBlur = () => {
-    setEditing(false);
     const num = parseInt(value);
-    onDepthChange(isNaN(num) ? null : Math.min(15, Math.max(0, num)));
+    const clamped = isNaN(num) ? null : Math.min(15, Math.max(0, num));
+    if (editing === "depth") onDepthChange(clamped);
+    else if (editing === "recession") onRecessionChange?.(clamped);
+    setEditing(null);
   };
+
+  // U6: Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
+      e.preventDefault();
+      handleBlur();
+      // Focus next cell
+      const nextEl = document.querySelector(`[data-cell-next="${cellId}"]`) as HTMLElement;
+      nextEl?.click();
+    }
+  };
+
+  // F3: Calculate CAL/NIC inline
+  const cal = depth != null && recession != null ? depth + recession : null;
 
   return (
     <div className="flex items-center gap-0.5">
       <span className="text-[8px] text-muted-foreground w-4">{site}</span>
-      {editing && !readOnly ? (
+      {editing === "depth" ? (
         <input
           type="number"
           className="w-6 h-5 text-[10px] text-center border rounded"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onBlur={handleBlur}
-          onKeyDown={(e) => e.key === "Enter" && handleBlur()}
+          onKeyDown={handleKeyDown}
           autoFocus
           min={0}
           max={15}
@@ -496,20 +552,48 @@ function SiteCell({ site, depth, bleeding, plaque, onDepthChange, onBleedingTogg
         <button
           className="w-6 h-5 text-[10px] font-bold rounded flex items-center justify-center"
           style={{ backgroundColor: getDepthColor(depth), color: depth !== null ? "white" : "#9ca3af" }}
-          onClick={() => !readOnly && setEditing(true)}
+          onClick={() => handleStartEdit("depth")}
           disabled={readOnly}
+          data-cell-next={cellId}
         >
           {depth ?? "-"}
         </button>
       )}
+      {editing === "recession" ? (
+        <input
+          type="number"
+          className="w-5 h-5 text-[9px] text-center border rounded"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          min={0}
+          max={15}
+        />
+      ) : (
+        <button
+          className="w-5 h-5 text-[9px] rounded flex items-center justify-center border bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300"
+          onClick={() => handleStartEdit("recession")}
+          disabled={readOnly}
+          title="Recessão (mm)"
+        >
+          {recession ?? "R"}
+        </button>
+      )}
+      {cal != null && (
+        <span className="text-[8px] text-purple-600 dark:text-purple-400 font-bold w-4 text-center" title="NIC/CAL">
+          {cal}
+        </span>
+      )}
       <button
-        className={`w-3 h-3 rounded-full border ${bleeding ? "bg-red-500 border-red-600" : "bg-white border-gray-300"}`}
+        className={`w-3 h-3 rounded-full border ${bleeding ? "bg-red-500 border-red-600" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"}`}
         onClick={onBleedingToggle}
         disabled={readOnly}
         title="Sangramento"
       />
       <button
-        className={`w-3 h-3 rounded-sm border ${plaque ? "bg-yellow-500 border-yellow-600" : "bg-white border-gray-300"}`}
+        className={`w-3 h-3 rounded-sm border ${plaque ? "bg-yellow-500 border-yellow-600" : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"}`}
         onClick={onPlaqueToggle}
         disabled={readOnly}
         title="Placa"
@@ -526,7 +610,53 @@ function Legend() {
       <div className="flex items-center gap-1"><div className="w-4 h-4 rounded" style={{ backgroundColor: "#ef4444" }} />≥6mm (crítico)</div>
       <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-red-500" />Sangramento</div>
       <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-sm bg-yellow-500" />Placa</div>
+      <div className="flex items-center gap-1"><div className="w-4 h-4 rounded bg-blue-50 dark:bg-blue-950 border text-[8px] text-blue-700 flex items-center justify-center">R</div>Recessão</div>
+      <div className="flex items-center gap-1"><span className="text-purple-600 dark:text-purple-400 font-bold">#</span>NIC/CAL</div>
     </div>
+  );
+}
+
+/** F4: Gráfico de evolução periodontal ao longo do tempo */
+function EvolutionChart({ entries }: { entries: PeriogramSummary[] }) {
+  const data = useMemo(() => {
+    return [...entries]
+      .reverse()
+      .map(e => ({
+        date: new Date(e.exam_date).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+        placa: e.plaque_index != null ? Number(e.plaque_index.toFixed(1)) : null,
+        sangramento: e.bleeding_index != null ? Number(e.bleeding_index.toFixed(1)) : null,
+        profMedia: e.avg_probing_depth != null ? Number(e.avg_probing_depth.toFixed(1)) : null,
+        sitios4: e.sites_over_4mm,
+        sitios6: e.sites_over_6mm,
+      }));
+  }, [entries]);
+
+  if (data.length < 2) return null;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <LineChartIcon className="h-4 w-4" />
+          Evolução Periodontal
+        </CardTitle>
+        <CardDescription>Comparação dos índices ao longo das consultas</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <RechartsTooltip />
+            <RechartsLegend wrapperStyle={{ fontSize: 11 }} />
+            <Line type="monotone" dataKey="placa" name="Placa (%)" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            <Line type="monotone" dataKey="sangramento" name="Sangramento (%)" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            <Line type="monotone" dataKey="profMedia" name="Prof. Média (mm)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   );
 }
 

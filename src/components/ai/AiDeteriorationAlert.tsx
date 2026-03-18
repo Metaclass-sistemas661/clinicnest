@@ -86,6 +86,7 @@ export function AiDeteriorationAlert({ patientId, className }: AiDeteriorationAl
             Análise de Deterioração Clínica
           </CardTitle>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => analysisMutation.mutate()}
@@ -129,6 +130,7 @@ export function AiDeteriorationAlert({ patientId, className }: AiDeteriorationAl
             {result.alerts.length > 0 && (
               <div className="space-y-2">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setExpanded(!expanded)}

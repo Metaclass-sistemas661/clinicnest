@@ -21,7 +21,6 @@ import { logger } from "@/lib/logger";
 import { AiDrugInteractionAlert } from "@/components/ai";
 import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
-import { AiDeteriorationAlert } from "@/components/ai/AiDeteriorationAlert";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
 import { ProfessionFields } from "@/components/prontuario/ProfessionFields";
@@ -897,13 +896,6 @@ export function ProntuarioForm({
           <AccordionContent className="space-y-4 pb-4">
             {/* PROMs */}
             {patientId && <PatientPromsViewer patientId={patientId} />}
-
-            {/* Alerta de deterioração */}
-            {patientId && (
-              <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
-                <AiDeteriorationAlert patientId={patientId} />
-              </FeatureGate>
-            )}
 
             <div className="space-y-1.5">
               <Label>Queixa Principal *</Label>

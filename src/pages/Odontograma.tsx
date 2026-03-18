@@ -984,10 +984,12 @@ export default function Odontograma() {
                             className="h-7 w-7"
                             onClick={(e) => {
                               e.stopPropagation();
+                              pushUndo();
                               const next = new Map(teeth);
                               next.delete(r.tooth_number);
                               setTeeth(next);
                               setIsDirty(true);
+                              setDirtyTeeth(prev => new Set(prev).add(r.tooth_number));
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1144,6 +1146,68 @@ export default function Odontograma() {
               {isCreatingPlan ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
               Criar Plano ({treatmentPlanSelectedTeeth.size} itens)
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── F20: Templates Dialog ── */}
+      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5" />
+              Templates de Condição
+            </DialogTitle>
+            <DialogDescription>
+              Aplique templates pré-configurados para preencher rapidamente múltiplos dentes de uma vez.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            {CONDITION_TEMPLATES.map((tpl, idx) => (
+              <button
+                key={idx}
+                className="w-full text-left p-3 rounded-lg border hover:bg-muted/60 transition-colors"
+                onClick={() => handleApplyTemplate(idx)}
+              >
+                <p className="font-medium text-sm">{tpl.label}</p>
+                <p className="text-xs text-muted-foreground">{tpl.description}</p>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── F10: Auto Protocol Suggestion Dialog ── */}
+      <Dialog open={protocolDialogOpen} onOpenChange={setProtocolDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" />
+              Protocolo de Tratamento Sugerido
+            </DialogTitle>
+            <DialogDescription>
+              {protocolTooth && (
+                <>Dente {protocolTooth.tooth_number} — {getConditionInfo(protocolTooth.condition).label}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {protocolTooth && AUTO_PROTOCOL[protocolTooth.condition] && (
+            <div className="py-2">
+              <p className="text-sm font-medium mb-3">Sequência recomendada:</p>
+              <ol className="space-y-2">
+                {AUTO_PROTOCOL[protocolTooth.condition].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm pt-0.5">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProtocolDialogOpen(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

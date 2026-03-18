@@ -107,7 +107,7 @@ function ToothDiagramInner({
     // If tooth has a general condition, show it
     if (condition === "missing") return "transparent";
     if (condition !== "healthy") return getColor(condition);
-    return "#e5e7eb"; // neutral gray for healthy
+    return "var(--tooth-healthy, #e5e7eb)"; // neutral gray, dark-friendly via CSS var
   };
 
   const handleSurfaceClick = (face: string, e: React.MouseEvent) => {
@@ -260,11 +260,11 @@ function ToothDiagramInner({
             {/* Face labels (only in non-compact mode) */}
             {!compact && (
               <>
-                <text x={size / 2} y={pad + 9} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="bold" pointerEvents="none">V</text>
-                <text x={pad + 5} y={size / 2 + 2.5} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="bold" pointerEvents="none">M</text>
-                <text x={size - pad - 5} y={size / 2 + 2.5} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="bold" pointerEvents="none">D</text>
-                <text x={size / 2} y={size - pad - 3} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="bold" pointerEvents="none">{bottomLabel}</text>
-                <text x={size / 2} y={size / 2 + 3} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="bold" pointerEvents="none">{centerLabel}</text>
+                <text x={size / 2} y={pad + 9} textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="bold" pointerEvents="none">V</text>
+                <text x={pad + 5} y={size / 2 + 2.5} textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="bold" pointerEvents="none">M</text>
+                <text x={size - pad - 5} y={size / 2 + 2.5} textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="bold" pointerEvents="none">D</text>
+                <text x={size / 2} y={size - pad - 3} textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="bold" pointerEvents="none">{bottomLabel}</text>
+                <text x={size / 2} y={size / 2 + 3} textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="bold" pointerEvents="none">{centerLabel}</text>
               </>
             )}
 
