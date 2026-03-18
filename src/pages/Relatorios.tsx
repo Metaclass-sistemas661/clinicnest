@@ -1,5 +1,5 @@
 import { Spinner } from "@/components/ui/spinner";
-import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,8 @@ import {
   HandCoins,
   Megaphone,
   FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, subDays, startOfWeek, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -827,6 +829,34 @@ export default function Relatorios() {
     setSearchParams({ tab: value }, { replace: true });
   }, [setSearchParams]);
 
+  // Scroll arrows for tabs
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkTabsScroll = useCallback(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    checkTabsScroll();
+    el.addEventListener("scroll", checkTabsScroll, { passive: true });
+    const ro = new ResizeObserver(checkTabsScroll);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", checkTabsScroll); ro.disconnect(); };
+  }, [checkTabsScroll]);
+
+  const scrollTabs = useCallback((dir: "left" | "right") => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
+  }, []);
+
   const { start, end } = useMemo(() => getPeriodDates(period), [period]);
   
   // Período anterior para comparativo
@@ -944,72 +974,94 @@ export default function Relatorios() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <div className="relative overflow-hidden">
-            {/* Gradient fade on right edge to indicate scroll */}
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
-            <TabsList className="w-full flex overflow-x-auto scrollbar-hide pb-0.5">
-            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
-              Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="inativos" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Users className="h-3.5 w-3.5 hidden sm:block" />
-              Inativos
-            </TabsTrigger>
-            <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Stethoscope className="h-3.5 w-3.5 hidden sm:block" />
-              Procedimentos
-            </TabsTrigger>
-            <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <UserCog className="h-3.5 w-3.5 hidden sm:block" />
-              Equipe
-            </TabsTrigger>
-            <TabsTrigger value="produtividade" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Clock className="h-3.5 w-3.5 hidden sm:block" />
-              Produtividade
-            </TabsTrigger>
-            <TabsTrigger value="pacientes" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <UserPlus className="h-3.5 w-3.5 hidden sm:block" />
-              Pacientes
-            </TabsTrigger>
-            <TabsTrigger value="no-show" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <AlertTriangle className="h-3.5 w-3.5 hidden sm:block" />
-              No-Show
-            </TabsTrigger>
-            <TabsTrigger value="satisfacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Star className="h-3.5 w-3.5 hidden sm:block" />
-              Satisfação
-            </TabsTrigger>
-            <TabsTrigger value="resumo-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Sparkles className="h-3.5 w-3.5 hidden sm:block" />
-              Resumo IA
-            </TabsTrigger>
-            <TabsTrigger value="revenue-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
-              Revenue IA
-            </TabsTrigger>
-            <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <BarChart3 className="h-3.5 w-3.5 hidden sm:block" />
-              Benchmarking
-            </TabsTrigger>
-            <TabsTrigger value="financeiro" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <FileBarChart2 className="h-3.5 w-3.5 hidden sm:block" />
-              DRE
-            </TabsTrigger>
-            <TabsTrigger value="comissoes" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <HandCoins className="h-3.5 w-3.5 hidden sm:block" />
-              Comissões
-            </TabsTrigger>
-            <TabsTrigger value="captacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <Megaphone className="h-3.5 w-3.5 hidden sm:block" />
-              Captação
-            </TabsTrigger>
-            <TabsTrigger value="customizaveis" className="gap-1.5 text-xs sm:text-sm shrink-0">
-              <FileSpreadsheet className="h-3.5 w-3.5 hidden sm:block" />
-              Customizáveis
-            </TabsTrigger>
-          </TabsList>
-          </div>
+              <div className="relative flex items-center gap-1">
+                {canScrollLeft && (
+                  <>
+                    <button
+                      onClick={() => scrollTabs("left")}
+                      className="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      aria-label="Rolar abas para esquerda"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="pointer-events-none absolute left-9 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent z-[5]" />
+                  </>
+                )}
+                <TabsList ref={tabsScrollRef} className="flex-1 flex overflow-x-auto scrollbar-hide">
+                  <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
+                    Visão Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="inativos" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Users className="h-3.5 w-3.5 hidden sm:block" />
+                    Inativos
+                  </TabsTrigger>
+                  <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Stethoscope className="h-3.5 w-3.5 hidden sm:block" />
+                    Procedimentos
+                  </TabsTrigger>
+                  <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <UserCog className="h-3.5 w-3.5 hidden sm:block" />
+                    Equipe
+                  </TabsTrigger>
+                  <TabsTrigger value="produtividade" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Clock className="h-3.5 w-3.5 hidden sm:block" />
+                    Produtividade
+                  </TabsTrigger>
+                  <TabsTrigger value="pacientes" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <UserPlus className="h-3.5 w-3.5 hidden sm:block" />
+                    Pacientes
+                  </TabsTrigger>
+                  <TabsTrigger value="no-show" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <AlertTriangle className="h-3.5 w-3.5 hidden sm:block" />
+                    No-Show
+                  </TabsTrigger>
+                  <TabsTrigger value="satisfacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Star className="h-3.5 w-3.5 hidden sm:block" />
+                    Satisfação
+                  </TabsTrigger>
+                  <TabsTrigger value="resumo-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Sparkles className="h-3.5 w-3.5 hidden sm:block" />
+                    Resumo IA
+                  </TabsTrigger>
+                  <TabsTrigger value="revenue-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
+                    Revenue IA
+                  </TabsTrigger>
+                  <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <BarChart3 className="h-3.5 w-3.5 hidden sm:block" />
+                    Benchmarking
+                  </TabsTrigger>
+                  <TabsTrigger value="financeiro" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <FileBarChart2 className="h-3.5 w-3.5 hidden sm:block" />
+                    DRE
+                  </TabsTrigger>
+                  <TabsTrigger value="comissoes" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <HandCoins className="h-3.5 w-3.5 hidden sm:block" />
+                    Comissões
+                  </TabsTrigger>
+                  <TabsTrigger value="captacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <Megaphone className="h-3.5 w-3.5 hidden sm:block" />
+                    Captação
+                  </TabsTrigger>
+                  <TabsTrigger value="customizaveis" className="gap-1.5 text-xs sm:text-sm shrink-0">
+                    <FileSpreadsheet className="h-3.5 w-3.5 hidden sm:block" />
+                    Customizáveis
+                  </TabsTrigger>
+                </TabsList>
+                {canScrollRight && (
+                  <>
+                    <div className="pointer-events-none absolute right-9 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-[5]" />
+                    <button
+                      onClick={() => scrollTabs("right")}
+                      className="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-muted/80 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      aria-label="Rolar abas para direita"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
 
           <TabsContent value="visao-geral" className="mt-6">
             <TabVisaoGeral appts={completedAppts} prevAppts={prevCompletedAppts} period={period} isLoading={isFetching} />

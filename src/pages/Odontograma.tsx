@@ -858,7 +858,8 @@ export default function Odontograma() {
               dentitionType={dentitionType}
               onDentitionChange={!isViewingOldVersion ? setDentitionType : undefined}
               selectedTooth={selectedTooth}
-              onToothClick={openToothDialog}
+              onToothClick={(num) => setSelectedTooth(num)}
+              onToothDoubleClick={!isViewingOldVersion ? openToothDialog : undefined}
               showLegend
               showStats
               readOnly={isViewingOldVersion}

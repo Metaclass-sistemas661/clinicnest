@@ -38,6 +38,8 @@ interface OdontogramChartProps {
   onDentitionChange?: (type: DentitionType) => void;
   selectedTooth: number | null;
   onToothClick?: (toothNumber: number) => void;
+  /** U3: double-click handler to open edit dialog */
+  onToothDoubleClick?: (toothNumber: number) => void;
   onSurfaceClick?: (toothNumber: number, surface: string) => void;
   compact?: boolean;
   readOnly?: boolean;
@@ -57,6 +59,7 @@ export function OdontogramChart({
   onDentitionChange,
   selectedTooth,
   onToothClick,
+  onToothDoubleClick,
   onSurfaceClick,
   compact = false,
   readOnly = false,
@@ -120,6 +123,7 @@ export function OdontogramChart({
             isSelected={selectedTooth === num}
             compact={compact}
             onClick={() => onToothClick?.(num)}
+            onDoubleClick={onToothDoubleClick ? () => onToothDoubleClick(num) : undefined}
             onSurfaceClick={onSurfaceClick ? (s) => onSurfaceClick(num, s) : undefined}
             disabled={readOnly}
             isDirty={dirtyTeeth?.has(num) ?? false}

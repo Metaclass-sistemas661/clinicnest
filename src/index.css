@@ -171,6 +171,9 @@
     --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 8px 10px -6px hsl(0 0% 0% / 0.4);
     --shadow-glow: 0 0 40px hsl(174 70% 50% / 0.35);
     --shadow-glow-accent: 0 0 40px hsl(210 75% 60% / 0.35);
+
+    /* Odontograma dark */
+    --tooth-healthy: #374151;
   }
 }
 

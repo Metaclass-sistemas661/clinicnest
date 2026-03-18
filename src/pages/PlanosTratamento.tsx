@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ClipboardList, Plus, Search, Loader2, MoreHorizontal, Eye, Pencil, Trash2, FileText, CheckCircle } from "lucide-react";
+import { ClipboardList, Plus, Search, Loader2, MoreHorizontal, Eye, Pencil, Trash2, FileText, CheckCircle, Smile } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { generateTreatmentPlanPdf } from "@/lib/treatment-plan-pdf";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
+import { Link, useNavigate } from "react-router-dom";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pendente: { label: "Pendente", color: "bg-gray-500" },
@@ -200,7 +201,7 @@ function PlanDetailDialog({ open, onOpenChange, planData, onRefresh }: { open: b
         </CardContent></Card>}
         {items.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhum procedimento.</p> : <Table><TableHeader><TableRow><TableHead className="w-16">Dente</TableHead><TableHead>Procedimento</TableHead><TableHead className="w-24 text-right">Valor</TableHead><TableHead className="w-24">Status</TableHead><TableHead className="w-20"></TableHead></TableRow></TableHeader><TableBody>
           {items.map((item: any) => <TableRow key={item.id}>
-            <TableCell className="font-mono">{item.tooth_number || "—"}{item.surface && <span className="text-xs text-muted-foreground ml-1">({item.surface})</span>}</TableCell>
+            <TableCell className="font-mono">{item.tooth_number ? <Link to="/odontograma" className="text-primary hover:underline" title={`Ver dente ${item.tooth_number} no odontograma`}>{item.tooth_number}<Smile className="inline h-3 w-3 ml-0.5 opacity-50" /></Link> : "—"}{item.surface && <span className="text-xs text-muted-foreground ml-1">({item.surface})</span>}</TableCell>
             <TableCell><p className="font-medium">{item.procedure_name}</p>{item.procedure_code && <p className="text-xs text-muted-foreground">{item.procedure_code}</p>}</TableCell>
             <TableCell className="text-right font-medium">{formatCurrency(item.total_price)}</TableCell>
             <TableCell><Badge variant="outline" className="text-xs">{STATUS_CONFIG[item.status]?.label || item.status}</Badge></TableCell>

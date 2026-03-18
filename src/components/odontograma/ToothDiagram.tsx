@@ -7,7 +7,7 @@
  * Cada face pode ter uma condição independente (cárie, restauração, etc.)
  * Visualmente baseado no padrão ISO dos softwares odontológicos profissionais.
  */
-import { memo } from "react";
+import React, { memo } from "react";
 import { cn } from "@/lib/utils";
 import { TOOTH_CONDITIONS, type ToothConditionKey, type ToothCondition } from "./odontogramConstants";
 import {
@@ -31,6 +31,7 @@ interface ToothDiagramProps {
   isSelected?: boolean;
   compact?: boolean; // For embed use
   onClick?: () => void;
+  onDoubleClick?: () => void; // U3: double-click to open edit dialog
   onSurfaceClick?: (surface: string) => void;
   disabled?: boolean;
   isDirty?: boolean;     // U7: unsaved changes indicator
@@ -87,6 +88,7 @@ function ToothDiagramInner({
   isSelected = false,
   compact = false,
   onClick,
+  onDoubleClick,
   onSurfaceClick,
   disabled = false,
   isDirty = false,
@@ -99,6 +101,28 @@ function ToothDiagramInner({
   const bottomLabel = upper ? "P" : "L";
   const size = compact ? 44 : 56;
   const pad = compact ? 1 : 2;
+
+  // U3: double-click timer for distinguishing single vs double click
+  const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleClick = () => {
+    if (disabled) return;
+    if (onDoubleClick) {
+      // If double-click handler exists, delay single click to distinguish
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+        onDoubleClick();
+      } else {
+        clickTimerRef.current = setTimeout(() => {
+          clickTimerRef.current = null;
+          onClick?.();
+        }, 250);
+      }
+    } else {
+      onClick?.();
+    }
+  };
 
   // Get surface condition or fallback to tooth general condition
   const getSurfaceColor = (face: string): string => {
@@ -163,7 +187,7 @@ function ToothDiagramInner({
               isDirty && "ring-2 ring-amber-400 animate-pulse",
               diffHighlight && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/30"
             )}
-            onClick={() => !disabled && onClick?.()}
+            onClick={() => !disabled && handleClick()}
           >
       {/* Tooth number (top for upper, bottom for lower) */}
       {upper && (
@@ -175,8 +199,14 @@ function ToothDiagramInner({
         </span>
       )}
 
-      {/* SVG 5-face diagram */}
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* SVG 5-face diagram — responsive via viewBox (U5) */}
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="touch-manipulation max-w-full h-auto"
+        style={{ minWidth: compact ? 36 : 44, minHeight: compact ? 36 : 44 }}
+      >
         {/* Special cases: missing/impacted/etc draw differently */}
         {isMissing || isSpecial ? (
           <g>
