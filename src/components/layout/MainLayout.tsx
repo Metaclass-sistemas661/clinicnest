@@ -87,14 +87,14 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         <main className={cn(
           "min-h-screen transition-all duration-300",
           isMobile ? "ml-0" : sidebarCollapsed ? "ml-[92px]" : "ml-[300px]",
-          !isMobile && "mr-14"
+          !isMobile && "mr-[68px] pt-3 pr-3"
         )}>
           <GoalsProgressBar />
           <TrialBanner />
           {/* Header: título + sino (staff) + actions */}
           <header className={cn(
-            "sticky top-0 z-30 glass border-b border-border",
-            isMobile && "top-[88px]"
+            "sticky top-3 z-30 glass border border-border/50 rounded-2xl shadow-sm",
+            isMobile && "top-[88px] rounded-none border-b border-x-0 border-t-0"
           )}>
             <div className={cn(
               "flex items-center justify-between",

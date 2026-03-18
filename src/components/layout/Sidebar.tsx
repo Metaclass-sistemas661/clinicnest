@@ -881,7 +881,7 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-3 top-3 z-40 flex h-[calc(100vh-1.5rem)] flex-col transition-all duration-300 ease-out overflow-hidden rounded-2xl",
+        "fixed left-3 top-3 bottom-3 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden rounded-2xl",
         isCollapsed
           ? "bg-background/95 backdrop-blur-xl border border-border/50 shadow-xl"
           : "bg-[hsl(var(--sidebar-body))] shadow-xl shadow-black/10 border border-border/30",
@@ -890,27 +890,27 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
     >
       <SidebarContent isCollapsed={isCollapsed} />
 
-      {/* Collapse Toggle */}
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className={cn(
-          "absolute -right-3 top-20 z-50 h-6 w-6 rounded-full border border-border/50 bg-background shadow-md hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all",
-        )}
-        aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
-        onClick={() => {
-          const next = !isCollapsed;
-          setIsCollapsed(next);
-          onCollapsedChange?.(next);
-        }}
-      >
-        {isCollapsed ? (
-          <ChevronRight className="h-3 w-3" />
-        ) : (
-          <ChevronLeft className="h-3 w-3" />
-        )}
-      </Button>
+      {/* Collapse Toggle — inside card, bottom */}
+      <div className="flex items-center justify-center border-t border-border/30 py-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all"
+          aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
+          onClick={() => {
+            const next = !isCollapsed;
+            setIsCollapsed(next);
+            onCollapsedChange?.(next);
+          }}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
     </aside>
   );
 }
