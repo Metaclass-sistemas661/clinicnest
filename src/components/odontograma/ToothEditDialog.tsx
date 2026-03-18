@@ -104,6 +104,17 @@ export function ToothEditDialog({
 
   const conditionInfo = TOOTH_CONDITIONS.find(c => c.value === condition);
 
+  // B3: Conditions where surfaces/material don't make sense
+  const isMutuallyExclusive = ["missing", "extraction", "unerupted", "agenesis", "impacted"].includes(condition);
+
+  // Clear surfaces when switching to a mutually exclusive condition
+  useEffect(() => {
+    if (isMutuallyExclusive) {
+      setSelectedSurfaces([]);
+      setMaterial("");
+    }
+  }, [condition]);
+
   const handleToggleSurface = (surface: string) => {
     setSelectedSurfaces(prev =>
       prev.includes(surface) ? prev.filter(s => s !== surface) : [...prev, surface]
@@ -182,6 +193,14 @@ export function ToothEditDialog({
 
           {/* ── Tab: Faces/Superfícies ── */}
           <TabsContent value="surfaces" className="space-y-4 mt-3">
+            {isMutuallyExclusive && (
+              <div className="flex items-center gap-2 p-2 bg-muted rounded-md border">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <p className="text-[11px] text-muted-foreground">
+                  Seleção de faces não se aplica a dentes com condição &quot;{conditionInfo?.label}&quot;.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-xs">Selecione as faces afetadas</Label>
               <div className="flex justify-center gap-2">
@@ -189,9 +208,11 @@ export function ToothEditDialog({
                   <button
                     key={s}
                     type="button"
-                    onClick={() => handleToggleSurface(s)}
+                    onClick={() => !isMutuallyExclusive && handleToggleSurface(s)}
+                    disabled={isMutuallyExclusive}
                     className={cn(
                       "w-12 h-12 rounded-lg border-2 flex flex-col items-center justify-center transition-all text-xs font-bold",
+                      isMutuallyExclusive && "opacity-40 cursor-not-allowed",
                       selectedSurfaces.includes(s)
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-muted hover:border-primary/50 text-muted-foreground"
@@ -286,6 +307,7 @@ export function ToothEditDialog({
                 type="date"
                 value={procedureDate}
                 onChange={(e) => setProcedureDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
                 className="h-8 text-xs"
               />
             </div>

@@ -13,7 +13,7 @@ import { Spinner } from "@/components/ui/spinner";
  * - Estatísticas rápidas
  * @module
  */
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import {
 import {
   Smile, Trash2, Search, Loader2, History, ChevronLeft, ChevronRight,
   AlertTriangle, Plus, GitCompare, FileDown, ClipboardList,
+  Undo2, Redo2, Filter, Zap, LayoutTemplate,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,7 @@ import {
 } from "@/components/odontograma/odontogramConstants";
 import { generateOdontogramPdf } from "@/utils/odontogramPdf";
 import { PatientCombobox } from "@/components/ui/patient-combobox";
+import { cn } from "@/lib/utils";
 /** Condições que requerem tratamento e devem ser sugeridas no plano */
 const TREATABLE_CONDITIONS: Set<ToothConditionKey> = new Set([
   "caries", "fracture", "extraction", "abscess", "periapical",
@@ -75,6 +77,82 @@ const CONDITION_PROCEDURE_MAP: Record<string, { name: string; code?: string }> =
   erosion:      { name: "Restauração" },
   abrasion:     { name: "Restauração" },
   temporary:    { name: "Restauração definitiva" },
+};
+
+/** F20: Templates de condição pré-configurados */
+const CONDITION_TEMPLATES: Array<{
+  label: string;
+  description: string;
+  apply: () => Array<{ tooth: number; condition: ToothConditionKey }>;
+}> = [
+  {
+    label: "Prótese Total Superior",
+    description: "Marcar dentes 11-18 e 21-28 como ausentes",
+    apply: () => {
+      const teeth: Array<{ tooth: number; condition: ToothConditionKey }> = [];
+      for (const num of [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28]) {
+        teeth.push({ tooth: num, condition: "missing" });
+      }
+      return teeth;
+    },
+  },
+  {
+    label: "Prótese Total Inferior",
+    description: "Marcar dentes 31-38 e 41-48 como ausentes",
+    apply: () => {
+      const teeth: Array<{ tooth: number; condition: ToothConditionKey }> = [];
+      for (const num of [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]) {
+        teeth.push({ tooth: num, condition: "missing" });
+      }
+      return teeth;
+    },
+  },
+  {
+    label: "Prótese Total Bimaxilar",
+    description: "Marcar todos os dentes como ausentes",
+    apply: () => {
+      const teeth: Array<{ tooth: number; condition: ToothConditionKey }> = [];
+      for (const num of [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38]) {
+        teeth.push({ tooth: num, condition: "missing" });
+      }
+      return teeth;
+    },
+  },
+  {
+    label: "Classe III Kennedy Sup. (post. bilateral)",
+    description: "Molares superiores ausentes bilateral",
+    apply: () => [
+      { tooth: 16, condition: "missing" as ToothConditionKey },
+      { tooth: 17, condition: "missing" as ToothConditionKey },
+      { tooth: 18, condition: "missing" as ToothConditionKey },
+      { tooth: 26, condition: "missing" as ToothConditionKey },
+      { tooth: 27, condition: "missing" as ToothConditionKey },
+      { tooth: 28, condition: "missing" as ToothConditionKey },
+    ],
+  },
+  {
+    label: "Selantes em Primeiros Molares (jovem)",
+    description: "Aplicar selante nos dentes 16, 26, 36, 46",
+    apply: () => [
+      { tooth: 16, condition: "sealant" as ToothConditionKey },
+      { tooth: 26, condition: "sealant" as ToothConditionKey },
+      { tooth: 36, condition: "sealant" as ToothConditionKey },
+      { tooth: 46, condition: "sealant" as ToothConditionKey },
+    ],
+  },
+];
+
+/** F10: Protocolo de tratamento automático — sequência sugerida por condição */
+const AUTO_PROTOCOL: Record<string, string[]> = {
+  caries: ["Anestesia local", "Remoção de cárie", "Restauração direta"],
+  abscess: ["Drenagem de abscesso", "Antibioticoterapia", "Tratamento endodôntico", "Restauração definitiva"],
+  periapical: ["Tratamento endodôntico", "Pino de fibra de vidro", "Coroa protética"],
+  root_remnant: ["Exodontia de resto radicular", "Alveoloplastia", "Planejamento protético"],
+  fracture: ["Avaliação de viabilidade", "Restauração / Coroa", "Controle radiográfico"],
+  mobility: ["Avaliação periodontal", "Contenção provisória", "Tratamento periodontal"],
+  recession: ["Avaliação periodontal", "Enxerto gengival / Cirurgia mucogengival", "Manutenção periodontal"],
+  erosion: ["Orientação de higiene e dieta", "Restauração", "Aplicação de flúor"],
+  fistula: ["Tratamento endodôntico", "Drenagem", "Controle radiográfico"],
 };
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -128,6 +206,22 @@ export default function Odontograma() {
 
   // Dirty tracking
   const [isDirty, setIsDirty] = useState(false);
+  const [dirtyTeeth, setDirtyTeeth] = useState<Set<number>>(new Set()); // U7
+
+  // U4: Undo/Redo
+  const [undoStack, setUndoStack] = useState<Map<number, ToothRecord>[]>([]);
+  const [redoStack, setRedoStack] = useState<Map<number, ToothRecord>[]>([]);
+  const MAX_UNDO = 50;
+
+  // U8: Condition filter
+  const [conditionFilter, setConditionFilter] = useState<ToothConditionKey | null>(null);
+
+  // F20: Templates dialog
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+
+  // F10: Protocol suggestion
+  const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
+  const [protocolTooth, setProtocolTooth] = useState<ToothRecord | null>(null);
 
   // Treatment plan dialog
   const [treatmentPlanDialogOpen, setTreatmentPlanDialogOpen] = useState(false);
@@ -135,6 +229,55 @@ export default function Odontograma() {
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
 
   // ── Load odontograms for patient ──
+  /** Pushes current teeth state to undo stack before mutation */
+  const pushUndo = useCallback(() => {
+    setUndoStack(prev => {
+      const next = [...prev, new Map(teeth)];
+      return next.length > MAX_UNDO ? next.slice(-MAX_UNDO) : next;
+    });
+    setRedoStack([]); // clear redo on new change
+  }, [teeth]);
+
+  const handleUndo = useCallback(() => {
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev;
+      const next = [...prev];
+      const last = next.pop()!;
+      setRedoStack(r => [...r, new Map(teeth)]);
+      setTeeth(last);
+      setIsDirty(true);
+      return next;
+    });
+  }, [teeth]);
+
+  const handleRedo = useCallback(() => {
+    setRedoStack(prev => {
+      if (prev.length === 0) return prev;
+      const next = [...prev];
+      const last = next.pop()!;
+      setUndoStack(u => [...u, new Map(teeth)]);
+      setTeeth(last);
+      setIsDirty(true);
+      return next;
+    });
+  }, [teeth]);
+
+  // U4: Keyboard shortcut for Undo/Redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleUndo, handleRedo]);
+
   const handleSelectPatient = useCallback(async (patientId: string) => {
     setSelectedPatient(patientId);
     if (!profile?.tenant_id) return;
@@ -229,6 +372,7 @@ export default function Odontograma() {
 
   const handleSaveTooth = (data: ToothFormData) => {
     if (selectedTooth == null) return;
+    pushUndo();
     const next = new Map(teeth);
     next.set(selectedTooth, {
       tooth_number: selectedTooth,
@@ -241,16 +385,30 @@ export default function Odontograma() {
     });
     setTeeth(next);
     setIsDirty(true);
+    setDirtyTeeth(prev => new Set(prev).add(selectedTooth));
     setToothDialogOpen(false);
     toast.success(`Dente ${selectedTooth} atualizado`);
+
+    // F10: Show protocol suggestion if condition has a protocol
+    const cond = data.condition;
+    if (AUTO_PROTOCOL[cond]) {
+      setProtocolTooth({
+        tooth_number: selectedTooth,
+        condition: cond,
+        priority: data.priority || "normal",
+      });
+      setProtocolDialogOpen(true);
+    }
   };
 
   const handleRemoveTooth = () => {
     if (selectedTooth == null) return;
+    pushUndo();
     const next = new Map(teeth);
     next.delete(selectedTooth);
     setTeeth(next);
     setIsDirty(true);
+    setDirtyTeeth(prev => new Set(prev).add(selectedTooth));
     setToothDialogOpen(false);
     toast.success(`Dente ${selectedTooth} removido`);
   };
@@ -287,6 +445,9 @@ export default function Odontograma() {
 
       toast.success("Odontograma salvo com sucesso!");
       setIsDirty(false);
+      setDirtyTeeth(new Set());
+      setUndoStack([]);
+      setRedoStack([]);
       await handleSelectPatient(selectedPatient);
     } catch (err: any) {
       logger.error("Erro ao salvar odontograma:", err);
@@ -373,6 +534,12 @@ export default function Odontograma() {
     return changes.sort((a, b) => a.tooth - b.tooth);
   }, [teeth, compareTeeth, compareMode]);
 
+  /** F6: Set of tooth numbers that differ between versions */
+  const diffTeeth = useMemo(() => {
+    if (!compareMode) return new Set<number>();
+    return new Set(diffs.map(d => d.tooth));
+  }, [diffs, compareMode]);
+
   /** Dentes com condições que requerem tratamento */
   const treatableTeeth = useMemo(
     () => records.filter(r => TREATABLE_CONDITIONS.has(r.condition)),
@@ -383,6 +550,28 @@ export default function Odontograma() {
   const openTreatmentPlanDialog = () => {
     setTreatmentPlanSelectedTeeth(new Set(treatableTeeth.map(t => t.tooth_number)));
     setTreatmentPlanDialogOpen(true);
+  };
+
+  /** F20: Apply a condition template */
+  const handleApplyTemplate = (templateIndex: number) => {
+    const template = CONDITION_TEMPLATES[templateIndex];
+    if (!template) return;
+    pushUndo();
+    const next = new Map(teeth);
+    const dirtySet = new Set(dirtyTeeth);
+    for (const { tooth, condition } of template.apply()) {
+      next.set(tooth, {
+        tooth_number: tooth,
+        condition,
+        priority: "normal",
+      });
+      dirtySet.add(tooth);
+    }
+    setTeeth(next);
+    setDirtyTeeth(dirtySet);
+    setIsDirty(true);
+    setTemplatesDialogOpen(false);
+    toast.success(`Template "${template.label}" aplicado`);
   };
 
   /** Cria o plano de tratamento no Supabase e navega para a página */
@@ -467,10 +656,24 @@ export default function Odontograma() {
               />
             </div>
             {selectedPatient && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                {/* U4: Undo/Redo */}
+                <Button variant="outline" size="sm" onClick={handleUndo} disabled={undoStack.length === 0} title="Desfazer (Ctrl+Z)" className="gap-1">
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleRedo} disabled={redoStack.length === 0} title="Refazer (Ctrl+Y)" className="gap-1">
+                  <Redo2 className="h-3.5 w-3.5" />
+                </Button>
+
                 <Button variant="outline" size="sm" onClick={handleNewOdontogram} className="gap-1">
                   <Plus className="h-3.5 w-3.5" />
                   Novo
+                </Button>
+
+                {/* F20: Templates */}
+                <Button variant="outline" size="sm" onClick={() => setTemplatesDialogOpen(true)} className="gap-1" title="Templates de condição">
+                  <LayoutTemplate className="h-3.5 w-3.5" />
+                  Templates
                 </Button>
                 {historyEntries.length >= 2 && (
                   <Button
@@ -617,6 +820,39 @@ export default function Odontograma() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* U8: Condition filter */}
+            {records.length > 0 && (
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Filtrar:</span>
+                <button
+                  className={cn(
+                    "text-xs px-2 py-0.5 rounded-full border transition-colors",
+                    conditionFilter === null ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                  )}
+                  onClick={() => setConditionFilter(null)}
+                >
+                  Todos
+                </button>
+                {Array.from(new Set(records.map(r => r.condition))).map(cond => {
+                  const info = getConditionInfo(cond);
+                  return (
+                    <button
+                      key={cond}
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full border transition-colors",
+                        conditionFilter === cond ? "ring-2 ring-offset-1" : "hover:bg-muted"
+                      )}
+                      style={conditionFilter === cond ? { backgroundColor: info.color, color: "white" } : {}}
+                      onClick={() => setConditionFilter(prev => prev === cond ? null : cond)}
+                    >
+                      {info.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <OdontogramChart
               teeth={teeth}
               dentitionType={dentitionType}
@@ -626,6 +862,9 @@ export default function Odontograma() {
               showLegend
               showStats
               readOnly={isViewingOldVersion}
+              dirtyTeeth={dirtyTeeth}
+              conditionFilter={conditionFilter}
+              diffTeeth={diffTeeth}
             />
           </CardContent>
         </Card>
@@ -655,6 +894,7 @@ export default function Odontograma() {
               readOnly
               showLegend={false}
               showStats={false}
+              diffTeeth={diffTeeth}
             />
 
             {diffs.length > 0 && (
@@ -763,14 +1003,33 @@ export default function Odontograma() {
         </Card>
       )}
 
-      {/* ── Empty state ── */}
+      {/* ── Empty state (U9: more informative) ── */}
       {selectedPatient && !isLoading && records.length === 0 && historyEntries.length === 0 && (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Smile className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-1">Nenhum odontograma registrado</h3>
-            <p className="text-sm text-muted-foreground">
-              Clique nos dentes acima para registrar as condições e depois salve.
+          <CardContent className="py-12 text-center space-y-4">
+            <Smile className="h-16 w-16 mx-auto text-muted-foreground/40" />
+            <div>
+              <h3 className="text-lg font-medium mb-1">Nenhum odontograma registrado</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                Este paciente ainda não possui prontuário odontológico. Clique nos dentes no mapa acima para
+                registrar condições clínicas, depois salve para criar o primeiro odontograma.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-center flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => setTemplatesDialogOpen(true)} className="gap-1">
+                <LayoutTemplate className="h-3.5 w-3.5" />
+                Usar Template
+              </Button>
+              <Button size="sm" className="gap-1" onClick={() => {
+                const firstTooth = dentitionType === "deciduous" ? 55 : 18;
+                openToothDialog(firstTooth);
+              }}>
+                <Plus className="h-3.5 w-3.5" />
+                Começar Registro
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              💡 Dica: Use o toggle de dentição (Adulto / Infantil / Misto) para escolher o tipo de arcada.
             </p>
           </CardContent>
         </Card>

@@ -43,6 +43,12 @@ interface OdontogramChartProps {
   readOnly?: boolean;
   showLegend?: boolean;
   showStats?: boolean;
+  /** U7: Set of tooth numbers with unsaved changes */
+  dirtyTeeth?: Set<number>;
+  /** U8: Filter to highlight only teeth with this condition */
+  conditionFilter?: ToothConditionKey | null;
+  /** F6: Set of tooth numbers that differ between versions */
+  diffTeeth?: Set<number>;
 }
 
 export function OdontogramChart({
@@ -56,6 +62,9 @@ export function OdontogramChart({
   readOnly = false,
   showLegend = true,
   showStats = true,
+  dirtyTeeth,
+  conditionFilter,
+  diffTeeth,
 }: OdontogramChartProps) {
   const { upper, lower } = useMemo(() => getTeethForDentition(dentitionType), [dentitionType]);
 
@@ -98,11 +107,13 @@ export function OdontogramChart({
     <div className="flex flex-wrap justify-center gap-0">
       {toothNumbers.map(num => {
         const rec = getRecord(num);
+        const toothCondition = getCondition(num);
+        const isDimmed = conditionFilter != null && toothCondition !== conditionFilter;
         return (
           <ToothDiagram
             key={num}
             number={num}
-            condition={getCondition(num)}
+            condition={toothCondition}
             surfaces={rec?.surfaceData}
             mobilityGrade={rec?.mobility_grade}
             priority={rec?.priority}
@@ -111,6 +122,9 @@ export function OdontogramChart({
             onClick={() => onToothClick?.(num)}
             onSurfaceClick={onSurfaceClick ? (s) => onSurfaceClick(num, s) : undefined}
             disabled={readOnly}
+            isDirty={dirtyTeeth?.has(num) ?? false}
+            dimmed={isDimmed}
+            diffHighlight={diffTeeth?.has(num) ?? false}
           />
         );
       })}

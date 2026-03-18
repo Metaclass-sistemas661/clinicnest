@@ -33,7 +33,8 @@ SEGURANÇA:
 - NUNCA inclua CPF completo no resumo (use apenas últimos 4 dígitos se necessário).`;
 
 interface SummaryRequest {
-  client_id: string;
+  client_id?: string;
+  patient_id?: string;
   include_appointments?: boolean;
   include_prescriptions?: boolean;
   include_exams?: boolean;
@@ -123,14 +124,16 @@ serve(async (req) => {
     const body: SummaryRequest = await req.json();
     const {
       client_id,
+      patient_id,
       include_appointments = true,
       include_prescriptions = true,
       include_exams = true,
       max_appointments = 5,
     } = body;
 
-    if (!client_id) {
-      return new Response(JSON.stringify({ error: "client_id is required" }), {
+    const resolvedClientId = patient_id || client_id;
+    if (!resolvedClientId) {
+      return new Response(JSON.stringify({ error: "patient_id is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -152,7 +155,7 @@ serve(async (req) => {
         blood_type,
         notes
       `)
-      .eq("id", client_id)
+      .eq("id", resolvedClientId)
       .eq("tenant_id", profile.tenant_id)
       .single();
 

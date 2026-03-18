@@ -7,8 +7,15 @@
  * Cada face pode ter uma condição independente (cárie, restauração, etc.)
  * Visualmente baseado no padrão ISO dos softwares odontológicos profissionais.
  */
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { TOOTH_CONDITIONS, type ToothConditionKey, type ToothCondition } from "./odontogramConstants";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface ToothSurfaceData {
   surface: string; // V, L, P, M, D, O, I
@@ -26,6 +33,9 @@ interface ToothDiagramProps {
   onClick?: () => void;
   onSurfaceClick?: (surface: string) => void;
   disabled?: boolean;
+  isDirty?: boolean;     // U7: unsaved changes indicator
+  dimmed?: boolean;      // U8: dimmed when filtered out
+  diffHighlight?: boolean; // F6: highlight diff between versions
 }
 
 const getColor = (condition: ToothConditionKey): string => {
@@ -68,7 +78,7 @@ const isAnterior = (num: number) => {
  *        │   L/P   │
  *        └─────────┘
  */
-export function ToothDiagram({
+function ToothDiagramInner({
   number,
   condition,
   surfaces = [],
@@ -79,6 +89,9 @@ export function ToothDiagram({
   onClick,
   onSurfaceClick,
   disabled = false,
+  isDirty = false,
+  dimmed = false,
+  diffHighlight = false,
 }: ToothDiagramProps) {
   const upper = isUpperTooth(number);
   const anterior = isAnterior(number);
@@ -122,18 +135,36 @@ export function ToothDiagram({
   // Priority indicator
   const priorityColor = priority === "urgent" ? "#dc2626" : priority === "high" ? "#f59e0b" : null;
 
+  // Build tooltip text
+  const tooltipLines: string[] = [`Dente ${number} — ${getToothLabel(condition)}`];
+  if (surfaces && surfaces.length > 0) {
+    tooltipLines.push(`Faces: ${surfaces.map(s => s.surface).join(", ")}`);
+  }
+  if (mobilityGrade != null && mobilityGrade > 0) {
+    tooltipLines.push(`Mobilidade: Grau ${mobilityGrade}`);
+  }
+  if (priority && priority !== "normal") {
+    const pLabel = priority === "urgent" ? "Urgente" : priority === "high" ? "Alta" : priority === "low" ? "Baixa" : priority;
+    tooltipLines.push(`Prioridade: ${pLabel}`);
+  }
+
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center gap-0.5 rounded-lg transition-all cursor-pointer",
-        isSelected && "ring-2 ring-primary bg-primary/5",
-        !disabled && !isSelected && "hover:bg-muted/60 hover:scale-105",
-        disabled && "cursor-default opacity-70",
-        compact ? "p-0.5" : "p-1"
-      )}
-      onClick={() => !disabled && onClick?.()}
-      title={`Dente ${number} — ${getToothLabel(condition)}`}
-    >
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className={cn(
+              "flex flex-col items-center gap-0.5 rounded-lg transition-all cursor-pointer relative",
+              isSelected && "ring-2 ring-primary bg-primary/5",
+              !disabled && !isSelected && "hover:bg-muted/60 hover:scale-105",
+              disabled && "cursor-default opacity-70",
+              compact ? "p-0.5" : "p-1",
+              dimmed && "opacity-25 pointer-events-none",
+              isDirty && "ring-2 ring-amber-400 animate-pulse",
+              diffHighlight && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/30"
+            )}
+            onClick={() => !disabled && onClick?.()}
+          >
       {/* Tooth number (top for upper, bottom for lower) */}
       {upper && (
         <span className={cn(
@@ -284,6 +315,14 @@ export function ToothDiagram({
           {number}
         </span>
       )}
-    </div>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side={upper ? "top" : "bottom"} className="text-xs whitespace-pre-line">
+          {tooltipLines.join("\n")}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
+
+export const ToothDiagram = memo(ToothDiagramInner);
