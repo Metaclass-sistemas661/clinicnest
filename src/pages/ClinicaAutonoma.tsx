@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 interface AutonomousConfig {
   auto_checkin_enabled: boolean;
@@ -93,7 +94,7 @@ export default function ClinicaAutonoma() {
     queryFn: async () => {
       if (!profile?.tenant_id) return DEFAULT_CONFIG;
       const { data } = await supabase
-        .from("tenant_settings" as never)
+        .from("tenants")
         .select("autonomous_config")
         .eq("id", profile.tenant_id)
         .single();
@@ -105,7 +106,7 @@ export default function ClinicaAutonoma() {
   const updateMutation = useMutation({
     mutationFn: async (newConfig: AutonomousConfig) => {
       const { error } = await supabase
-        .from("tenant_settings" as never)
+        .from("tenants")
         .update({ autonomous_config: newConfig } as never)
         .eq("id", profile!.tenant_id);
       if (error) throw error;
@@ -128,23 +129,26 @@ export default function ClinicaAutonoma() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="py-6">
-          <Skeleton className="h-64 w-full" />
-        </CardContent>
-      </Card>
+      <MainLayout title="Clínica Autônoma" subtitle="Pipeline de automação inteligente">
+        <Card>
+          <CardContent className="py-6">
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </MainLayout>
     );
   }
 
   return (
+    <MainLayout title="Clínica Autônoma" subtitle="Pipeline de automação inteligente">
     <div className="space-y-6">
       {/* Header */}
-      <Card className="border-teal-200 bg-gradient-to-br from-teal-50/60 to-cyan-50/40">
+      <Card className="border-teal-200 dark:border-teal-800 bg-gradient-to-br from-teal-50/60 to-cyan-50/40 dark:from-teal-950/40 dark:to-cyan-950/30">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-teal-100">
-                <Bot className="h-6 w-6 text-teal-700" />
+              <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/50">
+                <Bot className="h-6 w-6 text-teal-700 dark:text-teal-400" />
               </div>
               <div>
                 <CardTitle className="text-lg">Clínica Autônoma</CardTitle>
@@ -254,5 +258,6 @@ export default function ClinicaAutonoma() {
         </CardContent>
       </Card>
     </div>
+    </MainLayout>
   );
 }
