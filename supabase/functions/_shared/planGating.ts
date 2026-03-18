@@ -85,18 +85,28 @@ function parseTier(plan: string | null): string {
 /**
  * Check if a tenant's plan allows a specific AI feature and daily quota.
  * Returns { allowed: true } on success, or { allowed: false, reason } on denial.
+ *
+ * Special cases:
+ * - Superadmin users (SUPERADMIN_USER_IDS env) bypass all checks.
+ * - Trialing subscriptions (within trial_end) get full premium access.
  */
 export async function checkAiAccess(
   tenantId: string,
   userId: string,
   feature: AiFeature,
 ): Promise<AiAccessResult> {
+  // ── Superadmin bypass ────────────────────────────────────────────────────
+  const superadminIds = (Deno.env.get("SUPERADMIN_USER_IDS") ?? "").split(",").map(s => s.trim()).filter(Boolean);
+  if (superadminIds.includes(userId)) {
+    return { allowed: true, tier: "premium", dailyUsed: 0, dailyLimit: -1 };
+  }
+
   const admin = getAdminClient();
 
   // 1. Get subscription
   const { data: sub } = await admin
     .from("subscriptions")
-    .select("plan, status")
+    .select("plan, status, trial_end")
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
@@ -111,8 +121,24 @@ export async function checkAiAccess(
     };
   }
 
-  // 2. Determine tier
-  const tier = parseTier(sub.plan);
+  // 2. Determine tier — trialing within trial window gets premium access
+  let tier: string;
+  if (sub.status === "trialing") {
+    const trialEnd = sub.trial_end ? new Date(sub.trial_end) : null;
+    if (!trialEnd || trialEnd <= new Date()) {
+      return {
+        allowed: false,
+        reason: "Período de teste expirou. Escolha um plano para continuar usando a IA.",
+        tier: "trial_expired",
+        dailyUsed: 0,
+        dailyLimit: 0,
+      };
+    }
+    tier = "premium"; // Trial ativo = acesso premium completo
+  } else {
+    tier = parseTier(sub.plan);
+  }
+
   const config = AI_PLAN_CONFIG[tier];
 
   if (!config) {

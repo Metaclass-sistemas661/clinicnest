@@ -52,6 +52,7 @@ import {
   type ToothConditionKey,
 } from "@/components/odontograma/odontogramConstants";
 import { generateOdontogramPdf } from "@/utils/odontogramPdf";
+import { PatientCombobox } from "@/components/ui/patient-combobox";
 /** Condições que requerem tratamento e devem ser sugeridas no plano */
 const TREATABLE_CONDITIONS: Set<ToothConditionKey> = new Set([
   "caries", "fracture", "extraction", "abscess", "periapical",
@@ -103,9 +104,8 @@ export default function Odontograma() {
   const navigate = useNavigate();
 
   // Patient selection
-  const [patients, setPatients] = useState<PatientOption[]>([]);
-  const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<string>("");
+  const [selectedPatientName, setSelectedPatientName] = useState<string>("");
 
   // Odontogram state
   const [teeth, setTeeth] = useState<Map<number, ToothRecord>>(new Map());
@@ -133,28 +133,6 @@ export default function Odontograma() {
   const [treatmentPlanDialogOpen, setTreatmentPlanDialogOpen] = useState(false);
   const [treatmentPlanSelectedTeeth, setTreatmentPlanSelectedTeeth] = useState<Set<number>>(new Set());
   const [isCreatingPlan, setIsCreatingPlan] = useState(false);
-
-  // ── Patient search (debounced) ──
-  useEffect(() => {
-    if (!profile?.tenant_id || patientSearch.length < 2) return;
-
-    const timer = setTimeout(() => {
-      void searchPatients();
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [patientSearch, profile?.tenant_id]);
-
-  const searchPatients = async () => {
-    if (!profile?.tenant_id) return;
-    const { data } = await (supabase
-      .from("patients") as any)
-      .select("id, name")
-      .eq("tenant_id", profile.tenant_id)
-      .ilike("name", `%${patientSearch}%`)
-      .limit(20);
-    setPatients((data ?? []) as unknown as PatientOption[]);
-  };
 
   // ── Load odontograms for patient ──
   const handleSelectPatient = useCallback(async (patientId: string) => {
@@ -474,31 +452,20 @@ export default function Odontograma() {
           <div className="flex flex-wrap gap-3 items-end">
             <div className="space-y-1 flex-1 min-w-[200px]">
               <Label className="text-xs">Buscar Paciente</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                  placeholder="Digite o nome do paciente..."
-                  className="pl-10"
-                />
-              </div>
+              <PatientCombobox
+                tenantId={profile?.tenant_id}
+                value={selectedPatient}
+                onSelect={(id, name) => {
+                  if (id) {
+                    setSelectedPatientName(name);
+                    void handleSelectPatient(id);
+                  } else {
+                    setSelectedPatient("");
+                    setSelectedPatientName("");
+                  }
+                }}
+              />
             </div>
-            {patients.length > 0 && (
-              <div className="space-y-1">
-                <Label className="text-xs">Paciente</Label>
-                <Select value={selectedPatient} onValueChange={(v) => void handleSelectPatient(v)}>
-                  <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             {selectedPatient && (
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleNewOdontogram} className="gap-1">
@@ -522,7 +489,7 @@ export default function Odontograma() {
                     size="sm"
                     className="gap-1"
                     onClick={() => {
-                      const patientName = patients.find(p => p.id === selectedPatient)?.name ?? "Paciente";
+                      const patientName = selectedPatientName || "Paciente";
                       generateOdontogramPdf({
                         patient_name: patientName,
                         exam_date: historyEntries[historyIndex]?.exam_date ?? new Date().toISOString().slice(0, 10),

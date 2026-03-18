@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { generateTreatmentPlanPdf } from "@/lib/treatment-plan-pdf";
+import { PatientCombobox } from "@/components/ui/patient-combobox";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pendente: { label: "Pendente", color: "bg-gray-500" },
@@ -44,9 +45,7 @@ interface TreatmentPlan {
 export default function PlanosTratamento() {
   const { profile } = useAuth();
   const [plans, setPlans] = useState<TreatmentPlan[]>([]);
-  const [patients, setPatients] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isNewPlanOpen, setIsNewPlanOpen] = useState(false);
@@ -55,17 +54,7 @@ export default function PlanosTratamento() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ title: "Plano de Tratamento", description: "", valid_until: "", payment_conditions: "", discount_percent: "0" });
 
-  useEffect(() => {
-    if (!profile?.tenant_id || patientSearch.length < 2) return;
-    const timer = setTimeout(() => { searchPatients(); }, 350);
-    return () => clearTimeout(timer);
-  }, [patientSearch]);
   useEffect(() => { if (selectedPatient) fetchPlans(); }, [selectedPatient, statusFilter]);
-
-  const searchPatients = async () => {
-    const { data } = await supabase.from("patients").select("id, name").eq("tenant_id", profile!.tenant_id).ilike("name", `%${patientSearch}%`).limit(20);
-    setPatients(data || []);
-  };
 
   const fetchPlans = async () => {
     setIsLoading(true);
@@ -114,9 +103,12 @@ export default function PlanosTratamento() {
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1 flex-1 min-w-[200px]">
             <Label className="text-xs">Buscar Paciente</Label>
-            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input value={patientSearch} onChange={e => setPatientSearch(e.target.value)} placeholder="Nome do paciente..." className="pl-10" /></div>
+            <PatientCombobox
+              tenantId={profile?.tenant_id}
+              value={selectedPatient}
+              onSelect={(id) => setSelectedPatient(id)}
+            />
           </div>
-          {patients.length > 0 && <div className="space-y-1"><Label className="text-xs">Paciente</Label><Select value={selectedPatient} onValueChange={setSelectedPatient}><SelectTrigger className="w-64"><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{patients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>}
           {selectedPatient && <><div className="space-y-1"><Label className="text-xs">Status</Label><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{Object.entries(STATUS_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div><Button onClick={() => setIsNewPlanOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Novo Plano</Button></>}
         </div>
       </CardContent></Card>

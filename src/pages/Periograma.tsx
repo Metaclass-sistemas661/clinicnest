@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { generatePeriogramPdf } from "@/utils/periogramPdf";
+import { PatientCombobox } from "@/components/ui/patient-combobox";
 
 // Constantes
 const UPPER_TEETH = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
@@ -71,9 +72,8 @@ function getDepthColor(depth: number | null): string {
 
 export default function Periograma() {
   const { profile } = useAuth();
-  const [patients, setPatients] = useState<PatientOption[]>([]);
-  const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState("");
+  const [selectedPatientName, setSelectedPatientName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -84,27 +84,6 @@ export default function Periograma() {
   const [notes, setNotes] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [riskClass, setRiskClass] = useState("");
-
-  useEffect(() => {
-    if (!profile?.tenant_id || patientSearch.length < 2) return;
-
-    const timer = setTimeout(() => {
-      void searchPatients();
-    }, 350);
-
-    return () => clearTimeout(timer);
-  }, [patientSearch, profile?.tenant_id]);
-
-  const searchPatients = async () => {
-    if (!profile?.tenant_id) return;
-    const { data } = await supabase
-      .from("patients")
-      .select("id, name")
-      .eq("tenant_id", profile.tenant_id)
-      .ilike("name", `%${patientSearch}%`)
-      .limit(20);
-    setPatients((data ?? []) as PatientOption[]);
-  };
 
   const handleSelectPatient = async (patientId: string) => {
     setSelectedPatient(patientId);
@@ -249,7 +228,7 @@ export default function Periograma() {
   const isViewingOld = historyIndex > 0;
 
   const handleExportPdf = () => {
-    const patientName = patients.find(c => c.id === selectedPatient)?.name || "Paciente";
+    const patientName = selectedPatientName || "Paciente";
     const current = historyEntries[historyIndex];
     const measurementsArray = Array.from(measurements.values()).filter(m => m.probing_depth !== null);
     
@@ -274,11 +253,17 @@ export default function Periograma() {
   return (
     <MainLayout title="Periograma" subtitle="Registro da saúde periodontal">
       <PeriogramHeader
-        patientSearch={patientSearch}
-        setPatientSearch={setPatientSearch}
-        patients={patients}
+        tenantId={profile?.tenant_id}
         selectedPatient={selectedPatient}
-        onSelectPatient={handleSelectPatient}
+        onSelectPatient={(id: string, name: string) => {
+          if (id) {
+            setSelectedPatientName(name);
+            void handleSelectPatient(id);
+          } else {
+            setSelectedPatient("");
+            setSelectedPatientName("");
+          }
+        }}
         onSave={handleSave}
         isSaving={isSaving}
         isViewingOld={isViewingOld}
@@ -327,36 +312,19 @@ export default function Periograma() {
 }
 
 // Sub-componentes serão adicionados abaixo
-function PeriogramHeader({ patientSearch, setPatientSearch, patients, selectedPatient, onSelectPatient, onSave, isSaving, isViewingOld, hasData, onExportPdf }: any) {
+function PeriogramHeader({ tenantId, selectedPatient, onSelectPatient, onSave, isSaving, isViewingOld, hasData, onExportPdf }: any) {
   return (
     <Card className="mb-6">
       <CardContent className="pt-5">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1 flex-1 min-w-[200px]">
             <Label className="text-xs">Buscar Paciente</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
-                placeholder="Digite o nome..."
-                className="pl-10"
-              />
-            </div>
+            <PatientCombobox
+              tenantId={tenantId}
+              value={selectedPatient}
+              onSelect={(id, name) => onSelectPatient(id, name)}
+            />
           </div>
-          {patients.length > 0 && (
-            <div className="space-y-1">
-              <Label className="text-xs">Paciente</Label>
-              <Select value={selectedPatient} onValueChange={onSelectPatient}>
-                <SelectTrigger className="w-64"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {patients.map((c: PatientOption) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           {selectedPatient && !isViewingOld && (
             <Button onClick={onSave} disabled={isSaving || !hasData} className="gap-2">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

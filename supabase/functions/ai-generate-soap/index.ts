@@ -91,13 +91,13 @@ serve(async (req) => {
 
     const { data: userRole } = await supabaseClient
       .from("user_roles")
-      .select("is_admin")
+      .select("role")
       .eq("user_id", user.id)
       .eq("tenant_id", profile.tenant_id)
       .single();
 
-    const clinicalRoles = ["medico", "dentista", "enfermeiro", "tec_enfermagem", "fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "admin"];
-    const isAdmin = userRole?.is_admin === true;
+    const clinicalRoles = ["medico", "dentista", "enfermeiro", "tec_enfermagem", "fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "esteticista", "admin"];
+    const isAdmin = userRole?.role === "admin";
     const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
     if (!isAdmin && !hasClinicalRole) {
       return new Response(JSON.stringify({ error: "Access denied" }), {

@@ -944,68 +944,72 @@ export default function Relatorios() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:grid-cols-7 sm:inline-flex overflow-x-auto">
-            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm">
+          <div className="relative">
+            {/* Gradient fade on right edge to indicate scroll */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 sm:block hidden" />
+            <TabsList className="w-full flex overflow-x-auto scrollbar-hide pb-0.5 sm:w-auto sm:inline-flex">
+            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
               Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="inativos" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="inativos" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Users className="h-3.5 w-3.5 hidden sm:block" />
               Inativos
             </TabsTrigger>
-            <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="servicos" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Stethoscope className="h-3.5 w-3.5 hidden sm:block" />
               Procedimentos
             </TabsTrigger>
-            <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="profissionais" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <UserCog className="h-3.5 w-3.5 hidden sm:block" />
               Equipe
             </TabsTrigger>
-            <TabsTrigger value="produtividade" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="produtividade" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Clock className="h-3.5 w-3.5 hidden sm:block" />
               Produtividade
             </TabsTrigger>
-            <TabsTrigger value="pacientes" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="pacientes" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <UserPlus className="h-3.5 w-3.5 hidden sm:block" />
               Pacientes
             </TabsTrigger>
-            <TabsTrigger value="no-show" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="no-show" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <AlertTriangle className="h-3.5 w-3.5 hidden sm:block" />
               No-Show
             </TabsTrigger>
-            <TabsTrigger value="satisfacao" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="satisfacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Star className="h-3.5 w-3.5 hidden sm:block" />
               Satisfação
             </TabsTrigger>
-            <TabsTrigger value="resumo-ia" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="resumo-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Sparkles className="h-3.5 w-3.5 hidden sm:block" />
               Resumo IA
             </TabsTrigger>
-            <TabsTrigger value="revenue-ia" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="revenue-ia" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <TrendingUp className="h-3.5 w-3.5 hidden sm:block" />
               Revenue IA
             </TabsTrigger>
-            <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="benchmarking" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <BarChart3 className="h-3.5 w-3.5 hidden sm:block" />
               Benchmarking
             </TabsTrigger>
-            <TabsTrigger value="financeiro" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="financeiro" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <FileBarChart2 className="h-3.5 w-3.5 hidden sm:block" />
               DRE
             </TabsTrigger>
-            <TabsTrigger value="comissoes" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="comissoes" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <HandCoins className="h-3.5 w-3.5 hidden sm:block" />
               Comissões
             </TabsTrigger>
-            <TabsTrigger value="captacao" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="captacao" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <Megaphone className="h-3.5 w-3.5 hidden sm:block" />
               Captação
             </TabsTrigger>
-            <TabsTrigger value="customizaveis" className="gap-1.5 text-xs sm:text-sm">
+            <TabsTrigger value="customizaveis" className="gap-1.5 text-xs sm:text-sm shrink-0">
               <FileSpreadsheet className="h-3.5 w-3.5 hidden sm:block" />
               Customizáveis
             </TabsTrigger>
           </TabsList>
+          </div>
 
           <TabsContent value="visao-geral" className="mt-6">
             <TabVisaoGeral appts={completedAppts} prevAppts={prevCompletedAppts} period={period} isLoading={isFetching} />

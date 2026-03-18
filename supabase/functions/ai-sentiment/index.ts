@@ -120,13 +120,13 @@ serve(async (req) => {
 
     const { data: userRole } = await supabaseClient
       .from("user_roles")
-      .select("is_admin")
+      .select("role")
       .eq("user_id", user.id)
       .eq("tenant_id", profile.tenant_id)
       .single();
 
     const sentimentRoles = ["admin", "secretaria"];
-    const isAdmin = userRole?.is_admin === true;
+    const isAdmin = userRole?.role === "admin";
     const hasSentimentRole = sentimentRoles.includes(profile.professional_type ?? "");
     if (!isAdmin && !hasSentimentRole) {
       return new Response(JSON.stringify({ error: "Access denied" }), {
