@@ -159,22 +159,25 @@ export default function ProntuarioDetalhe() {
       })));
 
       const docs: LinkedDoc[] = [];
+      const orFilter = r.appointment_id
+        ? `medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`
+        : `medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.is.null)`;
       const [rxRes, certRes, examRes, refRes] = await Promise.all([
         supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
+          .or(orFilter)
           .order("issued_at", { ascending: false }),
         supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
+          .or(orFilter)
           .order("issued_at", { ascending: false }),
         supabase.from("exam_results").select("id, created_at, exam_name, status")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
+          .or(orFilter)
           .order("created_at", { ascending: false }),
         supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id)
-          .or(`medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`)
+          .or(orFilter)
           .order("created_at", { ascending: false }),
       ]);
 

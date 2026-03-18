@@ -75,11 +75,29 @@ serve(async (req: Request) => {
     // Get profile
     const { data: profile } = await supabase
       .from("profiles")
-      .select("tenant_id, role")
-      .eq("id", user.id)
+      .select("tenant_id, professional_type")
+      .eq("user_id", user.id)
       .single();
 
-    if (!profile || !["admin", "professional"].includes(profile.role)) {
+    if (!profile) {
+      return new Response(JSON.stringify({ error: "Sem permissão" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check admin via user_roles OR clinical professional_type
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("tenant_id", profile.tenant_id)
+      .single();
+
+    const clinicalRoles = ["medico", "dentista", "enfermeiro", "tec_enfermagem", "fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "esteticista", "admin"];
+    const isAdmin = userRole?.role === "admin";
+    const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
+    if (!isAdmin && !hasClinicalRole) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -87,9 +105,9 @@ serve(async (req: Request) => {
     }
 
     // Plan gating
-    const accessError = await checkAiAccess(profile.tenant_id, "aiCopilot");
-    if (accessError) {
-      return new Response(JSON.stringify({ error: accessError }), {
+    const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+    if (!aiAccess.allowed) {
+      return new Response(JSON.stringify({ error: aiAccess.reason }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
