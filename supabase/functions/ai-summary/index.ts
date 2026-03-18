@@ -182,24 +182,22 @@ serve(async (req) => {
       const { data: appointments } = await supabaseClient
         .from("appointments")
         .select(`
-          start_time,
+          scheduled_at,
           status,
           notes,
-          diagnosis,
-          cid_code,
+          procedure:procedures(name),
           professional:profiles!appointments_professional_id_fkey(full_name)
         `)
         .eq("patient_id", resolvedClientId)
         .eq("tenant_id", profile.tenant_id)
         .eq("status", "completed")
-        .order("start_time", { ascending: false })
+        .order("scheduled_at", { ascending: false })
         .limit(max_appointments);
 
       patientData.consultas_recentes = appointments?.map((a) => ({
-        data: a.start_time,
-        profissional: a.professional?.full_name,
-        diagnostico: a.diagnosis,
-        cid: a.cid_code,
+        data: a.scheduled_at,
+        profissional: (a.professional as any)?.full_name,
+        procedimento: (a.procedure as any)?.name,
         observacoes: a.notes,
       })) || [];
     }

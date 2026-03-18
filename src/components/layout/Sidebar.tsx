@@ -51,6 +51,7 @@ import {
   Archive,
   CalendarClock,
   MonitorPlay,
+  Search,
   Tv,
   FileText,
   Sparkles,
@@ -608,6 +609,26 @@ function SidebarContent({
         )}
       </div>
 
+      {/* Search */}
+      {!isCollapsed && (
+        <div className="px-3 pt-3 pb-1">
+          <button
+            type="button"
+            onClick={() => {
+              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
+              document.dispatchEvent(event);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground transition-all hover:border-primary/50 hover:bg-muted/50"
+          >
+            <Search className="h-4 w-4" />
+            <span className="flex-1 text-left">Buscar...</span>
+            <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
+
       {/* Quick Access */}
       {!isCollapsed && (
         <div className="px-3 pb-2">
@@ -860,10 +881,8 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-3 top-3 bottom-3 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden rounded-2xl",
-        isCollapsed
-          ? "bg-background/95 backdrop-blur-xl border border-border/50 shadow-xl"
-          : "bg-[hsl(var(--sidebar-body))] shadow-xl shadow-black/10 border border-border/30",
+        "fixed left-2 top-2 bottom-2 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden",
+        "bg-[hsl(var(--sidebar-body))] rounded-l-2xl",
         isCollapsed ? "w-20" : "w-72"
       )}
     >

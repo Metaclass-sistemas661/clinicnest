@@ -25,9 +25,12 @@ export function PatientCombobox({
   placeholder = "Buscar paciente por nome...",
   className,
 }: PatientComboboxProps) {
+  const PAGE_SIZE = 20;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PatientOption[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedName, setSelectedName] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,21 +63,32 @@ export function PatientCombobox({
   }, [value, tenantId]);
 
   const searchPatients = useCallback(
-    async (term: string) => {
+    async (term: string, offset = 0) => {
       if (!tenantId || !term.trim()) {
         setResults([]);
+        setHasMore(false);
         return;
       }
-      setIsSearching(true);
+      if (offset === 0) setIsSearching(true);
+      else setIsLoadingMore(true);
+
       const { data } = await supabase
         .from("patients")
         .select("id, name")
         .eq("tenant_id", tenantId)
         .ilike("name", `%${term}%`)
         .order("name")
-        .limit(20);
-      setResults((data ?? []) as PatientOption[]);
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      const fetched = (data ?? []) as PatientOption[];
+      if (offset === 0) {
+        setResults(fetched);
+      } else {
+        setResults(prev => [...prev, ...fetched]);
+      }
+      setHasMore(fetched.length === PAGE_SIZE);
       setIsSearching(false);
+      setIsLoadingMore(false);
     },
     [tenantId],
   );
@@ -160,6 +174,16 @@ export function PatientCombobox({
                   <span className="truncate">{patient.name}</span>
                 </button>
               ))}
+              {hasMore && (
+                <button
+                  type="button"
+                  disabled={isLoadingMore}
+                  onClick={() => void searchPatients(query, results.length)}
+                  className="flex w-full items-center justify-center gap-1 px-3 py-2 text-xs text-muted-foreground hover:bg-accent transition-colors"
+                >
+                  {isLoadingMore ? "Carregando..." : "Carregar mais"}
+                </button>
+              )}
             </div>
           </ScrollArea>
         </div>
