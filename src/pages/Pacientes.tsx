@@ -3,51 +3,35 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { createPatientPackageV1, getPatientTimelineV1, revertPackageConsumptionForAppointmentV1 } from "@/lib/supabase-typed-rpc";
-import { Plus, Search, KeyRound, Copy, Check, Lock, Sparkles, FileSpreadsheet } from "lucide-react";
+import { createPatientPackageV1 } from "@/lib/supabase-typed-rpc";
+import { Plus, Search, Lock, Sparkles, FileSpreadsheet } from "lucide-react";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
 import { SendConsentLinkDialog } from "@/components/consent/SendConsentLinkDialog";
 import { PatientContractsDrawer } from "@/components/consent/PatientContractsDrawer";
-import type { ClinicalEvolution } from "@/types/database";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
 import type { Patient } from "@/types/database";
-import type { PatientTimelineEventRow } from "@/types/supabase-extensions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UsageIndicator } from "@/components/subscription/LimitGate";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
 import { CsvImportDialog } from "@/components/patient/CsvImportDialog";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-import { PatientFormDialog, PatientTable, PatientDetailModal, PatientPackageDialog } from "./pacientes/index";
-import type { PatientPackage, ClinicalHistoryItem } from "./pacientes/helpers";
+import { PatientTable, PatientPackageDialog } from "./pacientes/index";
 
 export default function Pacientes() {
   const { profile, isAdmin } = useAuth();
   const { isWithinLimit, getLimit } = usePlanFeatures();
+  const navigate = useNavigate();
 
   // ── Patient list state ───────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ── Form dialog ──────────────────────────────────────────────
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-
-  // ── Detail modal ─────────────────────────────────────────────
-  const [detailPatient, setDetailPatient] = useState<Patient | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [detailTimeline, setDetailTimeline] = useState<PatientTimelineEventRow[]>([]);
-  const [detailPackages, setDetailPackages] = useState<PatientPackage[]>([]);
-  const [isDetailLoadingExtras, setIsDetailLoadingExtras] = useState(false);
-  const [clinicalHistory, setClinicalHistory] = useState<ClinicalHistoryItem[]>([]);
-  const [patientEvolutions, setPatientEvolutions] = useState<ClinicalEvolution[]>([]);
 
   // ── Staff filter ─────────────────────────────────────────────
   const [myPatientIds, setMyPatientIds] = useState<Set<string>>(new Set());
@@ -58,12 +42,6 @@ export default function Pacientes() {
   const [packagePatientId, setPackagePatientId] = useState("");
   const [procedures, setProcedures] = useState<Array<{ id: string; name: string }>>([]);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
-
-  // ── Access code dialog ───────────────────────────────────────
-  const [accessCodeDialog, setAccessCodeDialog] = useState(false);
-  const [newAccessCode, setNewAccessCode] = useState("");
-  const [newPatientName, setNewPatientName] = useState("");
-  const [codeCopied, setCodeCopied] = useState(false);
 
   // ── Auxiliary dialogs ────────────────────────────────────────
   const [contractsPatient, setContractsPatient] = useState<Patient | null>(null);
@@ -131,80 +109,6 @@ export default function Pacientes() {
     })();
   }, [profile?.tenant_id, profile?.id, isAdmin]);
 
-  // Load detail extras when modal opens
-  useEffect(() => {
-    if (!isDetailOpen || !detailPatient?.id || !profile?.tenant_id) {
-      setDetailTimeline([]);
-      setDetailPackages([]);
-      setClinicalHistory([]);
-      setPatientEvolutions([]);
-      setIsDetailLoadingExtras(false);
-      return;
-    }
-    const patientId = detailPatient.id;
-    const tenantId = profile.tenant_id;
-
-    (async () => {
-      setIsDetailLoadingExtras(true);
-      try {
-        const [{ data: timelineData, error: timelineError }, packagesRes] = await Promise.all([
-          getPatientTimelineV1({ p_patient_id: patientId, p_limit: 50 }),
-          supabase
-            .from("patient_packages")
-            .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
-            .eq("tenant_id", tenantId)
-            .eq("patient_id", patientId)
-            .order("purchased_at", { ascending: false }),
-        ]);
-
-        if (timelineError) toastRpcError(toast, timelineError as any, "Erro ao carregar histórico");
-        else setDetailTimeline((timelineData || []) as PatientTimelineEventRow[]);
-
-        if (!packagesRes.error) {
-          setDetailPackages((packagesRes.data || []).map((p: any) => ({
-            id: String(p.id),
-            procedure_id: String(p.procedure_id),
-            service_name: String(p?.procedure?.name ?? "Procedimento"),
-            total_sessions: Number(p.total_sessions ?? 0),
-            remaining_sessions: Number(p.remaining_sessions ?? 0),
-            status: String(p.status ?? ""),
-            purchased_at: String(p.purchased_at ?? ""),
-            expires_at: p.expires_at ? String(p.expires_at) : null,
-          })));
-        }
-
-        const clinDocs: ClinicalHistoryItem[] = [];
-        const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
-          supabase.from("prescriptions").select("id, issued_at, medications, prescription_type").eq("tenant_id", tenantId).eq("patient_id", patientId).order("issued_at", { ascending: false }).limit(20),
-          supabase.from("medical_certificates").select("id, issued_at, certificate_type, content").eq("tenant_id", tenantId).eq("patient_id", patientId).order("issued_at", { ascending: false }).limit(20),
-          supabase.from("exam_results").select("id, created_at, exam_name, status").eq("tenant_id", tenantId).eq("patient_id", patientId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("referrals").select("id, created_at, reason, status, specialties(name)").eq("tenant_id", tenantId).eq("patient_id", patientId).order("created_at", { ascending: false }).limit(20),
-          supabase.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code").eq("tenant_id", tenantId).eq("patient_id", patientId).order("record_date", { ascending: false }).limit(20),
-        ]);
-
-        (mrRes.data || []).forEach((d: any) => clinDocs.push({ id: d.id, type: "prontuario", title: d.chief_complaint || "Prontuário", subtitle: [d.diagnosis, d.cid_code].filter(Boolean).join(" — "), date: d.record_date }));
-        (recRes.data || []).forEach((d: any) => clinDocs.push({ id: d.id, type: "receita", title: d.prescription_type === "simples" ? "Receita Simples" : d.prescription_type === "especial_b" ? "Receita Especial B" : "Receita Especial A", subtitle: (d.medications || "").substring(0, 60), date: d.issued_at }));
-        (certRes.data || []).forEach((d: any) => clinDocs.push({ id: d.id, type: "atestado", title: d.certificate_type === "atestado" ? "Atestado Médico" : d.certificate_type === "declaracao_comparecimento" ? "Declaração" : d.certificate_type === "laudo" ? "Laudo Médico" : "Relatório Médico", subtitle: (d.content || "").substring(0, 60), date: d.issued_at }));
-        (examRes.data || []).forEach((d: any) => clinDocs.push({ id: d.id, type: "laudo", title: d.exam_name, subtitle: d.status, date: d.created_at }));
-        (refRes.data || []).forEach((d: any) => clinDocs.push({ id: d.id, type: "encaminhamento", title: `Encaminhamento${d.specialties?.name ? ` — ${d.specialties.name}` : ""}`, subtitle: (d.reason || "").substring(0, 60), date: d.created_at }));
-
-        clinDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setClinicalHistory(clinDocs);
-
-        const { data: evoData } = await (supabase as any).from("clinical_evolutions")
-          .select("*, patient:patients(name), profiles(full_name)")
-          .eq("tenant_id", tenantId).eq("patient_id", patientId)
-          .order("evolution_date", { ascending: false }).limit(50);
-        setPatientEvolutions((evoData ?? []) as ClinicalEvolution[]);
-      } catch (err) {
-        logger.error("Error loading patient extras:", err);
-        toast.error("Erro ao carregar detalhes do paciente");
-      } finally {
-        setIsDetailLoadingExtras(false);
-      }
-    })();
-  }, [isDetailOpen, detailPatient?.id, profile?.tenant_id]);
-
   // ── Derived / computed ───────────────────────────────────────
 
   const filteredPatients = useMemo(() => {
@@ -228,25 +132,6 @@ export default function Pacientes() {
 
   // ── Handlers ─────────────────────────────────────────────────
 
-  const handleOpenDialog = (patient?: Patient) => {
-    setEditingPatient(patient ?? null);
-    setIsDialogOpen(true);
-  };
-
-  const handleFormSaved = (result: { isNew: boolean; accessCode?: string; patientName: string }) => {
-    setIsDialogOpen(false);
-    setEditingPatient(null);
-    fetchPatients();
-    if (result.isNew && result.accessCode) {
-      setNewAccessCode(result.accessCode);
-      setNewPatientName(result.patientName);
-      setCodeCopied(false);
-      setAccessCodeDialog(true);
-    } else {
-      toast.success(result.isNew ? "Paciente cadastrado com sucesso!" : "Paciente atualizado com sucesso!");
-    }
-  };
-
   const openPackageDialog = (patientId: string) => {
     setPackagePatientId(patientId);
     setPackageDialog(true);
@@ -265,24 +150,6 @@ export default function Pacientes() {
       if (error) { toastRpcError(toast, error as any, "Erro ao criar pacote"); return; }
       toast.success("Pacote criado com sucesso!");
       setPackageDialog(false);
-
-      if (isDetailOpen && detailPatient?.id === packagePatientId && profile?.tenant_id) {
-        const packagesRes = await supabase
-          .from("patient_packages")
-          .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
-          .eq("tenant_id", profile.tenant_id)
-          .eq("patient_id", packagePatientId)
-          .order("purchased_at", { ascending: false });
-        if (!packagesRes.error) {
-          setDetailPackages((packagesRes.data || []).map((p: any) => ({
-            id: String(p.id), procedure_id: String(p.procedure_id),
-            service_name: String(p?.procedure?.name ?? "Procedimento"),
-            total_sessions: Number(p.total_sessions ?? 0), remaining_sessions: Number(p.remaining_sessions ?? 0),
-            status: String(p.status ?? ""), purchased_at: String(p.purchased_at ?? ""),
-            expires_at: p.expires_at ? String(p.expires_at) : null,
-          })));
-        }
-      }
     } catch (err) {
       logger.error("[Pacientes] createPackage error", err);
       toast.error("Erro ao criar pacote");
@@ -291,52 +158,10 @@ export default function Pacientes() {
     }
   };
 
-  const handleRevertPackage = async (appointmentId: string) => {
-    if (!isAdmin) return;
-    const id = String(appointmentId || "").trim();
-    if (!id) return;
-    try {
-      const { data, error } = await revertPackageConsumptionForAppointmentV1({
-        p_appointment_id: id,
-        p_reason: "Estorno manual via CRM",
-      });
-      if (error) { toastRpcError(toast, error as any, "Erro ao estornar pacote"); return; }
-      if (!data?.success) { toast.error("Não foi possível estornar"); return; }
-      if (data.reverted) { toast.success("Sessão estornada com sucesso"); } else { toast.message("Nenhum consumo para estornar"); }
-
-      if (detailPatient?.id) {
-        setIsDetailLoadingExtras(true);
-        const [{ data: timelineData }, packagesRes] = await Promise.all([
-          getPatientTimelineV1({ p_patient_id: detailPatient.id, p_limit: 50 }),
-          supabase.from("patient_packages")
-            .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
-            .eq("tenant_id", profile?.tenant_id)
-            .eq("patient_id", detailPatient.id)
-            .order("purchased_at", { ascending: false }),
-        ]);
-        setDetailTimeline((timelineData || []) as PatientTimelineEventRow[]);
-        if (!packagesRes.error) {
-          setDetailPackages((packagesRes.data || []).map((p: any) => ({
-            id: String(p.id), procedure_id: String(p.procedure_id),
-            service_name: String(p?.procedure?.name ?? "Procedimento"),
-            total_sessions: Number(p.total_sessions ?? 0), remaining_sessions: Number(p.remaining_sessions ?? 0),
-            status: String(p.status ?? ""), purchased_at: String(p.purchased_at ?? ""),
-            expires_at: p.expires_at ? String(p.expires_at) : null,
-          })));
-        }
-      }
-    } catch (err) {
-      logger.error("Error reverting package consumption:", err);
-      toast.error("Erro ao estornar pacote");
-    } finally {
-      setIsDetailLoadingExtras(false);
-    }
-  };
-
   // ── Render ───────────────────────────────────────────────────
 
   const renderAddPatientButton = () => {
-    if (!canAddPatient && !editingPatient) {
+    if (!canAddPatient) {
       return (
         <Link to="/assinatura">
           <Button variant="outline" className="gap-2 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
@@ -346,7 +171,7 @@ export default function Pacientes() {
       );
     }
     return (
-      <Button variant="gradient" onClick={() => handleOpenDialog()} data-tour="patients-new">
+      <Button variant="gradient" onClick={() => navigate("/pacientes/novo")} data-tour="patients-new">
         <Plus className="mr-2 h-4 w-4" />Novo Paciente
       </Button>
     );
@@ -397,37 +222,9 @@ export default function Pacientes() {
         isAdmin={isAdmin}
         tenantId={profile?.tenant_id}
         searchQuery={searchQuery}
-        onEdit={(p) => handleOpenDialog(p)}
-        onNewPatient={() => handleOpenDialog()}
+        onEdit={(p) => navigate(`/pacientes/${p.id}/editar`)}
+        onNewPatient={() => navigate("/pacientes/novo")}
         onOpenPackage={openPackageDialog}
-        onOpenContracts={(p) => setContractsPatient(p)}
-        onSendLink={(p) => setSendLinkPatient(p)}
-        onOpenDrawer={(p) => setDrawerPatient(p)}
-      />
-
-      {/* Form Dialog (extracted component) */}
-      <PatientFormDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        editingPatient={editingPatient}
-        tenantId={profile?.tenant_id ?? ""}
-        onSaved={handleFormSaved}
-      />
-
-      {/* Detail Modal (extracted component) */}
-      <PatientDetailModal
-        patient={detailPatient}
-        open={isDetailOpen}
-        onOpenChange={setIsDetailOpen}
-        isLoading={isDetailLoadingExtras}
-        isAdmin={isAdmin}
-        tenantId={profile?.tenant_id ?? ""}
-        timeline={detailTimeline}
-        packages={detailPackages}
-        clinicalHistory={clinicalHistory}
-        evolutions={patientEvolutions}
-        onOpenPackageDialog={openPackageDialog}
-        onRevertPackage={handleRevertPackage}
         onOpenContracts={(p) => setContractsPatient(p)}
         onSendLink={(p) => setSendLinkPatient(p)}
         onOpenDrawer={(p) => setDrawerPatient(p)}
@@ -441,47 +238,6 @@ export default function Pacientes() {
         isSaving={isSavingPackage}
         onSave={handleCreatePackage}
       />
-
-      {/* Access Code Dialog */}
-      <Dialog open={accessCodeDialog} onOpenChange={setAccessCodeDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-primary" />Paciente cadastrado!
-            </DialogTitle>
-            <DialogDescription>
-              Envie o código abaixo ao paciente <strong>{newPatientName}</strong> para que ele possa acessar o Portal do Paciente.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="flex items-center gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
-              <div className="flex-1 text-center">
-                <div className="text-xs text-muted-foreground mb-1">Código de acesso</div>
-                <div className="text-2xl font-mono font-bold tracking-widest text-primary">{newAccessCode}</div>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={async () => {
-                  await navigator.clipboard.writeText(newAccessCode);
-                  setCodeCopied(true);
-                  setTimeout(() => setCodeCopied(false), 2500);
-                  toast.success("Código copiado!");
-                }}
-              >
-                {codeCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-              O paciente deve informar este código (ou CPF) na tela de login do portal para criar sua senha e acessar consultas, exames, receitas e teleconsultas.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setAccessCodeDialog(false)} variant="gradient">Entendi</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Contracts Dialog */}
       {contractsPatient && (

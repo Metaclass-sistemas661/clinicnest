@@ -20,6 +20,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useAuth } from "@/contexts/AuthContext";
 import { TourProvider } from "@/contexts/TourContext";
 import { AppStatusProvider } from "@/contexts/AppStatusContext";
+import { AiActivityProvider } from "@/contexts/AiActivityContext";
 import { initBirdId } from "@/lib/birdid-integration";
 
 // Inicializa BirdID se credenciais estiverem configuradas
@@ -141,6 +142,7 @@ const ApiDocumentation = lazyWithRetry(() => import("@/pages/ApiDocumentation"))
 
 // Páginas FASE 13D — Dialog → Página
 const PacienteDetalhe = lazyWithRetry(() => import("@/pages/PacienteDetalhe"));
+const PatientFormPage = lazyWithRetry(() => import("@/pages/pacientes/PatientFormPage"));
 const NovaCompra = lazyWithRetry(() => import("@/pages/NovaCompra"));
 const NovaCampanha = lazyWithRetry(() => import("@/pages/NovaCampanha"));
 const ModeloProntuarioEditor = lazyWithRetry(() => import("@/pages/ModeloProntuarioEditor"));
@@ -196,6 +198,7 @@ const App = () => (
           <CookieConsentBanner />
           <AuthProvider>
             <AppStatusProvider>
+              <AiActivityProvider>
               <GoalMotivationProvider>
               <TourProvider>
                 <InternalDarkMode />
@@ -265,6 +268,22 @@ const App = () => (
                   element={
                     <ProtectedRoute resource="pacientes">
                       <Pacientes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/pacientes/novo"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <PatientFormPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/pacientes/:id/editar"
+                  element={
+                    <ProtectedRoute resource="pacientes">
+                      <PatientFormPage />
                     </ProtectedRoute>
                   }
                 />
@@ -1072,6 +1091,7 @@ const App = () => (
                 </ErrorBoundary>
               </TourProvider>
               </GoalMotivationProvider>
+              </AiActivityProvider>
             </AppStatusProvider>
           </AuthProvider>
         </BrowserRouter>

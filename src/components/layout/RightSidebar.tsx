@@ -20,6 +20,7 @@ import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
 import { AiCopilotPanel } from "@/components/ai/AiCopilotPanel";
 import { AiGpsNavigator } from "@/components/ai/AiGpsNavigator";
 import { useCopilotProntuario } from "@/contexts/CopilotProntuarioContext";
+import { useAiActivity } from "@/contexts/AiActivityContext";
 
 const RAIL_WIDTH = "w-14"; // 56px
 const PANEL_WIDTH = "w-[380px]";
@@ -36,6 +37,7 @@ export function RightSidebar() {
   const [expanded, setExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<SidebarTab>("nest");
   const copilot = useCopilotProntuario();
+  const { isAnyActive: aiActive } = useAiActivity();
 
   const showNest = hasFeature("aiAgentChat");
   const showCopilot = copilot.active;
@@ -288,6 +290,7 @@ export function RightSidebar() {
                 >
                   <Stethoscope className="h-3.5 w-3.5" />
                   Clínico
+                  {aiActive && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
                 </button>
               </div>
             )}

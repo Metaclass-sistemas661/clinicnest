@@ -398,7 +398,7 @@ function CategoryGroup({
         type="button"
         onClick={onToggle}
         className={cn(
-          "group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200",
+          "group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 mr-2 text-xs font-bold uppercase tracking-wider transition-all duration-200",
           hasActiveChild
             ? `bg-gradient-to-r ${category.gradient} text-white shadow-md`
             : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
@@ -455,7 +455,7 @@ function CategoryGroup({
                   "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200",
                   isActive
                     ? "seamless-tab-active"
-                    : "rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    : "rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground mr-2"
                 )}
               >
                 <item.icon className={cn(
@@ -479,7 +479,7 @@ function CategoryGroup({
               <Link
                 key={item.href}
                 to="/assinatura"
-                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 mr-2 text-sm font-medium text-muted-foreground/60 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                 title={`Disponível no plano ${tierName}`}
               >
                 <Lock className="h-4 w-4 shrink-0 text-amber-500/70" />
@@ -651,7 +651,7 @@ function SidebarContent({
       )}
 
       {/* Navigation */}
-      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto px-2 pb-2 scrollbar-hide">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto pl-2 pr-0 pb-2 scrollbar-hide">
         {navCategories.map((category) => {
           const accessibleItems: NavItem[] = [];
           const lockedItems: NavItem[] = [];
@@ -870,10 +870,10 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-out",
+        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-out overflow-hidden",
         isCollapsed
-          ? "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl"
-          : "bg-[hsl(var(--sidebar-body))]",
+          ? "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl rounded-r-2xl"
+          : "bg-[hsl(var(--sidebar-body))] rounded-r-2xl shadow-lg shadow-black/5",
         isCollapsed ? "w-20" : "w-72"
       )}
     >

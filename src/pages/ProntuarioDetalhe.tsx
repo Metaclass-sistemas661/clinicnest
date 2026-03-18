@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +15,7 @@ import {
   ArrowLeft, User, Calendar, FileText, Heart, Activity,
   Thermometer, Wind, AlertCircle, Pill, ShieldCheck, Download,
   History, Lock, ClipboardList, ArrowRightLeft, FlaskConical, Smile, Sparkles,
+  MoreHorizontal,
 } from "lucide-react";
 import { logger } from "@/lib/logger";
 import { generateMedicalRecordPdf } from "@/utils/patientDocumentPdf";
@@ -302,17 +304,47 @@ export default function ProntuarioDetalhe() {
         </div>
 
         <Tabs defaultValue="prontuario">
-          <TabsList className={`grid w-full h-auto gap-1 p-1 ${isDentist ? "grid-cols-8" : "grid-cols-7"}`}>
-            <TabsTrigger value="prontuario" className="text-xs py-2"><ClipboardList className="h-3 w-3 mr-1" />Prontuário</TabsTrigger>
-            <TabsTrigger value="vitais" className="text-xs py-2"><Activity className="h-3 w-3 mr-1" />Sinais Vitais</TabsTrigger>
-            {isDentist && (
-              <TabsTrigger value="odontograma" className="text-xs py-2"><Smile className="h-3 w-3 mr-1" />Odontograma</TabsTrigger>
+          {/* Max 5 tabs visíveis + dropdown overflow (R21) */}
+          <TabsList className="grid w-full h-auto gap-1 p-1 grid-cols-5">
+            <TabsTrigger value="prontuario" className="text-xs sm:text-sm py-2"><ClipboardList className="h-3 w-3 mr-1" />Prontuário</TabsTrigger>
+            <TabsTrigger value="vitais" className="text-xs sm:text-sm py-2"><Activity className="h-3 w-3 mr-1" />Vitais</TabsTrigger>
+            {isDentist ? (
+              <TabsTrigger value="odontograma" className="text-xs sm:text-sm py-2"><Smile className="h-3 w-3 mr-1" />Odontograma</TabsTrigger>
+            ) : (
+              <TabsTrigger value="evolucoes" className="text-xs sm:text-sm py-2"><NotebookPen className="h-3 w-3 mr-1" />Evoluções</TabsTrigger>
             )}
-            <TabsTrigger value="evolucoes" className="text-xs py-2"><NotebookPen className="h-3 w-3 mr-1" />Evoluções ({evolutions.length})</TabsTrigger>
-            <TabsTrigger value="documentos" className="text-xs py-2"><FileText className="h-3 w-3 mr-1" />Documentos ({linkedDocs.length})</TabsTrigger>
-            <TabsTrigger value="historico" className="text-xs py-2"><History className="h-3 w-3 mr-1" />Histórico ({history.length})</TabsTrigger>
-            <TabsTrigger value="versoes" className="text-xs py-2"><FileText className="h-3 w-3 mr-1" />Versões ({versions.length})</TabsTrigger>
-            <TabsTrigger value="ia" className="text-xs py-2"><Sparkles className="h-3 w-3 mr-1" />IA</TabsTrigger>
+            <TabsTrigger value="documentos" className="text-xs sm:text-sm py-2"><FileText className="h-3 w-3 mr-1" />Documentos</TabsTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-full w-full text-xs sm:text-sm gap-1 rounded-sm bg-transparent data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <MoreHorizontal className="h-3 w-3" />Mais
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isDentist && (
+                  <TabsTrigger value="evolucoes" asChild>
+                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                      <NotebookPen className="h-3.5 w-3.5" />Evoluções ({evolutions.length})
+                    </DropdownMenuItem>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="historico" asChild>
+                  <DropdownMenuItem className="gap-2 cursor-pointer">
+                    <History className="h-3.5 w-3.5" />Histórico ({history.length})
+                  </DropdownMenuItem>
+                </TabsTrigger>
+                <TabsTrigger value="versoes" asChild>
+                  <DropdownMenuItem className="gap-2 cursor-pointer">
+                    <FileText className="h-3.5 w-3.5" />Versões ({versions.length})
+                  </DropdownMenuItem>
+                </TabsTrigger>
+                <TabsTrigger value="ia" asChild>
+                  <DropdownMenuItem className="gap-2 cursor-pointer">
+                    <Sparkles className="h-3.5 w-3.5" />IA
+                  </DropdownMenuItem>
+                </TabsTrigger>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </TabsList>
 
           <TabsContent value="prontuario" className="mt-4 space-y-4">

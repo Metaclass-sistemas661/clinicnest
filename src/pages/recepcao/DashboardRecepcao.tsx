@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { VirtualScrollList } from "@/components/ui/virtual-scroll-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -450,60 +451,61 @@ export default function DashboardRecepcao() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[420px]">
-                  {appointments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Calendar className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                      <p className="text-muted-foreground">Nenhum agendamento hoje</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {appointments.map((apt) => {
-                        const st = apt.status || "pending";
-                        const sb = statusBadge[st];
-                        const canCheckin = st === "confirmed" || st === "pending";
-                        const isArrived = st === "arrived";
-                        return (
-                          <div key={apt.id} className={`flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors ${isArrived ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/30" : ""}`}>
-                            <span className="shrink-0 rounded bg-muted px-2.5 py-1 text-xs font-bold tabular-nums">
-                              {formatInAppTz(apt.scheduled_at, "HH:mm")}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{apt.patient?.name}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {apt.procedure?.name}
-                                {apt.professional?.full_name && ` - ${apt.professional.full_name}`}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className={`text-[10px] ${sb?.className}`}>{sb?.label}</Badge>
-                            {canCheckin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="shrink-0 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950"
-                                disabled={checkinLoading === apt.id}
-                                onClick={() => handleCheckin(apt.id, apt.patient?.name || "Paciente")}
-                              >
-                                {checkinLoading === apt.id ? (
-                                  <Spinner size="sm" />
-                                ) : (
-                                  <LogIn className="h-3.5 w-3.5" />
-                                )}
-                                Check-in
-                              </Button>
-                            )}
-                            {isArrived && (
-                              <span className="shrink-0 flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Na fila
-                              </span>
-                            )}
+                {appointments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Calendar className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">Nenhum agendamento hoje</p>
+                  </div>
+                ) : (
+                  <VirtualScrollList
+                    items={appointments}
+                    height="420px"
+                    estimateSize={60}
+                    renderItem={(apt) => {
+                      const st = apt.status || "pending";
+                      const sb = statusBadge[st];
+                      const canCheckin = st === "confirmed" || st === "pending";
+                      const isArrived = st === "arrived";
+                      return (
+                        <div className={`flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors ${isArrived ? "border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-950/30" : ""}`}>
+                          <span className="shrink-0 rounded bg-muted px-2.5 py-1 text-xs font-bold tabular-nums">
+                            {formatInAppTz(apt.scheduled_at, "HH:mm")}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{apt.patient?.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {apt.procedure?.name}
+                              {apt.professional?.full_name && ` - ${apt.professional.full_name}`}
+                            </p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </ScrollArea>
+                          <Badge variant="outline" className={`text-[10px] ${sb?.className}`}>{sb?.label}</Badge>
+                          {canCheckin && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="shrink-0 gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-400 dark:hover:bg-violet-950"
+                              disabled={checkinLoading === apt.id}
+                              onClick={() => handleCheckin(apt.id, apt.patient?.name || "Paciente")}
+                            >
+                              {checkinLoading === apt.id ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                <LogIn className="h-3.5 w-3.5" />
+                              )}
+                              Check-in
+                            </Button>
+                          )}
+                          {isArrived && (
+                            <span className="shrink-0 flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Na fila
+                            </span>
+                          )}
+                        </div>
+                      );
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -666,62 +668,62 @@ export default function DashboardRecepcao() {
                       </p>
                     </div>
                   ) : (
-                    <ScrollArea className="h-[400px]">
-                      <div className="space-y-2">
-                        {queue.map((item: QueueItem, index: number) => (
-                          <div
-                            key={item.call_id}
-                            className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                              index === 0 ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30" : "hover:bg-muted/50"
-                            }`}
-                          >
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted font-bold">
-                              {item.call_number}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium truncate">{item.client_name}</p>
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] ${priorityColors[item.priority] || ""}`}
-                                >
-                                  {item.priority_label || priorityLabels[item.priority] || "Normal"}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                {item.is_triaged ? (
-                                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                                    <Activity className="h-3 w-3" />
-                                    Triado
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                                    <Activity className="h-3 w-3" />
-                                    Aguarda triagem
-                                  </span>
-                                )}
-                                {item.service_name && <span>· {item.service_name}</span>}
-                                {item.professional_name && <span>· {item.professional_name}</span>}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-1 text-sm">
-                                <Clock className="h-3 w-3" />
-                                <span className={item.wait_time_minutes > 30 ? "text-red-600 font-medium" : ""}>
-                                  {item.wait_time_minutes} min
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                {formatInAppTz(item.checked_in_at, "HH:mm")}
-                              </p>
-                            </div>
-                            {item.wait_time_minutes > 30 && (
-                              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                            )}
+                    <VirtualScrollList
+                      items={queue}
+                      height="400px"
+                      estimateSize={72}
+                      renderItem={(item: QueueItem, index: number) => (
+                        <div
+                          className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+                            index === 0 ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30" : "hover:bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted font-bold">
+                            {item.call_number}
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">{item.client_name}</p>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] ${priorityColors[item.priority] || ""}`}
+                              >
+                                {item.priority_label || priorityLabels[item.priority] || "Normal"}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {item.is_triaged ? (
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                  <Activity className="h-3 w-3" />
+                                  Triado
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                                  <Activity className="h-3 w-3" />
+                                  Aguarda triagem
+                                </span>
+                              )}
+                              {item.service_name && <span>· {item.service_name}</span>}
+                              {item.professional_name && <span>· {item.professional_name}</span>}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3" />
+                              <span className={item.wait_time_minutes > 30 ? "text-red-600 font-medium" : ""}>
+                                {item.wait_time_minutes} min
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {formatInAppTz(item.checked_in_at, "HH:mm")}
+                            </p>
+                          </div>
+                          {item.wait_time_minutes > 30 && (
+                            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                          )}
+                        </div>
+                      )}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -744,36 +746,37 @@ export default function DashboardRecepcao() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[420px]">
-                  {returns.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <CalendarClock className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                      <p className="text-muted-foreground">Nenhum retorno hoje</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {returns.map((ret) => (
-                        <div key={ret.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{ret.patient?.name}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {ret.reason || "Retorno"}
-                              {ret.professional?.full_name && ` - ${ret.professional.full_name}`}
-                            </p>
-                          </div>
-                          <Badge variant="outline" className={
-                            ret.status === "scheduled" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
-                            ret.status === "notified" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" :
-                            "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                          }>
-                            {ret.status === "scheduled" ? "Confirmado" : 
-                             ret.status === "notified" ? "Notificado" : "Pendente"}
-                          </Badge>
+                {returns.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <CalendarClock className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">Nenhum retorno hoje</p>
+                  </div>
+                ) : (
+                  <VirtualScrollList
+                    items={returns}
+                    height="420px"
+                    estimateSize={56}
+                    renderItem={(ret) => (
+                      <div className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{ret.patient?.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {ret.reason || "Retorno"}
+                            {ret.professional?.full_name && ` - ${ret.professional.full_name}`}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
+                        <Badge variant="outline" className={
+                          ret.status === "scheduled" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" :
+                          ret.status === "notified" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" :
+                          "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                        }>
+                          {ret.status === "scheduled" ? "Confirmado" : 
+                           ret.status === "notified" ? "Notificado" : "Pendente"}
+                        </Badge>
+                      </div>
+                    )}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>

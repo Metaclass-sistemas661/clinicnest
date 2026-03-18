@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 import type { Appointment, ProfessionalType } from "@/types/database";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { CallNextButton } from "@/components/queue/CallNextButton";
+import { ProfessionInsights } from "./ProfessionInsights";
 
 const statusBadge: Record<string, { className: string; label: string }> = {
   pending: { className: "bg-warning/20 text-warning border-warning/30", label: "Pendente" },
@@ -205,6 +206,9 @@ export const DashboardClinico = memo(function DashboardClinico() {
           </div>
         )}
       </div>
+
+      {/* Profession-specific insights */}
+      <ProfessionInsights professionalType={professionalType} monthCompleted={monthCompleted} />
 
       {/* Next appointment hero */}
       {nextAppointment && (

@@ -7,15 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope } from "lucide-react";
+import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,11 +42,11 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-  open: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-  paid: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
-  refunded: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+  draft: "bg-muted text-muted-foreground",
+  open: "bg-info/10 text-info",
+  paid: "bg-success/10 text-success",
+  cancelled: "bg-destructive/10 text-destructive",
+  refunded: "bg-warning/10 text-warning",
 };
 
 export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: ComandaDetailProps) {
@@ -432,7 +424,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
               </div>
 
               {/* Finalize button */}
-              {isEditable && items.length > 0 && (
+              {isEditable && items.length > 0 && !finalizeOpen && !addItemOpen && (
                 <Button
                   variant="gradient" className="w-full"
                   onClick={handleOpenFinalize}
@@ -440,6 +432,131 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
                   <CreditCard className="mr-2 h-4 w-4" />
                   Finalizar Conta
                 </Button>
+              )}
+
+              {/* ── Inline: Add Item Form ── */}
+              {addItemOpen && (
+                <div className="rounded-lg border border-primary/20 bg-muted/30 p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Adicionar Item</h3>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setAddItemOpen(false)}>
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Tipo</Label>
+                      <Select value={itemKind} onValueChange={(v) => handleItemKindChange(v as "service" | "product")}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="service">Servi&ccedil;o</SelectItem>
+                          <SelectItem value="product">Produto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">{itemKind === "service" ? "Servi\u00e7o" : "Produto"}</Label>
+                      <Select value={selectedItemId} onValueChange={handleSelectItem}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          {(itemKind === "service" ? procedures : products).map((item) => (
+                            <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {itemKind === "product" && (
+                      <div className="space-y-2">
+                        <Label className="text-xs">Quantidade</Label>
+                        <Input type="number" min="1" value={itemQty} onChange={(e) => setItemQty(e.target.value)} className="h-9" />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Pre&ccedil;o unit&aacute;rio (R$)</Label>
+                      <Input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} className="h-9" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setAddItemOpen(false)} className="flex-1">Cancelar</Button>
+                      <Button
+                        size="sm"
+                        onClick={handleAddItem}
+                        disabled={isAddingItem || !selectedItemId || !itemPrice}
+                        variant="gradient"
+                        className="flex-1"
+                      >
+                        {isAddingItem ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adicionando...</> : "Adicionar"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Inline: Finalize Form ── */}
+              {finalizeOpen && (
+                <div className="rounded-lg border border-primary/20 bg-muted/30 p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Finalizar Conta</h3>
+                      <p className="text-xs text-muted-foreground">Total: <strong>{formatCurrency(order?.total_amount ?? 0)}</strong></p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFinalizeOpen(false)}>
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {paymentLines.map((line, idx) => (
+                      <div key={idx} className="flex items-end gap-2">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">M&eacute;todo</Label>
+                          <Select value={line.payment_method_id} onValueChange={(v) => updatePaymentLine(idx, "payment_method_id", v)}>
+                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {paymentMethods.map((pm) => (
+                                <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-28 space-y-1">
+                          <Label className="text-xs">Valor (R$)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="h-9"
+                            value={line.amount}
+                            onChange={(e) => updatePaymentLine(idx, "amount", e.target.value)}
+                          />
+                        </div>
+                        {paymentLines.length > 1 && (
+                          <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removePaymentLine(idx)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" onClick={addPaymentLine} className="w-full">
+                      <Plus className="h-4 w-4 mr-1" /> Dividir pagamento
+                    </Button>
+                    {Math.abs(paymentSum - (order?.total_amount ?? 0)) > 0.01 && (
+                      <p className="text-xs text-destructive text-center">
+                        Diferen&ccedil;a: {formatCurrency(paymentSum - (order?.total_amount ?? 0))}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setFinalizeOpen(false)} className="flex-1">Cancelar</Button>
+                      <Button
+                        size="sm"
+                        onClick={handleFinalize}
+                        disabled={isFinalizing || Math.abs(paymentSum - (order?.total_amount ?? 0)) > 0.01}
+                        variant="gradient"
+                        className="flex-1"
+                      >
+                        {isFinalizing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Finalizando...</> : "Confirmar Pagamento"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Payments (if paid) */}
@@ -461,123 +578,6 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
         </SheetContent>
       </Sheet>
 
-      {/* Add Item Dialog */}
-      <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Adicionar Item</DialogTitle>
-            <DialogDescription>Selecione um procedimento ou produto para adicionar à conta.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select value={itemKind} onValueChange={(v) => handleItemKindChange(v as "service" | "product")}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="service">Servi&ccedil;o</SelectItem>
-                  <SelectItem value="product">Produto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{itemKind === "service" ? "Servi\u00e7o" : "Produto"}</Label>
-              <Select value={selectedItemId} onValueChange={handleSelectItem}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {(itemKind === "service" ? services : products).map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {itemKind === "product" && (
-              <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input type="number" min="1" value={itemQty} onChange={(e) => setItemQty(e.target.value)} />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Pre&ccedil;o unit&aacute;rio (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={handleAddItem}
-              disabled={isAddingItem || !selectedItemId || !itemPrice}
-              variant="gradient"
-            >
-              {isAddingItem ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adicionando...</> : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Finalize Dialog */}
-      <Dialog open={finalizeOpen} onOpenChange={setFinalizeOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Finalizar Conta</DialogTitle>
-            <DialogDescription>
-              Total: <strong>{formatCurrency(order?.total_amount ?? 0)}</strong>. Informe os pagamentos.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            {paymentLines.map((line, idx) => (
-              <div key={idx} className="flex items-end gap-2">
-                <div className="flex-1 space-y-1">
-                  <Label className="text-xs">M&eacute;todo</Label>
-                  <Select value={line.payment_method_id} onValueChange={(v) => updatePaymentLine(idx, "payment_method_id", v)}>
-                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods.map((pm) => (
-                        <SelectItem key={pm.id} value={pm.id}>{pm.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-28 space-y-1">
-                  <Label className="text-xs">Valor (R$)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="h-9"
-                    value={line.amount}
-                    onChange={(e) => updatePaymentLine(idx, "amount", e.target.value)}
-                  />
-                </div>
-                {paymentLines.length > 1 && (
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removePaymentLine(idx)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button variant="outline" size="sm" onClick={addPaymentLine} className="w-full">
-              <Plus className="h-4 w-4 mr-1" /> Dividir pagamento
-            </Button>
-            {Math.abs(paymentSum - (order?.total_amount ?? 0)) > 0.01 && (
-              <p className="text-xs text-destructive text-center">
-                Diferen&ccedil;a: {formatCurrency(paymentSum - (order?.total_amount ?? 0))}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFinalizeOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={handleFinalize}
-              disabled={isFinalizing || Math.abs(paymentSum - (order?.total_amount ?? 0)) > 0.01}
-              variant="gradient"
-            >
-              {isFinalizing ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Finalizando...</> : "Confirmar Pagamento"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

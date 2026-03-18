@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Navigation, ChevronRight, CheckCircle2, CircleDot } from "lucide-react";
 import type { CopilotInput } from "./AiCopilotPanel";
+import { useAiActivity } from "@/contexts/AiActivityContext";
 
 // ── GPS Steps ──────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export function AiGpsNavigator({ input, className }: Props) {
   const [evaluation, setEvaluation] = useState<GpsEvaluation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ai = useAiActivity();
 
   // Compute which steps are filled
   const filledSteps = new Set<StepKey>();
@@ -65,6 +67,7 @@ export function AiGpsNavigator({ input, className }: Props) {
 
     setLoading(true);
     setError(null);
+    ai.start("gps");
 
     try {
       const resp = await supabase.functions.invoke("ai-gps-evaluate", {
@@ -86,6 +89,7 @@ export function AiGpsNavigator({ input, className }: Props) {
       setError(err instanceof Error ? err.message : "Erro ao avaliar GPS");
     } finally {
       setLoading(false);
+      ai.end("gps");
     }
   }, [input]);
 
@@ -100,9 +104,9 @@ export function AiGpsNavigator({ input, className }: Props) {
   }, [input.chief_complaint, input.anamnesis, input.physical_exam, input.diagnosis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confidenceColor = (score: number) => {
-    if (score >= 80) return "bg-emerald-500";
-    if (score >= 50) return "bg-amber-500";
-    return "bg-red-500";
+    if (score >= 80) return "bg-success";
+    if (score >= 50) return "bg-warning";
+    return "bg-destructive";
   };
 
   const confidenceLabel = (score: number) => {
@@ -152,7 +156,7 @@ export function AiGpsNavigator({ input, className }: Props) {
           <div
             className={cn(
               "h-full rounded-full transition-all duration-500",
-              progress >= 80 ? "bg-emerald-500" : progress >= 40 ? "bg-amber-500" : "bg-primary",
+              progress >= 80 ? "bg-success" : progress >= 40 ? "bg-warning" : "bg-primary",
             )}
             style={{ width: `${progress}%` }}
           />

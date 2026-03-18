@@ -7,11 +7,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sparkles, Pill, FlaskConical, AlertTriangle, ChevronDown, ChevronRight,
-  Loader2, Stethoscope, ArrowRight, Copy, Check, ShieldAlert, RefreshCw,
+  Loader2, Stethoscope, ArrowRight, Copy, Check, ShieldAlert, RefreshCw, ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { AiClinicalProtocols } from "./AiClinicalProtocols";
+import { useAiActivity } from "@/contexts/AiActivityContext";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -94,10 +96,10 @@ const alertIcon: Record<string, typeof AlertTriangle> = {
 };
 
 const alertColor: Record<string, string> = {
-  red_flag: "text-red-600 bg-red-50 border-red-200",
-  interaction: "text-orange-600 bg-orange-50 border-orange-200",
-  allergy: "text-amber-600 bg-amber-50 border-amber-200",
-  contraindication: "text-red-600 bg-red-50 border-red-200",
+  red_flag: "text-destructive bg-destructive/10 border-destructive/20",
+  interaction: "text-warning bg-warning/10 border-warning/20",
+  allergy: "text-warning bg-warning/10 border-warning/20",
+  contraindication: "text-destructive bg-destructive/10 border-destructive/20",
 };
 
 // ── Component ───────────────────────────────────────────────────
@@ -116,6 +118,7 @@ export function AiCopilotPanel({
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInputRef = useRef<string>("");
+  const ai = useAiActivity();
 
   const [openSections, setOpenSections] = useState({
     alerts: true,
@@ -123,6 +126,7 @@ export function AiCopilotPanel({
     medications: true,
     exams: true,
     conduct: true,
+    protocols: false,
   });
 
   const toggleSection = (key: keyof typeof openSections) => {
@@ -139,6 +143,7 @@ export function AiCopilotPanel({
 
     setLoading(true);
     setError(null);
+    ai.start("copilot");
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -156,6 +161,7 @@ export function AiCopilotPanel({
       setError(msg);
     } finally {
       setLoading(false);
+      ai.end("copilot");
     }
   }, []);
 
@@ -247,7 +253,7 @@ export function AiCopilotPanel({
                           key={i}
                           className={cn(
                             "flex items-start gap-2 p-2 rounded-md border text-xs",
-                            alertColor[alert.type] || "text-amber-600 bg-amber-50 border-amber-200",
+                            alertColor[alert.type] || "text-warning bg-warning/10 border-warning/20",
                           )}
                         >
                           <Icon className="h-3.5 w-3.5 shrink-0 mt-0.5" />
@@ -434,6 +440,26 @@ export function AiCopilotPanel({
                         </div>
                       </div>
                     ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Clinical Protocols (from CID) */}
+              {input.cid_code && (
+                <Collapsible open={openSections.protocols} onOpenChange={() => toggleSection("protocols")}>
+                  <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left text-xs font-semibold text-foreground py-1">
+                    {openSections.protocols ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <ClipboardList className="h-3.5 w-3.5" />
+                    Protocolos Clínicos
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pl-1 pb-1 pt-1">
+                    <AiClinicalProtocols
+                      cidCode={input.cid_code}
+                      cidDescription={input.diagnosis}
+                      allergies={input.allergies}
+                      currentMedications={input.current_medications}
+                      compact
+                    />
                   </CollapsibleContent>
                 </Collapsible>
               )}

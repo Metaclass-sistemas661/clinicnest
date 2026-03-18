@@ -33,41 +33,41 @@
 ---
 
 ## Sprint 2 — Prontuário Adaptativo
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluído — 17/03/2026
 
 | # | Ação | Status |
 |---|---|---|
-| R6 | ProntuarioForm adaptativo por professionalType — ocultar prescrição para não-prescritores, exame físico para psicólogo, sinais vitais simplificados | ⬜ |
-| R20 | ProntuarioForm em accordion colapsável (max 8 campos por seção visível) | ⬜ |
-| R21 | Tabs do ProntuarioDetalhe: máximo 5 visíveis + dropdown overflow | ⬜ |
-| R10 | Expandir PermissionGate inline em seções do prontuário | ⬜ |
-| R9 | Templates built-in para Fisioterapia, Nutrição, Psicologia, Fonoaudiologia | ⬜ |
+| R6 | ProntuarioForm adaptativo por professionalType — ocultar prescrição para não-prescritores, exame físico para psicólogo, sinais vitais simplificados | ✅ |
+| R20 | ProntuarioForm em accordion colapsável (max 8 campos por seção visível) | ✅ |
+| R21 | Tabs do ProntuarioDetalhe: máximo 5 visíveis + dropdown overflow | ✅ |
+| R10 | Expandir PermissionGate inline em seções do prontuário | ✅ |
+| R9 | Templates built-in para Fisioterapia, Nutrição, Psicologia, Fonoaudiologia | ✅ |
 
 ---
 
 ## Sprint 3 — Desintoxicação de Interface
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluído
 
 | # | Ação | Status |
 |---|---|---|
-| R22 | Migrar PatientFormDialog e PatientDetailModal para subpages (rotas) | ⬜ |
-| R23 | Eliminar Dialog-in-Sheet (ComandaDetail, CommissionRulesDrawer) | ⬜ |
-| R24 | Consolidar paleta de cores para <=6 famílias semânticas | ⬜ |
-| R25 | Padronizar tokens CSS de cor (eliminar hardcoded) | ⬜ |
-| R3 | Consolidar AiClinicalProtocols dentro do AiCopilotPanel sidebar | ⬜ |
-| R5 | AiActivityContext — estado coordenado de loading de IA | ⬜ |
+| R22 | Migrar PatientFormDialog e PatientDetailModal para subpages (rotas) | ✅ |
+| R23 | Eliminar Dialog-in-Sheet (ComandaDetail, CommissionRulesDrawer) | ✅ |
+| R24 | Consolidar paleta de cores para <=6 famílias semânticas | ✅ |
+| R25 | Padronizar tokens CSS de cor (eliminar hardcoded) | ✅ |
+| R3 | Consolidar AiClinicalProtocols dentro do AiCopilotPanel sidebar | ✅ |
+| R5 | AiActivityContext — estado coordenado de loading de IA | ✅ |
 
 ---
 
 ## Sprint 4 — Evolução por Profissão + Dashboards
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluído
 
 | # | Ação | Status |
 |---|---|---|
-| R11 | Dashboards dedicados para fisio/nutri/psico/fono | ⬜ |
-| R12 | Evolução por profissão (Nota de Sessão para psicólogo, campos cinéticos para fisio, recordatório para nutri) | ⬜ |
-| R28 | Atalhos de teclado para tabs clínicos (Ctrl+1..5) | ⬜ |
-| R29 | Virtualizar ScrollAreas longas (DashboardRecepcao, etc.) | ⬜ |
+| R11 | Dashboards dedicados para fisio/nutri/psico/fono | ✅ |
+| R12 | Evolução por profissão (Nota de Sessão para psicólogo, campos cinéticos para fisio, recordatório para nutri) | ✅ |
+| R28 | Atalhos de teclado para tabs clínicos (Ctrl+1..6) | ✅ |
+| R29 | Virtualizar ScrollAreas longas (DashboardRecepcao, etc.) | ✅ |
 
 ---
 

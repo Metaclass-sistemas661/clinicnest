@@ -19,12 +19,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { AiDrugInteractionAlert } from "@/components/ai";
-import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
 import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
 import { AiDeteriorationAlert } from "@/components/ai/AiDeteriorationAlert";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
+import { ProfessionFields } from "@/components/prontuario/ProfessionFields";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import type { CopilotInput } from "@/components/ai";
@@ -167,6 +167,11 @@ export function ProntuarioForm({
       : emptyBase
   );
   const [customFields, setCustomFields] = useState<Record<string, unknown>>(editRecord?.custom_fields ?? {});
+  const [professionFields, setProfessionFields] = useState<Record<string, string>>(() => {
+    const cf = editRecord?.custom_fields ?? {};
+    const pf = cf._profession as Record<string, string> | undefined;
+    return pf ?? {};
+  });
   const [builtInCustomFields, setBuiltInCustomFields] = useState<Record<string, unknown>>({});
   const [triage, setTriage] = useState<TriageData | null>(initialTriage || null);
   const [vitals, setVitals] = useState(
@@ -626,8 +631,8 @@ export function ProntuarioForm({
           signed_by_crm: signedByCrm,
           return_days: returnConfig.returnDays || null,
           return_reason: returnConfig.reason || null,
-          custom_fields: Object.keys(customFields).length > 0 || Object.keys(builtInCustomFields).length > 0
-            ? { ...builtInCustomFields, ...customFields }
+          custom_fields: Object.keys(customFields).length > 0 || Object.keys(builtInCustomFields).length > 0 || Object.keys(professionFields).length > 0
+            ? { ...builtInCustomFields, ...customFields, _profession: professionFields }
             : {},
         }).select("id").single();
         if (error) throw error;
@@ -684,11 +689,11 @@ export function ProntuarioForm({
       </div>
 
       {isEditing && !canEdit && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center gap-3">
-          <Lock className="h-5 w-5 text-amber-600 shrink-0" />
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 flex items-center gap-3">
+          <Lock className="h-5 w-5 text-warning shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-amber-700">Prontuário bloqueado para edição</p>
-            <p className="text-xs text-amber-600">
+            <p className="text-sm font-semibold text-warning">Prontuário bloqueado para edição</p>
+            <p className="text-xs text-warning">
               {isLocked
                 ? `Motivo: ${editRecord?.lock_reason || "Bloqueado pelo sistema"}`
                 : "Prontuários só podem ser editados nas primeiras 24 horas após a criação."}
@@ -709,15 +714,15 @@ export function ProntuarioForm({
       )}
 
       {isEditing && canEdit && (
-        <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 px-4 py-3 space-y-2">
-          <Label className="text-sm font-semibold text-blue-700">Motivo da Alteração *</Label>
+        <div className="rounded-xl border border-info/30 bg-info/5 px-4 py-3 space-y-2">
+          <Label className="text-sm font-semibold text-info">Motivo da Alteração *</Label>
           <Input
             value={changeReason}
             onChange={(e) => setChangeReason(e.target.value)}
             placeholder="Descreva o motivo da edição (obrigatório para audit trail)..."
-            className="border-blue-500/20"
+            className="border-info/20"
           />
-          <p className="text-xs text-blue-600">A versão anterior será salva automaticamente no histórico.</p>
+          <p className="text-xs text-info">A versão anterior será salva automaticamente no histórico.</p>
         </div>
       )}
 
@@ -769,199 +774,226 @@ export function ProntuarioForm({
 
       {triage && <TriageContextCard triage={triage} />}
 
-      {/* Sinais Vitais Estruturados */}
-      <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
-        <h4 className="text-sm font-semibold flex items-center gap-2">
-          <Heart className="h-4 w-4 text-red-500" />
-          Sinais Vitais
-          {triage && <span className="text-xs font-normal text-muted-foreground">(pré-preenchidos da triagem — editáveis)</span>}
-        </h4>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Heart className="h-3 w-3 text-red-500" />PA (mmHg)</Label>
-            <div className="flex gap-1">
-              <Input type="number" placeholder="Sis" value={vitals.blood_pressure_systolic ?? ""}
-                onChange={(e) => setVitals((v) => ({ ...v, blood_pressure_systolic: e.target.value ? +e.target.value : null }))}
-                className="text-center text-sm" />
-              <span className="self-center text-muted-foreground">/</span>
-              <Input type="number" placeholder="Dia" value={vitals.blood_pressure_diastolic ?? ""}
-                onChange={(e) => setVitals((v) => ({ ...v, blood_pressure_diastolic: e.target.value ? +e.target.value : null }))}
-                className="text-center text-sm" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Activity className="h-3 w-3 text-pink-500" />FC (bpm)</Label>
-            <Input type="number" placeholder="72" value={vitals.heart_rate ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, heart_rate: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Thermometer className="h-3 w-3 text-orange-500" />Temp (°C)</Label>
-            <Input type="number" step="0.1" placeholder="36.5" value={vitals.temperature ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, temperature: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3 text-blue-500" />SpO₂ (%)</Label>
-            <Input type="number" placeholder="98" value={vitals.oxygen_saturation ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, oxygen_saturation: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3 text-teal-500" />FR (irpm)</Label>
-            <Input type="number" placeholder="18" value={vitals.respiratory_rate ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, respiratory_rate: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3 text-purple-500" />Peso (kg)</Label>
-            <Input type="number" step="0.1" placeholder="70.0" value={vitals.weight_kg ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, weight_kg: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs flex items-center gap-1"><Ruler className="h-3 w-3 text-indigo-500" />Altura (cm)</Label>
-            <Input type="number" placeholder="170" value={vitals.height_cm ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, height_cm: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Dor (0-10)</Label>
-            <Input type="number" min={0} max={10} placeholder="0" value={vitals.pain_scale ?? ""}
-              onChange={(e) => setVitals((v) => ({ ...v, pain_scale: e.target.value ? +e.target.value : null }))}
-              className="text-sm" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-destructive font-medium">Alergias</Label>
-            <Input value={vitals.allergies} onChange={(e) => setVitals((v) => ({ ...v, allergies: e.target.value }))}
-              placeholder="Penicilina, AAS..." className="text-sm border-destructive/30" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Medicamentos em Uso</Label>
-            <Input value={vitals.current_medications} onChange={(e) => setVitals((v) => ({ ...v, current_medications: e.target.value }))}
-              placeholder="Losartana 50mg, Metformina..." className="text-sm" />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Histórico Médico</Label>
-            <Input value={vitals.medical_history} onChange={(e) => setVitals((v) => ({ ...v, medical_history: e.target.value }))}
-              placeholder="HAS, DM2..." className="text-sm" />
-          </div>
-        </div>
-      </div>
-
-      <div>
-      <div className="space-y-4">
-        {/* Voice-first dictation: grava → transcreve → auto-SOAP → preenche */}
-        {canEdit && (
-          <FeatureGate feature="aiTranscribe" showUpgradePrompt={false}>
-            <VoiceFirstDictation
-              onSoapReady={(soap) => {
-                setBase((b) => ({
-                  ...b,
-                  chief_complaint: soap.chief_complaint || b.chief_complaint,
-                  anamnesis: soap.anamnesis || b.anamnesis,
-                  physical_exam: soap.physical_exam || b.physical_exam,
-                  diagnosis: soap.diagnosis || b.diagnosis,
-                  treatment_plan: soap.treatment_plan || b.treatment_plan,
-                }));
-                if (soap.cid_code) set("cid_code", soap.cid_code);
-              }}
-              disabled={!canEdit}
-              className="mb-2"
-            />
-          </FeatureGate>
-        )}
-
-        {/* PROMs: desfechos relatados pelo paciente */}
-        {patientId && <PatientPromsViewer patientId={patientId} />}
-
-        {/* Alerta de deterioração clínica (IA) */}
-        {patientId && (
-          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
-            <AiDeteriorationAlert patientId={patientId} />
-          </FeatureGate>
-        )}
-
-        <div className="space-y-1.5">
-          <Label>Queixa Principal *</Label>
-          <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Anamnese</Label>
-          <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Exame Físico</Label>
-          <Textarea value={base.physical_exam} onChange={(e) => set("physical_exam", e.target.value)} placeholder="PA, FC, achados..." rows={3} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Diagnóstico</Label>
-            <Input value={base.diagnosis} onChange={(e) => set("diagnosis", e.target.value)} placeholder="Diagnóstico clínico" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>CID-10</Label>
-            <Cid10Combobox value={base.cid_code} onChange={(code) => set("cid_code", code)} />
-          </div>
-        </div>
-
-        {base.cid_code && (
-          <FeatureGate feature="clinicalProtocols" showUpgradePrompt={false}>
-            <AiClinicalProtocols
-              cidCode={base.cid_code}
-              cidDescription={base.diagnosis}
-              allergies={vitals.allergies}
-              currentMedications={vitals.current_medications}
-              compact
-            />
-          </FeatureGate>
-        )}
-
-
-        <div className="space-y-1.5">
-          <Label>Plano Terapêutico / Conduta</Label>
-          <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
-        </div>
-
-        {/* Encaminhamento Inteligente */}
-        {canEdit && (base.diagnosis || base.chief_complaint) && (
-          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
-            <AiSmartReferral
-              chiefComplaint={base.chief_complaint}
-              diagnosis={base.diagnosis}
-              treatmentPlan={base.treatment_plan}
-              cidCode={base.cid_code}
-              patientName={patients?.find((p) => p.id === patientId)?.name}
-              allergies={vitals.allergies}
-            />
-          </FeatureGate>
-        )}
-
-        <div className="space-y-1.5">
-          <Label>Prescrições</Label>
-          <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />
-          <AiDrugInteractionAlert
-            prescriptions={base.prescriptions}
-            currentMedications={vitals.current_medications}
-            allergies={vitals.allergies}
+      {/* Voice-first dictation (acima do accordion para acesso rápido) */}
+      {canEdit && (
+        <FeatureGate feature="aiTranscribe" showUpgradePrompt={false}>
+          <VoiceFirstDictation
+            onSoapReady={(soap) => {
+              setBase((b) => ({
+                ...b,
+                chief_complaint: soap.chief_complaint || b.chief_complaint,
+                anamnesis: soap.anamnesis || b.anamnesis,
+                physical_exam: soap.physical_exam || b.physical_exam,
+                diagnosis: soap.diagnosis || b.diagnosis,
+                treatment_plan: soap.treatment_plan || b.treatment_plan,
+              }));
+              if (soap.cid_code) set("cid_code", soap.cid_code);
+            }}
+            disabled={!canEdit}
+            className="mb-2"
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Observações</Label>
-          <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
-        </div>
+        </FeatureGate>
+      )}
 
-        {/* OCR de Exames */}
-        {canEdit && (
-          <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
-            <ExamOcrAnalyzer patientId={patientId} />
-          </FeatureGate>
+      <Accordion type="multiple" defaultValue={accordionDefaults} className="space-y-2">
+        {/* ── Sinais Vitais (simplificado para psicólogo: só peso/altura) ── */}
+        <AccordionItem value="vitais" className="rounded-xl border bg-muted/20 px-4">
+          <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+            <span className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-destructive" />
+              Sinais Vitais
+              {triage && <span className="text-xs font-normal text-muted-foreground">(pré-preenchidos da triagem)</span>}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-3 pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3 text-chart-4" />Peso (kg)</Label>
+                <Input type="number" step="0.1" placeholder="70.0" value={vitals.weight_kg ?? ""}
+                  onChange={(e) => setVitals((v) => ({ ...v, weight_kg: e.target.value ? +e.target.value : null }))}
+                  className="text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1"><Ruler className="h-3 w-3 text-indigo-500" />Altura (cm)</Label>
+                <Input type="number" placeholder="170" value={vitals.height_cm ?? ""}
+                  onChange={(e) => setVitals((v) => ({ ...v, height_cm: e.target.value ? +e.target.value : null }))}
+                  className="text-sm" />
+              </div>
+              {!isPsychologist && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Heart className="h-3 w-3 text-destructive" />PA (mmHg)</Label>
+                    <div className="flex gap-1">
+                      <Input type="number" placeholder="Sis" value={vitals.blood_pressure_systolic ?? ""}
+                        onChange={(e) => setVitals((v) => ({ ...v, blood_pressure_systolic: e.target.value ? +e.target.value : null }))}
+                        className="text-center text-sm" />
+                      <span className="self-center text-muted-foreground">/</span>
+                      <Input type="number" placeholder="Dia" value={vitals.blood_pressure_diastolic ?? ""}
+                        onChange={(e) => setVitals((v) => ({ ...v, blood_pressure_diastolic: e.target.value ? +e.target.value : null }))}
+                        className="text-center text-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Activity className="h-3 w-3 text-pink-500" />FC (bpm)</Label>
+                    <Input type="number" placeholder="72" value={vitals.heart_rate ?? ""}
+                      onChange={(e) => setVitals((v) => ({ ...v, heart_rate: e.target.value ? +e.target.value : null }))}
+                      className="text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Thermometer className="h-3 w-3 text-chart-5" />Temp (°C)</Label>
+                    <Input type="number" step="0.1" placeholder="36.5" value={vitals.temperature ?? ""}
+                      onChange={(e) => setVitals((v) => ({ ...v, temperature: e.target.value ? +e.target.value : null }))}
+                      className="text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3 text-info" />SpO₂ (%)</Label>
+                    <Input type="number" placeholder="98" value={vitals.oxygen_saturation ?? ""}
+                      onChange={(e) => setVitals((v) => ({ ...v, oxygen_saturation: e.target.value ? +e.target.value : null }))}
+                      className="text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1"><Wind className="h-3 w-3 text-primary" />FR (irpm)</Label>
+                    <Input type="number" placeholder="18" value={vitals.respiratory_rate ?? ""}
+                      onChange={(e) => setVitals((v) => ({ ...v, respiratory_rate: e.target.value ? +e.target.value : null }))}
+                      className="text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Dor (0-10)</Label>
+                    <Input type="number" min={0} max={10} placeholder="0" value={vitals.pain_scale ?? ""}
+                      onChange={(e) => setVitals((v) => ({ ...v, pain_scale: e.target.value ? +e.target.value : null }))}
+                      className="text-sm" />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-destructive font-medium">Alergias</Label>
+                <Input value={vitals.allergies} onChange={(e) => setVitals((v) => ({ ...v, allergies: e.target.value }))}
+                  placeholder="Penicilina, AAS..." className="text-sm border-destructive/30" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Medicamentos em Uso</Label>
+                <Input value={vitals.current_medications} onChange={(e) => setVitals((v) => ({ ...v, current_medications: e.target.value }))}
+                  placeholder="Losartana 50mg, Metformina..." className="text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Histórico Médico</Label>
+                <Input value={vitals.medical_history} onChange={(e) => setVitals((v) => ({ ...v, medical_history: e.target.value }))}
+                  placeholder="HAS, DM2..." className="text-sm" />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Campos Clínicos ── */}
+        <AccordionItem value="clinico" className="rounded-xl border px-4">
+          <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+            <span className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" />
+              Avaliação Clínica
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 pb-4">
+            {/* PROMs */}
+            {patientId && <PatientPromsViewer patientId={patientId} />}
+
+            {/* Alerta de deterioração */}
+            {patientId && (
+              <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+                <AiDeteriorationAlert patientId={patientId} />
+              </FeatureGate>
+            )}
+
+            <div className="space-y-1.5">
+              <Label>Queixa Principal *</Label>
+              <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Anamnese</Label>
+              <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
+            </div>
+            {/* Exame Físico — oculto para psicólogo */}
+            {!isPsychologist && (
+              <div className="space-y-1.5">
+                <Label>Exame Físico</Label>
+                <Textarea value={base.physical_exam} onChange={(e) => set("physical_exam", e.target.value)} placeholder="PA, FC, achados..." rows={3} />
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Diagnóstico</Label>
+                <Input value={base.diagnosis} onChange={(e) => set("diagnosis", e.target.value)} placeholder="Diagnóstico clínico" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>CID-10</Label>
+                <Cid10Combobox value={base.cid_code} onChange={(code) => set("cid_code", code)} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Plano Terapêutico / Conduta</Label>
+              <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
+            </div>
+
+            {/* Encaminhamento Inteligente */}
+            {canEdit && (base.diagnosis || base.chief_complaint) && (
+              <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+                <AiSmartReferral
+                  chiefComplaint={base.chief_complaint}
+                  diagnosis={base.diagnosis}
+                  treatmentPlan={base.treatment_plan}
+                  cidCode={base.cid_code}
+                  patientName={patients?.find((p) => p.id === patientId)?.name}
+                  allergies={vitals.allergies}
+                />
+              </FeatureGate>
+            )}
+
+            {/* Campos específicos da profissão */}
+            <ProfessionFields
+              professionalType={professionalType}
+              values={professionFields}
+              onChange={(k, v) => setProfessionFields(prev => ({ ...prev, [k]: v }))}
+              disabled={!canEdit}
+            />
+
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
+            </div>
+
+            {/* OCR de Exames */}
+            {canEdit && (
+              <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+                <ExamOcrAnalyzer patientId={patientId} />
+              </FeatureGate>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* ── Prescrições — apenas prescritores (médico/dentista) ── */}
+        {isPrescriber && (
+          <AccordionItem value="prescricao" className="rounded-xl border px-4">
+            <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
+              <span className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-warning" />
+                Prescrições
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pb-4">
+              <div className="space-y-1.5">
+                <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />
+                <AiDrugInteractionAlert
+                  prescriptions={base.prescriptions}
+                  currentMedications={vitals.current_medications}
+                  allergies={vitals.allergies}
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
         )}
-      </div>
-
-      </div>
+      </Accordion>
 
       {/* ── Retorno do Paciente ── */}
       {canEdit && (
@@ -973,13 +1005,13 @@ export function ProntuarioForm({
 
           {/* Sugestão automática baseada no CID */}
           {cidSuggestion && !suggestionDismissed && !returnConfig.returnDays && (
-            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 p-3">
-              <Lightbulb className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/5 p-3">
+              <Lightbulb className="h-4 w-4 text-info mt-0.5 shrink-0" />
               <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                <p className="text-sm font-medium text-info">
                   Sugestão de retorno (CID {cidSuggestion.cid_code})
                 </p>
-                <p className="text-xs text-blue-700 dark:text-blue-400">
+                <p className="text-xs text-info/80">
                   {formatSuggestion(cidSuggestion)}
                 </p>
                 <div className="flex gap-2 pt-1">
@@ -1027,9 +1059,9 @@ export function ProntuarioForm({
                 </div>
               </div>
               <Badge variant="outline" className={`shrink-0 text-[10px] ${
-                cidSuggestion.priority === "alta" ? "border-red-300 text-red-700" :
-                cidSuggestion.priority === "media" ? "border-yellow-300 text-yellow-700" :
-                "border-green-300 text-green-700"
+                cidSuggestion.priority === "alta" ? "border-destructive/30 text-destructive" :
+                cidSuggestion.priority === "media" ? "border-warning/30 text-warning" :
+                "border-success/30 text-success"
               }`}>
                 Prioridade {cidSuggestion.priority}
               </Badge>
@@ -1078,8 +1110,8 @@ export function ProntuarioForm({
             <div className="space-y-3">
               <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
-                  <span className="font-medium text-green-700">Certificado cadastrado encontrado</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                  <span className="font-medium text-success">Certificado cadastrado encontrado</span>
                 </div>
                 <p><span className="font-medium">Titular:</span> {certState.certificate?.common_name}</p>
                 {certState.certificate?.cpf_cnpj && <p><span className="font-medium">CPF/CNPJ:</span> {certState.certificate.cpf_cnpj}</p>}

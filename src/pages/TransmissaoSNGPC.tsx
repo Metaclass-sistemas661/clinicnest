@@ -90,7 +90,7 @@ export default function TransmissaoSNGPC() {
     switch (status) {
       case "pendente": return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
       case "enviado": return <Badge variant="default"><Send className="h-3 w-3 mr-1" />Enviado</Badge>;
-      case "validado": return <Badge className="bg-green-600 text-white"><CheckCircle2 className="h-3 w-3 mr-1" />Validado</Badge>;
+      case "validado": return <Badge className="bg-success text-success-foreground"><CheckCircle2 className="h-3 w-3 mr-1" />Validado</Badge>;
       case "erro": return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Erro</Badge>;
       case "rejeitado": return <Badge variant="destructive"><FileX className="h-3 w-3 mr-1" />Rejeitado</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
@@ -98,10 +98,10 @@ export default function TransmissaoSNGPC() {
   };
 
   const tipoMovBadge = (tipo: string) => {
-    if (tipo.includes("ENTRADA")) return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Entrada</Badge>;
-    if (tipo.includes("DISPENSACAO")) return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Dispensação</Badge>;
-    if (tipo.includes("PERDA")) return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Perda</Badge>;
-    if (tipo.includes("TRANSFERENCIA")) return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Transferência</Badge>;
+    if (tipo.includes("ENTRADA")) return <Badge variant="outline" className="status-success">Entrada</Badge>;
+    if (tipo.includes("DISPENSACAO")) return <Badge variant="outline" className="status-info">Dispensação</Badge>;
+    if (tipo.includes("PERDA")) return <Badge variant="outline" className="status-error">Perda</Badge>;
+    if (tipo.includes("TRANSFERENCIA")) return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Transferência</Badge>;
     return <Badge variant="outline">{tipo}</Badge>;
   };
 

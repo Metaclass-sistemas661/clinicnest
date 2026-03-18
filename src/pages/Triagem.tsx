@@ -85,15 +85,15 @@ interface Triagem {
 
 
 const priorityConfig: Record<Priority, { label: string; color: string; icon: React.ElementType }> = {
-  emergencia: { label: "Emergência", color: "bg-red-500/20 text-red-600 border-red-500/30", icon: AlertTriangle },
-  urgente: { label: "Urgente", color: "bg-orange-500/20 text-orange-600 border-orange-500/30", icon: AlertTriangle },
-  pouco_urgente: { label: "Pouco Urgente", color: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30", icon: Clock },
+  emergencia: { label: "Emergência", color: "bg-destructive/20 text-destructive border-destructive/30", icon: AlertTriangle },
+  urgente: { label: "Urgente", color: "bg-warning/20 text-warning border-warning/30", icon: AlertTriangle },
+  pouco_urgente: { label: "Pouco Urgente", color: "bg-warning/20 text-warning border-warning/30", icon: Clock },
   nao_urgente: { label: "Não Urgente", color: "bg-success/20 text-success border-success/30", icon: CheckCircle2 },
 };
 
 const statusConfig: Record<TriageStatus, { label: string; color: string }> = {
-  pendente: { label: "Aguardando", color: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30" },
-  em_atendimento: { label: "Em atendimento", color: "bg-blue-500/20 text-blue-600 border-blue-500/30" },
+  pendente: { label: "Aguardando", color: "bg-warning/20 text-warning border-warning/30" },
+  em_atendimento: { label: "Em atendimento", color: "bg-info/20 text-info border-info/30" },
   concluida: { label: "Concluída", color: "bg-success/20 text-success border-success/30" },
 };
 

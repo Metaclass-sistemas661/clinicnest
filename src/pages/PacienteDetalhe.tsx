@@ -54,6 +54,21 @@ export default function PacienteDetalhe() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("consumo");
 
+  // ── Keyboard shortcuts: Ctrl+1..6 switches tabs ──
+  const TAB_KEYS = ["consumo", "clinico", "evolucoes", "pacotes", "timeline", "termos"] as const;
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
+      const idx = parseInt(e.key, 10);
+      if (idx >= 1 && idx <= TAB_KEYS.length) {
+        e.preventDefault();
+        setActiveTab(TAB_KEYS[idx - 1]);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Data states
   const [patientSpending, setPatientSpending] = useState<PatientSpendingRow | null>(null);
   const [clinicalHistory, setClinicalHistory] = useState<Array<{
@@ -315,26 +330,32 @@ export default function PacienteDetalhe() {
           <TabsTrigger value="consumo" className="gap-2">
             <DollarSign className="h-4 w-4" />
             Consumo
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃1</kbd>
           </TabsTrigger>
           <TabsTrigger value="clinico" className="gap-2">
             <ClipboardList className="h-4 w-4" />
             Clínico
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃2</kbd>
           </TabsTrigger>
           <TabsTrigger value="evolucoes" className="gap-2">
             <NotebookPen className="h-4 w-4" />
             Evoluções
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃3</kbd>
           </TabsTrigger>
           <TabsTrigger value="pacotes" className="gap-2">
             <Package className="h-4 w-4" />
             Pacotes
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃4</kbd>
           </TabsTrigger>
           <TabsTrigger value="timeline" className="gap-2">
             <Clock className="h-4 w-4" />
             Timeline
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃5</kbd>
           </TabsTrigger>
           <TabsTrigger value="termos" className="gap-2">
             <ShieldCheck className="h-4 w-4" />
             Termos
+            <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃6</kbd>
           </TabsTrigger>
         </TabsList>
 

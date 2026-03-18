@@ -58,6 +58,13 @@
     --info: 200 90% 50%;
     --info-foreground: 0 0% 100%;
 
+    /* Chart / Categorical Colors */
+    --chart-1: 174 72% 38%;
+    --chart-2: 210 80% 55%;
+    --chart-3: 152 76% 40%;
+    --chart-4: 262 70% 55%;
+    --chart-5: 24 90% 55%;
+
     /* Borders & Inputs */
     --border: 180 20% 88%;
     --input: 180 20% 88%;
@@ -126,6 +133,13 @@
 
     --info: 200 85% 55%;
     --info-foreground: 0 0% 100%;
+
+    /* Chart / Categorical Colors */
+    --chart-1: 174 70% 50%;
+    --chart-2: 210 75% 60%;
+    --chart-3: 152 70% 45%;
+    --chart-4: 262 65% 60%;
+    --chart-5: 24 85% 55%;
 
     --border: 200 25% 18%;
     --input: 200 25% 18%;
@@ -198,12 +212,34 @@
   .status-warning { @apply bg-warning/10 text-warning border-warning/20; }
   .status-info    { @apply bg-info/10 text-info border-info/20; }
 
+  /* Chart / categorical color utilities */
+  .chart-1 { color: hsl(var(--chart-1)); }
+  .chart-2 { color: hsl(var(--chart-2)); }
+  .chart-3 { color: hsl(var(--chart-3)); }
+  .chart-4 { color: hsl(var(--chart-4)); }
+  .chart-5 { color: hsl(var(--chart-5)); }
+
+  /* Semantic color alias utilities for common patterns */
+  .badge-success { @apply bg-success/10 text-success border-success/20; }
+  .badge-warning { @apply bg-warning/10 text-warning border-warning/20; }
+  .badge-destructive { @apply bg-destructive/10 text-destructive border-destructive/20; }
+  .badge-info { @apply bg-info/10 text-info border-info/20; }
+  .badge-primary { @apply bg-primary/10 text-primary border-primary/20; }
+  .badge-accent { @apply bg-accent/10 text-accent border-accent/20; }
+  .status-neutral { @apply bg-muted text-muted-foreground border-border; }
+
+  /* Design System: Semantic Accent Classes (icon backgrounds, badges, etc.) */
+  .accent-success { @apply bg-success/15 text-success; }
+  .accent-error   { @apply bg-destructive/15 text-destructive; }
+  .accent-warning { @apply bg-warning/15 text-warning; }
+  .accent-info    { @apply bg-info/15 text-info; }
+
   /* Design System: Seamless Tab Active — Sidebar fusion effect */
   .seamless-tab-active {
-    @apply bg-background rounded-l-xl rounded-r-none relative z-10;
+    @apply bg-background rounded-l-2xl rounded-r-none relative z-10;
     @apply text-foreground font-semibold;
-    @apply border-y border-l border-border/30 border-r-0;
-    margin-right: -1px;
+    margin-right: 0;
+    padding-right: 1rem;
     transition: all 0.2s ease-out;
   }
 
@@ -211,12 +247,12 @@
     content: '';
     position: absolute;
     right: 0;
-    top: -12px;
-    width: 12px;
-    height: 12px;
+    top: -10px;
+    width: 10px;
+    height: 10px;
     background: transparent;
-    border-bottom-right-radius: 12px;
-    box-shadow: 4px 4px 0 4px hsl(var(--background));
+    border-bottom-right-radius: 10px;
+    box-shadow: 5px 5px 0 5px hsl(var(--background));
     pointer-events: none;
   }
 
@@ -224,12 +260,12 @@
     content: '';
     position: absolute;
     right: 0;
-    bottom: -12px;
-    width: 12px;
-    height: 12px;
+    bottom: -10px;
+    width: 10px;
+    height: 10px;
     background: transparent;
-    border-top-right-radius: 12px;
-    box-shadow: 4px -4px 0 4px hsl(var(--background));
+    border-top-right-radius: 10px;
+    box-shadow: 5px -5px 0 5px hsl(var(--background));
     pointer-events: none;
   }
 

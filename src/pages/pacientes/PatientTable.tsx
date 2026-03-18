@@ -88,7 +88,7 @@ export function PatientTable({
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{patient.name}</p>
                       {patient.allergies && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[11px] gap-1 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30">
+                        <Badge variant="outline" className="status-error text-[11px] gap-1">
                           <AlertTriangle className="h-3 w-3" />Alergia
                         </Badge>
                       )}
@@ -160,12 +160,16 @@ export function PatientTable({
                 </TableHeader>
                 <TableBody>
                   {paginatedPatients.map((patient) => (
-                    <TableRow key={patient.id}>
+                    <TableRow
+                      key={patient.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/pacientes/${patient.id}`)}
+                    >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {patient.name}
                           {patient.allergies && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[11px] gap-1 shrink-0 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/30" title={`Alergias: ${patient.allergies}`}>
+                            <Badge variant="outline" className="status-error text-[11px] gap-1 shrink-0" title={`Alergias: ${patient.allergies}`}>
                               <AlertTriangle className="h-3 w-3" />Alergia
                             </Badge>
                           )}
@@ -181,7 +185,7 @@ export function PatientTable({
                       <TableCell>{patient.email ? <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-4 w-4" />{patient.email}</div> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="max-w-xs truncate text-muted-foreground">{patient.notes || "—"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" onClick={() => onOpenDrawer(patient)} title="Ver Termos e Contratos">
                             <ShieldCheck className="h-4 w-4 text-primary" />
                           </Button>
