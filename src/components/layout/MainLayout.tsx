@@ -38,18 +38,21 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
       )}
       {!isAdmin && <ProfessionalGoalMotivationDialog />}
       <KeyboardShortcutsDialog />
-      {/* Outer border container — like the reference design */}
+      {/* Outer teal background — fixed viewport, never scrolls */}
       <div className={cn(
-        "min-h-screen",
-        !isMobile && "p-2 bg-muted/30"
+        "h-screen w-screen overflow-hidden",
+        !isMobile && "bg-teal-600 dark:bg-teal-700 p-2"
       )}>
+        {/* Inner container — rounded card with border, fills viewport */}
         <div className={cn(
-          "min-h-[calc(100vh-16px)] bg-background relative",
-          !isMobile && "rounded-2xl border border-border/40 shadow-sm overflow-hidden"
+          "h-full w-full bg-background relative flex",
+          !isMobile && "rounded-2xl overflow-hidden"
         )}>
           <Sidebar onCollapsedChange={setSidebarCollapsed} />
+
+          {/* Scrollable main area */}
           <main className={cn(
-            "min-h-screen transition-all duration-300",
+            "flex-1 overflow-y-auto transition-all duration-300",
             isMobile ? "ml-0" : sidebarCollapsed ? "ml-[88px]" : "ml-[288px]",
             !isMobile && "mr-[56px]"
           )}>

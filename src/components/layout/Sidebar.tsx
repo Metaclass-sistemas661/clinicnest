@@ -585,7 +585,7 @@ function SidebarContent({
   return (
     <>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4 mt-2">
+      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
@@ -881,8 +881,8 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-2 top-2 bottom-2 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden",
-        "bg-[hsl(var(--sidebar-body))] rounded-l-2xl",
+        "absolute left-0 top-0 bottom-0 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden",
+        "bg-[hsl(var(--sidebar-body))]",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
