@@ -247,6 +247,163 @@ export const CONSENT_TEMPLATES_LIBRARY: ConsentTemplateModel[] = [
 <p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
   },
 
+  // ── Bioestimulador de Colágeno ──
+  {
+    id: "estetica-bioestimulador",
+    slug: "bioestimulador_colageno",
+    title: "Termo de Consentimento - Bioestimulador de Colágeno",
+    description: "Consentimento para procedimento com bioestimuladores (ex: Sculptra, Radiesse)",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO - BIOESTIMULADOR DE COLÁGENO</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, CPF <strong>{{cpf}}</strong>, declaro que fui informado(a) sobre o procedimento de aplicação de <strong>Bioestimulador de Colágeno</strong>:</p>
+
+<h3>1. SOBRE O PROCEDIMENTO</h3>
+<p>O bioestimulador é uma substância injetável que estimula a produção natural de colágeno, promovendo melhora progressiva da qualidade e firmeza da pele. Os resultados aparecem gradualmente ao longo de semanas/meses.</p>
+
+<h3>2. RISCOS E POSSÍVEIS COMPLICAÇÕES</h3>
+<ul>
+  <li>Edema, dor e equimoses no local da aplicação;</li>
+  <li>Formação de nódulos ou granulomas;</li>
+  <li>Assimetria de resultado;</li>
+  <li>Reação inflamatória local;</li>
+  <li>Necessidade de sessões adicionais;</li>
+  <li>Resultados abaixo da expectativa.</li>
+</ul>
+
+<h3>3. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Realizar massagem conforme orientação profissional;</li>
+  <li>Evitar exercícios intensos por 48-72 horas;</li>
+  <li>Evitar exposição solar direta por 15 dias;</li>
+  <li>Retornar conforme agendamento para avaliação.</li>
+</ul>
+
+<p>Declaro que li, compreendi e concordo com os termos acima.</p>
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
+  },
+
+  // ── Fios de PDO ──
+  {
+    id: "estetica-fios-pdo",
+    slug: "fios_pdo",
+    title: "Termo de Consentimento - Fios de PDO",
+    description: "Consentimento para procedimento com fios de polidioxanona",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO - FIOS DE PDO</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, CPF <strong>{{cpf}}</strong>, declaro que fui informado(a) sobre o procedimento de implante de <strong>Fios de Polidioxanona (PDO)</strong>:</p>
+
+<h3>1. SOBRE O PROCEDIMENTO</h3>
+<p>Fios de PDO são fios absorvíveis implantados na pele com objetivo de sustentação, estímulo de colágeno e rejuvenescimento. São reabsorvidos pelo organismo em 6-8 meses.</p>
+
+<h3>2. RISCOS E POSSÍVEIS COMPLICAÇÕES</h3>
+<ul>
+  <li>Dor, edema e hematomas;</li>
+  <li>Sensação de repuxamento;</li>
+  <li>Assimetria facial;</li>
+  <li>Visibilidade ou palpabilidade dos fios;</li>
+  <li>Migração ou extrusão do fio;</li>
+  <li>Infecção local (rara);</li>
+  <li>Parestesia temporária.</li>
+</ul>
+
+<h3>3. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Não deitar sobre o rosto por 3-5 dias;</li>
+  <li>Evitar abrir muito a boca (bocejo amplo) por 2 semanas;</li>
+  <li>Não massagear a região;</li>
+  <li>Manter cabeça elevada ao dormir;</li>
+  <li>Evitar exercícios intensos por 1 semana.</li>
+</ul>
+
+<p>Declaro que li, compreendi e concordo com os termos acima.</p>
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
+  },
+
+  // ── Laser Estético ──
+  {
+    id: "estetica-laser",
+    slug: "laser_estetico",
+    title: "Termo de Consentimento - Procedimento a Laser",
+    description: "Consentimento para procedimentos com laser estético (ablativo e não-ablativo)",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO - PROCEDIMENTO A LASER</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, CPF <strong>{{cpf}}</strong>, declaro que fui informado(a) sobre o procedimento a <strong>Laser Estético</strong>:</p>
+
+<h3>1. SOBRE O PROCEDIMENTO</h3>
+<p>O laser emite energia luminosa controlada sobre a pele para tratamento de lesões pigmentares, vasculares, cicatrizes, rejuvenescimento ou remoção de pelos, conforme indicação clínica.</p>
+
+<h3>2. RISCOS E POSSÍVEIS COMPLICAÇÕES</h3>
+<ul>
+  <li>Eritema (vermelhidão) e edema;</li>
+  <li>Hiperpigmentação ou hipopigmentação;</li>
+  <li>Queimaduras;</li>
+  <li>Formação de bolhas ou crostas;</li>
+  <li>Cicatrizes (raro);</li>
+  <li>Necessidade de múltiplas sessões;</li>
+  <li>Resultados variáveis conforme fototipo.</li>
+</ul>
+
+<h3>3. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Proteção solar rigorosa (FPS 50+) por mínimo 30 dias;</li>
+  <li>Hidratação constante da região;</li>
+  <li>Não remover crostas manualmente;</li>
+  <li>Evitar produtos ácidos por 7-14 dias;</li>
+  <li>Evitar água quente e sauna por 48 horas.</li>
+</ul>
+
+<p>Declaro que li, compreendi e concordo com os termos acima.</p>
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
+  },
+
+  // ── Microagulhamento ──
+  {
+    id: "estetica-microagulhamento",
+    slug: "microagulhamento",
+    title: "Termo de Consentimento - Microagulhamento",
+    description: "Consentimento para procedimento de microagulhamento (indução percutânea de colágeno)",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO - MICROAGULHAMENTO</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, CPF <strong>{{cpf}}</strong>, declaro que fui informado(a) sobre o procedimento de <strong>Microagulhamento (IPCA)</strong>:</p>
+
+<h3>1. SOBRE O PROCEDIMENTO</h3>
+<p>O microagulhamento consiste na criação de microcanais na pele através de microagulhas, estimulando a produção de colágeno e elastina. Pode ser associado a drug delivery (aplicação de ativos).</p>
+
+<h3>2. RISCOS E POSSÍVEIS COMPLICAÇÕES</h3>
+<ul>
+  <li>Eritema e edema por 24-72 horas;</li>
+  <li>Descamação fina;</li>
+  <li>Sangramento puntiforme durante o procedimento;</li>
+  <li>Hiperpigmentação pós-inflamatória;</li>
+  <li>Infecção local (rara com cuidados adequados);</li>
+  <li>Cicatrizes (raro, em peles predispostas).</li>
+</ul>
+
+<h3>3. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Não aplicar maquiagem por 24 horas;</li>
+  <li>Proteção solar rigorosa por 30 dias;</li>
+  <li>Hidratar com produtos indicados pelo profissional;</li>
+  <li>Evitar ácidos por 5-7 dias;</li>
+  <li>Evitar piscina, sauna e exercícios intensos por 48 horas.</li>
+</ul>
+
+<p>Declaro que li, compreendi e concordo com os termos acima.</p>
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ODONTOLOGIA
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1231,6 +1388,165 @@ export const CONSENT_TEMPLATES_LIBRARY: ConsentTemplateModel[] = [
 <p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
 
 <p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>`,
+  },
+
+  {
+    id: "estetica-laser",
+    slug: "laser_estetico",
+    title: "Termo de Consentimento - Laser / Luz Intensa Pulsada",
+    description: "Procedimentos com laser, IPL e radiofrequência estéticos",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO — LASER / LUZ INTENSA PULSADA (IPL)</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, portador(a) do CPF <strong>{{cpf}}</strong>, declaro que fui devidamente informado(a) sobre o procedimento a que serei submetido(a).</p>
+
+<h3>1. PROCEDIMENTO</h3>
+<p>Aplicação de energia luminosa (laser ou luz intensa pulsada) com finalidade estética para tratamento de:</p>
+<ul>
+  <li>Rejuvenescimento e fotorejuvenescimento;</li>
+  <li>Manchas e hiperpigmentação;</li>
+  <li>Lesões vasculares (telangiectasias, rosácea);</li>
+  <li>Depilação a laser;</li>
+  <li>Cicatrizes de acne;</li>
+  <li>Melhora da textura e poros.</li>
+</ul>
+
+<h3>2. TIPO E PARÂMETROS</h3>
+<p>( ) Laser Nd:YAG<br/>
+( ) Laser CO2 Fracionado<br/>
+( ) Laser Alexandrite<br/>
+( ) Laser Diodo<br/>
+( ) Luz Intensa Pulsada (IPL)<br/>
+( ) Radiofrequência<br/>
+( ) Outro: _______________</p>
+<p>Parâmetros serão definidos pelo profissional conforme avaliação individual.</p>
+
+<h3>3. RESULTADOS ESPERADOS</h3>
+<ul>
+  <li>Resultados progressivos ao longo das sessões;</li>
+  <li>Número estimado de sessões: ___;</li>
+  <li>Intervalo entre sessões: ___ semanas;</li>
+  <li>Resultados definitivos não são garantidos.</li>
+</ul>
+
+<h3>4. RISCOS E EFEITOS COLATERAIS</h3>
+<ul>
+  <li>Eritema (vermelhidão) e edema local;</li>
+  <li>Dor ou desconforto durante o procedimento;</li>
+  <li>Queimaduras superficiais ou profundas;</li>
+  <li>Hipo ou hiperpigmentação;</li>
+  <li>Bolhas e crostas;</li>
+  <li>Cicatrizes (raro);</li>
+  <li>Infecção secundária;</li>
+  <li>Reativação de herpes labial;</li>
+  <li>Fotossensibilidade aumentada.</li>
+</ul>
+
+<h3>5. CONTRAINDICAÇÕES</h3>
+<ul>
+  <li>Uso de isotretinoína nos últimos 6 meses;</li>
+  <li>Gravidez e amamentação;</li>
+  <li>Bronzeamento recente ou pele bronzeada;</li>
+  <li>Doenças autoimunes ou fotossensibilizantes;</li>
+  <li>Uso de medicamentos fotossensibilizantes.</li>
+</ul>
+
+<h3>6. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Protetor solar FPS 50+ de amplo espectro, reaplicar a cada 2h;</li>
+  <li>Evitar exposição solar por no mínimo 30 dias;</li>
+  <li>Não utilizar produtos ácidos por 7-14 dias;</li>
+  <li>Manter hidratação da pele;</li>
+  <li>Não remover crostas ou descamação;</li>
+  <li>Em caso de bolhas ou dor intensa, contatar a clínica imediatamente.</li>
+</ul>
+
+<p>Declaro que li, compreendi e tive oportunidade de esclarecer todas as dúvidas sobre este procedimento.</p>
+
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>
+
+<p>____________________________________<br/>Profissional Responsável<br/>CRM/CRBM: ___________</p>`,
+  },
+
+  {
+    id: "estetica-microagulhamento",
+    slug: "microagulhamento_estetico",
+    title: "Termo de Consentimento - Microagulhamento / Drug Delivery",
+    description: "IPCA (Indução Percutânea de Colágeno por Agulhas) e drug delivery",
+    category: "estetica",
+    is_required_default: true,
+    body_html: `<h2 style="text-align:center;">TERMO DE CONSENTIMENTO INFORMADO — MICROAGULHAMENTO / DRUG DELIVERY</h2>
+
+<p>Eu, <strong>{{nome_paciente}}</strong>, portador(a) do CPF <strong>{{cpf}}</strong>, declaro que fui devidamente informado(a) sobre o procedimento descrito abaixo.</p>
+
+<h3>1. PROCEDIMENTO</h3>
+<p>O microagulhamento (IPCA — Indução Percutânea de Colágeno por Agulhas) consiste na utilização de dispositivo com microagulhas que criam microperfurações controladas na pele, estimulando a produção natural de colágeno e elastina.</p>
+<p>( ) Microagulhamento isolado<br/>
+( ) Microagulhamento com drug delivery (associação de ativos)<br/>
+Ativo utilizado: _______________</p>
+
+<h3>2. INDICAÇÕES</h3>
+<ul>
+  <li>Cicatrizes de acne;</li>
+  <li>Rejuvenescimento facial;</li>
+  <li>Estrias;</li>
+  <li>Melasma e hiperpigmentações;</li>
+  <li>Alopecia (couro cabeludo);</li>
+  <li>Melhora da textura da pele.</li>
+</ul>
+
+<h3>3. PARÂMETROS DO PROCEDIMENTO</h3>
+<ul>
+  <li>Profundidade das agulhas: ___ mm;</li>
+  <li>Dispositivo: ( ) Roller ( ) Pen elétrico ( ) Stamp;</li>
+  <li>Número estimado de sessões: ___;</li>
+  <li>Intervalo entre sessões: ___ semanas.</li>
+</ul>
+
+<h3>4. RISCOS E EFEITOS COLATERAIS</h3>
+<ul>
+  <li>Eritema (vermelhidão) por 24-72 horas;</li>
+  <li>Edema local;</li>
+  <li>Sangramento puntiforme durante o procedimento;</li>
+  <li>Descamação leve;</li>
+  <li>Hiperpigmentação pós-inflamatória;</li>
+  <li>Infecção secundária (raro);</li>
+  <li>Cicatrizes (raro, com técnica inadequada);</li>
+  <li>Reação alérgica ao ativo do drug delivery;</li>
+  <li>Reativação de herpes.</li>
+</ul>
+
+<h3>5. CONTRAINDICAÇÕES</h3>
+<ul>
+  <li>Infecção ativa na área (herpes, impetigo);</li>
+  <li>Uso de anticoagulantes;</li>
+  <li>Doenças de pele ativas (psoríase, eczema no local);</li>
+  <li>Queloide ou tendência queloidiana;</li>
+  <li>Gravidez e amamentação;</li>
+  <li>Uso de isotretinoína nos últimos 6 meses.</li>
+</ul>
+
+<h3>6. CUIDADOS PÓS-PROCEDIMENTO</h3>
+<ul>
+  <li>Não lavar o rosto nas primeiras 6 horas;</li>
+  <li>Usar apenas produtos indicados pelo profissional;</li>
+  <li>Protetor solar FPS 50+ obrigatório;</li>
+  <li>Evitar maquiagem por 24 horas;</li>
+  <li>Não se expor ao sol por no mínimo 15 dias;</li>
+  <li>Evitar exercícios físicos intensos por 48h;</li>
+  <li>Não frequentar piscina ou sauna por 72h.</li>
+</ul>
+
+<p>Declaro que li, compreendi e tive oportunidade de esclarecer todas as dúvidas. Autorizo a realização do procedimento.</p>
+
+<p style="margin-top:30px;"><strong>{{cidade}}</strong>, <strong>{{data_hoje}}</strong></p>
+
+<p>____________________________________<br/><strong>{{nome_paciente}}</strong><br/>CPF: {{cpf}}</p>
+
+<p>____________________________________<br/>Profissional Responsável<br/>CRM/CRBM: ___________</p>`,
   },
 
   // ═══════════════════════════════════════════════════════════════════════════

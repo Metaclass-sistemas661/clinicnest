@@ -14,7 +14,7 @@ export interface SubscriptionStatus {
   error: string | null;
 }
 
-export type SubscriptionTier = "free" | "starter" | "solo" | "clinica" | "premium";
+export type SubscriptionTier = "starter" | "solo" | "clinica" | "premium";
 export type SubscriptionInterval = "monthly" | "annual";
 
 export function normalizePlanKey(input: unknown): string | null {
@@ -35,10 +35,6 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
   if (key === "quarterly") {
     return { tier: "solo", interval: "monthly" };
   }
-  // Free plan (sem interval)
-  if (key === "free") {
-    return { tier: "free", interval: "monthly" };
-  }
 
   const [tierRaw, intervalRaw] = key.split("_");
   const interval: SubscriptionInterval | null =
@@ -49,7 +45,7 @@ export function parsePlanKey(planKey: unknown): { tier: SubscriptionTier; interv
   if (!interval) return null;
 
   // Novos nomes
-  if (tierRaw === "free" || tierRaw === "starter" || tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
+  if (tierRaw === "starter" || tierRaw === "solo" || tierRaw === "clinica" || tierRaw === "premium") {
     return { tier: tierRaw, interval: interval ?? "monthly" };
   }
   // Legado: basic → solo, pro → clinica

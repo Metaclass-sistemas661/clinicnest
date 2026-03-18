@@ -234,39 +234,14 @@
   .accent-warning { @apply bg-warning/15 text-warning; }
   .accent-info    { @apply bg-info/15 text-info; }
 
-  /* Design System: Seamless Tab Active — Sidebar fusion effect */
+  /* Design System: Seamless Tab Active — Sidebar floating card highlight */
   .seamless-tab-active {
-    @apply bg-background rounded-l-2xl rounded-r-none relative z-10;
+    @apply bg-background rounded-xl relative z-10;
     @apply text-foreground font-semibold;
-    margin-right: 0;
-    padding-right: 1rem;
+    margin-right: 0.5rem;
+    padding-right: 0.75rem;
     transition: all 0.2s ease-out;
-  }
-
-  .seamless-tab-active::before {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: -10px;
-    width: 10px;
-    height: 10px;
-    background: transparent;
-    border-bottom-right-radius: 10px;
-    box-shadow: 5px 5px 0 5px hsl(var(--background));
-    pointer-events: none;
-  }
-
-  .seamless-tab-active::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: -10px;
-    width: 10px;
-    height: 10px;
-    background: transparent;
-    border-top-right-radius: 10px;
-    box-shadow: 5px -5px 0 5px hsl(var(--background));
-    pointer-events: none;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06);
   }
 
   .gradient-primary {

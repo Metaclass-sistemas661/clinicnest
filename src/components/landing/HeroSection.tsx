@@ -516,7 +516,7 @@ export function HeroSection() {
                   size="lg"
                   className="bg-white text-teal-700 hover:bg-teal-50 text-base px-8 py-6 h-auto shadow-2xl shadow-black/30 font-bold group border-0"
                 >
-                  Começar 5 dias grátis
+                  Testar 7 dias grátis
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>

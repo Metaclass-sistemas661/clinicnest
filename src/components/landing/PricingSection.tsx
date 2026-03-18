@@ -34,10 +34,6 @@ import { ScrollReveal } from "./ScrollReveal";
 type BillingKey = "monthly" | "annual";
 
 const PRICING = {
-  free: {
-    monthly: { price: "0", perMonth: null, total: null },
-    annual:  { price: "0", perMonth: null, total: null },
-  },
   starter: {
     monthly: { price: "89,90", perMonth: null, total: null },
     annual:  { price: "809,00", perMonth: "R$67,42/mês", total: "R$809,00 cobrados anualmente", savings: "Economize R$269,80/ano" },
@@ -70,28 +66,7 @@ const TIERS: Array<{
   dark?: boolean;
   features: FeatureItem[];
   ctaLabel: string;
-  isFree?: boolean;
 }> = [
-  {
-    key: "free",
-    name: "Grátis",
-    tagline: "Para sempre",
-    target: "Estudantes, profissionais avaliando o sistema",
-    icon: Zap,
-    isFree: true,
-    features: [
-      { type: "include", icon: Users,      label: "1 profissional" },
-      { type: "include", icon: Calendar,   label: "Até 30 pacientes" },
-      { type: "include", icon: Calendar,   label: "50 agendamentos/mês" },
-      { type: "include", icon: FileText,   label: "Prontuário básico" },
-      { type: "include", icon: Clock,      label: "Histórico de 3 meses" },
-      { type: "include", icon: Brain,      label: "IA Básica (triagem + CID) — 5/dia" },
-      { type: "exclude",                   label: "Financeiro" },
-      { type: "exclude",                   label: "Portal do paciente" },
-      { type: "exclude",                   label: "Equipe e permissões" },
-    ],
-    ctaLabel: "Criar conta grátis",
-  },
   {
     key: "starter",
     name: "Starter",
@@ -111,7 +86,7 @@ const TIERS: Array<{
       { type: "exclude",                   label: "Evoluções SOAP" },
       { type: "exclude",                   label: "Equipe e permissões" },
     ],
-    ctaLabel: "Começar grátis",
+    ctaLabel: "Testar 7 dias grátis",
   },
   {
     key: "solo",
@@ -133,7 +108,7 @@ const TIERS: Array<{
       { type: "exclude",                   label: "Convênios e TISS" },
       { type: "exclude",                   label: "Comissões e metas" },
     ],
-    ctaLabel: "Começar grátis",
+    ctaLabel: "Testar 7 dias grátis",
   },
   {
     key: "clinic",
@@ -157,7 +132,7 @@ const TIERS: Array<{
       { type: "include", icon: Lock,       label: "RBAC (5 perfis)" },
       { type: "include", icon: Headphones, label: "Suporte via chat (Seg–Sáb)" },
     ],
-    ctaLabel: "Começar grátis",
+    ctaLabel: "Testar 7 dias grátis",
   },
   {
     key: "premium",
@@ -276,21 +251,18 @@ export function PricingSection() {
           </div>
         </ScrollReveal>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-5 max-w-7xl mx-auto items-start">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 max-w-7xl mx-auto items-start">
           {TIERS.map((tier, index) => {
             const price = PRICING[tier.key][billing];
             const Icon = tier.icon;
-            const isFree = 'isFree' in tier && tier.isFree;
 
             return (
-              <ScrollReveal key={tier.key} animation="up" stagger={(index % 5) + 1}>
+              <ScrollReveal key={tier.key} animation="up" stagger={(index % 4) + 1}>
                 <div
                   className={cn(
                     "relative rounded-3xl border-2 transition-all duration-300 hover:shadow-2xl flex flex-col",
                     tier.popular
                       ? "border-teal-500 shadow-2xl shadow-teal-500/20 md:-translate-y-4 bg-gradient-to-b from-teal-800 to-teal-900 text-white"
-                      : isFree
-                      ? "border-emerald-300 bg-emerald-50/50 shadow-lg hover:-translate-y-1"
                       : "border-gray-200 bg-white shadow-lg hover:-translate-y-1"
                   )}
               >
@@ -302,15 +274,7 @@ export function PricingSection() {
                   </div>
                 )}
 
-                {isFree && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <div className="px-5 py-1.5 rounded-full bg-gradient-to-r from-emerald-400 to-green-400 text-emerald-950 text-xs font-bold shadow-lg whitespace-nowrap tracking-wide uppercase">
-                      Grátis para sempre
-                    </div>
-                  </div>
-                )}
-
-                <div className={cn("p-6 sm:p-8", (tier.popular || isFree) && "pt-10")}>
+                <div className={cn("p-6 sm:p-8", tier.popular && "pt-10")}>
 
                   <div className="flex items-start justify-between mb-5">
                     <div>
@@ -337,16 +301,6 @@ export function PricingSection() {
                   </div>
 
                   <div className="mb-2">
-                    {isFree ? (
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-display font-extrabold tracking-tight text-emerald-600 text-4xl">
-                          Grátis
-                        </span>
-                        <span className="text-sm text-emerald-500">
-                          para sempre
-                        </span>
-                      </div>
-                    ) : (
                     <div className="flex items-baseline gap-1">
                       <span className={cn("text-sm font-medium", tier.popular ? "text-teal-300" : "text-muted-foreground")}>
                         R$
@@ -361,7 +315,6 @@ export function PricingSection() {
                         {billing === "monthly" ? "/mês" : "/ano"}
                       </span>
                     </div>
-                    )}
 
                     {price.perMonth && (
                       <p className={cn("text-xs mt-1", tier.popular ? "text-teal-300" : "text-muted-foreground")}>
@@ -427,8 +380,6 @@ export function PricingSection() {
                           ? "bg-white text-teal-800 hover:bg-teal-50 shadow-lg hover:shadow-xl hover:scale-[1.02]"
                           : tier.key === "premium"
                           ? "bg-teal-900 hover:bg-teal-800 text-white shadow-md hover:shadow-lg"
-                          : isFree
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg hover:shadow-emerald-500/25"
                           : "bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white shadow-md hover:shadow-lg hover:shadow-teal-500/25"
                       )}
                     >
@@ -438,7 +389,7 @@ export function PricingSection() {
                   </Link>
 
                   <p className={cn("text-center text-xs mt-3", tier.popular ? "text-teal-300" : "text-muted-foreground")}>
-                    {isFree ? "Sem cartão de crédito necessário" : "5 dias grátis · Sem cartão de crédito"}
+                    7 dias grátis · Sem cartão de crédito
                   </p>
                 </div>
                 </div>
@@ -453,7 +404,7 @@ export function PricingSection() {
               {[
                 {
                   icon: Clock,
-                  title: "5 dias grátis",
+                  title: "7 dias grátis",
                   desc: "Acesso total sem compromisso",
                 },
                 {

@@ -223,7 +223,7 @@ export function Navbar() {
             </DropdownMenu>
             <Link to="/cadastro">
               <Button className="bg-gradient-to-r from-teal-500 to-cyan-400 hover:from-teal-600 hover:to-cyan-500 shadow-lg shadow-teal-500/30 text-white font-semibold">
-                Começar Grátis
+                Testar 7 Dias Grátis
               </Button>
             </Link>
           </div>
@@ -273,7 +273,7 @@ export function Navbar() {
                   </Button>
                 </Link>
                 <Link to="/cadastro" onClick={() => setIsOpen(false)}>
-                  <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white font-semibold">Começar Grátis</Button>
+                  <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 text-white font-semibold">Testar 7 Dias Grátis</Button>
                 </Link>
               </div>
             </div>

@@ -26,6 +26,7 @@ import { GlobalSearch } from "@/components/header/GlobalSearch";
 import { KeyboardShortcutsDialog } from "@/components/help/KeyboardShortcutsDialog";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { CopilotProntuarioProvider } from "@/contexts/CopilotProntuarioContext";
+import { TrialBanner } from "@/components/subscription/TrialBanner";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -85,10 +86,11 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
         <Sidebar onCollapsedChange={setSidebarCollapsed} />
         <main className={cn(
           "min-h-screen transition-all duration-300",
-          isMobile ? "ml-0" : sidebarCollapsed ? "ml-20" : "ml-72",
+          isMobile ? "ml-0" : sidebarCollapsed ? "ml-[92px]" : "ml-[300px]",
           !isMobile && "mr-14"
         )}>
           <GoalsProgressBar />
+          <TrialBanner />
           {/* Header: título + sino (staff) + actions */}
           <header className={cn(
             "sticky top-0 z-30 glass border-b border-border",

@@ -139,6 +139,7 @@ const Periograma = lazyWithRetry(() => import("@/pages/Periograma"));
 const GestaoSalas = lazyWithRetry(() => import("@/pages/GestaoSalas"));
 const Evolucoes = lazyWithRetry(() => import("@/pages/Evolucoes"));
 const ApiDocumentation = lazyWithRetry(() => import("@/pages/ApiDocumentation"));
+const EsteticaMapping = lazyWithRetry(() => import("@/pages/estetica/EsteticaMapping"));
 
 // Páginas FASE 13D — Dialog → Página
 const PacienteDetalhe = lazyWithRetry(() => import("@/pages/PacienteDetalhe"));
@@ -431,6 +432,16 @@ const App = () => (
                   element={
                     <ProtectedRoute resource="periograma">
                       <Periograma />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Estética */}
+                <Route
+                  path="/estetica/mapeamento"
+                  element={
+                    <ProtectedRoute resource="estetica">
+                      <EsteticaMapping />
                     </ProtectedRoute>
                   }
                 />

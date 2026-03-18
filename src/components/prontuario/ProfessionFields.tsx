@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Apple, Brain, Ear } from "lucide-react";
+import { Activity, Apple, Brain, Ear, Gem } from "lucide-react";
 import type { ProfessionalType } from "@/types/database";
 
 interface Props {
@@ -170,7 +170,71 @@ function FonoFields({ values, onChange, disabled }: Omit<Props, "professionalTyp
   );
 }
 
-const SUPPORTED: ProfessionalType[] = ["fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo"];
+/* ─── Estética ─── */
+function EsteticaFields({ values, onChange, disabled }: Omit<Props, "professionalType">) {
+  return (
+    <div className="space-y-3 p-3 border rounded-lg bg-fuchsia-50/30 dark:bg-fuchsia-950/10">
+      <div className="flex items-center gap-2 text-fuchsia-600 dark:text-fuchsia-400">
+        <Gem className="h-4 w-4" />
+        <span className="text-xs font-semibold">Campos Estéticos</span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Tipo de Procedimento</Label>
+          <Select value={values.procedure_type || ""} onValueChange={v => onChange("procedure_type", v)} disabled={disabled}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="toxina">Toxina Botulínica</SelectItem>
+              <SelectItem value="preenchimento">Preenchimento</SelectItem>
+              <SelectItem value="bioestimulador">Bioestimulador</SelectItem>
+              <SelectItem value="fios_pdo">Fios de PDO</SelectItem>
+              <SelectItem value="laser">Laser</SelectItem>
+              <SelectItem value="microagulhamento">Microagulhamento</SelectItem>
+              <SelectItem value="peeling">Peeling</SelectItem>
+              <SelectItem value="outro">Outro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Classificação Glogau</Label>
+          <Select value={values.glogau || ""} onValueChange={v => onChange("glogau", v)} disabled={disabled}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="I">I - Sem rugas</SelectItem>
+              <SelectItem value="II">II - Rugas em movimento</SelectItem>
+              <SelectItem value="III">III - Rugas em repouso</SelectItem>
+              <SelectItem value="IV">IV - Rugas difusas</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Produto Utilizado</Label>
+          <Input value={values.aesthetic_product || ""} onChange={e => onChange("aesthetic_product", e.target.value)} placeholder="Nome comercial, fabricante..." disabled={disabled} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Lote / Validade</Label>
+          <Input value={values.batch_info || ""} onChange={e => onChange("batch_info", e.target.value)} placeholder="Lote e validade do produto" disabled={disabled} />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Zonas Tratadas</Label>
+        <Textarea value={values.treated_zones || ""} onChange={e => onChange("treated_zones", e.target.value)} placeholder="Regiões faciais/corporais tratadas, pontos de aplicação..." rows={2} disabled={disabled} />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Intercorrências</Label>
+        <Textarea value={values.complications || ""} onChange={e => onChange("complications", e.target.value)} placeholder="Eventos durante ou após o procedimento..." rows={2} disabled={disabled} />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Orientações Pós-Procedimento</Label>
+        <Textarea value={values.post_care || ""} onChange={e => onChange("post_care", e.target.value)} placeholder="Cuidados pós, restrições, retorno..." rows={2} disabled={disabled} />
+      </div>
+    </div>
+  );
+}
+
+const SUPPORTED: ProfessionalType[] = ["fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "esteticista"];
 
 export const ProfessionFields = memo(function ProfessionFields({ professionalType, values, onChange, disabled }: Props) {
   if (!SUPPORTED.includes(professionalType)) return null;
@@ -180,6 +244,7 @@ export const ProfessionFields = memo(function ProfessionFields({ professionalTyp
     case "nutricionista": return <NutriFields values={values} onChange={onChange} disabled={disabled} />;
     case "psicologo": return <PsicoFields values={values} onChange={onChange} disabled={disabled} />;
     case "fonoaudiologo": return <FonoFields values={values} onChange={onChange} disabled={disabled} />;
+    case "esteticista": return <EsteticaFields values={values} onChange={onChange} disabled={disabled} />;
     default: return null;
   }
 });

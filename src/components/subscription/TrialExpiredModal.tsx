@@ -22,46 +22,53 @@ interface TrialExpiredModalProps {
   isStaff?: boolean;
 }
 
-type TierKey = "basic" | "pro" | "premium";
-type IntervalKey = "monthly" | "quarterly" | "annual";
+type TierKey = "starter" | "solo" | "clinica" | "premium";
+type IntervalKey = "monthly" | "annual";
 
 const PRICING: Record<TierKey, Record<IntervalKey, { label: string; savings?: string }>> = {
-  basic: {
-    monthly: { label: "R$79,90" },
-    quarterly: { label: "R$219,90", savings: "Economize ~8%" },
-    annual: { label: "R$719,00", savings: "Economize ~25%" },
+  starter: {
+    monthly: { label: "R$89,90" },
+    annual: { label: "R$809,00", savings: "Economize ~25%" },
   },
-  pro: {
-    monthly: { label: "R$119,90" },
-    quarterly: { label: "R$329,90", savings: "Economize ~8%" },
-    annual: { label: "R$1.079,00", savings: "Economize ~25%" },
+  solo: {
+    monthly: { label: "R$159,90" },
+    annual: { label: "R$1.439,10", savings: "Economize ~25%" },
+  },
+  clinica: {
+    monthly: { label: "R$289,90" },
+    annual: { label: "R$2.609,10", savings: "Economize ~25%" },
   },
   premium: {
-    monthly: { label: "R$169,90" },
-    quarterly: { label: "R$469,90", savings: "Economize ~8%" },
-    annual: { label: "R$1.499,00", savings: "Economize ~25%" },
+    monthly: { label: "R$399,90" },
+    annual: { label: "R$3.599,00", savings: "Economize ~25%" },
   },
 };
 
 const tiers: Array<{ key: TierKey; name: string; description: string; popular?: boolean; features: string[] }> = [
   {
-    key: "basic",
-    name: "Básico",
+    key: "starter",
+    name: "Starter",
     description: "Essencial para começar",
-    features: ["Equipe: 2 usuários (inclui 1 admin)", "Pacientes: até 300", "Histórico: 6 meses"],
+    features: ["1 profissional", "Até 100 pacientes", "Histórico: 6 meses"],
   },
   {
-    key: "pro",
-    name: "Pro",
-    description: "Para crescer com controle",
+    key: "solo",
+    name: "Solo",
+    description: "Para profissionais autônomos",
+    features: ["Até 2 profissionais", "Até 500 pacientes", "Histórico: 12 meses"],
+  },
+  {
+    key: "clinica",
+    name: "Clínica",
+    description: "Para clínicas com equipe",
     popular: true,
-    features: ["Equipe: 5 usuários (inclui 1 admin)", "Pacientes: até 2.000", "Histórico: 24 meses"],
+    features: ["Até 6 profissionais", "Até 3.000 pacientes", "Histórico ilimitado"],
   },
   {
     key: "premium",
     name: "Premium",
-    description: "Tudo liberado",
-    features: ["Equipe ilimitada (inclui 1 admin)", "Pacientes ilimitados", "Histórico ilimitado"],
+    description: "Tudo ilimitado",
+    features: ["Profissionais ilimitados", "Pacientes ilimitados", "Histórico ilimitado"],
   },
 ];
 
@@ -72,8 +79,9 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
   const [loading, setLoading] = useState<string | null>(null);
 
   const [selectedInterval, setSelectedInterval] = useState<Record<TierKey, IntervalKey>>({
-    basic: "monthly",
-    pro: "annual",
+    starter: "monthly",
+    solo: "annual",
+    clinica: "annual",
     premium: "annual",
   });
 
@@ -100,7 +108,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent
-        className={isStaff ? "max-w-md" : "max-w-4xl max-h-[90vh] overflow-y-auto"}
+        className={isStaff ? "max-w-md" : "max-w-5xl max-h-[90vh] overflow-y-auto"}
         hideCloseButton={isStaff}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => isStaff && e.preventDefault()}
@@ -143,7 +151,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-3 gap-4 mt-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           {tiers.map((tier) => {
             const interval = selectedInterval[tier.key];
             const price = PRICING[tier.key][interval];
@@ -175,12 +183,11 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
                     value={interval}
                     onValueChange={(v) => {
                       if (!v) return;
-                      if (v !== "monthly" && v !== "quarterly" && v !== "annual") return;
+                      if (v !== "monthly" && v !== "annual") return;
                       setSelectedInterval((prev) => ({ ...prev, [tier.key]: v }));
                     }}
                   >
                     <ToggleGroupItem value="monthly">Mensal</ToggleGroupItem>
-                    <ToggleGroupItem value="quarterly">Trimestral</ToggleGroupItem>
                     <ToggleGroupItem value="annual">Anual</ToggleGroupItem>
                   </ToggleGroup>
                 </div>
@@ -188,7 +195,7 @@ export function TrialExpiredModal({ open, isStaff = false }: TrialExpiredModalPr
                 <div className="mt-2">
                   <span className="text-3xl font-bold">{price.label}</span>
                   <span className="text-muted-foreground">
-                    {interval === "monthly" ? "/mês" : interval === "quarterly" ? "/trimestre" : "/ano"}
+                    {interval === "monthly" ? "/mês" : "/ano"}
                   </span>
                 </div>
                 {price.savings && (

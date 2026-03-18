@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TemplateBuilder, type CustomTemplate } from "@/components/estetica/TemplateBuilder";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Wand2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -211,6 +213,9 @@ export default function ModelosProntuario() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [builderMode, setBuilderMode] = useState(false);
+  const [builderEditingId, setBuilderEditingId] = useState<string | null>(null);
+  const [builderInitial, setBuilderInitial] = useState<CustomTemplate | undefined>(undefined);
 
   const [formName, setFormName] = useState("");
   const [formSpecialty, setFormSpecialty] = useState<string>("none");
@@ -353,15 +358,86 @@ export default function ModelosProntuario() {
       return next;
     });
 
+  // ── Template Builder (advanced) ──
+  const openBuilder = (t?: RecordTemplate) => {
+    if (t) {
+      setBuilderEditingId(t.id);
+      setBuilderInitial({
+        id: t.id,
+        key: t.name.toLowerCase().replace(/\s+/g, "_"),
+        name: t.name,
+        description: t.specialty_name ?? "",
+        targetTypes: [],
+        fields: t.fields,
+      });
+    } else {
+      setBuilderEditingId(null);
+      setBuilderInitial(undefined);
+    }
+    setBuilderMode(true);
+  };
+
+  const handleBuilderSave = async (template: CustomTemplate) => {
+    if (!profile?.tenant_id) return;
+    try {
+      const payload = {
+        name: template.name.trim(),
+        specialty_id: null as string | null,
+        is_default: false,
+        fields: template.fields,
+        tenant_id: profile.tenant_id,
+      };
+      if (builderEditingId) {
+        const { error } = await supabase
+          .from("record_field_templates")
+          .update(payload)
+          .eq("id", builderEditingId)
+          .eq("tenant_id", profile.tenant_id);
+        if (error) throw error;
+        toast.success("Modelo atualizado via Builder");
+      } else {
+        const { error } = await supabase.from("record_field_templates").insert(payload);
+        if (error) throw error;
+        toast.success("Modelo criado via Builder");
+      }
+      setBuilderMode(false);
+      void fetchTemplates();
+    } catch (err) {
+      logger.error("Builder save:", err);
+      toast.error("Erro ao salvar modelo");
+    }
+  };
+
+  if (builderMode) {
+    return (
+      <MainLayout
+        title="Template Builder"
+        subtitle="Crie modelos de prontuário com editor visual avançado"
+      >
+        <TemplateBuilder
+          initialTemplate={builderInitial}
+          onSave={(t) => void handleBuilderSave(t)}
+          onCancel={() => setBuilderMode(false)}
+        />
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout
       title="Modelos de Prontuário"
       subtitle="Configure campos personalizados por especialidade"
       actions={
-        <Button onClick={openCreate} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Modelo
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => openBuilder()} size="sm" variant="outline" className="gap-2">
+            <Wand2 className="h-4 w-4" />
+            Template Builder
+          </Button>
+          <Button onClick={openCreate} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Modelo
+          </Button>
+        </div>
       }
     >
       {isLoading ? (

@@ -11,6 +11,7 @@ export type ProfessionalType =
   | 'nutricionista'
   | 'psicologo'
   | 'fonoaudiologo'
+  | 'esteticista'
   | 'secretaria'
   | 'faturista'
   | 'custom';
@@ -35,6 +36,7 @@ export const COUNCIL_BY_TYPE: Partial<Record<ProfessionalType, string>> = {
   nutricionista: 'CRN',
   psicologo: 'CRP',
   fonoaudiologo: 'CRFa',
+  esteticista: 'CRBM',
 };
 
 export const PROFESSIONAL_TYPE_LABELS: Record<ProfessionalType, string> = {
@@ -47,6 +49,7 @@ export const PROFESSIONAL_TYPE_LABELS: Record<ProfessionalType, string> = {
   nutricionista: 'Nutricionista',
   psicologo: 'Psicólogo(a)',
   fonoaudiologo: 'Fonoaudiólogo(a)',
+  esteticista: 'Esteticista / Biomédico(a)',
   secretaria: 'Secretária / Recepcionista',
   faturista: 'Faturista',
   custom: 'Perfil Customizado',
@@ -280,6 +283,28 @@ export interface StockMovement {
   movement_type: 'in' | 'out';
   reason: string | null;
   created_by: string | null;
+  created_at: string;
+  batch_number?: string | null;
+  expiry_date?: string | null;
+}
+
+// ─── Product Usage (R15) ────────────────────────────────────
+
+export interface ProductUsage {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  patient_id: string;
+  appointment_id: string | null;
+  quantity: number;
+  unit: string;
+  batch_number: string | null;
+  expiry_date: string | null;
+  zone: string | null;
+  procedure_type: string | null;
+  notes: string | null;
+  applied_by: string | null;
+  applied_at: string;
   created_at: string;
 }
 

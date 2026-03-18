@@ -17,6 +17,7 @@ import {
   Apple,
   BrainCircuit,
   Ear,
+  Sparkles,
 } from "lucide-react";
 
 export interface BuiltInProntuarioTemplate {
@@ -181,6 +182,50 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
       f("biopsia", "Biópsia", "select", { options: "Não indicada,Indicada,Realizada - aguardando resultado,Resultado disponível" }),
       f("tratamento_topico", "Tratamento Tópico", "textarea", { placeholder: "Cremes, pomadas, loções..." }),
       f("procedimento_realizado", "Procedimento Realizado", "select", { options: "Nenhum,Crioterapia,Eletrocauterização,Curetagem,Biópsia excisional,Biópsia incisional,Laser,Peeling,Preenchimento,Toxina botulínica" }),
+    ],
+  },
+  {
+    key: "estetica",
+    name: "Estética / Harmonização",
+    description: "Procedimentos estéticos com controle de insumos, zonas e injeções",
+    icon: Sparkles,
+    color: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+    targetTypes: ["medico", "biomédico esteticista", "enfermeiro"],
+    fields: [
+      f("tipo_procedimento", "Tipo de Procedimento", "select", {
+        required: true,
+        options: "Toxina Botulínica,Preenchimento (AH),Bioestimulador,Fios de PDO,Skinbooster,Peeling Químico,Microagulhamento,Laser,Radiofrequência,Ultrassom Microfocado,Criolipólise,Mesoterapia,Intradermoterapia,Outro",
+      }),
+      f("zonas_aplicacao", "Zonas de Aplicação", "textarea", {
+        required: true,
+        placeholder: "Ex: Glabela, frontal, periocular bilateral, sulco nasogeniano...",
+      }),
+      f("produto_marca", "Produto / Marca", "text", { placeholder: "Ex: Botox 100U, Juvederm Voluma, Sculptra..." }),
+      f("unidades_toxina", "Unidades de Toxina (U)", "number", { placeholder: "Total de U aplicadas" }),
+      f("volume_ml", "Volume Total (ml)", "number", { placeholder: "Volume total em ml" }),
+      f("lote", "Nº do Lote", "text", { placeholder: "Lote do produto utilizado" }),
+      f("validade_produto", "Validade do Produto", "date"),
+      f("calibre_agulha", "Calibre (Agulha/Cânula)", "text", { placeholder: "Ex: 27G, 25G×50mm cânula" }),
+      f("profundidade", "Profundidade de Aplicação", "select", {
+        options: "Intradérmica,Subcutânea superficial,Subcutânea profunda,Supraperiosteal,Intramuscular,Subdérmica",
+      }),
+      f("anestesia", "Anestesia", "select", {
+        options: "Nenhuma,Tópica (lidocaína),Bloqueio regional,Infiltrativa local,Produto com lidocaína",
+      }),
+      f("escala_glogau", "Escala de Glogau", "select", {
+        options: "I — Sem rugas,II — Rugas em movimento,III — Rugas em repouso,IV — Só rugas",
+      }),
+      f("fototipo_fitzpatrick", "Fototipo Fitzpatrick", "select", { options: "I,II,III,IV,V,VI" }),
+      f("pontos_aplicacao", "Pontos de Aplicação (mapa)", "textarea", {
+        placeholder: "Descrição dos pontos: Glabela 5U prócero + 2,5U×4 corrugadores...",
+      }),
+      f("intercorrencia", "Intercorrências", "select", {
+        options: "Nenhuma,Equimose leve,Edema moderado,Hematoma,Dor intensa,Assimetria,Nódulo palpável,Reação alérgica,Isquemia/branqueamento,Outro",
+      }),
+      f("intercorrencia_descricao", "Descrição da Intercorrência", "textarea", { placeholder: "Detalhamento da intercorrência, conduta..." }),
+      f("fotos_antes_depois", "Fotos Antes/Depois", "select", { options: "Sim — anexadas,Não realizadas,Paciente recusou" }),
+      f("retorno_previsto", "Retorno Previsto", "text", { placeholder: "Ex: 15 dias para revisão, 4 meses para nova aplicação" }),
+      f("observacoes_estetica", "Observações Adicionais", "textarea", { placeholder: "Orientações pós-procedimento, cuidados..." }),
     ],
   },
   {
@@ -434,6 +479,34 @@ export const PRONTUARIO_TEMPLATES: BuiltInProntuarioTemplate[] = [
       f("conduta_fono", "Conduta/Plano Terapêutico", "textarea", { required: true, placeholder: "Terapia de linguagem, exercícios vocais, AASI..." }),
       f("frequencia_sessoes", "Frequência das Sessões", "select", { options: "1x/semana,2x/semana,3x/semana,Quinzenal,Mensal" }),
       f("orientacoes_familia", "Orientações à Família", "textarea", { placeholder: "Estimulação em casa, cuidados com voz..." }),
+    ],
+  },
+
+  // ── Estética ──
+  {
+    key: "estetica",
+    name: "Estética",
+    description: "Procedimentos estéticos com mapeamento de zonas, toxina, preenchimento, Glogau e rastreabilidade",
+    icon: Sparkles,
+    color: "bg-fuchsia-500/10 text-fuchsia-600 border-fuchsia-500/20",
+    targetTypes: ["esteticista", "medico", "dentista"],
+    fields: [
+      f("tipo_procedimento", "Tipo de Procedimento", "select", { required: true, options: "Toxina Botulínica,Preenchimento (AH),Bioestimulador,Fios PDO,Peeling,Microagulhamento,Laser,Radiofrequência,Ultrassom Microfocado,Skinbooster,Mesoterapia,Criolipólise,Intradermoterapia,Outro" }),
+      f("glogau", "Classificação de Glogau", "select", { options: "Tipo I — Sem rugas,Tipo II — Rugas em movimento,Tipo III — Rugas em repouso,Tipo IV — Só rugas" }),
+      f("fitzpatrick", "Fototipo (Fitzpatrick)", "select", { options: "I - Pele muito clara,II - Pele clara,III - Pele morena clara,IV - Pele morena,V - Pele morena escura,VI - Pele negra" }),
+      f("zonas_tratadas", "Zonas Tratadas", "textarea", { required: true, placeholder: "Ex: Frontal (20U), Glabela (10U), Malar D/E (0.5ml cada)..." }),
+      f("produto", "Produto Utilizado", "text", { required: true, placeholder: "Nome comercial: Botox, Juvederm, Radiesse, Sculptra..." }),
+      f("lote", "Lote do Produto", "text", { required: true, placeholder: "Nº do lote para rastreabilidade" }),
+      f("validade", "Validade do Produto", "date", {}),
+      f("volume_total", "Volume/Unidades Total", "text", { required: true, placeholder: "Ex: 50U, 1.0ml, 3 fios" }),
+      f("calibre_agulha", "Calibre Agulha/Cânula", "text", { placeholder: "Ex: 30G, cânula 25G x 50mm" }),
+      f("profundidade", "Profundidade/Plano de Injeção", "text", { placeholder: "Subcutâneo, supraperiosteal, intradérmico..." }),
+      f("anestesia", "Anestesia", "select", { options: "Tópica (lidocaína),Bloqueio local,Crioanestesia,Nenhuma,Outra" }),
+      f("intercorrencias", "Intercorrências", "textarea", { placeholder: "Hematoma, edema excessivo, dor atípica..." }),
+      f("orientacoes_pos", "Orientações Pós-Procedimento", "textarea", { required: true, placeholder: "Evitar sol, exercício, massagem, anti-inflamatório..." }),
+      f("retorno", "Retorno Programado", "text", { placeholder: "Ex: 15 dias para revisão, 6 meses para retoque..." }),
+      f("fotos_referencia", "Fotos de Referência", "text", { placeholder: "IDs das fotos antes/depois (frontal, 45°, perfil)" }),
+      f("consentimento", "Termo de Consentimento", "boolean", { required: true }),
     ],
   },
 ];

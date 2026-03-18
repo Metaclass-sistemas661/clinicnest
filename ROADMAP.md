@@ -72,17 +72,17 @@
 ---
 
 ## Sprint 5 — Módulo Estética
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluído
 
 | # | Ação | Status |
 |---|---|---|
-| R13 | Face/Body Mapping interativo (SVG com zonas clicáveis + quantidades) | ⬜ |
-| R14 | Galeria Antes/Depois com comparação visual (slider/side-by-side) | ⬜ |
-| R15 | Vincular produto → paciente → sessão com lote/validade | ⬜ |
-| R16 | Template estético dedicado (unidades, volume, marca, zonas, calibre, Glogau) | ⬜ |
-| R17 | Termos de consentimento adicionais (bioestimulador, fios PDO, laser, microagulhamento) | ⬜ |
-| R18 | Template Builder UI (admin cria templates sem código) | ⬜ |
-| R19 | Dashboard estético (ml preenchimento/mês, U toxina/mês, ticket médio) | ⬜ |
+| R13 | Face/Body Mapping interativo (SVG com zonas clicáveis + quantidades) | ✅ |
+| R14 | Galeria Antes/Depois com comparação visual (slider/side-by-side) | ✅ |
+| R15 | Vincular produto → paciente → sessão com lote/validade | ✅ |
+| R16 | Template estético dedicado (unidades, volume, marca, zonas, calibre, Glogau) | ✅ |
+| R17 | Termos de consentimento adicionais (bioestimulador, fios PDO, laser, microagulhamento) | ✅ |
+| R18 | Template Builder UI (admin cria templates sem código) | ✅ |
+| R19 | Dashboard estético (ml preenchimento/mês, U toxina/mês, ticket médio) | ✅ |
 
 ---
 

@@ -7,7 +7,7 @@ const steps = [
     icon: UserPlus,
     step: "01",
     title: "Crie sua Conta",
-    description: "Cadastro em 2 minutos. Escolha seu plano e comece o trial de 5 dias grátis, sem cartão.",
+    description: "Cadastro em 2 minutos. Escolha seu plano e comece o trial de 7 dias grátis, sem cartão.",
     color: "teal",
   },
   {

@@ -5,7 +5,7 @@
  * para cada tier de assinatura do ClinicNest.
  */
 
-export type SubscriptionTier = 'free' | 'starter' | 'solo' | 'clinica' | 'premium';
+export type SubscriptionTier = 'starter' | 'solo' | 'clinica' | 'premium';
 export type SubscriptionInterval = 'monthly' | 'annual';
 
 export type FeatureKey =
@@ -34,6 +34,10 @@ export type FeatureKey =
   | 'periogram'
   | 'treatmentPlans'
   | 'dentalImages'
+  // Estética
+  | 'aestheticMapping'
+  | 'beforeAfterGallery'
+  | 'productTracking'
   // Financeiro
   | 'basicFinancial'
   | 'advancedFinancial'
@@ -138,101 +142,6 @@ export interface PlanConfig {
 export const UNLIMITED = -1;
 
 export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
-  free: {
-    name: 'Free',
-    tagline: 'Gratuito para sempre',
-    target: 'Conheça o ClinicNest sem compromisso',
-    price: {
-      monthly: 0,
-      annual: 0,
-    },
-    limits: {
-      professionals: 1,
-      patients: 30,
-      appointmentsPerMonth: 50,
-      teleconsultasPerMonth: 0,
-      smsPerMonth: 0,
-      storageGb: 0.5,
-      historyMonths: 3,
-      automations: 0,
-      webhooks: 0,
-      units: 1,
-      customReports: 0,
-      aiRequestsPerDay: 5,
-      aiTranscribeMinutesPerMonth: 0,
-    },
-    features: {
-      agenda: true,
-      waitlist: false,
-      returnReminders: false,
-      availability: true,
-      callPanel: false,
-      patients: true,
-      triage: false,
-      medicalRecords: true,
-      soapEvolutions: false,
-      nursingEvolutions: false,
-      teleconsulta: false,
-      internalChat: false,
-      prescriptions: true,
-      certificates: false,
-      reports: false,
-      referrals: false,
-      contracts: false,
-      odontogram: false,
-      periogram: false,
-      treatmentPlans: false,
-      dentalImages: false,
-      basicFinancial: true,
-      advancedFinancial: false,
-      tissGuides: false,
-      tissBilling: false,
-      glossManagement: false,
-      insurancePlans: false,
-      basicReports: true,
-      advancedReports: false,
-      customReports: false,
-      inventory: false,
-      purchases: false,
-      suppliers: false,
-      onlineBooking: true,
-      campaigns: false,
-      automations: false,
-      team: false,
-      basicRbac: false,
-      advancedRbac: false,
-      multiUnit: false,
-      rooms: false,
-      procedures: true,
-      specialties: false,
-      recordTemplates: false,
-      integrations: false,
-      apiAccess: false,
-      compliance: false,
-      sngpc: false,
-      audit: false,
-      dataRetention: false,
-      onaDashboard: false,
-      commissions: false,
-      aiTriage: true,
-      aiCidSuggest: true,
-      aiSummary: false,
-      aiTranscribe: false,
-      aiSentiment: false,
-      aiAgentChat: false,
-      aiPatientChat: false,
-      aiCopilot: false,
-      aiDrugInteractions: false,
-      aiCancelPrediction: false,
-      aiExplainPatient: false,
-      aiWeeklySummary: false,
-      revenueIntelligence: false,
-      clinicalProtocols: false,
-      benchmarking: false,
-      csvImport: false,
-    },
-  },
-
   starter: {
     name: 'Starter',
     tagline: 'Para começar',
@@ -282,6 +191,10 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       periogram: false,
       treatmentPlans: false,
       dentalImages: false,
+      // Estética
+      aestheticMapping: false,
+      beforeAfterGallery: false,
+      productTracking: false,
       // Financeiro
       basicFinancial: true,
       advancedFinancial: false,
@@ -387,6 +300,10 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       periogram: false,
       treatmentPlans: false,
       dentalImages: false,
+      // Estética
+      aestheticMapping: false,
+      beforeAfterGallery: false,
+      productTracking: false,
       // Financeiro
       basicFinancial: true,
       advancedFinancial: false,
@@ -492,6 +409,10 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       periogram: true,
       treatmentPlans: true,
       dentalImages: true,
+      // Estética
+      aestheticMapping: true,
+      beforeAfterGallery: true,
+      productTracking: true,
       // Financeiro
       basicFinancial: true,
       advancedFinancial: true,
@@ -597,6 +518,10 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
       periogram: true,
       treatmentPlans: true,
       dentalImages: true,
+      // Estética
+      aestheticMapping: true,
+      beforeAfterGallery: true,
+      productTracking: true,
       // Financeiro
       basicFinancial: true,
       advancedFinancial: true,
@@ -654,7 +579,7 @@ export const PLAN_CONFIG: Record<SubscriptionTier, PlanConfig> = {
   },
 };
 
-export const TIER_ORDER: SubscriptionTier[] = ['free', 'starter', 'solo', 'clinica', 'premium'];
+export const TIER_ORDER: SubscriptionTier[] = ['starter', 'solo', 'clinica', 'premium'];
 
 export function getTierIndex(tier: SubscriptionTier): number {
   return TIER_ORDER.indexOf(tier);
@@ -707,6 +632,10 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   periogram: 'Periograma',
   treatmentPlans: 'Planos de Tratamento',
   dentalImages: 'Imagens Odontológicas',
+  // Estética
+  aestheticMapping: 'Mapeamento Estético',
+  beforeAfterGallery: 'Galeria Antes/Depois',
+  productTracking: 'Rastreio de Produtos',
   // Financeiro
   basicFinancial: 'Financeiro Básico',
   advancedFinancial: 'Financeiro Avançado',

@@ -49,6 +49,7 @@ import {
   DashboardClinico,
   DashboardDentista,
 } from "@/components/dashboard";
+import { DashboardEstetica } from "@/components/dashboard/DashboardEstetica";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { ProfessionalType } from "@/types/database";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
@@ -72,6 +73,8 @@ function getDashboardForType(pType: ProfessionalType): React.ComponentType | nul
     case 'psicologo':
     case 'fonoaudiologo':
       return DashboardClinico;
+    case 'esteticista':
+      return DashboardEstetica;
     default:
       return null;
   }

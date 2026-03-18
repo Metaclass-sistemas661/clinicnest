@@ -17,7 +17,7 @@ const faqs = [
       },
       {
         q: "Posso testar antes de assinar?",
-        a: "Sim! Oferecemos 5 dias de teste grátis com acesso completo a todas as funcionalidades do plano escolhido. Não pedimos cartão de crédito para o trial. Você pode cancelar a qualquer momento sem compromisso.",
+        a: "Sim! Oferecemos 7 dias de teste grátis com acesso completo a todas as funcionalidades. Não pedimos cartão de crédito para o trial. Você pode cancelar a qualquer momento sem compromisso.",
       },
       {
         q: "O sistema funciona offline?",

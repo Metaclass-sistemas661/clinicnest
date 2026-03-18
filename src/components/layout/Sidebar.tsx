@@ -58,6 +58,7 @@ import {
   Lock,
   Plus,
   Bot,
+  Gem,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -171,6 +172,15 @@ const navCategories: NavCategory[] = [
       { title: "Odontograma", href: "/odontograma", icon: Smile, resource: "odontograma", requiredFeature: "odontogram" },
       { title: "Periograma", href: "/periograma", icon: Activity, resource: "odontograma", requiredFeature: "periogram" },
       { title: "Planos de Tratamento", href: "/planos-tratamento", icon: ClipboardList, resource: "odontograma", requiredFeature: "treatmentPlans" },
+    ],
+  },
+  {
+    label: "Estética",
+    icon: Gem,
+    color: "text-fuchsia-500",
+    gradient: "from-fuchsia-500 to-pink-500",
+    items: [
+      { title: "Mapeamento", href: "/estetica/mapeamento", icon: Gem, resource: "estetica", requiredFeature: "aestheticMapping" },
     ],
   },
   {
@@ -297,6 +307,7 @@ const prefetchByHref: Record<string, () => void> = {
   "/suporte": () => void import("@/pages/Suporte"),
   "/odontograma": () => void import("@/pages/Odontograma"),
   "/evolucoes": () => void import("@/pages/Evolucoes"),
+  "/estetica/mapeamento": () => void import("@/pages/estetica/EsteticaMapping"),
   "/gestao-salas": () => void import("@/pages/GestaoSalas"),
   "/api-docs": () => void import("@/pages/ApiDocumentation"),
   "/sngpc": () => void import("@/pages/TransmissaoSNGPC"),
@@ -651,7 +662,7 @@ function SidebarContent({
       )}
 
       {/* Navigation */}
-      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto pl-2 pr-0 pb-2 scrollbar-hide">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 space-y-1 overflow-y-auto pl-2 pr-2 pb-2 scrollbar-hide">
         {navCategories.map((category) => {
           const accessibleItems: NavItem[] = [];
           const lockedItems: NavItem[] = [];
@@ -870,10 +881,10 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-out overflow-hidden",
+        "fixed left-3 top-3 z-40 flex h-[calc(100vh-1.5rem)] flex-col transition-all duration-300 ease-out overflow-hidden rounded-2xl",
         isCollapsed
-          ? "bg-background/95 backdrop-blur-xl border-r border-border/50 shadow-xl rounded-r-2xl"
-          : "bg-[hsl(var(--sidebar-body))] rounded-r-2xl shadow-lg shadow-black/5",
+          ? "bg-background/95 backdrop-blur-xl border border-border/50 shadow-xl"
+          : "bg-[hsl(var(--sidebar-body))] shadow-xl shadow-black/10 border border-border/30",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
@@ -906,5 +917,5 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
 
 export function useSidebarWidth() {
   const isMobile = useIsMobile();
-  return isMobile ? 0 : 288; // 72 * 4 = 288px (w-72)
+  return isMobile ? 0 : 300; // 72 * 4 = 288px (w-72) + 12px (left-3 margin)
 }
