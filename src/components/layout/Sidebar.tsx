@@ -463,15 +463,15 @@ function CategoryGroup({
                 onMouseEnter={() => prefetchRoute(item.href)}
                 data-tour={tourKey}
                 className={cn(
-                  "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200",
+                  "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg",
                   isActive
-                    ? "seamless-tab-active"
-                    : "rounded-lg text-white/70 hover:bg-white/10 hover:text-white mr-2"
+                    ? "seamless-tab-active mr-2"
+                    : "text-white/70 hover:bg-white/10 hover:text-white mr-2"
                 )}
               >
                 <item.icon className={cn(
                   "h-4 w-4 shrink-0 transition-all duration-200",
-                  isActive ? "text-foreground" : "text-white/80",
+                  isActive ? "text-white" : "text-white/80",
                   "group-hover:scale-110"
                 )} />
                 <span className="truncate">{item.title}</span>
