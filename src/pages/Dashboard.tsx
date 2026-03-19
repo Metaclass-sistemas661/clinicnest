@@ -902,10 +902,10 @@ export default function Dashboard() {
                 </div>
                 {isAdmin && (
                   <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
-                    <TrendingUp className="h-5 w-5 text-cyan-200" />
+                    <DollarSign className="h-5 w-5 text-cyan-200" />
                     <div className="text-right">
-                      <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
-                      <p className="text-[10px] text-teal-200 uppercase tracking-wide">Receita do mês</p>
+                      <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
+                      <p className="text-[10px] text-teal-200 uppercase tracking-wide">Saldo do mês</p>
                     </div>
                   </div>
                 )}
@@ -1227,29 +1227,19 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            {/* Receita do mês (admin) / Atendimentos do mês (staff) */}
+            {/* Saldo do mês (admin) / Atendimentos do mês (staff) */}
             {isAdmin ? (
-              <Link to="/financeiro" data-tour="dashboard-monthly-income" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '160ms' }}>
-                <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
+              <Link to="/financeiro" data-tour="dashboard-monthly-balance" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '160ms' }}>
+                <div className={`group relative overflow-hidden rounded-2xl p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02] ${stats.monthlyBalance >= 0 ? 'bg-gradient-to-br from-teal-500 to-cyan-500' : 'bg-gradient-to-br from-rose-500 to-red-500'}`}>
                   <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                      <TrendingUp className="h-5 w-5 text-white" />
+                      <DollarSign className="h-5 w-5 text-white" />
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
-                  <p className="mt-1 text-sm text-emerald-100">Receita do mês</p>
-                  {/* Mini sparkline */}
-                  {miniChartData.length > 0 && (
-                    <div className="mt-2 h-8 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={miniChartData}>
-                          <Area type="monotone" dataKey="receita" stroke="rgba(255,255,255,0.7)" fill="rgba(255,255,255,0.15)" strokeWidth={2} dot={false} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
+                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
+                  <p className="mt-1 text-sm text-white/80">Saldo do mês</p>
                 </div>
               </Link>
             ) : (
@@ -1305,23 +1295,28 @@ export default function Dashboard() {
 
             if (sectionKey === "quick_actions") {
               return (
-                <Card key={sectionKey} className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-                  <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-lg">Ações rápidas</CardTitle>
-                      <CardDescription>Atalhos para o que você mais faz no dia a dia</CardDescription>
+                <div key={sectionKey} className="animate-fade-in-up space-y-3" style={{ animationDelay: '300ms' }}>
+                  {/* Section Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 shadow-lg shadow-violet-500/20">
+                        <Zap className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold tracking-tight">Ações rápidas</h3>
+                        <p className="text-xs text-muted-foreground">Atalhos para o que você mais faz no dia a dia</p>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="gap-2"
+                      className="gap-2 text-muted-foreground"
                       onClick={() => setPrefsOpen(true)}
                     >
                       <SlidersHorizontal className="h-4 w-4" />
                       Personalizar
                     </Button>
-                  </CardHeader>
-                  <CardContent>
+                  </div>
                     <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                       <Link to="/agenda" data-tour="dashboard-quick-new-appointment" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-teal-200 hover:shadow-md hover:scale-[1.03]">
                         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-600 transition-colors group-hover:bg-teal-600 group-hover:text-white">
@@ -1364,15 +1359,24 @@ export default function Dashboard() {
                         </Link>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                </div>
               );
             }
 
             if (sectionKey === "activity_feed") {
               return (
+                <div key={sectionKey} className="animate-fade-in-up space-y-3" style={{ animationDelay: '600ms' }}>
+                  {/* Section Header */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 shadow-lg shadow-orange-500/20">
+                      <Activity className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold tracking-tight">Atividade recente</h3>
+                      <p className="text-xs text-muted-foreground">Últimas ações registradas na clínica</p>
+                    </div>
+                  </div>
                 <Collapsible
-                  key={sectionKey}
                   open={activityOpen}
                   onOpenChange={(o) => {
                     setActivityOpen(o);
@@ -1380,18 +1384,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
-                          <Activity className="h-4 w-4 text-teal-600" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold">Atividade recente</CardTitle>
-                          <CardDescription className="text-xs">Últimas ações registradas na clínica</CardDescription>
-                        </div>
-                      </div>
+                    <CardHeader className="flex flex-row items-center justify-between py-3">
                       <CollapsibleTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                           {activityOpen ? (
                             <>Ocultar <ChevronUp className="ml-2 h-4 w-4" /></>
                           ) : (
@@ -1453,12 +1448,24 @@ export default function Dashboard() {
                     </CollapsibleContent>
                   </Card>
                 </Collapsible>
+                </div>
               );
             }
 
             if (sectionKey === "today") {
               return (
                 <div key={sectionKey} className="space-y-4 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                  {/* Section Header */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg shadow-blue-500/20">
+                      <Calendar className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold tracking-tight">Hoje</h3>
+                      <p className="text-xs text-muted-foreground">{todayFormatted}</p>
+                    </div>
+                  </div>
+
                   {/* Mini weekly calendar strip */}
                   <Card>
                     <CardContent className="py-3 px-4">
