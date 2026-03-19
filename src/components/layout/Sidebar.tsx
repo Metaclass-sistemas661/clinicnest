@@ -359,11 +359,11 @@ function CategoryGroup({
         <div
           className={cn(
             "mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg transition-all",
-            hasActiveChild ? `bg-gradient-to-br ${category.gradient} text-white shadow-md` : "bg-muted/50"
+            hasActiveChild ? `bg-gradient-to-br ${category.gradient} text-white shadow-md` : "bg-white/15"
           )}
           title={category.label}
         >
-          <category.icon className={cn("h-4 w-4", !hasActiveChild && category.color)} />
+          <category.icon className={cn("h-4 w-4", !hasActiveChild && "text-white/70")} />
         </div>
         {filteredItems.map((item) => {
           const isActive = location.pathname === item.href;
@@ -377,7 +377,7 @@ function CategoryGroup({
                 "group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
                   ? `bg-gradient-to-r ${category.gradient} text-white shadow-lg shadow-primary/20`
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
               title={item.title}
             >
@@ -393,7 +393,7 @@ function CategoryGroup({
           <Link
             key={item.href}
             to="/assinatura"
-            className="group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground/50 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            className="group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium text-white/40 transition-all duration-200 hover:bg-amber-500/20"
             title={`${item.title} - Upgrade necessário`}
           >
             <Lock className="h-4 w-4 shrink-0" />
@@ -412,16 +412,16 @@ function CategoryGroup({
           "group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 mr-2 text-xs font-bold uppercase tracking-wider transition-all duration-200",
           hasActiveChild
             ? `bg-gradient-to-r ${category.gradient} text-white shadow-md`
-            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
         )}
       >
         <div className={cn(
           "flex h-7 w-7 items-center justify-center rounded-lg transition-all",
-          hasActiveChild ? "bg-white/20" : "bg-muted"
+          hasActiveChild ? "bg-white/20" : "bg-white/15"
         )}>
           <category.icon className={cn(
             "h-4 w-4 transition-transform group-hover:scale-110",
-            hasActiveChild ? "text-white" : category.color
+            hasActiveChild ? "text-white" : "text-white/80"
           )} />
         </div>
         <span className="flex-1 text-left">{category.label}</span>
@@ -466,12 +466,12 @@ function CategoryGroup({
                   "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200",
                   isActive
                     ? "seamless-tab-active"
-                    : "rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground mr-2"
+                    : "rounded-lg text-white/70 hover:bg-white/10 hover:text-white mr-2"
                 )}
               >
                 <item.icon className={cn(
                   "h-4 w-4 shrink-0 transition-all duration-200",
-                  isActive ? "text-foreground" : category.color,
+                  isActive ? "text-foreground" : "text-white/80",
                   "group-hover:scale-110"
                 )} />
                 <span className="truncate">{item.title}</span>
@@ -490,12 +490,12 @@ function CategoryGroup({
               <Link
                 key={item.href}
                 to="/assinatura"
-                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 mr-2 text-sm font-medium text-muted-foreground/60 transition-all duration-200 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                className="group relative flex items-center gap-3 rounded-lg px-3 py-2 mr-2 text-sm font-medium text-white/40 transition-all duration-200 hover:bg-amber-500/20"
                 title={`Disponível no plano ${tierName}`}
               >
-                <Lock className="h-4 w-4 shrink-0 text-amber-500/70" />
+                <Lock className="h-4 w-4 shrink-0 text-amber-300/70" />
                 <span className="truncate">{item.title}</span>
-                <span className="ml-auto rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span className="ml-auto rounded bg-amber-400/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-300">
                   {tierName}
                 </span>
               </Link>
@@ -585,18 +585,18 @@ function SidebarContent({
   return (
     <>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between border-b border-border/50 px-4">
+      <div className="flex h-16 items-center justify-between border-b border-white/15 px-4">
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
               <HeartPulse className="h-5 w-5 text-white" />
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-teal-600 bg-emerald-500" />
             </div>
             <div>
-              <span className="font-display text-base font-bold text-foreground">
+              <span className="font-display text-base font-bold text-white">
                 {tenant?.name || "ClinicNest"}
               </span>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-white/60">
                 Gestão Clínica
               </p>
             </div>
@@ -618,11 +618,11 @@ function SidebarContent({
               const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
               document.dispatchEvent(event);
             }}
-            className="flex w-full items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground transition-all hover:border-primary/50 hover:bg-muted/50"
+            className="flex w-full items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/60 transition-all hover:border-white/30 hover:bg-white/15"
           >
             <Search className="h-4 w-4" />
             <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
+            <kbd className="hidden rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-medium text-white/50 sm:inline-block">
               ⌘K
             </kbd>
           </button>
@@ -643,8 +643,8 @@ function SidebarContent({
                   className={cn(
                     "flex flex-1 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-all",
                     isActive
-                      ? "bg-background text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      ? "bg-white/20 text-white font-semibold"
+                      : "text-white/60 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -658,7 +658,7 @@ function SidebarContent({
 
       {/* Divider */}
       {!isCollapsed && (
-        <div className="mx-3 mb-2 border-t border-border/50" />
+        <div className="mx-3 mb-2 border-t border-white/15" />
       )}
 
       {/* Navigation */}
@@ -704,11 +704,11 @@ function SidebarContent({
       </nav>
 
       {/* Logout section */}
-      <div className="border-t border-border/50 p-3">
+      <div className="border-t border-white/15 p-3">
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all",
+            "w-full justify-start gap-3 rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300 transition-all",
             isCollapsed && "justify-center px-3"
           )}
           onClick={handleSignOut}
@@ -757,7 +757,7 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-80 p-0 border-r border-border/50 bg-background">
+                <SheetContent side="left" className="w-80 p-0 border-r border-white/15 bg-teal-600">
                   <div className="flex h-full flex-col">
                     <SidebarContent isCollapsed={false} onNavigate={() => setIsOpen(false)} />
                   </div>
@@ -882,19 +882,19 @@ export function Sidebar({ onCollapsedChange }: { onCollapsedChange?: (collapsed:
     <aside
       className={cn(
         "absolute left-0 top-0 bottom-0 z-40 flex flex-col transition-all duration-300 ease-out overflow-hidden",
-        "bg-[hsl(var(--sidebar-body))]",
+        "bg-teal-600",
         isCollapsed ? "w-20" : "w-72"
       )}
     >
       <SidebarContent isCollapsed={isCollapsed} />
 
       {/* Collapse Toggle — inside card, bottom */}
-      <div className="flex items-center justify-center border-t border-border/30 py-2">
+      <div className="flex items-center justify-center border-t border-white/15 py-2">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-all"
+          className="h-7 w-7 rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition-all"
           aria-label={isCollapsed ? "Expandir sidebar" : "Recolher sidebar"}
           onClick={() => {
             const next = !isCollapsed;
