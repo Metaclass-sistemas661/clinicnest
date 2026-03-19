@@ -240,12 +240,33 @@
   .accent-warning { @apply bg-warning/15 text-warning; }
   .accent-info    { @apply bg-info/15 text-info; }
 
-  /* Design System: Seamless Tab Active — Sidebar active item highlight */
+  /* Design System: Seamless Tab Active — Sidebar curved tab that blends into main content */
   .seamless-tab-active {
-    @apply bg-white/20 relative z-10;
-    @apply text-white font-semibold;
-    border-radius: 0.5rem;
+    @apply bg-background relative z-10;
+    @apply text-foreground font-semibold;
+    margin-right: 0 !important;
+    border-radius: 0.75rem 0 0 0.75rem;
     transition: all 0.2s ease-out;
+  }
+
+  .seamless-tab-active::before,
+  .seamless-tab-active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+  }
+
+  .seamless-tab-active::before {
+    top: -12px;
+    background: radial-gradient(circle at 0% 100%, transparent 12px, hsl(var(--background)) 12px);
+  }
+
+  .seamless-tab-active::after {
+    bottom: -12px;
+    background: radial-gradient(circle at 0% 0%, transparent 12px, hsl(var(--background)) 12px);
   }
 
   .gradient-primary {

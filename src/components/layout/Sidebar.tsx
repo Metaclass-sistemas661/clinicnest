@@ -437,11 +437,11 @@ function CategoryGroup({
         ref={contentRef}
         className="overflow-hidden transition-all duration-300 ease-out"
         style={{
-          maxHeight: isOpen ? `${allItems.length * 44 + 12}px` : "0px",
+          maxHeight: isOpen ? `${allItems.length * 44 + 36}px` : "0px",
           opacity: isOpen ? 1 : 0,
         }}
       >
-        <div className="space-y-0.5 py-1 pl-3">
+        <div className="space-y-0.5 py-3 pl-3">
           {filteredItems.map((item) => {
             const isActive = location.pathname === item.href;
             const tourKey =
@@ -463,15 +463,15 @@ function CategoryGroup({
                 onMouseEnter={() => prefetchRoute(item.href)}
                 data-tour={tourKey}
                 className={cn(
-                  "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200 rounded-lg",
+                  "group relative flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "seamless-tab-active mr-2"
-                    : "text-white/70 hover:bg-white/10 hover:text-white mr-2"
+                    ? "seamless-tab-active"
+                    : "rounded-lg text-white/70 hover:bg-white/10 hover:text-white mr-2"
                 )}
               >
                 <item.icon className={cn(
                   "h-4 w-4 shrink-0 transition-all duration-200",
-                  isActive ? "text-white" : "text-white/80",
+                  isActive ? "text-foreground" : "text-white/80",
                   "group-hover:scale-110"
                 )} />
                 <span className="truncate">{item.title}</span>
