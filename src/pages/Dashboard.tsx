@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link } from "react-router-dom";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from "recharts";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
 import { fromZonedTime } from "date-fns-tz";
@@ -136,6 +136,8 @@ export default function Dashboard() {
   const [mySalaryAmount, setMySalaryAmount] = useState<number | null>(null);
   const [lastSalaryPayment, setLastSalaryPayment] = useState<{ date: string | null; amount: number } | null>(null);
   const [bannerSlide, setBannerSlide] = useState(0);
+  const [financeFilter, setFinanceFilter] = useState<'week' | 'month' | 'year'>('month');
+  const [hoveredChart, setHoveredChart] = useState<string | null>(null);
 
   // Banner só aparece para usuários novos (< 7 dias) e que não dispensaram
   const showBanner = useMemo(() => {
@@ -833,21 +835,24 @@ export default function Dashboard() {
       <TooltipProvider>
         <div className="space-y-6">
 
-          {/* ===== HERO BANNER WITH GRADIENT ===== */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 px-6 py-6 sm:px-8 sm:py-8 text-white shadow-xl">
-            {/* Decorative shapes */}
-            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/5" />
-            <div className="pointer-events-none absolute -bottom-16 right-20 h-48 w-48 rounded-full bg-cyan-400/10" />
-            <div className="pointer-events-none absolute right-1/3 top-4 h-24 w-24 rounded-full bg-emerald-400/8" />
-            <div className="pointer-events-none absolute left-1/4 -bottom-10 h-32 w-32 rounded-full bg-teal-300/10" />
+          {/* ===== HERO BANNER — FULL-BLEED GRADIENT ===== */}
+          <div className="relative overflow-hidden -mx-8 -mt-6 bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 px-8 py-8 sm:px-10 sm:py-10 text-white">
+            {/* Decorative shapes — large ambient blobs */}
+            <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
+            <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
+            <div className="pointer-events-none absolute right-1/4 top-6 h-40 w-40 rounded-full bg-emerald-400/[0.05]" />
+            <div className="pointer-events-none absolute left-1/3 bottom-2 h-28 w-28 rounded-full bg-teal-200/[0.06]" />
+            <div className="pointer-events-none absolute right-1/2 -top-10 h-72 w-72 rounded-full bg-teal-400/[0.03]" />
 
-            {/* Abstract pattern overlay */}
+            {/* Abstract paint-texture overlay */}
             <div
-              className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              className="pointer-events-none absolute inset-0 opacity-[0.035]"
               style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
               }}
             />
+            {/* Gradient shimmer band */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent animate-[hero-shimmer_6s_ease-in-out_infinite]" />
 
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -1592,154 +1597,325 @@ export default function Dashboard() {
             }
 
             if (sectionKey === "month") {
+              const CHART_COLORS = ['#14b8a6', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
+              const pieData = [
+                { name: 'Receita', value: stats.monthlyIncome, color: '#10b981' },
+                { name: 'Despesa', value: stats.monthlyExpenses, color: '#ef4444' },
+              ].filter(d => d.value > 0);
+              const barChartData = miniChartData.length > 0 ? miniChartData : [
+                { name: 'S1', receita: 0, despesa: 0 },
+                { name: 'S2', receita: 0, despesa: 0 },
+                { name: 'S3', receita: 0, despesa: 0 },
+                { name: 'S4', receita: 0, despesa: 0 },
+              ];
+              const filterLabels = { week: 'Semana', month: 'Mês', year: 'Ano' } as const;
               return (
-                <Card key={sectionKey} className="animate-fade-in-up" style={{ animationDelay: '500ms' }}>
-                  <CardHeader className="flex flex-row items-center gap-2 pb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
-                      <Activity className="h-4 w-4 text-teal-600" />
+                <div key={sectionKey} className="animate-fade-in-up space-y-5" style={{ animationDelay: '500ms', perspective: '1200px' }}>
+                  {/* Section Header with Filter Tabs */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-teal-500/25">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold tracking-tight">Painel Financeiro</h3>
+                        <p className="text-xs text-muted-foreground">{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</p>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base font-semibold">Financeiro do mês</CardTitle>
-                      <CardDescription className="text-xs">{formatInAppTz(new Date(), "MMMM 'de' yyyy")}</CardDescription>
+                    <div className="flex items-center gap-1 rounded-xl bg-muted/50 p-1 backdrop-blur-sm">
+                      {(['week', 'month', 'year'] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setFinanceFilter(f)}
+                          className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all duration-300 ${financeFilter === f ? 'bg-white dark:bg-card text-teal-700 dark:text-teal-400 shadow-md' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                          {filterLabels[f]}
+                        </button>
+                      ))}
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Admin: 3 hero financial cards + mini chart */}
-                    {isAdmin && (
-                      <>
-                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
-                              <div className="mb-4 flex items-center justify-between">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
-                                  <TrendingUp className="h-5 w-5 text-emerald-600" />
-                                </div>
-                                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Entradas</span>
-                              </div>
-                              <p className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.monthlyIncome)}</p>
-                              <p className="mt-1 text-sm text-emerald-600/70">Receitas do mês</p>
-                            </div>
-                          </Link>
-                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
-                            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 transition-all hover:border-red-300 hover:shadow-md">
-                              <div className="mb-4 flex items-center justify-between">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                                  <TrendingDown className="h-5 w-5 text-red-600" />
-                                </div>
-                                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Saídas</span>
-                              </div>
-                              <p className="text-2xl font-bold text-red-700">{formatCurrency(stats.monthlyExpenses)}</p>
-                              <p className="mt-1 text-sm text-red-600/70">Despesas do mês</p>
-                            </div>
-                          </Link>
-                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
-                            <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50 hover:border-teal-300" : "border-red-200 bg-red-50 hover:border-red-300"}`}>
-                              <div className="mb-4 flex items-center justify-between">
-                                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stats.monthlyBalance >= 0 ? "bg-teal-100" : "bg-red-100"}`}>
-                                  <DollarSign className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
-                                </div>
-                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>Saldo</span>
-                              </div>
-                              <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{formatCurrency(stats.monthlyBalance)}</p>
-                              <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>Resultado do mês</p>
-                            </div>
-                          </Link>
-                        </div>
+                  </div>
 
-                        {/* Mini Area Chart — Receita vs Despesa semanal */}
-                        {miniChartData.length > 0 && (
-                          <div className="rounded-2xl border bg-card p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                                <p className="text-sm font-medium">Receita vs Despesa</p>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs">
-                                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />Receita</span>
-                                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" />Despesa</span>
+                  {isAdmin && (
+                    <>
+                      {/* ── 3D Floating KPI Cards ── */}
+                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                        {[
+                          { label: 'Receita', value: stats.monthlyIncome, icon: TrendingUp, color: 'emerald', gradient: 'from-emerald-500 to-teal-400', shadow: 'shadow-emerald-500/20', link: '/financeiro', tag: 'Entradas' },
+                          { label: 'Despesas', value: stats.monthlyExpenses, icon: TrendingDown, color: 'red', gradient: 'from-rose-500 to-red-400', shadow: 'shadow-rose-500/20', link: '/financeiro', tag: 'Saídas' },
+                          { label: 'Saldo', value: stats.monthlyBalance, icon: DollarSign, color: stats.monthlyBalance >= 0 ? 'teal' : 'red', gradient: stats.monthlyBalance >= 0 ? 'from-teal-500 to-cyan-400' : 'from-red-500 to-rose-400', shadow: stats.monthlyBalance >= 0 ? 'shadow-teal-500/20' : 'shadow-red-500/20', link: '/financeiro', tag: 'Resultado' },
+                        ].map((card, i) => (
+                          <Link key={card.label} to={card.link} className="block [&:hover]:no-underline">
+                            <div
+                              className={`finance-3d-card group relative overflow-hidden rounded-2xl bg-gradient-to-br ${card.gradient} p-5 text-white shadow-xl ${card.shadow} transition-all duration-500 hover:shadow-2xl`}
+                              style={{
+                                transform: hoveredChart === card.label ? 'perspective(800px) rotateY(-5deg) rotateX(3deg) scale(1.03)' : 'perspective(800px) rotateY(0deg) rotateX(0deg) scale(1)',
+                                transformStyle: 'preserve-3d',
+                                animationDelay: `${i * 120}ms`,
+                              }}
+                              onMouseEnter={() => setHoveredChart(card.label)}
+                              onMouseLeave={() => setHoveredChart(null)}
+                            >
+                              {/* 3D Depth layers */}
+                              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-t from-black/10 to-transparent" />
+                              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 transition-transform duration-700 group-hover:scale-150" />
+                              <div className="pointer-events-none absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/5 transition-transform duration-700 group-hover:translate-x-4 group-hover:translate-y-2" />
+                              {/* Reflective shimmer */}
+                              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" style={{ transform: 'translateZ(1px)' }} />
+
+                              <div className="relative z-10" style={{ transform: 'translateZ(20px)' }}>
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md shadow-inner transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110">
+                                    <card.icon className="h-5 w-5 text-white drop-shadow-sm" />
+                                  </div>
+                                  <span className="rounded-full bg-white/20 backdrop-blur-sm px-3 py-1 text-[10px] font-bold uppercase tracking-wider shadow-sm">{card.tag}</span>
+                                </div>
+                                <p className="text-3xl font-black tabular-nums leading-none tracking-tight drop-shadow-sm">{isLoading ? "—" : formatCurrency(card.value)}</p>
+                                <p className="mt-1.5 text-sm font-medium text-white/80">{card.label} do {filterLabels[financeFilter].toLowerCase()}</p>
                               </div>
                             </div>
-                            <div className="h-32 w-full">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={miniChartData}>
-                                  <defs>
-                                    <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="despesaGrad" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="5%" stopColor="#f87171" stopOpacity={0.3} />
-                                      <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
-                                    </linearGradient>
-                                  </defs>
-                                  <Area type="monotone" dataKey="receita" stroke="#10b981" fill="url(#receitaGrad)" strokeWidth={2} dot={false} />
-                                  <Area type="monotone" dataKey="despesa" stroke="#f87171" fill="url(#despesaGrad)" strokeWidth={2} dot={false} />
-                                </AreaChart>
-                              </ResponsiveContainer>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {/* ── 3D Chart Cards Grid ── */}
+                      <div className="grid gap-5 grid-cols-1 lg:grid-cols-5">
+                        {/* Main Bar Chart — spans 3 cols */}
+                        <div
+                          className="finance-3d-card lg:col-span-3 relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
+                          style={{
+                            transform: hoveredChart === 'bar' ? 'perspective(1000px) rotateX(2deg) translateY(-4px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
+                            transformStyle: 'preserve-3d',
+                          }}
+                          onMouseEnter={() => setHoveredChart('bar')}
+                          onMouseLeave={() => setHoveredChart(null)}
+                        >
+                          {/* Glass overlay */}
+                          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent" />
+                          <div className="flex items-center justify-between mb-4 relative z-10">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500/15 to-cyan-500/15">
+                                <BarChart3 className="h-4 w-4 text-teal-600" />
+                              </div>
+                              <p className="text-sm font-bold tracking-tight">Receita vs Despesa</p>
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] font-medium">
+                              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-emerald-500 shadow-sm shadow-emerald-500/30" />Receita</span>
+                              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-rose-400 shadow-sm shadow-rose-400/30" />Despesa</span>
                             </div>
                           </div>
-                        )}
-                      </>
-                    )}
-
-                    {/* Patient Ranking — admin only */}
-                    {isAdmin && clientRanking.length > 0 && (
-                      <div className="rounded-2xl border bg-card p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Crown className="h-4 w-4 text-amber-500" />
-                          <p className="text-sm font-semibold">Top pacientes do mês</p>
+                          <div className="h-52 w-full relative z-10">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={barChartData} barGap={6} barCategoryGap="20%">
+                                <defs>
+                                  <linearGradient id="barReceitaGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.7} />
+                                  </linearGradient>
+                                  <linearGradient id="barDespesaGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={1} />
+                                    <stop offset="100%" stopColor="#fb7185" stopOpacity={0.7} />
+                                  </linearGradient>
+                                  <filter id="barShadow">
+                                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#10b981" floodOpacity="0.2" />
+                                  </filter>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 6" stroke="currentColor" strokeOpacity={0.06} vertical={false} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} width={40} />
+                                <RechartsTooltip
+                                  contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', backdropFilter: 'blur(12px)', fontSize: '12px' }}
+                                  formatter={(value: number) => [formatCurrency(value), '']}
+                                />
+                                <Bar dataKey="receita" fill="url(#barReceitaGrad)" radius={[8, 8, 2, 2]} filter="url(#barShadow)" animationDuration={1200} animationEasing="ease-out" />
+                                <Bar dataKey="despesa" fill="url(#barDespesaGrad)" radius={[8, 8, 2, 2]} animationDuration={1200} animationEasing="ease-out" />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          {clientRanking.slice(0, 5).map((client, index) => {
-                            const initials = client.client_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-                            const medalColors = ["bg-amber-400 text-amber-900", "bg-gray-300 text-gray-700", "bg-orange-400 text-orange-900"];
-                            const barWidth = clientRanking[0].month_total > 0 ? Math.max(10, (client.month_total / clientRanking[0].month_total) * 100) : 0;
-                            return (
-                              <div key={client.patient_id} className="flex items-center gap-3">
-                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${index < 3 ? medalColors[index] : "bg-muted text-muted-foreground"}`}>
-                                  {index < 3 ? index + 1 : initials}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                                    <p className="text-sm font-medium truncate">{client.client_name}</p>
-                                    <span className="text-xs font-semibold text-emerald-600 tabular-nums shrink-0">{formatCurrency(client.month_total)}</span>
-                                  </div>
-                                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                                    <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all" style={{ width: `${barWidth}%` }} />
-                                  </div>
-                                </div>
+
+                        {/* Donut Chart — 2 cols */}
+                        <div
+                          className="finance-3d-card lg:col-span-2 relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
+                          style={{
+                            transform: hoveredChart === 'pie' ? 'perspective(1000px) rotateY(4deg) translateY(-4px)' : 'perspective(1000px) rotateY(0deg) translateY(0)',
+                            transformStyle: 'preserve-3d',
+                          }}
+                          onMouseEnter={() => setHoveredChart('pie')}
+                          onMouseLeave={() => setHoveredChart(null)}
+                        >
+                          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent" />
+                          <div className="flex items-center gap-2.5 mb-3 relative z-10">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/15 to-purple-500/15">
+                              <Activity className="h-4 w-4 text-violet-600" />
+                            </div>
+                            <p className="text-sm font-bold tracking-tight">Composição</p>
+                          </div>
+                          <div className="h-44 w-full relative z-10">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={pieData.length > 0 ? pieData : [{ name: 'Sem dados', value: 1, color: '#d1d5db' }]}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={48}
+                                  outerRadius={72}
+                                  paddingAngle={4}
+                                  dataKey="value"
+                                  stroke="none"
+                                  animationDuration={1400}
+                                  animationEasing="ease-out"
+                                >
+                                  {(pieData.length > 0 ? pieData : [{ name: 'Sem dados', value: 1, color: '#d1d5db' }]).map((entry, idx) => (
+                                    <Cell key={idx} fill={entry.color} className="drop-shadow-md" />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip
+                                  contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', fontSize: '12px' }}
+                                  formatter={(value: number) => [formatCurrency(value), '']}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            {/* Center label */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <div className="text-center">
+                                <p className="text-lg font-black tabular-nums">{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium">Saldo</p>
                               </div>
-                            );
-                          })}
+                            </div>
+                          </div>
+                          {/* Legend */}
+                          <div className="flex items-center justify-center gap-5 mt-2 relative z-10">
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Receita</span>
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Despesa</span>
+                          </div>
                         </div>
                       </div>
-                    )}
 
-                    {/* Secondary stats */}
-                    <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                      {isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/pacientes" className="block [&:hover]:no-underline">
-                              <StatCard title="Pacientes ativos" value={String(patientsCount)} icon={Users} description="Total cadastrado" />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Total de pacientes cadastrados na clínica.</TooltipContent>
-                        </Tooltip>
+                      {/* ── Cashflow Area Chart ── */}
+                      {miniChartData.length > 0 && (
+                        <div
+                          className="finance-3d-card relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
+                          style={{
+                            transform: hoveredChart === 'area' ? 'perspective(1000px) rotateX(-2deg) translateY(-3px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
+                            transformStyle: 'preserve-3d',
+                          }}
+                          onMouseEnter={() => setHoveredChart('area')}
+                          onMouseLeave={() => setHoveredChart(null)}
+                        >
+                          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent" />
+                          <div className="flex items-center justify-between mb-4 relative z-10">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/15 to-blue-500/15">
+                                <Zap className="h-4 w-4 text-cyan-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold tracking-tight">Fluxo de Caixa</p>
+                                <p className="text-[10px] text-muted-foreground">Tendência semanal</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] font-medium">
+                              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-teal-500 shadow-sm shadow-teal-500/30" />Entrada</span>
+                              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-rose-400 shadow-sm shadow-rose-400/30" />Saída</span>
+                            </div>
+                          </div>
+                          <div className="h-40 w-full relative z-10">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={miniChartData}>
+                                <defs>
+                                  <linearGradient id="cashInGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.35} />
+                                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
+                                  </linearGradient>
+                                  <linearGradient id="cashOutGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+                                    <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 6" stroke="currentColor" strokeOpacity={0.06} vertical={false} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
+                                <RechartsTooltip
+                                  contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', fontSize: '12px' }}
+                                  formatter={(value: number) => [formatCurrency(value), '']}
+                                />
+                                <Area type="monotone" dataKey="receita" stroke="#14b8a6" fill="url(#cashInGrad)" strokeWidth={2.5} dot={{ r: 4, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }} animationDuration={1400} />
+                                <Area type="monotone" dataKey="despesa" stroke="#f43f5e" fill="url(#cashOutGrad)" strokeWidth={2.5} dot={{ r: 4, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} animationDuration={1400} />
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
                       )}
-                      {!isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
-                              <StatCard title="Meu financeiro (pendente)" value={formatCurrency(professionalCommissionsToReceive + (mySalaryAmount || 0))} icon={Wallet} variant={professionalCommissionsToReceive > 0 ? "warning" : "default"} description="Clique para ver detalhes" />
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">Comissões e salários pendentes.</TooltipContent>
-                        </Tooltip>
-                      )}
+                    </>
+                  )}
+
+                  {/* Patient Ranking — admin only (3D) */}
+                  {isAdmin && clientRanking.length > 0 && (
+                    <div
+                      className="finance-3d-card relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
+                      style={{
+                        transform: hoveredChart === 'ranking' ? 'perspective(1000px) rotateX(2deg) translateY(-3px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
+                        transformStyle: 'preserve-3d',
+                      }}
+                      onMouseEnter={() => setHoveredChart('ranking')}
+                      onMouseLeave={() => setHoveredChart(null)}
+                    >
+                      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent" />
+                      <div className="flex items-center gap-2.5 mb-4 relative z-10">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500/15 to-orange-500/15">
+                          <Crown className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <p className="text-sm font-bold tracking-tight">Top Pacientes</p>
+                      </div>
+                      <div className="space-y-2.5 relative z-10">
+                        {clientRanking.slice(0, 5).map((client, index) => {
+                          const initials = client.client_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                          const medalColors = ["bg-gradient-to-br from-amber-400 to-yellow-300 text-amber-900 shadow-amber-400/30", "bg-gradient-to-br from-gray-300 to-slate-200 text-gray-700 shadow-gray-300/30", "bg-gradient-to-br from-orange-400 to-amber-300 text-orange-900 shadow-orange-400/30"];
+                          const barWidth = clientRanking[0].month_total > 0 ? Math.max(10, (client.month_total / clientRanking[0].month_total) * 100) : 0;
+                          return (
+                            <div key={client.patient_id} className="flex items-center gap-3 group/row rounded-xl p-1.5 -mx-1.5 transition-colors hover:bg-muted/40">
+                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold shadow-sm ${index < 3 ? medalColors[index] : "bg-muted text-muted-foreground"}`}>
+                                {index < 3 ? index + 1 : initials}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <p className="text-sm font-medium truncate">{client.client_name}</p>
+                                  <span className="text-xs font-bold text-emerald-600 tabular-nums shrink-0">{formatCurrency(client.month_total)}</span>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
+                                  <div className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-400 transition-all duration-700" style={{ width: `${barWidth}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+
+                  {/* Secondary stat row */}
+                  <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                    {isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to="/pacientes" className="block [&:hover]:no-underline">
+                            <StatCard title="Pacientes ativos" value={String(patientsCount)} icon={Users} description="Total cadastrado" />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Total de pacientes cadastrados na clínica.</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {!isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
+                            <StatCard title="Meu financeiro (pendente)" value={formatCurrency(professionalCommissionsToReceive + (mySalaryAmount || 0))} icon={Wallet} variant={professionalCommissionsToReceive > 0 ? "warning" : "default"} description="Clique para ver detalhes" />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Comissões e salários pendentes.</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
               );
             }
 

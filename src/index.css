@@ -321,6 +321,20 @@
     animation: scale-in 0.4s ease-out both;
   }
 
+  /* ── 3D Financial Cards ── */
+  @keyframes hero-shimmer {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+  }
+  @keyframes float-3d {
+    0%, 100% { transform: perspective(800px) rotateX(0deg) translateY(0); }
+    50% { transform: perspective(800px) rotateX(1deg) translateY(-3px); }
+  }
+  .finance-3d-card {
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
+  }
+
   .glass {
     @apply backdrop-blur-xl border border-white/20;
     background: linear-gradient(135deg, hsl(0 0% 100% / 0.85), hsl(0 0% 100% / 0.65));

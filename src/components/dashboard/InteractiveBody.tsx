@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, memo } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { cn } from "@/lib/utils";
 import { X, RotateCcw } from "lucide-react";
 
@@ -8,13 +8,12 @@ interface BodyRegion {
   label: string;
   description: string;
   specialties: string[];
-  path: string; // SVG path
-  /** Center of the region for tooltip positioning (%) */
+  path: string;
   cx: number;
   cy: number;
 }
 
-const BODY_REGIONS: BodyRegion[] = [
+const FRONT_REGIONS: BodyRegion[] = [
   {
     id: "head",
     label: "Cabeça",
@@ -105,7 +104,6 @@ const BODY_REGIONS: BodyRegion[] = [
   },
 ];
 
-/* ─── BACK BODY REGIONS ─── */
 const BACK_REGIONS: BodyRegion[] = [
   {
     id: "back-head",
@@ -150,32 +148,10 @@ export const InteractiveBody = memo(function InteractiveBody() {
   const [startRotation, setStartRotation] = useState(0);
   const [selectedRegion, setSelectedRegion] = useState<BodyRegion | null>(null);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
-  const autoRotateRef = useRef<number | null>(null);
-  const [autoRotate, setAutoRotate] = useState(true);
 
-  // Auto-rotate animation
-  useEffect(() => {
-    if (!autoRotate || isDragging) {
-      if (autoRotateRef.current) cancelAnimationFrame(autoRotateRef.current);
-      return;
-    }
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = now - last;
-      last = now;
-      setRotationY((prev) => (prev + dt * 0.015) % 360);
-      autoRotateRef.current = requestAnimationFrame(tick);
-    };
-    autoRotateRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (autoRotateRef.current) cancelAnimationFrame(autoRotateRef.current);
-    };
-  }, [autoRotate, isDragging]);
-
-  // Mouse/touch drag handlers
+  /* No auto-rotate — only user drag rotates */
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     setIsDragging(true);
-    setAutoRotate(false);
     setDragStartX(e.clientX);
     setStartRotation(rotationY);
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -192,21 +168,18 @@ export const InteractiveBody = memo(function InteractiveBody() {
   }, []);
 
   const showingBack = Math.abs(((rotationY % 360) + 360) % 360 - 180) < 90;
-  const currentRegions = showingBack ? BACK_REGIONS : BODY_REGIONS;
+  const currentRegions = showingBack ? BACK_REGIONS : FRONT_REGIONS;
 
   const handleRegionClick = useCallback((region: BodyRegion) => {
-    setAutoRotate(false);
     setSelectedRegion(region);
   }, []);
 
   const resetView = useCallback(() => {
     setRotationY(0);
-    setAutoRotate(true);
     setSelectedRegion(null);
     setHoveredRegion(null);
   }, []);
 
-  // Compute the visual scale factor from the Y rotation to achieve a 3D coin-flip illusion
   const normalizedAngle = ((rotationY % 360) + 360) % 360;
   const scaleX = Math.cos((normalizedAngle * Math.PI) / 180);
 
@@ -226,9 +199,8 @@ export const InteractiveBody = memo(function InteractiveBody() {
         </button>
       </div>
 
-      {/* Instruction */}
       <p className="text-[10px] text-muted-foreground/70 mb-3 text-center">
-        {showingBack ? "Vista posterior" : "Vista anterior"} • Arraste para girar • Clique em uma região
+        {showingBack ? "Vista posterior" : "Vista anterior"} · Arraste para girar · Clique em uma região
       </p>
 
       {/* 3D Body Container */}
@@ -244,55 +216,214 @@ export const InteractiveBody = memo(function InteractiveBody() {
         onPointerLeave={handlePointerUp}
         style={{ perspective: "800px" }}
       >
-        {/* Glow effect behind body */}
-        <div
-          className="absolute inset-0 mx-auto rounded-full opacity-30 blur-3xl"
-          style={{
-            width: "60%",
-            height: "70%",
-            top: "10%",
-            background: "radial-gradient(ellipse, rgba(20,184,166,0.3) 0%, transparent 70%)",
-          }}
-        />
-
         <svg
           viewBox="0 0 100 210"
-          className="w-full h-full transition-transform"
+          className="w-full h-full"
           style={{
             transform: `scaleX(${scaleX})`,
             transition: isDragging ? "none" : "transform 0.1s ease-out",
           }}
         >
           <defs>
-            {/* Body gradient fill */}
-            <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.12" />
-              <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.04" />
+            {/* Realistic muscle/skin gradients */}
+            <linearGradient id="skinBody" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0%" stopColor="#D4956B" />
+              <stop offset="35%" stopColor="#C4845A" />
+              <stop offset="70%" stopColor="#B87456" />
+              <stop offset="100%" stopColor="#A86648" />
             </linearGradient>
-            <linearGradient id="bodyStroke" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+            <linearGradient id="muscleOverlay" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#C97B5E" />
+              <stop offset="50%" stopColor="#B5664A" />
+              <stop offset="100%" stopColor="#9E5840" />
             </linearGradient>
-            {/* Hover glow filter */}
+            <linearGradient id="skinHead" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="#DCAA82" />
+              <stop offset="100%" stopColor="#D09670" />
+            </linearGradient>
+            <linearGradient id="armGradL" x1="1" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#C9876A" />
+              <stop offset="100%" stopColor="#A8623E" />
+            </linearGradient>
+            <linearGradient id="armGradR" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#C9876A" />
+              <stop offset="100%" stopColor="#A8623E" />
+            </linearGradient>
+            <linearGradient id="legGrad" x1="0.5" y1="0" x2="0.5" y2="1">
+              <stop offset="0%" stopColor="#B87456" />
+              <stop offset="50%" stopColor="#A86648" />
+              <stop offset="100%" stopColor="#9E5840" />
+            </linearGradient>
+            <radialGradient id="bodyShadow" cx="0.5" cy="1" r="0.6">
+              <stop offset="0%" stopColor="#000" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#000" stopOpacity="0" />
+            </radialGradient>
             <filter id="regionGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
           </defs>
 
-          {/* Full body outline silhouette */}
+          {/* Floor shadow */}
+          <ellipse cx="50" cy="208" rx="20" ry="2.5" fill="url(#bodyShadow)" />
+
+          {/* ===== ANATOMICAL BODY ===== */}
+
+          {/* Full silhouette base — muscle tone */}
           <path
             d="M48,6 C40,6 35,11 34,18 L33,28 C33,33 37,38 42,40 L43,42 L41,50 C40,52 38,53 35,53 L28,56 C24,58 22,63 22,68 L13,105 L12,110 L16,111 L22,85 L26,72 L27,65 L28,75 L33,80 L34,92 L36,104 L32,110 L28,130 L26,155 L24,180 L22,195 L19,206 L20,208 L28,208 L31,205 L32,195 L34,170 L38,140 L42,120 L48,114 L52,114 L58,120 L62,140 L66,170 L68,195 L69,205 L72,208 L80,208 L81,206 L78,195 L76,180 L74,155 L72,130 L68,110 L64,104 L66,92 L67,80 L72,75 L73,65 L74,72 L78,85 L84,111 L88,110 L87,105 L78,68 C78,63 76,58 72,56 L65,53 C62,53 60,52 59,50 L57,42 L58,40 C63,38 67,33 67,28 L66,18 C65,11 60,6 52,6 Z"
-            fill="url(#bodyGrad)"
-            stroke="url(#bodyStroke)"
-            strokeWidth="0.5"
+            fill="url(#skinBody)"
+            stroke="#8B4332"
+            strokeWidth="0.35"
           />
 
-          {/* Interactive regions */}
+          {/* Head — lighter skin */}
+          <path
+            d="M48,7 C41,7 36,12 35,18.5 L34.5,27 C34.5,32 38,37 42.5,39 L44,40 C45.5,41.5 47,42.5 49,42.5 L51,42.5 C53,42.5 54.5,41.5 56,40 L57.5,39 C62,37 65.5,32 65.5,27 L65,18.5 C64,12 59,7 52,7 Z"
+            fill="url(#skinHead)"
+            stroke="#B57349"
+            strokeWidth="0.25"
+          />
+          {/* Hair line hint */}
+          <path d="M38,10 C42,7 48,6 52,6 C56,6 62,8 64,11" fill="none" stroke="#6B3A28" strokeWidth="0.5" opacity="0.35" />
+          {/* Ear left */}
+          <ellipse cx="35" cy="25" rx="1.5" ry="3" fill="#D09670" stroke="#B57349" strokeWidth="0.2" />
+          {/* Ear right */}
+          <ellipse cx="65" cy="25" rx="1.5" ry="3" fill="#D09670" stroke="#B57349" strokeWidth="0.2" />
+          {/* Eye sockets */}
+          <ellipse cx="44" cy="22" rx="3" ry="1.5" fill="#B57349" opacity="0.15" />
+          <ellipse cx="56" cy="22" rx="3" ry="1.5" fill="#B57349" opacity="0.15" />
+          {/* Nose */}
+          <path d="M49,25 L48,28 L50,29 L52,28 L51,25" fill="none" stroke="#B57349" strokeWidth="0.2" opacity="0.3" />
+          {/* Mouth line */}
+          <path d="M47,32 Q50,33.5 53,32" fill="none" stroke="#A86648" strokeWidth="0.2" opacity="0.25" />
+
+          {/* Neck */}
+          <path
+            d="M44.5,42 L43.5,49.5 C43.5,51.5 45.5,52.5 48.5,52.5 L51.5,52.5 C54.5,52.5 56.5,51.5 56.5,49.5 L55.5,42"
+            fill="#C9876A"
+            stroke="#A86648"
+            strokeWidth="0.2"
+          />
+          {/* Sternocleidomastoid */}
+          <path d="M44,43 L42,50 L43,52" fill="none" stroke="#A8623E" strokeWidth="0.3" opacity="0.25" />
+          <path d="M56,43 L58,50 L57,52" fill="none" stroke="#A8623E" strokeWidth="0.3" opacity="0.25" />
+
+          {/* Trapezius */}
+          <path d="M35,53 L43,50 L50,52.5 L57,50 L65,53 L58,55 L50,54.5 L42,55 Z"
+            fill="#B5664A" stroke="#9E5840" strokeWidth="0.15" opacity="0.5" />
+
+          {/* Deltoids */}
+          <path d="M28,56 L25,62 L23,68 L27,66 L30,60 L33,56 Z" fill="#C4845A" stroke="#9E5840" strokeWidth="0.15" opacity="0.55" />
+          <path d="M72,56 L75,62 L77,68 L73,66 L70,60 L67,56 Z" fill="#C4845A" stroke="#9E5840" strokeWidth="0.15" opacity="0.55" />
+
+          {/* Pectoral muscles */}
+          <path d="M34,57 C37,55 42,55 46,57 L49,61 L50,64 L48,66 L40,64 L34,61 Z"
+            fill="#B5664A" opacity="0.3" />
+          <path d="M66,57 C63,55 58,55 54,57 L51,61 L50,64 L52,66 L60,64 L66,61 Z"
+            fill="#B5664A" opacity="0.3" />
+          {/* Pec lines */}
+          <path d="M34,61 C38,64 44,66 50,64" fill="none" stroke="#9E5840" strokeWidth="0.25" opacity="0.35" />
+          <path d="M66,61 C62,64 56,66 50,64" fill="none" stroke="#9E5840" strokeWidth="0.25" opacity="0.35" />
+
+          {/* Biceps */}
+          <path d="M23,68 L20,76 L18,84 L20,86 L24,80 L26,74 L27,66 Z" fill="url(#armGradL)" opacity="0.45" />
+          <path d="M77,68 L80,76 L82,84 L80,86 L76,80 L74,74 L73,66 Z" fill="url(#armGradR)" opacity="0.45" />
+          {/* Forearms */}
+          <path d="M18,84 L16,92 L14,100 L15,105 L17,104 L19,96 L20,86 Z" fill="#C4845A" opacity="0.35" />
+          <path d="M82,84 L84,92 L86,100 L85,105 L83,104 L81,96 L80,86 Z" fill="#C4845A" opacity="0.35" />
+
+          {/* Abs — rectus abdominis */}
+          <line x1="50" y1="64" x2="50" y2="104" stroke="#9E5840" strokeWidth="0.3" opacity="0.25" />
+          <line x1="44" y1="67" x2="44" y2="98" stroke="#9E5840" strokeWidth="0.18" opacity="0.18" />
+          <line x1="56" y1="67" x2="56" y2="98" stroke="#9E5840" strokeWidth="0.18" opacity="0.18" />
+          {/* Horizontal ab lines */}
+          <line x1="44" y1="72" x2="56" y2="72" stroke="#9E5840" strokeWidth="0.15" opacity="0.16" />
+          <line x1="44" y1="78" x2="56" y2="78" stroke="#9E5840" strokeWidth="0.15" opacity="0.16" />
+          <line x1="44" y1="84" x2="56" y2="84" stroke="#9E5840" strokeWidth="0.15" opacity="0.14" />
+          <line x1="45" y1="90" x2="55" y2="90" stroke="#9E5840" strokeWidth="0.15" opacity="0.12" />
+          <line x1="45" y1="96" x2="55" y2="96" stroke="#9E5840" strokeWidth="0.15" opacity="0.10" />
+
+          {/* Obliques */}
+          <path d="M33,65 L38,68 L40,80 L37,92 L34,84 Z" fill="#9E5840" opacity="0.10" />
+          <path d="M67,65 L62,68 L60,80 L63,92 L66,84 Z" fill="#9E5840" opacity="0.10" />
+
+          {/* Navel */}
+          <circle cx="50" cy="96" r="1.2" fill="#8B4332" opacity="0.25" />
+
+          {/* Nipples */}
+          <circle cx="43.5" cy="65" r="0.7" fill="#9E5840" opacity="0.25" />
+          <circle cx="56.5" cy="65" r="0.7" fill="#9E5840" opacity="0.25" />
+
+          {/* Serratus anterior */}
+          <path d="M34,68 L36,70 L34,72 L36,74 L34,76" fill="none" stroke="#9E5840" strokeWidth="0.2" opacity="0.15" />
+          <path d="M66,68 L64,70 L66,72 L64,74 L66,76" fill="none" stroke="#9E5840" strokeWidth="0.2" opacity="0.15" />
+
+          {/* Inguinal lines */}
+          <path d="M42,102 L48,114" fill="none" stroke="#9E5840" strokeWidth="0.2" opacity="0.15" />
+          <path d="M58,102 L52,114" fill="none" stroke="#9E5840" strokeWidth="0.2" opacity="0.15" />
+
+          {/* Quadriceps */}
+          <path d="M35,118 L33,130 L31,145 L32,150 L36,148 L37,138 L38,128 L38,118 Z" fill="url(#legGrad)" opacity="0.25" />
+          <path d="M38,118 L37,130 L36,142 L35,155 L37,156 L39,146 L41,133 L42,120 Z" fill="#C4845A" opacity="0.18" />
+          <path d="M65,118 L67,130 L69,145 L68,150 L64,148 L63,138 L62,128 L62,118 Z" fill="url(#legGrad)" opacity="0.25" />
+          <path d="M62,118 L63,130 L64,142 L65,155 L63,156 L61,146 L59,133 L58,120 Z" fill="#C4845A" opacity="0.18" />
+
+          {/* Knee caps */}
+          <ellipse cx="33" cy="158" rx="3.5" ry="3.5" fill="#D4A088" opacity="0.45" stroke="#A86648" strokeWidth="0.15" />
+          <ellipse cx="67" cy="158" rx="3.5" ry="3.5" fill="#D4A088" opacity="0.45" stroke="#A86648" strokeWidth="0.15" />
+
+          {/* Tibialis anterior */}
+          <path d="M32,162 L30,175 L28,188 L29,190 L32,186 L33,175 L34,162 Z" fill="#C9876A" opacity="0.18" />
+          <path d="M68,162 L70,175 L72,188 L71,190 L68,186 L67,175 L66,162 Z" fill="#C9876A" opacity="0.18" />
+
+          {/* Calves */}
+          <path d="M28,163 L26,173 L25,181 L27,183 L30,178 L31,170 L31,163 Z" fill="#B5664A" opacity="0.15" />
+          <path d="M72,163 L74,173 L75,181 L73,183 L70,178 L69,170 L69,163 Z" fill="#B5664A" opacity="0.15" />
+
+          {/* Hands */}
+          <path d="M13,105 L11,109 L12,111 L15,108 L16,106 Z" fill="#DCAA82" stroke="#B57349" strokeWidth="0.15" />
+          <path d="M87,105 L89,109 L88,111 L85,108 L84,106 Z" fill="#DCAA82" stroke="#B57349" strokeWidth="0.15" />
+          {/* Finger lines */}
+          <path d="M12,110 L10.5,112 M12.5,111 L11.5,113.5 M13.5,111 L13,113" fill="none" stroke="#B57349" strokeWidth="0.12" opacity="0.3" />
+          <path d="M88,110 L89.5,112 M87.5,111 L88.5,113.5 M86.5,111 L87,113" fill="none" stroke="#B57349" strokeWidth="0.12" opacity="0.3" />
+
+          {/* Feet detail */}
+          <path d="M24,200 L22,203 L23,205" fill="none" stroke="#9E5840" strokeWidth="0.15" opacity="0.2" />
+          <path d="M76,200 L78,203 L77,205" fill="none" stroke="#9E5840" strokeWidth="0.15" opacity="0.2" />
+
+          {/* ===== BACK VIEW DETAILS ===== */}
+          {showingBack && (
+            <>
+              {/* Spine */}
+              <line x1="50" y1="43" x2="50" y2="115" stroke="#7B3A28" strokeWidth="0.5" strokeOpacity="0.35" strokeDasharray="1.5 1" />
+              {/* Vertebrae bumps */}
+              {[47, 52, 57, 62, 67, 72, 77, 82, 87, 92, 97, 102, 107, 112].map(y => (
+                <circle key={y} cx="50" cy={y} r="0.6" fill="#8B4332" opacity="0.2" />
+              ))}
+              {/* Scapulae */}
+              <path d="M37,58 L41,63 L43,72 L40,76 L35,72 L33,63 Z" fill="#A8523A" opacity="0.2" stroke="#8B4332" strokeWidth="0.15" />
+              <path d="M63,58 L59,63 L57,72 L60,76 L65,72 L67,63 Z" fill="#A8523A" opacity="0.2" stroke="#8B4332" strokeWidth="0.15" />
+              {/* Lats */}
+              <path d="M34,63 L36,76 L40,88 L46,94 L50,95 L54,94 L60,88 L64,76 L66,63"
+                fill="none" stroke="#9E5840" strokeWidth="0.2" opacity="0.25" />
+              {/* Erector spinae */}
+              <path d="M47,55 L47,100" fill="none" stroke="#8B4332" strokeWidth="0.2" opacity="0.15" />
+              <path d="M53,55 L53,100" fill="none" stroke="#8B4332" strokeWidth="0.2" opacity="0.15" />
+              {/* Gluteals */}
+              <ellipse cx="42" cy="112" rx="8" ry="5.5" fill="#B5664A" opacity="0.2" />
+              <ellipse cx="58" cy="112" rx="8" ry="5.5" fill="#B5664A" opacity="0.2" />
+              <line x1="50" y1="106" x2="50" y2="118" stroke="#8B4332" strokeWidth="0.2" opacity="0.15" />
+              {/* Hamstrings */}
+              <path d="M35,120 L33,135 L32,150 L35,148 L37,135 L38,120 Z" fill="#A86648" opacity="0.15" />
+              <path d="M65,120 L67,135 L68,150 L65,148 L63,135 L62,120 Z" fill="#A86648" opacity="0.15" />
+              {/* Calf back */}
+              <path d="M29,165 L28,175 L29,185 L32,182 L33,172 L32,165 Z" fill="#B5664A" opacity="0.15" />
+              <path d="M71,165 L72,175 L71,185 L68,182 L67,172 L68,165 Z" fill="#B5664A" opacity="0.15" />
+            </>
+          )}
+
+          {/* ===== INTERACTIVE REGIONS (transparent hit areas) ===== */}
           {currentRegions.map((region) => {
             const isHovered = hoveredRegion === region.id;
             const isSelected = selectedRegion?.id === region.id;
@@ -300,9 +431,9 @@ export const InteractiveBody = memo(function InteractiveBody() {
               <path
                 key={region.id}
                 d={region.path}
-                fill={isSelected ? "hsla(var(--primary), 0.3)" : isHovered ? "hsla(var(--primary), 0.18)" : "transparent"}
-                stroke={isSelected ? "hsl(var(--primary))" : isHovered ? "hsl(var(--primary))" : "transparent"}
-                strokeWidth={isSelected ? "1" : "0.5"}
+                fill={isSelected ? "rgba(20,184,166,0.25)" : isHovered ? "rgba(20,184,166,0.12)" : "transparent"}
+                stroke={isSelected ? "#14b8a6" : isHovered ? "#14b8a6" : "transparent"}
+                strokeWidth={isSelected ? "0.8" : "0.4"}
                 className="cursor-pointer transition-all duration-200"
                 filter={isHovered || isSelected ? "url(#regionGlow)" : undefined}
                 onPointerEnter={() => setHoveredRegion(region.id)}
@@ -315,18 +446,7 @@ export const InteractiveBody = memo(function InteractiveBody() {
             );
           })}
 
-          {/* Spine line (decorative) */}
-          {showingBack && (
-            <line
-              x1="50" y1="45" x2="50" y2="115"
-              stroke="hsl(var(--primary))"
-              strokeWidth="0.4"
-              strokeOpacity="0.3"
-              strokeDasharray="2 2"
-            />
-          )}
-
-          {/* Pulse dot on hovered region center */}
+          {/* Pulse dot on hovered region */}
           {hoveredRegion && !selectedRegion && (() => {
             const region = currentRegions.find((r) => r.id === hoveredRegion);
             if (!region) return null;
@@ -335,7 +455,7 @@ export const InteractiveBody = memo(function InteractiveBody() {
                 cx={region.cx}
                 cy={region.cy + 100 * (region.cy / 100)}
                 r="2"
-                fill="hsl(var(--primary))"
+                fill="#14b8a6"
                 opacity="0.6"
               >
                 <animate attributeName="r" values="2;4;2" dur="1.5s" repeatCount="indefinite" />
