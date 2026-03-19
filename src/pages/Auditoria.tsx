@@ -724,7 +724,7 @@ export default function Auditoria() {
     await layout.init();
     const doc = layout.doc;
     const m = layout.margin;
-    let y = layout.contentStartY;
+    const y = layout.contentStartY;
 
     const tableData = clinicalRows.map((r) => [
       formatInAppTz(new Date(r.created_at), "dd/MM/yyyy HH:mm"),

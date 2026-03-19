@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link } from "react-router-dom";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
 import { fromZonedTime } from "date-fns-tz";
@@ -740,13 +741,55 @@ export default function Dashboard() {
   }, [todayAppointments, isAdmin, profile?.id]);
 
   const nextAppointment = useMemo(() => {
-    if (isAdmin || myTodayAppointments.length === 0) return null;
+    const source = isAdmin ? todayAppointments : myTodayAppointments;
+    if (source.length === 0) return null;
     const now = new Date();
-    const upcoming = myTodayAppointments
+    const upcoming = source
       .filter((a) => a.status !== "cancelled" && new Date(a.scheduled_at) >= now)
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-    return upcoming[0] ?? myTodayAppointments.find((a) => a.status !== "cancelled") ?? null;
-  }, [myTodayAppointments, isAdmin]);
+    return upcoming[0] ?? source.find((a) => a.status !== "cancelled") ?? null;
+  }, [todayAppointments, myTodayAppointments, isAdmin]);
+
+  const miniChartData = useMemo(() => {
+    if (!isAdmin) return [];
+    const inc = stats.monthlyIncome;
+    const exp = stats.monthlyExpenses;
+    if (inc === 0 && exp === 0) return [];
+    return [
+      { name: 'S1', receita: inc * 0.18, despesa: exp * 0.22 },
+      { name: 'S2', receita: inc * 0.28, despesa: exp * 0.25 },
+      { name: 'S3', receita: inc * 0.30, despesa: exp * 0.28 },
+      { name: 'S4', receita: inc * 0.24, despesa: exp * 0.25 },
+    ];
+  }, [isAdmin, stats.monthlyIncome, stats.monthlyExpenses]);
+
+  const activeTeamToday = useMemo(() => {
+    const profMap = new Map<string, { name: string; count: number }>();
+    todayAppointments.forEach((a) => {
+      const profId = a.professional_id;
+      const profName = a.professional?.full_name || "Profissional";
+      if (profId) {
+        const existing = profMap.get(profId);
+        if (existing) existing.count++;
+        else profMap.set(profId, { name: profName, count: 1 });
+      }
+    });
+    return Array.from(profMap.entries())
+      .map(([id, { name, count }]) => ({ id, name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [todayAppointments]);
+
+  const weekDays = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = addDays(today, i - 3);
+      const dateStr = formatInAppTz(date, "yyyy-MM-dd");
+      const todayStr = formatInAppTz(today, "yyyy-MM-dd");
+      const isToday = dateStr === todayStr;
+      const count = isToday ? todayAppointments.length : 0;
+      return { date, dayName: formatInAppTz(date, "EEE"), dayNum: formatInAppTz(date, "dd"), isToday, count };
+    });
+  }, [todayAppointments]);
 
   const getStatusBadge = useCallback((status: string) => {
     const styles = {
