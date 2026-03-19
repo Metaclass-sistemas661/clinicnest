@@ -9,7 +9,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse } from "lucide-react";
+import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link } from "react-router-dom";
 import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
@@ -767,20 +768,14 @@ export default function Dashboard() {
     );
   }, []);
 
+  const firstName = profile?.full_name?.split(" ")[0] || "Usuário";
+  const todayFormatted = formatInAppTz(new Date(), "EEEE, dd 'de' MMMM");
+  const summaryText = stats.todayAppointments > 0
+    ? `Você tem ${stats.todayAppointments} consulta${stats.todayAppointments > 1 ? "s" : ""} agendada${stats.todayAppointments > 1 ? "s" : ""} para hoje`
+    : "Nenhuma consulta agendada para hoje";
+
   return (
-    <MainLayout
-      title={`Olá, ${profile?.full_name?.split(" ")[0] || "Usuário"}!`}
-      subtitle={`Bem-vindo ao ${tenant?.name || "ClinicNest"}`}
-      actions={
-        <Button asChild variant="gradient" className="text-sm md:text-base">
-          <Link to="/agenda" data-tour="dashboard-new-appointment">
-            <Plus className="mr-1 md:mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Novo agendamento</span>
-            <span className="sm:hidden">Agendar</span>
-          </Link>
-        </Button>
-      }
-    >
+    <MainLayout>
       {/* Role-based dashboard: non-admin users with a specific type see a tailored view */}
       {(() => {
         if (!isAdmin) {
@@ -794,6 +789,81 @@ export default function Dashboard() {
       {(isAdmin || !getDashboardForType(professionalType)) && (
       <TooltipProvider>
         <div className="space-y-6">
+
+          {/* ===== HERO BANNER WITH GRADIENT ===== */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-teal-500 to-cyan-500 px-6 py-6 sm:px-8 sm:py-8 text-white shadow-xl">
+            {/* Decorative shapes */}
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute -bottom-16 right-20 h-48 w-48 rounded-full bg-cyan-400/10" />
+            <div className="pointer-events-none absolute right-1/3 top-4 h-24 w-24 rounded-full bg-emerald-400/8" />
+            <div className="pointer-events-none absolute left-1/4 -bottom-10 h-32 w-32 rounded-full bg-teal-300/10" />
+
+            {/* Abstract pattern overlay */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.04]"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
+
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-teal-100 text-xs sm:text-sm font-medium uppercase tracking-wider mb-1">
+                  {todayFormatted}
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-1">
+                  Olá, {firstName}! 👋
+                </h1>
+                <p className="text-sm sm:text-base text-teal-100 max-w-md">
+                  {summaryText}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <Link
+                    to="/agenda"
+                    data-tour="dashboard-new-appointment"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-teal-700 shadow-md transition-all hover:bg-teal-50 hover:shadow-lg"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Novo agendamento
+                  </Link>
+                  <Link
+                    to="/pacientes"
+                    className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/25"
+                  >
+                    <Users className="h-4 w-4" />
+                    Pacientes
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right side — KPI pills */}
+              <div className="hidden lg:flex flex-col gap-2 items-end">
+                <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
+                  <HeartPulse className="h-5 w-5 text-emerald-200" />
+                  <div className="text-right">
+                    <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : stats.todayAppointments}</p>
+                    <p className="text-[10px] text-teal-200 uppercase tracking-wide">Consultas hoje</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
+                  <Clock className="h-5 w-5 text-amber-200" />
+                  <div className="text-right">
+                    <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : stats.pendingAppointments}</p>
+                    <p className="text-[10px] text-teal-200 uppercase tracking-wide">Pendentes</p>
+                  </div>
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
+                    <TrendingUp className="h-5 w-5 text-cyan-200" />
+                    <div className="text-right">
+                      <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                      <p className="text-[10px] text-teal-200 uppercase tracking-wide">Receita do mês</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* ===== PROMOTIONAL BANNER CAROUSEL (only for new users < 7 days) ===== */}
           {showBanner && (
@@ -1067,7 +1137,13 @@ export default function Dashboard() {
           </div>
           )}
 
-          {/* ===== KPI METRICS GRID ===== */}
+          {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
+          <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+
+          {/* Left Column: KPIs + Sections */}
+          <div className="space-y-6">
+
+          {/* KPI METRICS GRID */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Consultas hoje */}
             <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="[&:hover]:no-underline">
@@ -1158,7 +1234,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* ===== ORDERED SECTIONS ===== */}
+          {/* ===== ORDERED SECTIONS (inside left column) ===== */}
           {dashboardPrefs.order.map((sectionKey) => {
             if (!availableSections.includes(sectionKey)) return null;
             if (dashboardPrefs.hidden?.[sectionKey]) return null;
@@ -1468,6 +1544,19 @@ export default function Dashboard() {
 
             return null;
           })}
+
+          </div>{/* end left column */}
+
+          {/* Right Column: Interactive Body Map */}
+          <div className="hidden lg:block">
+            <Card className="sticky top-6 h-[calc(100vh-12rem)] overflow-hidden">
+              <CardContent className="h-full p-4">
+                <InteractiveBody />
+              </CardContent>
+            </Card>
+          </div>
+
+          </div>{/* end main grid */}
         </div>
 
         <Dialog open={prefsOpen} onOpenChange={setPrefsOpen}>

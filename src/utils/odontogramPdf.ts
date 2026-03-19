@@ -1,14 +1,8 @@
 /**
  * odontogramPdf — Geração de PDF profissional do odontograma
  * 
- * Gera um PDF em formato paisagem A4 com:
- * - Header com dados do paciente e clínica
- * - Mapa dental estilizado (representação das condições por dente)
- * - Tabela de registros detalhada
- * - Legenda de condições
- * - Estatísticas resumidas
+ * Gera um PDF em formato paisagem A4 usando o Motor Universal Premium.
  */
-import jsPDF from "jspdf";
 import {
   TOOTH_CONDITIONS,
   UPPER_PERMANENT,
@@ -16,6 +10,14 @@ import {
   UPPER_DECIDUOUS,
   LOWER_DECIDUOUS,
 } from "@/components/odontograma/odontogramConstants";
+import {
+  BasePremiumPDFLayout,
+  FONT,
+  COLORS,
+  hexToRgb,
+  renderPatientInfoBox,
+  renderSummaryCards,
+} from "@/lib/pdf";
 
 interface OdontogramPdfData {
   patient_name: string;
@@ -38,38 +40,30 @@ function getConditionInfo(condition: string) {
   return TOOTH_CONDITIONS.find(c => c.value === condition) ?? TOOTH_CONDITIONS[0];
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return [100, 100, 100];
-  return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)];
-}
+export async function generateOdontogramPdf(data: OdontogramPdfData) {
+  const layout = new BasePremiumPDFLayout(
+    { name: data.clinic_name },
+    {
+      title: "Odontograma",
+      accentColor: "#0d9488",
+      orientation: "landscape",
+      subtitle: `Dentição: ${data.dentition_type === "permanent" ? "Permanente" : data.dentition_type === "deciduous" ? "Decídua" : "Mista"}`,
+    },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  const pageWidth = layout.pageW;
+  let y = layout.contentStartY;
 
-export function generateOdontogramPdf(data: OdontogramPdfData) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 15;
+  // ── Patient + Professional info ──
+  y = renderPatientInfoBox(layout, { name: data.patient_name }, y);
 
-  // ── Header ──
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("ODONTOGRAMA", pageWidth / 2, y, { align: "center" });
-  y += 7;
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(data.clinic_name, pageWidth / 2, y, { align: "center" });
-  y += 10;
-
-  // Patient info
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Paciente: ${data.patient_name}`, 15, y);
-  doc.text(`Data: ${new Date(data.exam_date).toLocaleDateString("pt-BR")}`, pageWidth - 15, y, { align: "right" });
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Profissional: ${data.professional_name}`, 15, y);
-  doc.text(`Dentição: ${data.dentition_type === "permanent" ? "Permanente" : data.dentition_type === "deciduous" ? "Decídua" : "Mista"}`, pageWidth - 15, y, { align: "right" });
-  y += 10;
+  doc.setFontSize(FONT.SMALL);
+  doc.setFont(FONT.FAMILY, "normal");
+  doc.setTextColor(...COLORS.TEXT_SECONDARY);
+  doc.text(`Data: ${new Date(data.exam_date).toLocaleDateString("pt-BR")}`, pageWidth - m, y - 20, { align: "right" });
+  doc.text(`Profissional: ${data.professional_name}`, pageWidth - m, y - 15, { align: "right" });
 
   // ── Dental Map ──
   const teethMap = new Map(data.teeth.map(t => [t.tooth_number, t]));
@@ -148,23 +142,25 @@ export function generateOdontogramPdf(data: OdontogramPdfData) {
   y += 4;
 
   // ── Legend ──
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "bold");
-  doc.text("Legenda:", 15, y);
+  doc.setFontSize(FONT.LABEL);
+  doc.setFont(FONT.FAMILY, "bold");
+  doc.setTextColor(...COLORS.TEXT_PRIMARY);
+  doc.text("Legenda:", m, y);
   y += 4;
 
   const usedConditions = new Set(data.teeth.map(t => t.condition));
   usedConditions.add("healthy");
   const legendItems = TOOTH_CONDITIONS.filter(c => usedConditions.has(c.value));
   const cols = 6;
-  const colW = (pageWidth - 30) / cols;
+  const colW = (pageWidth - m * 2) / cols;
 
-  doc.setFontSize(6);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT.TINY);
+  doc.setFont(FONT.FAMILY, "normal");
+  doc.setTextColor(...COLORS.TEXT_PRIMARY);
   legendItems.forEach((item, idx) => {
     const col = idx % cols;
     const row = Math.floor(idx / cols);
-    const lx = 15 + col * colW;
+    const lx = m + col * colW;
     const ly = y + row * 4;
     const [r, g, b] = hexToRgb(item.color);
     doc.setFillColor(r, g, b);
@@ -178,37 +174,39 @@ export function generateOdontogramPdf(data: OdontogramPdfData) {
   const registeredTeeth = data.teeth.filter(t => t.condition !== "healthy").sort((a, b) => a.tooth_number - b.tooth_number);
 
   if (registeredTeeth.length > 0) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Registros Detalhados (${registeredTeeth.length})`, 15, y);
+    doc.setFontSize(FONT.SMALL + 1);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text(`Registros Detalhados (${registeredTeeth.length})`, m, y);
     y += 5;
 
     // Table header
-    const colWidths = [15, 35, 25, 18, 18, pageWidth - 30 - 15 - 35 - 25 - 18 - 18];
+    const colWidths = [15, 35, 25, 18, 18, layout.contentW - 15 - 35 - 25 - 18 - 18];
     const headers = ["Dente", "Condição", "Faces", "Mob.", "Prior.", "Observações"];
 
-    doc.setFillColor(240, 240, 240);
-    doc.rect(15, y - 3, pageWidth - 30, 5, "F");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    let hx = 15;
+    doc.setFillColor(...COLORS.BG_ZEBRA);
+    doc.rect(m, y - 3, layout.contentW, 5, "F");
+    doc.setFontSize(FONT.LABEL);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    let hx = m;
     headers.forEach((h, i) => {
       doc.text(h, hx + 1, y);
       hx += colWidths[i];
     });
     y += 4;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT.FAMILY, "normal");
     for (const tooth of registeredTeeth) {
-      if (y > 185) {
-        doc.addPage();
-        y = 15;
+      if (y > layout.footerStart - 10) {
+        y = layout.addPage();
       }
 
       const info = getConditionInfo(tooth.condition);
-      let tx = 15;
+      let tx = m;
 
-      doc.setFontSize(7);
+      doc.setFontSize(FONT.LABEL);
+      doc.setTextColor(...COLORS.TEXT_PRIMARY);
       doc.text(tooth.tooth_number.toString(), tx + 1, y);
       tx += colWidths[0];
 
@@ -236,9 +234,8 @@ export function generateOdontogramPdf(data: OdontogramPdfData) {
 
   // ── Stats Summary ──
   y += 4;
-  if (y > 175) {
-    doc.addPage();
-    y = 15;
+  if (y > layout.footerStart - 30) {
+    y = layout.addPage();
   }
 
   const totalRegistered = data.teeth.length;
@@ -247,38 +244,26 @@ export function generateOdontogramPdf(data: OdontogramPdfData) {
   const restored = data.teeth.filter(t => t.condition === "restored").length;
   const urgent = data.teeth.filter(t => t.priority === "urgent").length;
 
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.text("Resumo:", 15, y);
-  y += 4;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.text(`Total registrado: ${totalRegistered} dente(s) | Cárie: ${caries} | Ausentes: ${missing} | Restaurados: ${restored} | Urgentes: ${urgent}`, 15, y);
+  y = renderSummaryCards(layout, [
+    { label: "TOTAL", value: `${totalRegistered}`, color: COLORS.ACCENT },
+    { label: "CÁRIE", value: `${caries}`, color: COLORS.DANGER },
+    { label: "AUSENTES", value: `${missing}`, color: COLORS.TEXT_SECONDARY },
+    { label: "RESTAURADOS", value: `${restored}`, color: COLORS.SUCCESS },
+    { label: "URGENTES", value: `${urgent}`, color: COLORS.WARNING },
+  ], y);
 
   if (data.notes) {
-    y += 6;
-    doc.setFont("helvetica", "bold");
-    doc.text("Observações:", 15, y);
+    y += 2;
+    doc.setFontSize(FONT.SMALL);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Observações:", m, y);
     y += 3;
-    doc.setFont("helvetica", "normal");
-    const noteLines = doc.splitTextToSize(data.notes, pageWidth - 30);
-    doc.text(noteLines, 15, y);
+    doc.setFont(FONT.FAMILY, "normal");
+    doc.setTextColor(...COLORS.TEXT_SECONDARY);
+    const noteLines = doc.splitTextToSize(data.notes, layout.contentW);
+    doc.text(noteLines, m, y);
   }
 
-  // ── Footer ──
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(6);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `Gerado em ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR")} — Página ${i}/${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 5,
-      { align: "center" }
-    );
-    doc.setTextColor(0, 0, 0);
-  }
-
-  doc.save(`odontograma_${data.patient_name.replace(/\s+/g, "_")}_${data.exam_date}.pdf`);
+  layout.finalize(`odontograma_${data.patient_name.replace(/\s+/g, "_")}_${data.exam_date}.pdf`);
 }

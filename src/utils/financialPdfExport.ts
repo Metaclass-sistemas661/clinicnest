@@ -10,6 +10,14 @@ import { ptBR } from "date-fns/locale";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { FinancialTransaction } from "@/types/database";
+import {
+  BasePremiumPDFLayout,
+  FONT,
+  COLORS,
+  renderSummaryCards,
+  renderPremiumTable,
+  type RGB,
+} from "@/lib/pdf";
 
 export interface CommissionPayment {
   id: string;
@@ -340,170 +348,50 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
     totalProductLoss,
   } = options;
 
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  let yPos = margin;
-
-  // Colors
-  const primaryColor: [number, number, number] = [124, 58, 237]; // Purple
-  const successColor: [number, number, number] = [34, 197, 94]; // Green
-  const dangerColor: [number, number, number] = [239, 68, 68]; // Red
-  const grayColor: [number, number, number] = [107, 114, 128];
-  const lightGray: [number, number, number] = [243, 244, 246];
-
-  const headerHeight = 28;
-  const footerHeight = 15;
-  const contentTop = headerHeight + 14;
   const periodText = formatPeriod(startDate, endDate);
+  const successColor: RGB = COLORS.SUCCESS;
+  const dangerColor: RGB = COLORS.DANGER;
+  const brandColor: RGB = COLORS.BRAND;
 
-  const drawHeader = (title: string) => {
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, headerHeight, "F");
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("ClinicNest", margin, 17);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    if (tenantName) {
-      doc.text(tenantName, margin, 23);
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(title, pageWidth - margin, 17, { align: "right" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.text(periodText, pageWidth - margin, 23, { align: "right" });
-  };
-
-  const drawFooter = (pageNumber: number, totalPages: number) => {
-    doc.setDrawColor(...lightGray);
-    doc.setLineWidth(0.5);
-    doc.line(margin, pageHeight - footerHeight, pageWidth - margin, pageHeight - footerHeight);
-
-    doc.setFontSize(8);
-    doc.setTextColor(...grayColor);
-    doc.setFont("helvetica", "normal");
-    doc.text(
-      `Gerado em ${formatInAppTz(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
-      margin,
-      pageHeight - 6
-    );
-    doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, pageHeight - 6, { align: "right" });
-  };
-
-  const baseTableStyles = {
-    styles: {
-      font: "helvetica",
-      fontSize: 8,
-      cellPadding: 2,
-      lineWidth: 0.1,
-      lineColor: [229, 231, 235] as [number, number, number],
-      valign: "middle" as const,
-    },
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255] as [number, number, number],
-      fontStyle: "bold" as const,
-      fontSize: 9,
-      cellPadding: 2.2,
-    },
-    alternateRowStyles: {
-      fillColor: [249, 250, 251] as [number, number, number],
-    },
-    margin: { left: margin, right: margin, top: contentTop, bottom: footerHeight },
-    tableWidth: pageWidth - margin * 2,
-    didDrawPage: () => {
-      drawHeader("Relatório Financeiro");
-    },
-  };
-
-  drawHeader("Relatório Financeiro");
-  yPos = contentTop;
+  const layout = new BasePremiumPDFLayout(
+    { name: tenantName || "ClinicNest" },
+    { title: "Relatório Financeiro", accentColor: "#7c3aed", subtitle: periodText },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let yPos = layout.contentStartY;
 
   // ==================== SUMMARY CARDS ====================
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Resumo do Período", margin, yPos);
-  yPos += 10;
+  const balanceColor = balance >= 0 ? successColor : dangerColor;
+  yPos = renderSummaryCards(layout, [
+    { label: "SALDO", value: formatCurrency(balance), color: balanceColor, borderColor: balanceColor },
+    { label: "RECEITAS", value: formatCurrency(totalIncome), color: successColor, borderColor: successColor },
+    { label: "DESPESAS", value: formatCurrency(totalExpense), color: dangerColor, borderColor: dangerColor },
+  ], yPos);
 
-  const cardWidth = (pageWidth - margin * 2 - 20) / 3;
-  const cardHeight = 35;
-  const cardY = yPos;
-
-  // Balance Card
-  const balanceCardColor = balance >= 0 ? successColor : dangerColor;
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4, 4, "F");
-  doc.setDrawColor(...balanceCardColor);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4, 4, "S");
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...grayColor);
-  doc.text("SALDO", margin + 10, cardY + 12);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...balanceCardColor);
-  doc.text(formatCurrency(balance), margin + 10, cardY + 26);
-
-  // Income Card
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(margin + cardWidth + 10, cardY, cardWidth, cardHeight, 4, 4, "F");
-  doc.setDrawColor(...successColor);
-  doc.roundedRect(margin + cardWidth + 10, cardY, cardWidth, cardHeight, 4, 4, "S");
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...grayColor);
-  doc.text("RECEITAS", margin + cardWidth + 20, cardY + 12);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...successColor);
-  doc.text(formatCurrency(totalIncome), margin + cardWidth + 20, cardY + 26);
-
-  // Expense Card
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(margin + (cardWidth + 10) * 2, cardY, cardWidth, cardHeight, 4, 4, "F");
-  doc.setDrawColor(...dangerColor);
-  doc.roundedRect(margin + (cardWidth + 10) * 2, cardY, cardWidth, cardHeight, 4, 4, "S");
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...grayColor);
-  doc.text("DESPESAS", margin + (cardWidth + 10) * 2 + 10, cardY + 12);
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...dangerColor);
-  doc.text(formatCurrency(totalExpense), margin + (cardWidth + 10) * 2 + 10, cardY + 26);
-
-  yPos = cardY + cardHeight + 20;
+  yPos += 6;
 
   const hasDamagedLosses = damagedLosses.length > 0;
   const productLossTotal = totalProductLoss ?? damagedLosses.reduce((sum, item) => sum + item.totalLoss, 0);
 
   if (hasDamagedLosses) {
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Perdas por Produtos Danificados", margin, yPos);
+    yPos = layout.ensureSpace(yPos, 30);
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Perdas por Produtos Danificados", m, yPos);
     yPos += 6;
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(FONT.BODY);
+    doc.setFont(FONT.FAMILY, "normal");
     doc.setTextColor(...dangerColor);
-    doc.text(`Total de perdas: ${formatCurrency(productLossTotal)}`, margin, yPos);
-
+    doc.text(`Total de perdas: ${formatCurrency(productLossTotal)}`, m, yPos);
     yPos += 8;
 
-    autoTable(doc, {
-      startY: Math.max(yPos, contentTop),
-      head: [["Data", "Produto", "Qtd", "Custo Unit.", "Total Perda", "Motivo"]],
+    yPos = renderPremiumTable(layout, {
+      startY: yPos,
+      head: ["Data", "Produto", "Qtd", "Custo Unit.", "Total Perda", "Motivo"],
       body: damagedLosses.map((loss) => [
         formatInAppTz(loss.created_at, "dd/MM/yyyy"),
         loss.productName,
@@ -512,19 +400,16 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         formatCurrency(loss.totalLoss),
         loss.reason || "—",
       ]),
-      ...baseTableStyles,
-      headStyles: { ...baseTableStyles.headStyles, fillColor: dangerColor },
+      headColor: dangerColor,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 45 },
         2: { cellWidth: 15, halign: "center" },
         3: { cellWidth: 25, halign: "right" },
-        4: { cellWidth: 28, halign: "right", fontStyle: "bold" },
+        4: { cellWidth: 28, halign: "right" },
         5: { cellWidth: 40 },
       },
     });
-
-    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
   }
 
   // ==================== EVOLUTION CHARTS ====================
@@ -534,20 +419,20 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   );
 
   if (evolutionData.length > 1) {
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Evolução Financeira", margin, yPos);
+    yPos = layout.ensureSpace(yPos, 90);
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Evolução Financeira", m, yPos);
     yPos += 8;
 
-    const chartWidth = (pageWidth - margin * 2 - 10) / 2;
+    const chartWidth = (layout.contentW - 10) / 2;
     const chartHeight = 70;
 
-    // Bar chart - Income vs Expenses
     drawBarChart(
       doc,
-      evolutionData.slice(-12), // Last 12 points max for readability
-      margin,
+      evolutionData.slice(-12),
+      m,
       yPos,
       chartWidth,
       chartHeight,
@@ -555,16 +440,15 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       { income: successColor, expense: dangerColor }
     );
 
-    // Line chart - Balance evolution
     drawLineChart(
       doc,
       evolutionData.slice(-12),
-      margin + chartWidth + 10,
+      m + chartWidth + 10,
       yPos,
       chartWidth,
       chartHeight,
       "Evolução do Saldo",
-      primaryColor
+      brandColor
     );
 
     yPos += chartHeight + 15;
@@ -575,99 +459,69 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
   const expenseByCategory = groupByCategory(transactions, "expense");
 
   if (incomeByCategory.length > 0) {
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Receitas por Categoria", margin, yPos);
+    yPos = layout.ensureSpace(yPos, 25);
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Receitas por Categoria", m, yPos);
     yPos += 5;
 
-    autoTable(doc, {
+    yPos = renderPremiumTable(layout, {
       startY: yPos,
-      head: [["Categoria", "Qtd", "Total"]],
+      head: ["Categoria", "Qtd", "Total"],
       body: incomeByCategory.map((item) => [
         item.category,
         item.count.toString(),
         formatCurrency(item.total),
       ]),
-      theme: "plain",
-      headStyles: {
-        fillColor: successColor,
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 10,
-      },
-      bodyStyles: {
-        fontSize: 9,
-      },
-      alternateRowStyles: {
-        fillColor: [240, 253, 244],
-      },
+      headColor: successColor,
       columnStyles: {
         0: { cellWidth: 80 },
         1: { cellWidth: 30, halign: "center" },
-        2: { cellWidth: 50, halign: "right", fontStyle: "bold" },
+        2: { cellWidth: 50, halign: "right" },
       },
-      margin: { left: margin, right: margin },
-      tableWidth: pageWidth - margin * 2,
     });
-
-    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
-  }
-
-  // Check if we need a new page
-  if (yPos > pageHeight - 80 && expenseByCategory.length > 0) {
-    doc.addPage();
-    yPos = margin;
   }
 
   if (expenseByCategory.length > 0) {
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Despesas por Categoria", margin, yPos);
+    if (yPos > layout.footerStart - 40) {
+      yPos = layout.addPage();
+    }
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Despesas por Categoria", m, yPos);
     yPos += 5;
 
-    autoTable(doc, {
+    yPos = renderPremiumTable(layout, {
       startY: yPos,
-      head: [["Categoria", "Qtd", "Total"]],
+      head: ["Categoria", "Qtd", "Total"],
       body: expenseByCategory.map((item) => [
         item.category,
         item.count.toString(),
         formatCurrency(item.total),
       ]),
-      theme: "plain",
-      headStyles: {
-        fillColor: dangerColor,
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 10,
-      },
-      bodyStyles: {
-        fontSize: 9,
-      },
-      alternateRowStyles: {
-        fillColor: [254, 242, 242],
-      },
+      headColor: dangerColor,
       columnStyles: {
         0: { cellWidth: 80 },
         1: { cellWidth: 30, halign: "center" },
-        2: { cellWidth: 50, halign: "right", fontStyle: "bold" },
+        2: { cellWidth: 50, halign: "right" },
       },
-      margin: { left: margin, right: margin },
-      tableWidth: pageWidth - margin * 2,
     });
-
-    yPos = (doc as JsPDFWithAutoTable).lastAutoTable!.finalY + 15;
   }
 
   // ==================== TRANSACTIONS TABLE (NEW PAGE) ====================
   if (transactions.length > 0) {
-    doc.addPage();
-    drawHeader("Extrato de Transações");
-    yPos = contentTop;
+    yPos = layout.addPage();
+
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Extrato de Transações", m, yPos);
+    yPos += 5;
 
     autoTable(doc, {
-      startY: Math.max(yPos, contentTop),
+      startY: yPos,
       head: [["Data", "Tipo", "Categoria", "Descrição", "Origem", "Valor"]],
       body: transactions.map((t) => [
         formatInAppTz(t.transaction_date, "dd/MM/yyyy"),
@@ -677,7 +531,22 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         t.appointment_id ? "Agenda" : "Manual",
         (t.type === "income" ? "+" : "-") + formatCurrency(t.amount),
       ]),
-      ...baseTableStyles,
+      styles: {
+        font: FONT.FAMILY,
+        fontSize: FONT.SMALL,
+        cellPadding: 2,
+        lineWidth: 0.1,
+        lineColor: COLORS.BORDER,
+      },
+      headStyles: {
+        fillColor: brandColor,
+        textColor: COLORS.WHITE,
+        fontStyle: "bold",
+        fontSize: FONT.SMALL + 0.5,
+      },
+      alternateRowStyles: { fillColor: COLORS.BG_ZEBRA },
+      margin: { left: m, right: m },
+      tableWidth: layout.contentW,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 20 },
@@ -697,49 +566,35 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         }
         if (data.section === "body" && data.column.index === 1) {
           const type = String(data.cell.raw);
-          if (type === "Entrada") {
-            data.cell.styles.textColor = successColor;
-          } else {
-            data.cell.styles.textColor = dangerColor;
-          }
+          data.cell.styles.textColor = type === "Entrada" ? successColor : dangerColor;
         }
-      },
-      didDrawPage: () => {
-        drawHeader("Extrato de Transações");
       },
     });
   }
 
   // ==================== COMMISSIONS TABLE (NEW PAGE IF NEEDED) ====================
   if (commissions.length > 0) {
-    doc.addPage();
-    drawHeader("Comissões");
-    yPos = contentTop;
+    yPos = layout.addPage();
 
     const paidCommissions = commissions.filter((c) => c.status === "paid");
     const pendingCommissions = commissions.filter((c) => c.status === "pending");
     const totalPaid = paidCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
     const totalPending = pendingCommissions.reduce((sum, c) => sum + Number(c.amount), 0);
 
-    // Summary
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text("Resumo de Comissões", margin, yPos);
+    doc.setFontSize(FONT.SECTION_TITLE - 2);
+    doc.setFont(FONT.FAMILY, "bold");
+    doc.setTextColor(...COLORS.TEXT_PRIMARY);
+    doc.text("Resumo de Comissões", m, yPos);
     yPos += 10;
 
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...successColor);
-    doc.text(`Comissões Pagas: ${formatCurrency(totalPaid)}`, margin, yPos);
-    yPos += 7;
-    doc.setTextColor(...dangerColor);
-    doc.text(`Comissões Pendentes: ${formatCurrency(totalPending)}`, margin, yPos);
-    yPos += 15;
+    yPos = renderSummaryCards(layout, [
+      { label: "PAGAS", value: formatCurrency(totalPaid), color: successColor, borderColor: successColor },
+      { label: "PENDENTES", value: formatCurrency(totalPending), color: dangerColor, borderColor: dangerColor },
+    ], yPos);
+    yPos += 4;
 
-    // Commissions table
     autoTable(doc, {
-      startY: Math.max(yPos, contentTop),
+      startY: yPos,
       head: [["Data", "Profissional", "Tipo", "Valor Procedimento", "Comissão", "Status"]],
       body: commissions.map((c) => [
         formatInAppTz(c.created_at, "dd/MM/yyyy"),
@@ -749,7 +604,22 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
         formatCurrency(Number(c.amount)),
         c.status === "paid" ? "Paga" : "Pendente",
       ]),
-      ...baseTableStyles,
+      styles: {
+        font: FONT.FAMILY,
+        fontSize: FONT.SMALL,
+        cellPadding: 2,
+        lineWidth: 0.1,
+        lineColor: COLORS.BORDER,
+      },
+      headStyles: {
+        fillColor: brandColor,
+        textColor: COLORS.WHITE,
+        fontStyle: "bold",
+        fontSize: FONT.SMALL + 0.5,
+      },
+      alternateRowStyles: { fillColor: COLORS.BG_ZEBRA },
+      margin: { left: m, right: m },
+      tableWidth: layout.contentW,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 40 },
@@ -761,32 +631,13 @@ export async function generateFinancialReport(options: ExportOptions): Promise<v
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index === 5) {
           const status = data.cell.text[0];
-          if (status === "Paga") {
-            data.cell.styles.textColor = successColor;
-          } else {
-            data.cell.styles.textColor = dangerColor;
-          }
+          data.cell.styles.textColor = status === "Paga" ? successColor : dangerColor;
         }
-      },
-      didDrawPage: () => {
-        drawHeader("Comissões");
       },
     });
   }
 
-  // ==================== FOOTER ====================
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-
-    if (i === 1) {
-      drawHeader("Relatório Financeiro");
-    }
-
-    drawFooter(i, totalPages);
-  }
-
-  // Save the PDF
+  // ==================== FINALIZE ====================
   const fileName = `relatorio-financeiro-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.pdf`;
-  doc.save(fileName);
+  layout.finalize(fileName);
 }

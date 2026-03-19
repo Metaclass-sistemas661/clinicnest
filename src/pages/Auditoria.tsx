@@ -21,7 +21,12 @@ import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { Download, Eye, RefreshCw, AlertTriangle, ShieldAlert, FileText, ClipboardList, ShieldCheck, Archive, Loader2 } from "lucide-react";
 import { useSimpleMode } from "@/lib/simple-mode";
-import jsPDF from "jspdf";
+import {
+  BasePremiumPDFLayout,
+  FONT,
+  COLORS,
+  renderPremiumTable,
+} from "@/lib/pdf";
 import autoTable from "jspdf-autotable";
 
 type AuditLogRow = {
@@ -702,17 +707,24 @@ export default function Auditoria() {
   };
 
   // 12F.5: Export clinical access PDF
-  const exportClinicalPdf = () => {
+  const exportClinicalPdf = async () => {
     if (!clinicalRows.length) {
       toast.error("Nada para exportar");
       return;
     }
-    const doc = new jsPDF({ orientation: "landscape" });
-    doc.setFontSize(16);
-    doc.text("Relatório de Acessos Clínicos", 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Período: ${startDate} a ${endDate}`, 14, 22);
-    doc.text(`Gerado em: ${formatInAppTz(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 28);
+    const layout = new BasePremiumPDFLayout(
+      { name: "ClinicNest" },
+      {
+        title: "Relatório de Acessos Clínicos",
+        accentColor: "#3b82f6",
+        orientation: "landscape",
+        subtitle: `Período: ${startDate} a ${endDate}`,
+      },
+    );
+    await layout.init();
+    const doc = layout.doc;
+    const m = layout.margin;
+    let y = layout.contentStartY;
 
     const tableData = clinicalRows.map((r) => [
       formatInAppTz(new Date(r.created_at), "dd/MM/yyyy HH:mm"),
@@ -725,21 +737,23 @@ export default function Auditoria() {
     ]);
 
     autoTable(doc, {
-      startY: 34,
+      startY: y,
       head: [["Data", "Profissional", "Tipo", "Ação", "Recurso", "Paciente", "Alerta"]],
       body: tableData,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [59, 130, 246] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      styles: { fontSize: FONT.SMALL, font: FONT.FAMILY, lineWidth: 0.1, lineColor: COLORS.BORDER },
+      headStyles: { fillColor: layout.accent, textColor: COLORS.WHITE, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: COLORS.BG_ZEBRA },
+      margin: { left: m, right: m },
+      tableWidth: layout.contentW,
       didParseCell: (data) => {
         if (data.column.index === 6 && data.cell.raw === "⚠️ SIM") {
-          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.textColor = COLORS.DANGER;
           data.cell.styles.fontStyle = "bold";
         }
       },
     });
 
-    doc.save(`acessos-clinicos-${startDate}-to-${endDate}.pdf`);
+    layout.finalize(`acessos-clinicos-${startDate}-to-${endDate}.pdf`);
     toast.success("PDF exportado");
   };
 

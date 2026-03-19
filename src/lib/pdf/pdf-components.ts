@@ -11,16 +11,13 @@
  *  - SummaryCards      → cards de resumo (receitas/despesas/saldo)
  *  - DigitalSealBlock  → selo de assinatura digital + QR Code
  */
-import jsPDF from "jspdf";
 import autoTable, { type UserOptions } from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   FONT,
   COLORS,
-  PAGE,
   drawLine,
-  hexToRgb,
   type RGB,
 } from "./pdf-design-system";
 import type { BasePremiumPDFLayout } from "./base-premium-layout";

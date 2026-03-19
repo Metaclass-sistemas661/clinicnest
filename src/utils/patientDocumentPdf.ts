@@ -1,23 +1,25 @@
-import jsPDF from "jspdf";
+/**
+ * ClinicNest — Geradores de PDF Clínicos (Premium)
+ *
+ * Todos utilizam o Motor Universal (BasePremiumPDFLayout) para
+ * garantir header, watermark, footer e design premium padronizado.
+ */
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { generateQRCodeDataUrl, getVerificationUrl } from "@/components/signature/DocumentQRCode";
 import { logger } from "@/lib/logger";
-
-const MARGIN = 20;
-const PAGE_W = 210;
-const PAGE_H = 297;
-const CONTENT_W = PAGE_W - MARGIN * 2;
-
-// ─── Helpers para conversão de cor hex → RGB ────────────────
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  return [
-    parseInt(h.substring(0, 2), 16),
-    parseInt(h.substring(2, 4), 16),
-    parseInt(h.substring(4, 6), 16),
-  ];
-}
+import {
+  BasePremiumPDFLayout,
+  FONT,
+  COLORS,
+  drawLine,
+  renderField,
+  renderPatientInfoBox,
+  renderSignatureBlock,
+  renderDigitalSeal,
+  renderSoapSection,
+  renderVitalsGrid,
+} from "@/lib/pdf";
 
 // ─── Cores por tipo de documento ────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
@@ -27,38 +29,22 @@ const TYPE_COLORS: Record<string, string> = {
   relatorio: "#7c3aed",
 };
 
-// ─── Carrega imagem de URL como base64 para jsPDF ───────────
-async function loadImageAsBase64(url: string): Promise<string | null> {
+async function safeQrDataUrl(hash: string): Promise<string | null> {
+  try { return await generateQRCodeDataUrl(hash, 80); }
+  catch (e) { logger.error("Error generating QR code for PDF:", e); return null; }
+}
+
+async function generateContentHash(content: string): Promise<string> {
   try {
-    const res = await fetch(url, { mode: "cors" });
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+    const data = new TextEncoder().encode(content);
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 40);
+  } catch { return btoa(content).substring(0, 40); }
 }
 
-function addField(doc: jsPDF, label: string, value: string, y: number): number {
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(100, 100, 100);
-  doc.text(label.toUpperCase(), MARGIN, y);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(30, 30, 30);
-  const lines = doc.splitTextToSize(value || "—", CONTENT_W);
-  doc.text(lines, MARGIN, y + 5);
-
-  return y + 5 + lines.length * 4.5 + 4;
-}
-
-// ─── Atestados / Laudos ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Atestados / Declarações / Laudos / Relatórios
+// ══════════════════════════════════════════════════════════════
 
 interface CertificateData {
   certificate_type: string;
@@ -96,319 +82,96 @@ function certTypeLabel(t: string): string {
   }
 }
 
-/**
- * Desenha o cabeçalho profissional com logo, nome da clínica, dados e faixa colorida.
- * Retorna a posição Y após o cabeçalho.
- */
-async function addProfessionalHeader(
-  doc: jsPDF,
-  cert: CertificateData,
-  accentColor: string,
-): Promise<number> {
-  const [r, g, b] = hexToRgb(accentColor);
-  let y = MARGIN;
-
-  // ── Logo + Nome da clínica (lado a lado) ──
-  let logoEndX = MARGIN;
-  if (cert.logo_url) {
-    try {
-      const logoB64 = await loadImageAsBase64(cert.logo_url);
-      if (logoB64) {
-        doc.addImage(logoB64, "PNG", MARGIN, y - 2, 18, 18);
-        logoEndX = MARGIN + 22;
-      }
-    } catch {
-      // sem logo — segue sem imagem
-    }
-  }
-
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(r, g, b);
-  doc.text(cert.clinic_name || "Clínica", logoEndX, y + 5);
-
-  // Subtitle: endereço · telefone · CNPJ · email
-  const infoParts: string[] = [];
-  if (cert.clinic_address) infoParts.push(cert.clinic_address);
-  if (cert.clinic_phone) infoParts.push(`Tel: ${cert.clinic_phone}`);
-  if (cert.clinic_cnpj) infoParts.push(`CNPJ: ${cert.clinic_cnpj}`);
-  if (cert.clinic_email) infoParts.push(cert.clinic_email);
-  if (infoParts.length > 0) {
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(110, 110, 110);
-    const infoLines = doc.splitTextToSize(infoParts.join("  ·  "), CONTENT_W - (logoEndX - MARGIN));
-    doc.text(infoLines, logoEndX, y + 10);
-    y += 10 + infoLines.length * 3;
-  } else {
-    y += 12;
-  }
-
-  y = Math.max(y, MARGIN + 18);
-
-  // ── Linha separadora sutil ──
-  y += 3;
-  doc.setDrawColor(r, g, b);
-  doc.setLineWidth(0.6);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-  doc.setLineWidth(0.2);
-
-  return y + 4;
-}
-
-/**
- * Desenha a marca-d'água centralizada com o nome da clínica em diagonal.
- */
-function addWatermark(doc: jsPDF, clinicName: string, accentColor: string) {
-  const [r, g, b] = hexToRgb(accentColor);
-  // @ts-expect-error — GState é suportado pelo jsPDF mas tipos podem não estar declarados
-  const gs = new doc.GState({ opacity: 0.07 });
-  doc.saveGraphicsState();
-  doc.setGState(gs);
-  doc.setFontSize(54);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(r, g, b);
-
-  // Texto centralizado e rotacionado -35°
-  const cx = PAGE_W / 2;
-  const cy = PAGE_H / 2;
-  doc.text(clinicName.toUpperCase(), cx, cy, {
-    align: "center",
-    angle: -35,
-  });
-
-  doc.restoreGraphicsState();
-}
-
-/**
- * Rodapé profissional com cor do tipo de documento.
- */
-function addProfessionalFooter(doc: jsPDF, accentColor: string) {
-  const [r, g, b] = hexToRgb(accentColor);
-  const y = PAGE_H - 18;
-
-  doc.setDrawColor(r, g, b);
-  doc.setLineWidth(0.4);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-  doc.setLineWidth(0.2);
-
-  doc.setFontSize(7);
-  doc.setTextColor(130, 130, 130);
-  doc.text(
-    `Documento gerado digitalmente em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
-    MARGIN,
-    y + 5,
-  );
-  doc.text(
-    "Este documento não substitui o original assinado pelo profissional de saúde.",
-    MARGIN,
-    y + 9,
-  );
-
-  // Faixa fina de cor na base
-  doc.setFillColor(r, g, b);
-  doc.rect(0, PAGE_H - 3, PAGE_W, 3, "F");
-}
-
 export async function generateCertificatePdf(cert: CertificateData) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
   const title = certTypeLabel(cert.certificate_type);
   const accentColor = TYPE_COLORS[cert.certificate_type] || "#2563eb";
-  const [ar, ag, ab] = hexToRgb(accentColor);
 
-  // ── Marca-d'água ──
-  addWatermark(doc, cert.clinic_name, accentColor);
-
-  // ── Cabeçalho profissional com logo ──
-  let y = await addProfessionalHeader(doc, cert, accentColor);
-
-  // ── Faixa com tipo de documento ──
-  doc.setFillColor(ar, ag, ab);
-  doc.roundedRect(MARGIN, y, CONTENT_W, 9, 1.5, 1.5, "F");
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(255, 255, 255);
-  doc.text(title.toUpperCase(), PAGE_W / 2, y + 6.3, { align: "center" });
-  y += 14;
+  const layout = new BasePremiumPDFLayout(
+    {
+      name: cert.clinic_name || "Clínica",
+      cnpj: cert.clinic_cnpj,
+      address: cert.clinic_address,
+      phone: cert.clinic_phone,
+      email: cert.clinic_email,
+      logoUrl: cert.logo_url,
+    },
+    { title, accentColor },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
   // ── Dados do paciente ──
   if (cert.patient_name) {
-    // Borda lateral colorida
-    doc.setFillColor(ar, ag, ab);
-    const patientBoxH = (cert.patient_cpf || cert.patient_birth_date) ? 18 : 12;
-    doc.rect(MARGIN, y - 2, 1.2, patientBoxH, "F");
-
-    doc.setFillColor(248, 250, 252);
-    doc.rect(MARGIN + 1.2, y - 2, CONTENT_W - 1.2, patientBoxH, "F");
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(ar, ag, ab);
-    doc.text("PACIENTE", MARGIN + 4, y + 3);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(10);
-    doc.text(cert.patient_name, MARGIN + 26, y + 3);
-
-    if (cert.patient_cpf || cert.patient_birth_date) {
-      const patientDetails: string[] = [];
-      if (cert.patient_cpf) patientDetails.push(`CPF: ${cert.patient_cpf}`);
-      if (cert.patient_birth_date) {
-        patientDetails.push(`Nascimento: ${format(new Date(cert.patient_birth_date), "dd/MM/yyyy")}`);
-      }
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(patientDetails.join("     "), MARGIN + 26, y + 9);
-    }
-    y += patientBoxH + 4;
+    y = renderPatientInfoBox(layout, {
+      name: cert.patient_name,
+      cpf: cert.patient_cpf,
+      birthDate: cert.patient_birth_date,
+    }, y);
   }
 
   // ── Campos ──
-  y = addField(doc, "Data de Emissão",
-    format(new Date(cert.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y);
+  y = renderField(doc, "Data de Emissão",
+    format(new Date(cert.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y, m, layout.contentW);
 
   if (cert.days_off != null && cert.days_off > 0) {
     let afastamento = `${cert.days_off} dia(s)`;
     if (cert.start_date && cert.end_date) {
       afastamento += ` — de ${format(new Date(cert.start_date), "dd/MM/yyyy")} a ${format(new Date(cert.end_date), "dd/MM/yyyy")}`;
     }
-    y = addField(doc, "Período de Afastamento", afastamento, y);
+    y = renderField(doc, "Período de Afastamento", afastamento, y, m, layout.contentW);
   }
 
   if (cert.cid_code) {
-    y = addField(doc, "CID-10", cert.cid_code + " (com autorização do paciente)", y);
+    y = renderField(doc, "CID-10", cert.cid_code + " (com autorização do paciente)", y, m, layout.contentW);
   }
 
-  // ── Separador ──
+  // ── Separador + conteúdo ──
   y += 2;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  drawLine(doc, y, COLORS.BORDER, m, layout.contentW);
   y += 6;
 
-  // ── Conteúdo principal ──
-  y = addField(doc, "Conteúdo", cert.content, y);
-
+  y = renderField(doc, "Conteúdo", cert.content, y, m, layout.contentW);
   if (cert.notes) {
-    y = addField(doc, "Observações", cert.notes, y);
+    y = renderField(doc, "Observações", cert.notes, y, m, layout.contentW);
   }
 
-  // ── Área de assinatura ──
-  y = Math.max(y, PAGE_H - 75);
-  y += 5;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-  y += 8;
+  // ── Assinatura profissional ──
+  y = renderSignatureBlock(layout, {
+    professionalName: cert.professional_name,
+    councilNumber: cert.professional_crm,
+    councilState: cert.professional_uf,
+    specialty: cert.professional_specialty,
+  }, y);
 
-  const sigX = PAGE_W / 2;
-  doc.setDrawColor(ar, ag, ab);
-  doc.setLineWidth(0.4);
-  doc.line(sigX - 40, y + 15, sigX + 40, y + 15);
-  doc.setLineWidth(0.2);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30, 30, 30);
-  doc.text(cert.professional_name, sigX, y + 21, { align: "center" });
-
-  if (cert.professional_crm) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    const crmText = cert.professional_uf
-      ? `${cert.professional_crm}/${cert.professional_uf}`
-      : cert.professional_crm;
-    doc.text(crmText, sigX, y + 26, { align: "center" });
-  }
-
-  if (cert.professional_specialty) {
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text(cert.professional_specialty, sigX, y + 31, { align: "center" });
-  }
-
-  // ── QR Code de verificação (sempre presente) ──
-  y += 40;
-
-  if (cert.digital_signature && cert.signed_at) {
-    // Documento assinado digitalmente — selo verde
-    doc.setFillColor(240, 253, 244);
-    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
-
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(22, 163, 74);
-    doc.text("✓ DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 3);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Assinado em: ${format(new Date(cert.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN + 3, y + 8);
-
-    doc.setFontSize(5);
-    doc.text(`Hash: ${cert.digital_signature}`, MARGIN + 3, y + 11);
-
-    doc.setFontSize(6);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Escaneie o QR Code para verificar a autenticidade:", MARGIN + 3, y + 16);
-    doc.setTextColor(ar, ag, ab);
-    doc.text(getVerificationUrl(cert.digital_signature), MARGIN + 3, y + 20);
-
-    try {
-      const qrDataUrl = await generateQRCodeDataUrl(cert.digital_signature, 80);
-      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 24, y - 2, 24, 24);
-    } catch (e) {
-      logger.error("Error generating QR code for PDF:", e);
-    }
+  // ── Selo digital / QR ──
+  if (cert.digital_signature) {
+    const qr = await safeQrDataUrl(cert.digital_signature);
+    y = renderDigitalSeal(layout, {
+      hash: cert.digital_signature,
+      signedAt: cert.signed_at,
+      qrDataUrl: qr,
+      verificationUrl: getVerificationUrl(cert.digital_signature),
+    }, y);
   } else {
-    // Documento ainda não assinado — gera hash do conteúdo para rastreabilidade
-    const contentForHash = `${cert.certificate_type}|${cert.patient_name || ""}|${cert.content}|${cert.issued_at}|${cert.professional_name}`;
-    let docHash: string;
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(contentForHash);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      docHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("").substring(0, 40);
-    } catch {
-      docHash = btoa(contentForHash).substring(0, 40);
-    }
-
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
-
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(ar, ag, ab);
-    doc.text("DOCUMENTO IDENTIFICADO DIGITALMENTE", MARGIN + 3, y + 3);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Emitido em: ${format(new Date(cert.issued_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN + 3, y + 8);
-
-    doc.setFontSize(5);
-    doc.text(`ID: ${docHash}`, MARGIN + 3, y + 11);
-
-    doc.setFontSize(6);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Escaneie para verificar:", MARGIN + 3, y + 16);
-    doc.setTextColor(ar, ag, ab);
-    doc.text(getVerificationUrl(docHash), MARGIN + 3, y + 20);
-
-    try {
-      const qrDataUrl = await generateQRCodeDataUrl(docHash, 80);
-      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 24, y - 2, 24, 24);
-    } catch (e) {
-      logger.error("Error generating QR code for PDF:", e);
-    }
+    const hashContent = `${cert.certificate_type}|${cert.patient_name || ""}|${cert.content}|${cert.issued_at}|${cert.professional_name}`;
+    const docHash = await generateContentHash(hashContent);
+    const qr = await safeQrDataUrl(docHash);
+    y = renderDigitalSeal(layout, {
+      hash: docHash,
+      qrDataUrl: qr,
+      verificationUrl: getVerificationUrl(docHash),
+    }, y);
   }
-
-  // ── Rodapé profissional ──
-  addProfessionalFooter(doc, accentColor);
 
   const filename = `${title.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(cert.issued_at), "yyyy-MM-dd")}.pdf`;
-  doc.save(filename);
+  layout.finalize(filename);
 }
 
-// ─── Receitas ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Receitas Médicas
+// ══════════════════════════════════════════════════════════════
 
 interface PrescriptionData {
   prescription_type: string;
@@ -438,103 +201,65 @@ function rxTypeLabel(t: string): string {
 }
 
 export async function generatePrescriptionPdf(rx: PrescriptionData) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
   const title = rxTypeLabel(rx.prescription_type);
 
-  addHeader(doc, rx.clinic_name, rx.professional_name);
+  const layout = new BasePremiumPDFLayout(
+    { name: rx.clinic_name },
+    { title, accentColor: "#0d9488" },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
-  let y = 40;
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(13, 148, 136);
-  doc.text(title, MARGIN, y);
-  y += 10;
-
-  y = addField(doc, "Data de Emissão",
-    format(new Date(rx.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y);
+  y = renderField(doc, "Data de Emissão",
+    format(new Date(rx.issued_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y, m, layout.contentW);
 
   if (rx.validity_days) {
     let validade = `${rx.validity_days} dias`;
-    if (rx.expires_at) {
-      validade += ` — válida até ${format(new Date(rx.expires_at), "dd/MM/yyyy")}`;
-    }
-    y = addField(doc, "Validade", validade, y);
+    if (rx.expires_at) validade += ` — válida até ${format(new Date(rx.expires_at), "dd/MM/yyyy")}`;
+    y = renderField(doc, "Validade", validade, y, m, layout.contentW);
   }
 
   if (rx.patient_name) {
-    y = addField(doc, "Paciente", rx.patient_name + (rx.patient_cpf ? ` (CPF: ${rx.patient_cpf})` : ""), y);
+    y = renderPatientInfoBox(layout, {
+      name: rx.patient_name,
+      cpf: rx.patient_cpf,
+    }, y);
   }
 
-  y += 2;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  drawLine(doc, y, COLORS.BORDER, m, layout.contentW);
   y += 6;
 
-  y = addField(doc, "Medicamentos", rx.medications, y);
-
+  y = renderField(doc, "Medicamentos", rx.medications, y, m, layout.contentW);
   if (rx.instructions) {
-    y = addField(doc, "Instruções de Uso", rx.instructions, y);
+    y = renderField(doc, "Instruções de Uso", rx.instructions, y, m, layout.contentW);
   }
 
-  y += 10;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-  y += 8;
+  // ── Assinatura ──
+  y = renderSignatureBlock(layout, {
+    professionalName: rx.professional_name,
+    councilNumber: rx.professional_crm,
+    councilState: rx.professional_uf,
+  }, y);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(60, 60, 60);
-  doc.text(rx.professional_name, PAGE_W / 2, y, { align: "center" });
-  y += 5;
-
-  if (rx.professional_crm) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const crmText = rx.professional_uf 
-      ? `CRM: ${rx.professional_crm}/${rx.professional_uf}` 
-      : `CRM: ${rx.professional_crm}`;
-    doc.text(crmText, PAGE_W / 2, y, { align: "center" });
-    y += 5;
+  // ── Selo digital ──
+  if (rx.digital_hash) {
+    const qr = await safeQrDataUrl(rx.digital_hash);
+    y = renderDigitalSeal(layout, {
+      hash: rx.digital_hash,
+      signedAt: rx.signed_at,
+      qrDataUrl: qr,
+      verificationUrl: getVerificationUrl(rx.digital_hash),
+    }, y);
   }
 
-  if (rx.signed_at && rx.digital_hash) {
-    y += 5;
-    doc.setFillColor(240, 253, 244);
-    doc.roundedRect(MARGIN, y, PAGE_W - 2 * MARGIN, 28, 2, 2, "F");
-    
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(22, 163, 74);
-    doc.text("DOCUMENTO ASSINADO DIGITALMENTE", MARGIN + 3, y + 5);
-    
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Assinado em: ${format(new Date(rx.signed_at), "dd/MM/yyyy 'às' HH:mm")}`, MARGIN + 3, y + 10);
-    doc.setFontSize(5);
-    doc.text(`Hash: ${rx.digital_hash.substring(0, 48)}...`, MARGIN + 3, y + 14);
-    
-    doc.setFontSize(6);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Verifique a autenticidade:", MARGIN + 3, y + 19);
-    doc.setTextColor(13, 148, 136);
-    doc.text(getVerificationUrl(rx.digital_hash), MARGIN + 3, y + 23);
-    
-    try {
-      const qrDataUrl = await generateQRCodeDataUrl(rx.digital_hash, 60);
-      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y + 2, 20, 20);
-    } catch (e) {
-      logger.error("Error generating QR code for PDF:", e);
-    }
-  }
-
-  addFooter(doc);
-
-  const filename = `receita_${rx.prescription_type}_${format(new Date(rx.issued_at), "yyyy-MM-dd")}.pdf`;
-  doc.save(filename);
+  layout.finalize(`receita_${rx.prescription_type}_${format(new Date(rx.issued_at), "yyyy-MM-dd")}.pdf`);
 }
 
-// ─── Exames / Laudos ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Exames
+// ══════════════════════════════════════════════════════════════
 
 interface ExamData {
   exam_name: string;
@@ -556,52 +281,39 @@ function examStatusLabel(s: string): string {
   }
 }
 
-export function generateExamPdf(exam: ExamData) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+export async function generateExamPdf(exam: ExamData) {
+  const layout = new BasePremiumPDFLayout(
+    { name: exam.clinic_name },
+    { title: exam.exam_name || "Resultado de Exame", accentColor: "#0d9488" },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
-  addHeader(doc, exam.clinic_name, exam.requested_by_name);
-
-  let y = 40;
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(13, 148, 136);
-  doc.text(exam.exam_name || "Resultado de Exame", MARGIN, y);
-  y += 10;
-
-  y = addField(doc, "Tipo de Exame", exam.exam_type || "—", y);
-
+  y = renderField(doc, "Tipo de Exame", exam.exam_type || "—", y, m, layout.contentW);
   if (exam.performed_at) {
-    y = addField(doc, "Data de Realização",
-      format(new Date(exam.performed_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y);
+    y = renderField(doc, "Data de Realização",
+      format(new Date(exam.performed_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }), y, m, layout.contentW);
   }
+  if (exam.lab_name) y = renderField(doc, "Laboratório", exam.lab_name, y, m, layout.contentW);
+  y = renderField(doc, "Status", examStatusLabel(exam.status), y, m, layout.contentW);
+  if (exam.requested_by_name) y = renderField(doc, "Solicitado por", exam.requested_by_name, y, m, layout.contentW);
 
-  if (exam.lab_name) {
-    y = addField(doc, "Laboratório", exam.lab_name, y);
-  }
-
-  y = addField(doc, "Status", examStatusLabel(exam.status), y);
-
-  if (exam.requested_by_name) {
-    y = addField(doc, "Solicitado por", exam.requested_by_name, y);
-  }
-
-  y += 2;
-  doc.setDrawColor(220, 220, 220);
-  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  drawLine(doc, y, COLORS.BORDER, m, layout.contentW);
   y += 6;
 
   if (exam.interpretation) {
-    y = addField(doc, "Interpretação / Resultado", exam.interpretation, y);
+    y = renderField(doc, "Interpretação / Resultado", exam.interpretation, y, m, layout.contentW);
   }
 
-  addFooter(doc);
-
   const filename = `exame_${(exam.exam_name || "resultado").toLowerCase().replace(/\s+/g, "_")}_${exam.performed_at ? format(new Date(exam.performed_at), "yyyy-MM-dd") : "sem_data"}.pdf`;
-  doc.save(filename);
+  layout.finalize(filename);
 }
 
-// ─── Prontuário Médico ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Prontuário Médico
+// ══════════════════════════════════════════════════════════════
 
 interface MedicalRecordPdfData {
   client_name: string;
@@ -635,37 +347,24 @@ interface MedicalRecordPdfData {
   signed_by_uf?: string | null;
 }
 
-function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
-  const pageH = doc.internal.pageSize.getHeight();
-  if (y + needed > pageH - 25) {
-    doc.addPage();
-    return 15;
-  }
-  return y;
-}
-
 export async function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pageH = doc.internal.pageSize.getHeight();
+  const layout = new BasePremiumPDFLayout(
+    { name: r.clinic_name },
+    { title: "Prontuário Médico", accentColor: "#0d9488" },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
-  addHeader(doc, r.clinic_name, r.professional_name);
+  y = renderPatientInfoBox(layout, { name: r.client_name }, y);
 
-  let y = 40;
+  doc.setFontSize(FONT.SMALL);
+  doc.setFont(FONT.FAMILY, "normal");
+  doc.setTextColor(...COLORS.TEXT_SECONDARY);
+  doc.text(`Data: ${format(new Date(r.record_date), "dd/MM/yyyy", { locale: ptBR })}`, layout.pageW - m, y - 2, { align: "right" });
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(13, 148, 136);
-  doc.text("Prontuário Médico", MARGIN, y);
-  y += 8;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(80, 80, 80);
-  doc.text(`Paciente: ${r.client_name}`, MARGIN, y);
-  doc.text(`Data: ${format(new Date(r.record_date), "dd/MM/yyyy", { locale: ptBR })}`, PAGE_W - MARGIN, y, { align: "right" });
-  y += 8;
-
-  // Sinais vitais em grid compacto
+  // ── Sinais vitais ──
   const vitals: string[] = [];
   if (r.blood_pressure_systolic != null) vitals.push(`PA: ${r.blood_pressure_systolic}/${r.blood_pressure_diastolic} mmHg`);
   if (r.heart_rate != null) vitals.push(`FC: ${r.heart_rate} bpm`);
@@ -675,101 +374,51 @@ export async function generateMedicalRecordPdf(r: MedicalRecordPdfData) {
   if (r.weight_kg != null) vitals.push(`Peso: ${r.weight_kg} kg`);
   if (r.height_cm != null) vitals.push(`Alt: ${r.height_cm} cm`);
   if (r.pain_scale != null) vitals.push(`Dor: ${r.pain_scale}/10`);
+  y = renderVitalsGrid(layout, vitals, y);
 
-  if (vitals.length > 0) {
-    doc.setFillColor(245, 247, 250);
-    doc.roundedRect(MARGIN, y - 3, CONTENT_W, 12, 2, 2, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(60, 60, 60);
-    doc.text("SINAIS VITAIS", MARGIN + 3, y + 2);
-    doc.setFont("helvetica", "normal");
-    doc.text(vitals.join("  ·  "), MARGIN + 32, y + 2);
-    y += 14;
+  const fields: [string, string][] = [
+    ["Alergias", r.allergies],
+    ["Medicamentos em Uso", r.current_medications],
+    ["Histórico Médico", r.medical_history],
+    ["Queixa Principal", r.chief_complaint],
+    ["Anamnese", r.anamnesis],
+    ["Exame Físico", r.physical_exam],
+  ];
+  for (const [label, value] of fields) {
+    if (!value) continue;
+    y = layout.ensureSpace(y, 15);
+    y = renderField(doc, label, value, y, m, layout.contentW);
   }
-
-  if (r.allergies) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Alergias", r.allergies, y); }
-  if (r.current_medications) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Medicamentos em Uso", r.current_medications, y); }
-  if (r.medical_history) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Histórico Médico", r.medical_history, y); }
-
-  y = checkPageBreak(doc, y, 12);
-  y = addField(doc, "Queixa Principal", r.chief_complaint, y);
-
-  if (r.anamnesis) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Anamnese", r.anamnesis, y); }
-  if (r.physical_exam) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Exame Físico", r.physical_exam, y); }
 
   if (r.diagnosis || r.cid_code) {
-    y = checkPageBreak(doc, y, 12);
+    y = layout.ensureSpace(y, 12);
     const diag = [r.diagnosis, r.cid_code ? `CID-10: ${r.cid_code}` : ""].filter(Boolean).join(" — ");
-    y = addField(doc, "Diagnóstico", diag, y);
+    y = renderField(doc, "Diagnóstico", diag, y, m, layout.contentW);
   }
 
-  if (r.treatment_plan) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Plano Terapêutico", r.treatment_plan, y); }
-  if (r.prescriptions) { y = checkPageBreak(doc, y, 15); y = addField(doc, "Prescrições", r.prescriptions, y); }
-  if (r.notes) { y = checkPageBreak(doc, y, 12); y = addField(doc, "Observações", r.notes, y); }
+  if (r.treatment_plan) { y = layout.ensureSpace(y, 15); y = renderField(doc, "Plano Terapêutico", r.treatment_plan, y, m, layout.contentW); }
+  if (r.prescriptions) { y = layout.ensureSpace(y, 15); y = renderField(doc, "Prescrições", r.prescriptions, y, m, layout.contentW); }
+  if (r.notes) { y = layout.ensureSpace(y, 12); y = renderField(doc, "Observações", r.notes, y, m, layout.contentW); }
 
-  // Assinatura digital com QR Code (somente com certificado ICP)
-  if (r.digital_hash && r.signed_at && r.signed_by_name) {
-    y = checkPageBreak(doc, y, 35);
-    y += 5;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-    y += 6;
-
-    doc.setFillColor(240, 253, 244);
-    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 28, 2, 2, "F");
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(13, 148, 136);
-    doc.text("ASSINATURA DIGITAL", MARGIN + 3, y + 3);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    const crmText = r.signed_by_crm 
-      ? (r.signed_by_uf ? `${r.signed_by_crm}/${r.signed_by_uf}` : r.signed_by_crm)
-      : "";
-    if (r.signed_by_name) doc.text(`Profissional: ${r.signed_by_name}${crmText ? ` — ${crmText}` : ""}`, MARGIN + 3, y + 8);
-    doc.text(`Assinado em: ${format(new Date(r.signed_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}`, MARGIN + 3, y + 12);
-    
-    doc.setFontSize(5);
-    doc.setTextColor(140, 140, 140);
-    doc.text(`SHA-256: ${r.digital_hash}`, MARGIN + 3, y + 16);
-    
-    doc.setFontSize(6);
-    doc.setTextColor(80, 80, 80);
-    doc.text("Verifique:", MARGIN + 3, y + 21);
-    doc.setTextColor(13, 148, 136);
-    doc.text(getVerificationUrl(r.digital_hash), MARGIN + 18, y + 21);
-    
-    try {
-      const qrDataUrl = await generateQRCodeDataUrl(r.digital_hash, 60);
-      doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 22, y, 20, 20);
-    } catch (e) {
-      logger.error("Error generating QR code for PDF:", e);
-    }
-  } else if (r.digital_hash && !r.signed_at) {
-    // Hash de integridade apenas (sem certificado)
-    y = checkPageBreak(doc, y, 15);
-    y += 5;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-    y += 6;
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(140, 140, 140);
-    doc.text("Registro de integridade", MARGIN + 3, y + 3);
-    doc.setFontSize(5);
-    doc.text(`SHA-256: ${r.digital_hash}`, MARGIN + 3, y + 7);
+  if (r.digital_hash) {
+    const qr = await safeQrDataUrl(r.digital_hash);
+    y = renderDigitalSeal(layout, {
+      hash: r.digital_hash,
+      signedAt: r.signed_at,
+      signerName: r.signed_by_name,
+      signerCrm: r.signed_by_crm,
+      signerUf: r.signed_by_uf,
+      qrDataUrl: qr,
+      verificationUrl: getVerificationUrl(r.digital_hash),
+    }, y);
   }
 
-  addFooter(doc);
-
-  const filename = `prontuario_${r.client_name.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(r.record_date), "yyyy-MM-dd")}.pdf`;
-  doc.save(filename);
+  layout.finalize(`prontuario_${r.client_name.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(r.record_date), "yyyy-MM-dd")}.pdf`);
 }
 
-// ── Evolution SOAP PDF ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// Evolução Clínica (SOAP)
+// ══════════════════════════════════════════════════════════════
 
 interface EvolutionPdfData {
   clinicName: string;
@@ -791,135 +440,58 @@ interface EvolutionPdfData {
 }
 
 export async function generateEvolutionPdf(e: EvolutionPdfData) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pageH = doc.internal.pageSize.getHeight();
+  const layout = new BasePremiumPDFLayout(
+    { name: e.clinicName },
+    { title: "Evolução Clínica (SOAP)", accentColor: "#7c3aed", subtitle: `${e.evolutionType} — ${format(new Date(e.evolutionDate), "dd/MM/yyyy", { locale: ptBR })}` },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
-  addHeader(doc, e.clinicName, e.professionalName);
+  y = renderPatientInfoBox(layout, { name: e.patientName }, y);
 
-  let y = 38;
-
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Evolução Clínica (SOAP)", MARGIN, y);
-  y += 7;
-
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Tipo: ${e.evolutionType}`, MARGIN, y);
-  y += 5;
-  doc.text(`Data: ${format(new Date(e.evolutionDate), "dd/MM/yyyy", { locale: ptBR })}`, MARGIN, y);
-  y += 5;
-  doc.text(`Paciente: ${e.patientName}`, MARGIN, y);
-  y += 8;
-
-  doc.setTextColor(0, 0, 0);
-
-  const soapSections: Array<{ label: string; code: string; value: string | null; color: [number, number, number] }> = [
-    { label: "SUBJETIVO", code: "S", value: e.subjective, color: [59, 130, 246] },
-    { label: "OBJETIVO", code: "O", value: e.objective, color: [16, 185, 129] },
-    { label: "AVALIAÇÃO", code: "A", value: e.assessment, color: [245, 158, 11] },
-    { label: "PLANO", code: "P", value: e.plan, color: [139, 92, 246] },
-  ];
-
-  for (const s of soapSections) {
-    if (!s.value) continue;
-    if (y > pageH - 40) { doc.addPage(); y = 20; }
-
-    doc.setFillColor(...s.color);
-    doc.roundedRect(MARGIN, y - 4, 8, 8, 1, 1, "F");
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text(s.code, MARGIN + 2.8, y + 1.5);
-
-    doc.setTextColor(s.color[0], s.color[1], s.color[2]);
-    doc.setFontSize(9);
-    doc.text(s.label, MARGIN + 11, y + 1);
-    y += 7;
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    const lines = doc.splitTextToSize(s.value, CONTENT_W);
-    for (const line of lines) {
-      if (y > pageH - 25) { doc.addPage(); y = 20; }
-      doc.text(line, MARGIN, y);
-      y += 5;
-    }
-    y += 4;
-  }
+  if (e.subjective) y = renderSoapSection(layout, "S", e.subjective, y);
+  if (e.objective) y = renderSoapSection(layout, "O", e.objective, y);
+  if (e.assessment) y = renderSoapSection(layout, "A", e.assessment, y);
+  if (e.plan) y = renderSoapSection(layout, "P", e.plan, y);
 
   if (e.cidCode) {
-    if (y > pageH - 30) { doc.addPage(); y = 20; }
-    y = addField(doc, "CID-10", e.cidCode, y);
+    y = layout.ensureSpace(y, 12);
+    y = renderField(doc, "CID-10", e.cidCode, y, m, layout.contentW);
   }
   if (e.notes) {
-    if (y > pageH - 30) { doc.addPage(); y = 20; }
-    y = addField(doc, "Observações", e.notes, y);
+    y = layout.ensureSpace(y, 12);
+    y = renderField(doc, "Observações", e.notes, y, m, layout.contentW);
   }
 
-  if (e.signedByName && e.signedAt) {
-    // Assinatura digital real (ICP-Brasil)
-    if (y > pageH - 45) { doc.addPage(); y = 20; }
-    y += 5;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(MARGIN, y, MARGIN + 70, y);
-    y += 5;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text(e.signedByName, MARGIN, y);
-    if (e.signedByCrm) {
-      y += 4;
-      doc.setFont("helvetica", "normal");
-      const crmText = e.signedByUf ? `CRM: ${e.signedByCrm}/${e.signedByUf}` : `CRM: ${e.signedByCrm}`;
-      doc.text(crmText, MARGIN, y);
-    }
-    y += 4;
-    doc.setFontSize(7);
-    doc.setTextColor(140, 140, 140);
-    doc.text(`Assinado em: ${format(new Date(e.signedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, MARGIN, y);
-    if (e.digitalHash) {
-      y += 6;
-      doc.setFillColor(240, 253, 244);
-      doc.roundedRect(MARGIN, y - 2, CONTENT_W, 22, 2, 2, "F");
-      
-      doc.setFontSize(6);
-      doc.setTextColor(140, 140, 140);
-      doc.text(`SHA-256: ${e.digitalHash}`, MARGIN + 3, y + 3);
-      
-      doc.setFontSize(6);
-      doc.setTextColor(80, 80, 80);
-      doc.text("Verifique a autenticidade:", MARGIN + 3, y + 8);
-      doc.setTextColor(13, 148, 136);
-      doc.text(getVerificationUrl(e.digitalHash), MARGIN + 3, y + 12);
-      
-      try {
-        const qrDataUrl = await generateQRCodeDataUrl(e.digitalHash, 50);
-        doc.addImage(qrDataUrl, "PNG", PAGE_W - MARGIN - 18, y - 1, 16, 16);
-      } catch (err) {
-        logger.error("Error generating QR code for PDF:", err);
-      }
-    }
-  } else if (e.digitalHash && !e.signedAt) {
-    // Apenas hash de integridade (sem certificado)
-    if (y > pageH - 25) { doc.addPage(); y = 20; }
-    y += 5;
-    doc.setFillColor(245, 245, 245);
-    doc.roundedRect(MARGIN, y - 2, CONTENT_W, 14, 2, 2, "F");
-    doc.setFontSize(6);
-    doc.setTextColor(140, 140, 140);
-    doc.text("Registro de integridade (sem assinatura digital)", MARGIN + 3, y + 3);
-    doc.text(`SHA-256: ${e.digitalHash}`, MARGIN + 3, y + 7);
+  if (e.signedByName) {
+    y = renderSignatureBlock(layout, {
+      professionalName: e.signedByName,
+      councilNumber: e.signedByCrm,
+      councilState: e.signedByUf,
+    }, y);
   }
 
-  addFooter(doc);
+  if (e.digitalHash) {
+    const qr = await safeQrDataUrl(e.digitalHash);
+    y = renderDigitalSeal(layout, {
+      hash: e.digitalHash,
+      signedAt: e.signedAt,
+      signerName: e.signedByName,
+      signerCrm: e.signedByCrm,
+      signerUf: e.signedByUf,
+      qrDataUrl: qr,
+      verificationUrl: getVerificationUrl(e.digitalHash),
+    }, y);
+  }
 
-  const filename = `evolucao_${e.patientName.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(e.evolutionDate), "yyyy-MM-dd")}.pdf`;
-  doc.save(filename);
+  layout.finalize(`evolucao_${e.patientName.toLowerCase().replace(/\s+/g, "_")}_${format(new Date(e.evolutionDate), "yyyy-MM-dd")}.pdf`);
 }
 
-// ─── Laudos Médicos (Medical Reports) ──────────────────────
+// ══════════════════════════════════════════════════════════════
+// Laudos Médicos (Medical Reports)
+// ══════════════════════════════════════════════════════════════
 
 interface MedicalReportPdfInput {
   tipo: string;
@@ -938,42 +510,29 @@ interface MedicalReportPdfInput {
 
 function reportTypeLabel(t: string): string {
   switch (t) {
-    case "laudo_medico":       return "Laudo Médico";
-    case "laudo_pericial":     return "Laudo Pericial";
-    case "parecer_tecnico":    return "Parecer Técnico";
-    case "relatorio_medico":   return "Relatório Médico";
+    case "laudo_medico": return "Laudo Médico";
+    case "laudo_pericial": return "Laudo Pericial";
+    case "parecer_tecnico": return "Parecer Técnico";
+    case "relatorio_medico": return "Relatório Médico";
     case "laudo_complementar": return "Laudo Complementar";
-    default:                    return t?.replace(/_/g, " ") ?? "Laudo Médico";
+    default: return t?.replace(/_/g, " ") ?? "Laudo Médico";
   }
 }
 
 export async function generateMedicalReportPdf(r: MedicalReportPdfInput) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pageH = doc.internal.pageSize.getHeight();
-
-  addHeader(doc, r.clinic_name, r.professional_name);
-
-  let y = 38;
-
-  // Title
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(13, 148, 136);
-  doc.text(reportTypeLabel(r.tipo), MARGIN, y);
-  y += 8;
-
-  // Date
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(100, 100, 100);
-  doc.text(
-    `Emitido em ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
-    MARGIN,
-    y
+  const layout = new BasePremiumPDFLayout(
+    { name: r.clinic_name },
+    {
+      title: reportTypeLabel(r.tipo),
+      accentColor: "#d97706",
+      subtitle: `Emitido em ${format(new Date(r.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+    },
   );
-  y += 8;
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  let y = layout.contentStartY;
 
-  // Fields
   const sections: [string, string | null | undefined][] = [
     ["Finalidade", r.finalidade],
     ["História Clínica", r.historia_clinica],
@@ -987,16 +546,13 @@ export async function generateMedicalReportPdf(r: MedicalReportPdfInput) {
 
   for (const [label, value] of sections) {
     if (!value) continue;
-    if (y > pageH - 30) {
-      addFooter(doc);
-      doc.addPage();
-      y = 20;
-    }
-    y = addField(doc, label, value, y);
+    y = layout.ensureSpace(y, 15);
+    y = renderField(doc, label, value, y, m, layout.contentW);
   }
 
-  addFooter(doc);
+  y = renderSignatureBlock(layout, {
+    professionalName: r.professional_name,
+  }, y);
 
-  const filename = `laudo_${format(new Date(r.created_at), "yyyy-MM-dd")}.pdf`;
-  doc.save(filename);
+  layout.finalize(`laudo_${format(new Date(r.created_at), "yyyy-MM-dd")}.pdf`);
 }

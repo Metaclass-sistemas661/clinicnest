@@ -105,8 +105,8 @@ export function drawLine(
   doc: jsPDF,
   y: number,
   color: RGB = COLORS.BORDER,
-  margin = PAGE.MARGIN,
-  width = PAGE.CONTENT_W,
+  margin: number = PAGE.MARGIN,
+  width: number = PAGE.CONTENT_W,
   lineWidth = 0.35,
 ) {
   doc.setDrawColor(...color);
@@ -120,7 +120,7 @@ export function ensureSpace(
   doc: jsPDF,
   y: number,
   needed: number,
-  footerStart = PAGE.FOOTER_START,
+  footerStart: number = PAGE.FOOTER_START,
 ): number {
   if (y + needed > footerStart) {
     doc.addPage();
@@ -151,8 +151,8 @@ export function renderField(
   label: string,
   value: string,
   y: number,
-  margin = PAGE.MARGIN,
-  contentW = PAGE.CONTENT_W,
+  margin: number = PAGE.MARGIN,
+  contentW: number = PAGE.CONTENT_W,
 ): number {
   doc.setFontSize(FONT.LABEL);
   doc.setFont(FONT.FAMILY, "bold");

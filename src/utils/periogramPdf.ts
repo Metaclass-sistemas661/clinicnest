@@ -1,4 +1,13 @@
 import jsPDF from "jspdf";
+import {
+  BasePremiumPDFLayout,
+  FONT,
+  COLORS,
+  renderPatientInfoBox,
+  renderSummaryCards,
+  renderField,
+  type RGB,
+} from "@/lib/pdf";
 
 interface PeriogramPdfData {
   client_name: string;
@@ -35,142 +44,100 @@ function getDepthColor(depth: number | null): [number, number, number] {
   return [239, 68, 68];
 }
 
-export function generatePeriogramPdf(data: PeriogramPdfData) {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  
-  let y = 15;
-
-  // Header
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("PERIOGRAMA", pageWidth / 2, y, { align: "center" });
-  y += 8;
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(data.clinic_name, pageWidth / 2, y, { align: "center" });
-  y += 10;
+export async function generatePeriogramPdf(data: PeriogramPdfData) {
+  const layout = new BasePremiumPDFLayout(
+    { name: data.clinic_name },
+    { title: "Periograma", accentColor: "#0d9488", orientation: "landscape" },
+  );
+  await layout.init();
+  const doc = layout.doc;
+  const m = layout.margin;
+  const pageWidth = layout.pageW;
+  let y = layout.contentStartY;
 
   // Patient info
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Paciente: ${data.client_name}`, 15, y);
-  doc.text(`Data: ${new Date(data.exam_date).toLocaleDateString("pt-BR")}`, pageWidth - 15, y, { align: "right" });
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Profissional: ${data.professional_name}`, 15, y);
-  y += 10;
+  y = renderPatientInfoBox(layout, { name: data.client_name }, y);
+  doc.setFontSize(FONT.SMALL);
+  doc.setFont(FONT.FAMILY, "normal");
+  doc.setTextColor(...COLORS.TEXT_SECONDARY);
+  doc.text(`Data: ${new Date(data.exam_date).toLocaleDateString("pt-BR")}`, pageWidth - m, y - 20, { align: "right" });
+  doc.text(`Profissional: ${data.professional_name}`, pageWidth - m, y - 15, { align: "right" });
 
-  // Indices box
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(245, 245, 245);
-  doc.roundedRect(15, y, pageWidth - 30, 20, 2, 2, "FD");
-  
-  const indicesY = y + 7;
-  const colWidth = (pageWidth - 30) / 5;
-  
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.text("Índice de Placa", 15 + colWidth * 0.5, indicesY, { align: "center" });
-  doc.text("Sangramento", 15 + colWidth * 1.5, indicesY, { align: "center" });
-  doc.text("Prof. Média", 15 + colWidth * 2.5, indicesY, { align: "center" });
-  doc.text("Sítios >4mm", 15 + colWidth * 3.5, indicesY, { align: "center" });
-  doc.text("Sítios >6mm", 15 + colWidth * 4.5, indicesY, { align: "center" });
-  
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(`${data.plaque_index.toFixed(1)}%`, 15 + colWidth * 0.5, indicesY + 8, { align: "center" });
-  doc.text(`${data.bleeding_index.toFixed(1)}%`, 15 + colWidth * 1.5, indicesY + 8, { align: "center" });
-  doc.text(`${data.avg_probing_depth.toFixed(1)}mm`, 15 + colWidth * 2.5, indicesY + 8, { align: "center" });
-  doc.setTextColor(234, 179, 8);
-  doc.text(`${data.sites_over_4mm}`, 15 + colWidth * 3.5, indicesY + 8, { align: "center" });
-  doc.setTextColor(239, 68, 68);
-  doc.text(`${data.sites_over_6mm}`, 15 + colWidth * 4.5, indicesY + 8, { align: "center" });
-  doc.setTextColor(0, 0, 0);
-  
-  y += 28;
+  // Indices summary cards
+  y = renderSummaryCards(layout, [
+    { label: "Placa", value: `${data.plaque_index.toFixed(1)}%`, color: COLORS.TEXT_PRIMARY },
+    { label: "Sangramento", value: `${data.bleeding_index.toFixed(1)}%`, color: COLORS.DANGER },
+    { label: "Prof. Média", value: `${data.avg_probing_depth.toFixed(1)}mm`, color: COLORS.TEXT_PRIMARY },
+    { label: "Sítios >4mm", value: `${data.sites_over_4mm}`, color: COLORS.WARNING },
+    { label: "Sítios >6mm", value: `${data.sites_over_6mm}`, color: COLORS.DANGER },
+  ], y);
 
   // Periogram chart - Upper arch
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
+  doc.setFontSize(FONT.SMALL + 1);
+  doc.setFont(FONT.FAMILY, "bold");
+  doc.setTextColor(...COLORS.TEXT_PRIMARY);
   doc.text("ARCADA SUPERIOR", pageWidth / 2, y, { align: "center" });
   y += 5;
 
-  drawToothRow(doc, UPPER_TEETH, data.measurements, 15, y, pageWidth - 30, true);
+  drawToothRow(doc, UPPER_TEETH, data.measurements, m, y, layout.contentW, true);
   y += 35;
 
   // Separator
-  doc.setDrawColor(150, 150, 150);
-  doc.line(15, y, pageWidth - 15, y);
+  doc.setDrawColor(...COLORS.BORDER);
+  doc.line(m, y, pageWidth - m, y);
   y += 5;
 
   // Lower arch
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
+  doc.setFontSize(FONT.SMALL + 1);
+  doc.setFont(FONT.FAMILY, "bold");
+  doc.setTextColor(...COLORS.TEXT_PRIMARY);
   doc.text("ARCADA INFERIOR", pageWidth / 2, y, { align: "center" });
   y += 5;
 
-  drawToothRow(doc, LOWER_TEETH, data.measurements, 15, y, pageWidth - 30, false);
+  drawToothRow(doc, LOWER_TEETH, data.measurements, m, y, layout.contentW, false);
   y += 35;
 
   // Legend
   y += 5;
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(FONT.LABEL);
+  doc.setFont(FONT.FAMILY, "normal");
+  doc.setTextColor(...COLORS.TEXT_PRIMARY);
   
-  const legendX = 15;
   doc.setFillColor(34, 197, 94);
-  doc.rect(legendX, y, 4, 4, "F");
-  doc.text("≤3mm (saudável)", legendX + 6, y + 3);
+  doc.rect(m, y, 4, 4, "F");
+  doc.text("≤3mm (saudável)", m + 6, y + 3);
   
   doc.setFillColor(234, 179, 8);
-  doc.rect(legendX + 40, y, 4, 4, "F");
-  doc.text("4-5mm (atenção)", legendX + 46, y + 3);
+  doc.rect(m + 40, y, 4, 4, "F");
+  doc.text("4-5mm (atenção)", m + 46, y + 3);
   
   doc.setFillColor(239, 68, 68);
-  doc.rect(legendX + 80, y, 4, 4, "F");
-  doc.text("≥6mm (crítico)", legendX + 86, y + 3);
+  doc.rect(m + 80, y, 4, 4, "F");
+  doc.text("≥6mm (crítico)", m + 86, y + 3);
   
   doc.setFillColor(239, 68, 68);
-  doc.circle(legendX + 120 + 2, y + 2, 2, "F");
-  doc.text("Sangramento", legendX + 126, y + 3);
+  doc.circle(m + 120 + 2, y + 2, 2, "F");
+  doc.text("Sangramento", m + 126, y + 3);
   
   doc.setFillColor(234, 179, 8);
-  doc.rect(legendX + 155, y, 4, 4, "F");
-  doc.text("Placa", legendX + 161, y + 3);
+  doc.rect(m + 155, y, 4, 4, "F");
+  doc.text("Placa", m + 161, y + 3);
 
   // Diagnosis
   if (data.periodontal_diagnosis || data.risk_classification || data.notes) {
     y += 12;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("DIAGNÓSTICO E OBSERVAÇÕES", 15, y);
-    y += 5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    
     if (data.periodontal_diagnosis) {
-      doc.text(`Diagnóstico: ${formatDiagnosis(data.periodontal_diagnosis)}`, 15, y);
-      y += 4;
+      y = renderField(doc, "Diagnóstico", formatDiagnosis(data.periodontal_diagnosis), y, m, layout.contentW);
     }
     if (data.risk_classification) {
-      doc.text(`Classificação de Risco: ${data.risk_classification.charAt(0).toUpperCase() + data.risk_classification.slice(1)}`, 15, y);
-      y += 4;
+      y = renderField(doc, "Classificação de Risco", data.risk_classification.charAt(0).toUpperCase() + data.risk_classification.slice(1), y, m, layout.contentW);
     }
     if (data.notes) {
-      const lines = doc.splitTextToSize(`Observações: ${data.notes}`, pageWidth - 30);
-      doc.text(lines, 15, y);
+      y = renderField(doc, "Observações", data.notes, y, m, layout.contentW);
     }
   }
 
-  // Footer
-  doc.setFontSize(7);
-  doc.setTextColor(128, 128, 128);
-  doc.text(`Gerado em ${new Date().toLocaleString("pt-BR")} · ${data.total_sites} sítios avaliados`, pageWidth / 2, pageHeight - 8, { align: "center" });
-
-  doc.save(`periograma_${data.client_name.replace(/\s+/g, "_")}_${data.exam_date}.pdf`);
+  layout.finalize(`periograma_${data.client_name.replace(/\s+/g, "_")}_${data.exam_date}.pdf`);
 }
 
 function drawToothRow(
