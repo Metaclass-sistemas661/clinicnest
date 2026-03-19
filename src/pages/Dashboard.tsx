@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link } from "react-router-dom";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
@@ -1186,93 +1186,109 @@ export default function Dashboard() {
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
 
-          {/* KPI METRICS GRID */}
+          {/* KPI METRICS GRID — gradient cards with sparklines */}
           <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Consultas hoje */}
-            <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="[&:hover]:no-underline">
-              <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-teal-200 hover:shadow-md">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100">
-                    <Calendar className="h-5 w-5 text-teal-600" />
+            <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '0ms' }}>
+              <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
+                <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Calendar className="h-5 w-5 text-white" />
                   </div>
-                  <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700">Hoje</span>
+                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Hoje</span>
                 </div>
                 <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
-                <p className="mt-1.5 text-sm text-muted-foreground">Consultas agendadas</p>
+                <p className="mt-1 text-sm text-teal-100">Consultas agendadas</p>
               </div>
             </Link>
 
             {/* Pendentes */}
-            <Link to="/agenda" data-tour="dashboard-today-stat-pending" className="[&:hover]:no-underline">
-              <div className={`group rounded-2xl border p-5 transition-all hover:shadow-md ${stats.pendingAppointments > 0 ? "border-amber-200 bg-amber-50" : "bg-card"}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${stats.pendingAppointments > 0 ? "bg-amber-100" : "bg-muted/50"}`}>
-                    <Clock className={`h-5 w-5 ${stats.pendingAppointments > 0 ? "text-amber-600" : "text-muted-foreground"}`} />
+            <Link to="/agenda" data-tour="dashboard-today-stat-pending" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '80ms' }}>
+              <div className={`group relative overflow-hidden rounded-2xl p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02] ${stats.pendingAppointments > 0 ? "bg-gradient-to-br from-amber-400 to-orange-500" : "bg-gradient-to-br from-slate-400 to-slate-500"}`}>
+                <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Clock className="h-5 w-5 text-white" />
                   </div>
                   {stats.pendingAppointments > 0 && (
-                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Atenção</span>
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider animate-pulse">Atenção</span>
                   )}
                 </div>
-                <p className={`text-3xl font-extrabold tabular-nums leading-none ${stats.pendingAppointments > 0 ? "text-amber-700" : ""}`}>
+                <p className="text-3xl font-extrabold tabular-nums leading-none">
                   {isLoading ? "—" : stats.pendingAppointments}
                 </p>
-                <p className="mt-1.5 text-sm text-muted-foreground">Pendentes de confirmação</p>
+                <p className="mt-1 text-sm text-white/80">Pendentes</p>
               </div>
             </Link>
 
             {/* Receita do mês (admin) / Atendimentos do mês (staff) */}
             {isAdmin ? (
-              <Link to="/financeiro" data-tour="dashboard-monthly-income" className="[&:hover]:no-underline">
-                <div className="group rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100">
-                      <TrendingUp className="h-5 w-5 text-emerald-600" />
+              <Link to="/financeiro" data-tour="dashboard-monthly-income" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '160ms' }}>
+                <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
+                  <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                      <TrendingUp className="h-5 w-5 text-white" />
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Mês</span>
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-2xl font-extrabold tabular-nums leading-none text-emerald-700">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
-                  <p className="mt-1.5 text-sm text-muted-foreground">Receita do mês</p>
+                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                  <p className="mt-1 text-sm text-emerald-100">Receita do mês</p>
+                  {/* Mini sparkline */}
+                  {miniChartData.length > 0 && (
+                    <div className="mt-2 h-8 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={miniChartData}>
+                          <Area type="monotone" dataKey="receita" stroke="rgba(255,255,255,0.7)" fill="rgba(255,255,255,0.15)" strokeWidth={2} dot={false} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </div>
               </Link>
             ) : (
-              <Link to="/meu-financeiro" data-tour="dashboard-insights-my-performance" className="[&:hover]:no-underline">
-                <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-teal-200 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-100">
-                      <Activity className="h-5 w-5 text-teal-600" />
+              <Link to="/meu-financeiro" data-tour="dashboard-insights-my-performance" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '160ms' }}>
+                <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
+                  <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                      <Activity className="h-5 w-5 text-white" />
                     </div>
-                    <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700">Mês</span>
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
                   <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
-                  <p className="mt-1.5 text-sm text-muted-foreground">Atendimentos no mês</p>
+                  <p className="mt-1 text-sm text-teal-100">Atendimentos no mês</p>
                 </div>
               </Link>
             )}
 
             {/* Pacientes (admin) / Pacientes meus (staff) */}
             {isAdmin ? (
-              <Link to="/pacientes" data-tour="dashboard-insights-clients" className="[&:hover]:no-underline">
-                <div className="group rounded-2xl border bg-card p-5 transition-all hover:border-blue-200 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
-                      <Users className="h-5 w-5 text-blue-600" />
+              <Link to="/pacientes" data-tour="dashboard-insights-clients" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '240ms' }}>
+                <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
+                  <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                      <Users className="h-5 w-5 text-white" />
                     </div>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Total</span>
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Total</span>
                   </div>
                   <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : patientsCount}</p>
-                  <p className="mt-1.5 text-sm text-muted-foreground">Pacientes cadastrados</p>
+                  <p className="mt-1 text-sm text-blue-100">Pacientes cadastrados</p>
                 </div>
               </Link>
             ) : (
-              <div data-tour="dashboard-insights-my-clients" className="rounded-2xl border bg-card p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
-                    <Users className="h-5 w-5 text-blue-600" />
+              <div data-tour="dashboard-insights-my-clients" className="animate-fade-in-up rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-md" style={{ animationDelay: '240ms' }}>
+                <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                    <Users className="h-5 w-5 text-white" />
                   </div>
-                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Meus</span>
+                  <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Meus</span>
                 </div>
                 <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyPatientsCount ?? 0)}</p>
-                <p className="mt-1.5 text-sm text-muted-foreground">Pacientes atendidos</p>
+                <p className="mt-1 text-sm text-blue-100">Pacientes atendidos</p>
               </div>
             )}
           </div>
@@ -1284,7 +1300,7 @@ export default function Dashboard() {
 
             if (sectionKey === "quick_actions") {
               return (
-                <Card key={sectionKey}>
+                <Card key={sectionKey} className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
                   <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
                       <CardTitle className="text-lg">Ações rápidas</CardTitle>
@@ -1301,38 +1317,46 @@ export default function Dashboard() {
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-                      <Button asChild variant="outline" className="justify-start">
-                        <Link to="/agenda" data-tour="dashboard-quick-new-appointment">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          Novo agendamento
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" className="justify-start">
-                        <Link to="/pacientes" data-tour="dashboard-quick-new-client">
-                          <Users className="mr-2 h-4 w-4" />
-                          Novo paciente
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" className="justify-start">
-                        <Link to="/produtos" data-tour="dashboard-quick-stock">
-                          <Package className="mr-2 h-4 w-4" />
-                          Movimentar estoque
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" className="justify-start">
-                        <Link to="/agenda" data-tour="dashboard-quick-start-visit">
-                          <Stethoscope className="mr-2 h-4 w-4" />
-                          Iniciar atendimento
-                        </Link>
-                      </Button>
+                    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                      <Link to="/agenda" data-tour="dashboard-quick-new-appointment" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-teal-200 hover:shadow-md hover:scale-[1.03]">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-600 transition-colors group-hover:bg-teal-600 group-hover:text-white">
+                          <Calendar className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-semibold text-foreground">Novo agendamento</span>
+                      </Link>
+                      <Link to="/pacientes" data-tour="dashboard-quick-new-client" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-blue-200 hover:shadow-md hover:scale-[1.03]">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                          <Users className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-semibold text-foreground">Novo paciente</span>
+                      </Link>
+                      <Link to="/produtos" data-tour="dashboard-quick-stock" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-amber-200 hover:shadow-md hover:scale-[1.03]">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 transition-colors group-hover:bg-amber-600 group-hover:text-white">
+                          <Package className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-semibold text-foreground">Movimentar estoque</span>
+                      </Link>
+                      <Link to="/agenda" data-tour="dashboard-quick-start-visit" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-emerald-200 hover:shadow-md hover:scale-[1.03]">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+                          <Stethoscope className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-semibold text-foreground">Iniciar atendimento</span>
+                      </Link>
                       {!isAdmin && (
-                        <Button asChild variant="outline" className="justify-start">
-                          <Link to="/meu-financeiro" data-tour="dashboard-quick-my-commissions">
-                            <Wallet className="mr-2 h-4 w-4" />
-                            Meu financeiro
-                          </Link>
-                        </Button>
+                        <Link to="/meu-financeiro" data-tour="dashboard-quick-my-commissions" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-purple-200 hover:shadow-md hover:scale-[1.03]">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 transition-colors group-hover:bg-purple-600 group-hover:text-white">
+                            <Wallet className="h-6 w-6" />
+                          </div>
+                          <span className="text-xs font-semibold text-foreground">Meu financeiro</span>
+                        </Link>
+                      )}
+                      {isAdmin && (
+                        <Link to="/financeiro" className="group flex flex-col items-center gap-2 rounded-2xl border bg-card p-4 text-center transition-all hover:border-purple-200 hover:shadow-md hover:scale-[1.03]">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 transition-colors group-hover:bg-purple-600 group-hover:text-white">
+                            <DollarSign className="h-6 w-6" />
+                          </div>
+                          <span className="text-xs font-semibold text-foreground">Financeiro</span>
+                        </Link>
                       )}
                     </div>
                   </CardContent>
@@ -1429,7 +1453,37 @@ export default function Dashboard() {
 
             if (sectionKey === "today") {
               return (
-                <div key={sectionKey} className="space-y-4">
+                <div key={sectionKey} className="space-y-4 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+                  {/* Mini weekly calendar strip */}
+                  <Card>
+                    <CardContent className="py-3 px-4">
+                      <div className="flex items-center gap-1 justify-between">
+                        {weekDays.map((d) => (
+                          <Link
+                            key={d.dayNum}
+                            to="/agenda"
+                            className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-center transition-all hover:bg-teal-50 ${d.isToday ? "bg-teal-600 text-white hover:bg-teal-700" : ""}`}
+                          >
+                            <span className={`text-[10px] font-medium uppercase ${d.isToday ? "text-teal-100" : "text-muted-foreground"}`}>{d.dayName}</span>
+                            <span className={`text-sm font-bold tabular-nums ${d.isToday ? "text-white" : "text-foreground"}`}>{d.dayNum}</span>
+                            {d.count > 0 && (
+                              <div className={`mt-0.5 flex gap-0.5`}>
+                                {Array.from({ length: Math.min(d.count, 4) }).map((_, i) => (
+                                  <div key={i} className={`h-1 w-1 rounded-full ${d.isToday ? "bg-white/70" : "bg-teal-500"}`} />
+                                ))}
+                              </div>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Next Appointment Highlight — visible for all */}
+                  {nextAppointment && (
+                    <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
+                  )}
+
                   <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
                     <div className="lg:col-span-2">
                       <DashboardTodayAppointments
@@ -1439,10 +1493,45 @@ export default function Dashboard() {
                       />
                     </div>
                     <div className="space-y-4">
-                      {!isAdmin && nextAppointment && (
-                        <DashboardNextAppointmentCard nextAppointment={nextAppointment} getStatusBadge={getStatusBadge} />
-                      )}
                       {isAdmin && <DashboardLowStockCard lowStockProducts={lowStockProducts} />}
+
+                      {/* Active Team Today */}
+                      {isAdmin && activeTeamToday.length > 0 && (
+                        <Card>
+                          <CardHeader className="flex flex-row items-center gap-2 pb-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/10">
+                              <UserCheck className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <div className="flex-1">
+                              <CardTitle className="text-base font-semibold">Equipe ativa hoje</CardTitle>
+                              <CardDescription className="text-xs">{activeTeamToday.length} profissiona{activeTeamToday.length === 1 ? "l" : "is"}</CardDescription>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-0 space-y-2">
+                            {activeTeamToday.slice(0, 5).map((prof) => {
+                              const initials = prof.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                              const colors = ["bg-teal-500", "bg-blue-500", "bg-purple-500", "bg-amber-500", "bg-emerald-500"];
+                              const bgColor = colors[prof.name.charCodeAt(0) % colors.length];
+                              return (
+                                <div key={prof.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/40 transition-colors">
+                                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-xs font-bold ${bgColor}`}>
+                                    {initials}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{prof.name}</p>
+                                    <p className="text-xs text-muted-foreground">{prof.count} consulta{prof.count > 1 ? "s" : ""}</p>
+                                  </div>
+                                  <div className="shrink-0">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
+                                      {prof.count}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
                   </div>
 
@@ -1504,7 +1593,7 @@ export default function Dashboard() {
 
             if (sectionKey === "month") {
               return (
-                <Card key={sectionKey}>
+                <Card key={sectionKey} className="animate-fade-in-up" style={{ animationDelay: '500ms' }}>
                   <CardHeader className="flex flex-row items-center gap-2 pb-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
                       <Activity className="h-4 w-4 text-teal-600" />
@@ -1515,45 +1604,114 @@ export default function Dashboard() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Admin: 3 hero financial cards */}
+                    {/* Admin: 3 hero financial cards + mini chart */}
                     {isAdmin && (
-                      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
-                          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
-                            <div className="mb-4 flex items-center justify-between">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
-                                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      <>
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-income">
+                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 transition-all hover:border-emerald-300 hover:shadow-md">
+                              <div className="mb-4 flex items-center justify-between">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Entradas</span>
                               </div>
-                              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Entradas</span>
+                              <p className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.monthlyIncome)}</p>
+                              <p className="mt-1 text-sm text-emerald-600/70">Receitas do mês</p>
                             </div>
-                            <p className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.monthlyIncome)}</p>
-                            <p className="mt-1 text-sm text-emerald-600/70">Receitas do mês</p>
-                          </div>
-                        </Link>
-                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
-                          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 transition-all hover:border-red-300 hover:shadow-md">
-                            <div className="mb-4 flex items-center justify-between">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                                <TrendingDown className="h-5 w-5 text-red-600" />
+                          </Link>
+                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-expenses">
+                            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 transition-all hover:border-red-300 hover:shadow-md">
+                              <div className="mb-4 flex items-center justify-between">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
+                                  <TrendingDown className="h-5 w-5 text-red-600" />
+                                </div>
+                                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Saídas</span>
                               </div>
-                              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Saídas</span>
+                              <p className="text-2xl font-bold text-red-700">{formatCurrency(stats.monthlyExpenses)}</p>
+                              <p className="mt-1 text-sm text-red-600/70">Despesas do mês</p>
                             </div>
-                            <p className="text-2xl font-bold text-red-700">{formatCurrency(stats.monthlyExpenses)}</p>
-                            <p className="mt-1 text-sm text-red-600/70">Despesas do mês</p>
-                          </div>
-                        </Link>
-                        <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
-                          <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50 hover:border-teal-300" : "border-red-200 bg-red-50 hover:border-red-300"}`}>
-                            <div className="mb-4 flex items-center justify-between">
-                              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stats.monthlyBalance >= 0 ? "bg-teal-100" : "bg-red-100"}`}>
-                                <DollarSign className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
+                          </Link>
+                          <Link to="/financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-balance">
+                            <div className={`rounded-2xl border p-5 transition-all hover:shadow-md ${stats.monthlyBalance >= 0 ? "border-teal-200 bg-teal-50 hover:border-teal-300" : "border-red-200 bg-red-50 hover:border-red-300"}`}>
+                              <div className="mb-4 flex items-center justify-between">
+                                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${stats.monthlyBalance >= 0 ? "bg-teal-100" : "bg-red-100"}`}>
+                                  <DollarSign className={`h-5 w-5 ${stats.monthlyBalance >= 0 ? "text-teal-600" : "text-red-600"}`} />
+                                </div>
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>Saldo</span>
                               </div>
-                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${stats.monthlyBalance >= 0 ? "bg-teal-100 text-teal-700" : "bg-red-100 text-red-700"}`}>Saldo</span>
+                              <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{formatCurrency(stats.monthlyBalance)}</p>
+                              <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>Resultado do mês</p>
                             </div>
-                            <p className={`text-2xl font-bold ${stats.monthlyBalance >= 0 ? "text-teal-700" : "text-red-700"}`}>{formatCurrency(stats.monthlyBalance)}</p>
-                            <p className={`mt-1 text-sm ${stats.monthlyBalance >= 0 ? "text-teal-600/70" : "text-red-600/70"}`}>Resultado do mês</p>
+                          </Link>
+                        </div>
+
+                        {/* Mini Area Chart — Receita vs Despesa semanal */}
+                        {miniChartData.length > 0 && (
+                          <div className="rounded-2xl border bg-card p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                                <p className="text-sm font-medium">Receita vs Despesa</p>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />Receita</span>
+                                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" />Despesa</span>
+                              </div>
+                            </div>
+                            <div className="h-32 w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={miniChartData}>
+                                  <defs>
+                                    <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="despesaGrad" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="5%" stopColor="#f87171" stopOpacity={0.3} />
+                                      <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
+                                    </linearGradient>
+                                  </defs>
+                                  <Area type="monotone" dataKey="receita" stroke="#10b981" fill="url(#receitaGrad)" strokeWidth={2} dot={false} />
+                                  <Area type="monotone" dataKey="despesa" stroke="#f87171" fill="url(#despesaGrad)" strokeWidth={2} dot={false} />
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            </div>
                           </div>
-                        </Link>
+                        )}
+                      </>
+                    )}
+
+                    {/* Patient Ranking — admin only */}
+                    {isAdmin && clientRanking.length > 0 && (
+                      <div className="rounded-2xl border bg-card p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Crown className="h-4 w-4 text-amber-500" />
+                          <p className="text-sm font-semibold">Top pacientes do mês</p>
+                        </div>
+                        <div className="space-y-2">
+                          {clientRanking.slice(0, 5).map((client, index) => {
+                            const initials = client.client_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                            const medalColors = ["bg-amber-400 text-amber-900", "bg-gray-300 text-gray-700", "bg-orange-400 text-orange-900"];
+                            const barWidth = clientRanking[0].month_total > 0 ? Math.max(10, (client.month_total / clientRanking[0].month_total) * 100) : 0;
+                            return (
+                              <div key={client.patient_id} className="flex items-center gap-3">
+                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${index < 3 ? medalColors[index] : "bg-muted text-muted-foreground"}`}>
+                                  {index < 3 ? index + 1 : initials}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <p className="text-sm font-medium truncate">{client.client_name}</p>
+                                    <span className="text-xs font-semibold text-emerald-600 tabular-nums shrink-0">{formatCurrency(client.month_total)}</span>
+                                  </div>
+                                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                                    <div className="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all" style={{ width: `${barWidth}%` }} />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
 

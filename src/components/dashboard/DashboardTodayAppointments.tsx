@@ -31,6 +31,9 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
   isAdmin,
   getStatusBadge,
 }: DashboardTodayAppointmentsProps) {
+  const completed = appointments.filter(a => a.status === "completed").length;
+  const progressPct = appointments.length > 0 ? Math.round((completed / appointments.length) * 100) : 0;
+
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -38,9 +41,19 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-600/10">
             <Calendar className="h-4 w-4 text-teal-600" />
           </div>
-          <CardTitle className="text-base font-semibold">
-            {isAdmin ? "Agenda de hoje" : "Meus atendimentos hoje"}
-          </CardTitle>
+          <div>
+            <CardTitle className="text-base font-semibold">
+              {isAdmin ? "Agenda de hoje" : "Meus atendimentos hoje"}
+            </CardTitle>
+            {appointments.length > 0 && (
+              <div className="flex items-center gap-2 mt-1">
+                <div className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${progressPct}%` }} />
+                </div>
+                <span className="text-[10px] text-muted-foreground font-medium">{completed}/{appointments.length} concluídos</span>
+              </div>
+            )}
+          </div>
         </div>
         <Button variant="ghost" size="sm" asChild className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 text-xs">
           <Link to="/agenda" data-tour="dashboard-today-appointments-view-all">Ver tudo →</Link>
@@ -67,6 +80,10 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
 
             {appointments.slice(0, 6).map((appointment) => {
               const st = appointment.status || "pending";
+              const patientName = appointment.patient?.name || "Paciente";
+              const initials = patientName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+              const avatarColors = ["bg-teal-500", "bg-blue-500", "bg-purple-500", "bg-amber-500", "bg-rose-500", "bg-emerald-500"];
+              const avatarBg = avatarColors[patientName.charCodeAt(0) % avatarColors.length];
               return (
                 <div key={appointment.id} className="relative flex gap-3 pl-1 py-1.5 group">
                   {/* Dot na linha */}
@@ -75,31 +92,37 @@ export const DashboardTodayAppointments = memo(function DashboardTodayAppointmen
                   {/* Card do agendamento */}
                   <div className="flex-1 min-w-0 rounded-xl border bg-card px-3 py-2.5 transition-all group-hover:shadow-sm group-hover:border-teal-200/80">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        {/* Horário + nome */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold tabular-nums ${statusTime[st] ?? "bg-muted text-muted-foreground border-border"}`}>
-                            {formatInAppTz(appointment.scheduled_at, "HH:mm")}
-                          </span>
-                          <p className="truncate text-sm font-semibold text-foreground">
-                            {appointment.patient?.name || "Paciente não informado"}
-                          </p>
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        {/* Avatar com iniciais */}
+                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold mt-0.5 ${avatarBg}`}>
+                          {initials}
                         </div>
+                        <div className="min-w-0 flex-1">
+                          {/* Horário + nome */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-bold tabular-nums ${statusTime[st] ?? "bg-muted text-muted-foreground border-border"}`}>
+                              {formatInAppTz(appointment.scheduled_at, "HH:mm")}
+                            </span>
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {patientName}
+                            </p>
+                          </div>
 
-                        {/* Procedimento + profissional */}
-                        <div className="mt-1 flex items-center gap-2 flex-wrap">
-                          {appointment.procedure?.name && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Stethoscope className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{appointment.procedure.name}</span>
-                            </span>
-                          )}
-                          {isAdmin && appointment.professional?.full_name && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <UserRound className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{appointment.professional.full_name}</span>
-                            </span>
-                          )}
+                          {/* Procedimento + profissional */}
+                          <div className="mt-1 flex items-center gap-2 flex-wrap">
+                            {appointment.procedure?.name && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Stethoscope className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{appointment.procedure.name}</span>
+                              </span>
+                            )}
+                            {isAdmin && appointment.professional?.full_name && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <UserRound className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{appointment.professional.full_name}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
