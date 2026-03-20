@@ -1159,13 +1159,13 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="relative z-20 -mt-14 sm:-mt-16 grid gap-6 lg:grid-cols-[1fr_280px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
 
-          {/* KPI METRICS GRID — overlapping header */}
-          <div className="relative z-20 -mt-12 grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {/* KPI METRICS GRID */}
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Consultas hoje */}
             <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '0ms' }}>
               <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
@@ -1896,7 +1896,7 @@ export default function Dashboard() {
 
           {/* Right Column: Interactive Body Map */}
           <div className="hidden lg:block">
-            <Card className="sticky top-6 h-[calc(100vh-12rem)] overflow-hidden">
+            <Card className="sticky top-6 h-[calc(100vh-10rem)] overflow-hidden shadow-xl">
               <CardContent className="h-full p-4">
                 <InteractiveBody />
               </CardContent>
