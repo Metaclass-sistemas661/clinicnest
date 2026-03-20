@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, HeartPulse, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
+import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link } from "react-router-dom";
 import { AreaChart, Area, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from "recharts";
@@ -835,8 +835,8 @@ export default function Dashboard() {
       <TooltipProvider>
         <div className="space-y-6">
 
-          {/* ===== HERO BANNER — FULL-BLEED GRADIENT ===== */}
-          <div className="relative overflow-hidden -mx-8 -mt-6 bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-500 px-8 py-8 sm:px-10 sm:py-10 text-white">
+          {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
+          <div className="sticky top-0 z-30 relative overflow-hidden -mx-8 -mt-6 bg-teal-600 dark:bg-teal-700 px-8 pt-8 pb-16 sm:px-10 sm:pt-10 sm:pb-20 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
@@ -882,33 +882,6 @@ export default function Dashboard() {
                     Pacientes
                   </Link>
                 </div>
-              </div>
-
-              {/* Right side — KPI pills */}
-              <div className="hidden lg:flex flex-col gap-2 items-end">
-                <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
-                  <HeartPulse className="h-5 w-5 text-emerald-200" />
-                  <div className="text-right">
-                    <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : stats.todayAppointments}</p>
-                    <p className="text-[10px] text-teal-200 uppercase tracking-wide">Consultas hoje</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
-                  <Clock className="h-5 w-5 text-amber-200" />
-                  <div className="text-right">
-                    <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : stats.pendingAppointments}</p>
-                    <p className="text-[10px] text-teal-200 uppercase tracking-wide">Pendentes</p>
-                  </div>
-                </div>
-                {isAdmin && (
-                  <div className="flex items-center gap-3 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2.5">
-                    <DollarSign className="h-5 w-5 text-cyan-200" />
-                    <div className="text-right">
-                      <p className="text-lg font-bold tabular-nums">{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
-                      <p className="text-[10px] text-teal-200 uppercase tracking-wide">Saldo do mês</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1191,8 +1164,8 @@ export default function Dashboard() {
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
 
-          {/* KPI METRICS GRID — gradient cards with sparklines */}
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {/* KPI METRICS GRID — overlapping header */}
+          <div className="relative z-20 -mt-12 grid gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Consultas hoje */}
             <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '0ms' }}>
               <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
@@ -1230,16 +1203,16 @@ export default function Dashboard() {
             {/* Saldo do mês (admin) / Atendimentos do mês (staff) */}
             {isAdmin ? (
               <Link to="/financeiro" data-tour="dashboard-monthly-balance" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '160ms' }}>
-                <div className={`group relative overflow-hidden rounded-2xl p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02] ${stats.monthlyBalance >= 0 ? 'bg-gradient-to-br from-teal-500 to-cyan-500' : 'bg-gradient-to-br from-rose-500 to-red-500'}`}>
+                <div className="group relative overflow-hidden rounded-2xl p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02] bg-gradient-to-br from-emerald-500 to-teal-500">
                   <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                      <DollarSign className="h-5 w-5 text-white" />
+                      <TrendingUp className="h-5 w-5 text-white" />
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyBalance)}</p>
-                  <p className="mt-1 text-sm text-white/80">Saldo do mês</p>
+                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                  <p className="mt-1 text-sm text-white/80">Receita do mês</p>
                 </div>
               </Link>
             ) : (
@@ -1900,18 +1873,8 @@ export default function Dashboard() {
                   )}
 
                   {/* Secondary stat row */}
+                  {!isAdmin && (
                   <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-                    {isAdmin && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Link to="/pacientes" className="block [&:hover]:no-underline">
-                            <StatCard title="Pacientes ativos" value={String(patientsCount)} icon={Users} description="Total cadastrado" />
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">Total de pacientes cadastrados na clínica.</TooltipContent>
-                      </Tooltip>
-                    )}
-                    {!isAdmin && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
@@ -1920,8 +1883,8 @@ export default function Dashboard() {
                         </TooltipTrigger>
                         <TooltipContent side="bottom">Comissões e salários pendentes.</TooltipContent>
                       </Tooltip>
-                    )}
                   </div>
+                  )}
                 </div>
               );
             }
