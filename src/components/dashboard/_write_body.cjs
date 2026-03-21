@@ -1,4 +1,7 @@
-import { useState, useCallback, memo } from "react";
+const fs = require('fs');
+const path = require('path');
+
+const content = `import { useState, useCallback, memo } from "react";
 import { cn } from "@/lib/utils";
 import { Focus, Layers, Sparkles, X } from "lucide-react";
 
@@ -135,16 +138,16 @@ export const InteractiveBody = memo(function InteractiveBody() {
             <div className="pointer-events-none absolute inset-0 z-20">
               <svg className="absolute inset-0 h-full w-full" style={{ overflow: "visible" }}>
                 <line
-                  x1={`${pinLeftNum}%`} y1={`${pinTopNum}%`}
-                  x2={`${isLeft ? cardLeft + 36 : cardLeft}%`} y2={`${cardTop + 2}%`}
+                  x1={\`\${pinLeftNum}%\`} y1={\`\${pinTopNum}%\`}
+                  x2={\`\${isLeft ? cardLeft + 36 : cardLeft}%\`} y2={\`\${cardTop + 2}%\`}
                   stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" opacity="0.5"
                 />
               </svg>
               <div
                 className="pointer-events-auto absolute bg-white dark:bg-slate-800 shadow-xl shadow-black/10 rounded-2xl px-3 py-2 flex items-center gap-2.5 border border-slate-100 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-200"
                 style={{
-                  left: `${cardLeft}%`,
-                  top: `${cardTop}%`,
+                  left: \`\${cardLeft}%\`,
+                  top: \`\${cardTop}%\`,
                   minWidth: "120px",
                   maxWidth: "160px",
                 }}
@@ -254,3 +257,8 @@ export const InteractiveBody = memo(function InteractiveBody() {
     </div>
   );
 });
+`;
+
+const target = path.join(__dirname, 'InteractiveBody.tsx');
+fs.writeFileSync(target, content, 'utf8');
+console.log('Written ' + content.split('\\n').length + ' lines to ' + target);
