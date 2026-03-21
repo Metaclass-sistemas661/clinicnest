@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Loader2,
   ShieldCheck,
+  Timer,
 } from "lucide-react";
 
 interface FacialCaptureProps {
@@ -23,6 +24,9 @@ interface FacialCaptureProps {
 const BANUBA_SDK_VERSION = "1.17.7";
 const BANUBA_CDN = `https://cdn.jsdelivr.net/npm/@banuba/webar@${BANUBA_SDK_VERSION}`;
 const BANUBA_TOKEN = (import.meta.env.VITE_BANUBA_CLIENT_TOKEN as string) || "";
+
+/** Timeout in ms before allowing capture even without face detection */
+const FACE_DETECT_TIMEOUT_MS = 8_000;
 
 /** Singleton – the CDN ESM is fetched only once. */
 let _sdkPromise: Promise<any | null> | null = null;
@@ -48,6 +52,8 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const playerRef = useRef<any>(null);
   const offscreenRef = useRef<HTMLDivElement | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameCountRef = useRef(0);
 
   const [status, setStatus] = useState<
     "idle" | "loading" | "streaming" | "captured" | "error"
@@ -56,9 +62,14 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
   const [errorMsg, setErrorMsg] = useState("");
   const [faceDetected, setFaceDetected] = useState(false);
   const [banubaActive, setBanubaActive] = useState(false);
+  const [fallbackActive, setFallbackActive] = useState(false);
 
   /* ── Cleanup ─────────────────────────────────────────── */
   const stopCamera = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     if (playerRef.current) {
       try {
         playerRef.current.pause();
@@ -85,11 +96,19 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     };
   }, [stopCamera, capturedUrl]);
 
+  /* ── Auto-start camera on mount ──────────────────────── */
+  useEffect(() => {
+    startCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* ── Start camera + optional Banuba face detection ───── */
   const startCamera = useCallback(async () => {
     setErrorMsg("");
     setFaceDetected(false);
+    setFallbackActive(false);
     setStatus("loading");
+    frameCountRef.current = 0;
 
     // 1. Acquire camera stream
     let stream: MediaStream;
@@ -131,7 +150,6 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
         const sdk = await getBanubaSDK();
         if (sdk) {
           const { Player, Module, Dom } = sdk;
-          // Use the SDK's MediaStream wrapper to feed our existing stream
           const BanubaMediaStream = sdk.MediaStream;
 
           const player = await Player.create({
@@ -145,7 +163,6 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
             )
           );
 
-          // Feed the same getUserMedia stream
           player.use(new BanubaMediaStream(stream));
 
           // Render to an offscreen container (needed for the GPU pipeline)
@@ -160,10 +177,31 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
           player.addEventListener(
             "framedata",
             ({ detail: frameData }: any) => {
-              const hasFace = frameData.get(
-                "frxRecognitionResult.faces.0.hasFace"
-              );
-              setFaceDetected(!!hasFace);
+              frameCountRef.current++;
+              try {
+                // Try compound key first (some SDK versions support dot-path)
+                let hasFace = frameData.get("frxRecognitionResult.faces.0.hasFace");
+
+                // Fallback: try accessing the recognition result object directly
+                if (hasFace === undefined || hasFace === null) {
+                  const frx = frameData.get("frxRecognitionResult");
+                  if (frx) {
+                    hasFace = frx?.faces?.[0]?.hasFace;
+                  }
+                }
+
+                // Fallback: check face count
+                if (hasFace === undefined || hasFace === null) {
+                  const faceCount = frameData.get("frxRecognitionResult.faces.count");
+                  if (typeof faceCount === "number") {
+                    hasFace = faceCount > 0;
+                  }
+                }
+
+                setFaceDetected(!!hasFace);
+              } catch (e) {
+                console.warn("[FacialCapture] framedata parse error:", e);
+              }
             }
           );
 
@@ -180,9 +218,28 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     }
 
     setBanubaActive(banubaOk);
-    if (!banubaOk) setFaceDetected(true); // no detection → always allow capture
+    if (!banubaOk) {
+      setFaceDetected(true); // no detection → always allow capture
+    } else {
+      // Start timeout: if no face detected after N seconds, enable fallback capture
+      timeoutRef.current = setTimeout(() => {
+        setFallbackActive(true);
+        setFaceDetected(true);
+        console.warn(
+          `[FacialCapture] Face detection timeout after ${FACE_DETECT_TIMEOUT_MS}ms. Frames received: ${frameCountRef.current}. Enabling manual capture fallback.`
+        );
+      }, FACE_DETECT_TIMEOUT_MS);
+    }
     setStatus("streaming");
   }, []);
+
+  /* ── Cancel timeout when face is actually detected ──── */
+  useEffect(() => {
+    if (faceDetected && !fallbackActive && timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [faceDetected, fallbackActive]);
 
   /* ── Capture photo ──────────────────────────────────── */
   const capture = useCallback(() => {
@@ -221,6 +278,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     setCapturedUrl(null);
     setFaceDetected(false);
     setBanubaActive(false);
+    setFallbackActive(false);
     setStatus("idle");
     startCamera();
   }, [capturedUrl, startCamera]);
@@ -281,18 +339,28 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
               />
             </div>
 
-            {/* Face detection badge (only when Banuba is active) */}
+            {/* Face detection badge */}
             {banubaActive && (
               <div className="absolute top-2 left-2">
                 <div
                   className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full backdrop-blur-sm transition-colors ${
-                    faceDetected
+                    faceDetected && !fallbackActive
                       ? "bg-green-600/80 text-white"
-                      : "bg-yellow-600/80 text-white"
+                      : fallbackActive
+                        ? "bg-blue-600/80 text-white"
+                        : "bg-yellow-600/80 text-white"
                   }`}
                 >
-                  <ShieldCheck className="h-3 w-3" />
-                  {faceDetected ? "Rosto detectado" : "Posicione seu rosto"}
+                  {fallbackActive ? (
+                    <Timer className="h-3 w-3" />
+                  ) : (
+                    <ShieldCheck className="h-3 w-3" />
+                  )}
+                  {faceDetected && !fallbackActive
+                    ? "Rosto detectado"
+                    : fallbackActive
+                      ? "Captura liberada"
+                      : "Posicione seu rosto"}
                 </div>
               </div>
             )}
@@ -367,7 +435,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
       {status === "captured" && (
         <p className="text-xs text-center text-green-600 dark:text-green-400 flex items-center justify-center gap-1">
           <CheckCircle2 className="h-3 w-3" />
-          {banubaActive
+          {banubaActive && !fallbackActive
             ? "Foto facial verificada por IA e capturada com sucesso"
             : "Foto facial capturada com sucesso"}
         </p>

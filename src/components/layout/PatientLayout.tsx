@@ -58,7 +58,6 @@ const navItems: NavItem[] = [
   { label: "Exames", href: "/paciente/exames", icon: FileText },
   { label: "Laudos", href: "/paciente/laudos", icon: Stethoscope },
   { label: "Receitas", href: "/paciente/receitas", icon: Pill },
-  { label: "Renovar Receita", href: "/paciente/renovar-receita", icon: Pill },
   { label: "Atestados", href: "/paciente/atestados", icon: ClipboardList },
   { label: "Dependentes", href: "/paciente/dependentes", icon: Users },
   { label: "Créditos de Saúde", href: "/paciente/creditos", icon: Heart },

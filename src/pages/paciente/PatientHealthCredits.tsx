@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { PatientLayout } from "@/components/layout/PatientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -101,15 +102,18 @@ export default function PatientHealthCredits() {
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-4">
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
-      </div>
+      <PatientLayout title="Créditos de Saúde" subtitle="Seus pontos e recompensas">
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </PatientLayout>
     );
   }
 
   return (
-    <div className="space-y-4 p-4 max-w-lg mx-auto">
+    <PatientLayout title="Créditos de Saúde" subtitle="Seus pontos e recompensas">
+    <div className="space-y-4 max-w-lg mx-auto">
       {/* Balance card */}
       <Card className="bg-gradient-to-br from-teal-500 to-cyan-600 text-white border-0">
         <CardContent className="pt-6">
@@ -211,5 +215,6 @@ export default function PatientHealthCredits() {
         </CardContent>
       </Card>
     </div>
+    </PatientLayout>
   );
 }

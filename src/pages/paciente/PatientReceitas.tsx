@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Pill, RefreshCw, Building2, Stethoscope, Calendar, Clock, Download } from "lucide-react";
+import { Pill, RefreshCw, Building2, Stethoscope, Calendar, Clock, Download, Send } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
@@ -47,6 +48,7 @@ function typeLabel(t: string) {
 }
 
 export default function PatientReceitas() {
+  const navigate = useNavigate();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -70,10 +72,16 @@ export default function PatientReceitas() {
       title="Receitas"
       subtitle="Receituários digitais emitidos para você"
       actions={
-        <Button variant="outline" size="sm" onClick={() => void fetchPrescriptions()} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => navigate("/paciente/renovar-receita")} className="gap-1.5">
+            <Send className="h-4 w-4" />
+            Solicitar Renovação
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => void fetchPrescriptions()} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       }
     >
       <PatientBannerCarousel slides={receitasBanners} />
