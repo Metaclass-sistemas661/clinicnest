@@ -1159,7 +1159,7 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="relative z-20 -mt-14 sm:-mt-16 grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="relative z-20 -mt-14 sm:-mt-16 grid gap-6 lg:grid-cols-[1fr_240px] xl:grid-cols-[1fr_280px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">

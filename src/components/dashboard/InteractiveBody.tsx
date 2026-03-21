@@ -81,7 +81,7 @@ export const InteractiveBody = memo(function InteractiveBody() {
         {/* PNG Body Image — no background */}
         <div className="absolute inset-0 flex items-center justify-center select-none">
           <img
-            src="/MAPA-CORPORAL..png"
+            src="/MAPA-CORPORAL.png"
             alt="Mapa Corporal"
             className="h-[88%] w-auto max-w-full object-contain pointer-events-none"
             draggable={false}
