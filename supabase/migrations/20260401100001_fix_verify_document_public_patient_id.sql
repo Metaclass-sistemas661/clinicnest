@@ -1,19 +1,9 @@
--- =====================================================
--- Migration: Extend verify_document_public for consent PDFs
--- Permite verificação pública de termos de consentimento selados
--- via /verificar/:hash (mesmo endpoint de atestados/receitas)
--- =====================================================
+-- ============================================================================
+-- FIX: verify_document_public RPC uses client_id but column was renamed to patient_id
+-- Error: column pc.client_id does not exist (42703)
+-- Also: clients table was renamed to patients
+-- ============================================================================
 
-BEGIN;
-
--- Adicionar 'consent' ao enum se não existir
-DO $$ BEGIN
-  ALTER TYPE public.verifiable_document_type ADD VALUE IF NOT EXISTS 'consent';
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
-
--- Recriar a RPC para também buscar em patient_consents.sealed_pdf_hash
 CREATE OR REPLACE FUNCTION public.verify_document_public(
   p_hash TEXT,
   p_verifier_ip INET DEFAULT NULL,
@@ -41,7 +31,6 @@ BEGIN
   LIMIT 1;
 
   IF v_document IS NOT NULL THEN
-    -- Documento médico encontrado (atestado, receituário etc.)
     v_is_valid := v_document.is_signed;
     v_doc_type := v_document.document_type::text;
     v_doc_id   := v_document.document_id;
@@ -160,10 +149,3 @@ BEGIN
   RETURN v_result;
 END;
 $$;
-
--- Índice para busca rápida por hash do consent
-CREATE INDEX IF NOT EXISTS idx_patient_consents_sealed_pdf_hash
-  ON public.patient_consents (sealed_pdf_hash)
-  WHERE sealed_pdf_hash IS NOT NULL;
-
-COMMIT;
