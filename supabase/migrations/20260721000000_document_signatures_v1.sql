@@ -47,8 +47,8 @@ CREATE POLICY "document_signatures_select_tenant"
   ON public.document_signatures FOR SELECT
   USING (
     tenant_id IN (
-      SELECT s.tenant_id FROM public.staff s
-      WHERE s.user_id = auth.uid() AND s.is_active = true
+      SELECT ur.tenant_id FROM public.user_roles ur
+      WHERE ur.user_id = auth.uid()
     )
   );
 
