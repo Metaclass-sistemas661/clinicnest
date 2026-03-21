@@ -69,7 +69,7 @@ export default function PatientMensagens() {
               event: "INSERT",
               schema: "public",
               table: "patient_messages",
-              filter: `client_id=eq.${link.client_id}`,
+              filter: `patient_id=eq.${link.client_id}`,
             },
             (payload: any) => {
               // Nova mensagem recebida — recarregar lista completa

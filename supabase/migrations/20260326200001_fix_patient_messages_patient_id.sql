@@ -1,31 +1,22 @@
 -- ============================================================================
--- FASE 29C: Chat/Mensagens com a Clínica (Portal do Paciente)
+-- FIX: Renomear client_id → patient_id na tabela patient_messages
+-- e recriar todas as RPCs, RLS policies e indexes
 -- ============================================================================
 
--- 1) Tabela de mensagens do paciente
-CREATE TABLE IF NOT EXISTS public.patient_messages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  patient_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-  
-  sender_type text NOT NULL CHECK (sender_type IN ('patient', 'clinic')),
-  sender_user_id uuid,
-  sender_name text,
-  
-  content text NOT NULL CHECK (char_length(content) <= 2000),
-  
-  read_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+-- Coluna já foi renomeada via CLI, apenas garantir:
+-- ALTER TABLE public.patient_messages RENAME COLUMN client_id TO patient_id;
+-- (já aplicado)
 
-CREATE INDEX IF NOT EXISTS idx_patient_messages_tenant ON public.patient_messages(tenant_id);
+-- Recriar indexes com nome correto
+DROP INDEX IF EXISTS idx_patient_messages_client;
+DROP INDEX IF EXISTS idx_patient_messages_created;
+DROP INDEX IF EXISTS idx_patient_messages_unread;
+
 CREATE INDEX IF NOT EXISTS idx_patient_messages_patient ON public.patient_messages(patient_id);
 CREATE INDEX IF NOT EXISTS idx_patient_messages_created ON public.patient_messages(patient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_patient_messages_unread ON public.patient_messages(patient_id, read_at) WHERE read_at IS NULL;
 
-ALTER TABLE public.patient_messages ENABLE ROW LEVEL SECURITY;
-
--- RLS: Paciente vê suas mensagens
+-- Recriar RLS policies usando patient_id
 DROP POLICY IF EXISTS "patient_messages_patient_select" ON public.patient_messages;
 CREATE POLICY "patient_messages_patient_select" ON public.patient_messages
   FOR SELECT TO authenticated
@@ -35,7 +26,6 @@ CREATE POLICY "patient_messages_patient_select" ON public.patient_messages
     )
   );
 
--- RLS: Paciente pode inserir mensagens (sender_type = 'patient')
 DROP POLICY IF EXISTS "patient_messages_patient_insert" ON public.patient_messages;
 CREATE POLICY "patient_messages_patient_insert" ON public.patient_messages
   FOR INSERT TO authenticated
@@ -46,33 +36,8 @@ CREATE POLICY "patient_messages_patient_insert" ON public.patient_messages
     )
   );
 
--- RLS: Admin/staff do tenant gerencia
 DROP POLICY IF EXISTS "patient_messages_tenant_all" ON public.patient_messages;
 CREATE POLICY "patient_messages_tenant_all" ON public.patient_messages
-  FOR ALL TO authenticated
-  USING (tenant_id IN (SELECT tenant_id FROM public.profiles WHERE user_id = auth.uid()))
-  WITH CHECK (tenant_id IN (SELECT tenant_id FROM public.profiles WHERE user_id = auth.uid()));
-
--- 2) Tabela de templates de resposta rápida
-CREATE TABLE IF NOT EXISTS public.message_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  
-  title text NOT NULL,
-  content text NOT NULL CHECK (char_length(content) <= 2000),
-  category text,
-  is_active boolean NOT NULL DEFAULT true,
-  
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_message_templates_tenant ON public.message_templates(tenant_id);
-
-ALTER TABLE public.message_templates ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "message_templates_tenant_all" ON public.message_templates;
-CREATE POLICY "message_templates_tenant_all" ON public.message_templates
   FOR ALL TO authenticated
   USING (tenant_id IN (SELECT tenant_id FROM public.profiles WHERE user_id = auth.uid()))
   WITH CHECK (tenant_id IN (SELECT tenant_id FROM public.profiles WHERE user_id = auth.uid()));
@@ -252,7 +217,7 @@ DECLARE
   v_user_id uuid;
   v_tenant_id uuid;
   v_sender_name text;
-  v_client_tenant_id uuid;
+  v_patient_tenant_id uuid;
   v_message_id uuid;
 BEGIN
   v_user_id := auth.uid();
@@ -272,11 +237,11 @@ BEGIN
     RAISE EXCEPTION 'Usuário não vinculado a tenant';
   END IF;
 
-  SELECT c.tenant_id INTO v_client_tenant_id
+  SELECT c.tenant_id INTO v_patient_tenant_id
   FROM public.clients c
   WHERE c.id = p_client_id;
 
-  IF v_client_tenant_id IS NULL OR v_client_tenant_id != v_tenant_id THEN
+  IF v_patient_tenant_id IS NULL OR v_patient_tenant_id != v_tenant_id THEN
     RAISE EXCEPTION 'Paciente não encontrado';
   END IF;
 
@@ -395,7 +360,7 @@ AS $$
 DECLARE
   v_user_id uuid;
   v_tenant_id uuid;
-  v_client_tenant_id uuid;
+  v_patient_tenant_id uuid;
 BEGIN
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
@@ -406,11 +371,11 @@ BEGIN
   FROM public.profiles p
   WHERE p.id = v_user_id;
 
-  SELECT c.tenant_id INTO v_client_tenant_id
+  SELECT c.tenant_id INTO v_patient_tenant_id
   FROM public.clients c
   WHERE c.id = p_client_id;
 
-  IF v_client_tenant_id IS NULL OR v_client_tenant_id != v_tenant_id THEN
+  IF v_patient_tenant_id IS NULL OR v_patient_tenant_id != v_tenant_id THEN
     RAISE EXCEPTION 'Paciente não encontrado';
   END IF;
 
@@ -437,20 +402,3 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_messages_for_patient(uuid, integer) TO authenticated;
-
--- 9) Seed de templates de mensagem
-INSERT INTO public.message_templates (tenant_id, title, content, category)
-SELECT 
-  t.id,
-  template.title,
-  template.content,
-  template.category
-FROM public.tenants t
-CROSS JOIN (VALUES
-  ('Confirmação de Agendamento', 'Olá! Confirmamos seu agendamento. Aguardamos você na data e horário marcados. Qualquer dúvida, estamos à disposição.', 'agendamento'),
-  ('Resultado Disponível', 'Olá! Informamos que o resultado do seu exame já está disponível no portal. Acesse para visualizar e baixar.', 'exames'),
-  ('Lembrete de Consulta', 'Olá! Lembramos que você tem uma consulta agendada. Não se esqueça de trazer seus documentos e exames anteriores.', 'agendamento'),
-  ('Receita Disponível', 'Olá! Sua receita médica já está disponível no portal. Acesse para visualizar e baixar.', 'documentos'),
-  ('Agradecimento', 'Obrigado por escolher nossa clínica! Esperamos que tenha tido uma boa experiência. Qualquer dúvida, estamos à disposição.', 'geral')
-) AS template(title, content, category)
-ON CONFLICT DO NOTHING;
