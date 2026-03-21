@@ -24,7 +24,8 @@ type EventType =
   | "return_reminder"
   | "exam_ready"
   | "appointment_cancelled"
-  | "waitlist_slot_available";
+  | "waitlist_slot_available"
+  | "document_available";
 
 interface EventPayload {
   event_type: EventType;
@@ -169,6 +170,34 @@ function waitlistSlotContent(clientName: string, serviceName: string, profession
   };
 }
 
+function documentAvailableContent(clientName: string, documentType: string, documentTitle: string): { headline: string; icon: string; bodyHtml: string; bodyText: string; ctaLabel?: string; ctaUrl?: string } {
+  const siteUrl = Deno.env.get("SITE_URL") || "https://clinicnest.metaclass.com.br";
+  const typeLabels: Record<string, string> = {
+    certificate: "Atestado",
+    prescription: "Receita",
+    exam: "Exame",
+    report: "Laudo",
+  };
+  const label = typeLabels[documentType] || "Documento";
+
+  return {
+    headline: `${label} Disponível`,
+    icon: "📄",
+    bodyHtml:
+      greeting(clientName) +
+      paragraph(`Um novo documento foi emitido para você: <strong>${documentTitle}</strong>.`) +
+      infoBox([
+        { label: "📋 Tipo", value: label },
+        { label: "📄 Documento", value: documentTitle },
+        { label: "📅 Data", value: new Date().toLocaleDateString("pt-BR") },
+      ], COLORS.INFO) +
+      paragraph("Acesse seu portal do paciente para visualizar, baixar e assinar o documento."),
+    bodyText: `Olá, ${clientName}! Um novo ${label.toLowerCase()} foi emitido para você: "${documentTitle}". Acesse seu portal para visualizar e assinar.`,
+    ctaLabel: "Ver Documentos",
+    ctaUrl: `${siteUrl}/paciente/documentos`,
+  };
+}
+
 // ─── Edge Function ─────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -291,6 +320,16 @@ serve(async (req) => {
         subject = `🎉 Vaga disponível - ${clinicName}`;
         pushTitle = "Vaga Disponível! 🎉";
         pushBody = `Uma vaga ficou disponível${serviceName ? ` para ${serviceName}` : ""}. Agende agora!`;
+        break;
+      }
+
+      case "document_available": {
+        const documentType = String(metadata?.document_type ?? "document");
+        const documentTitle = String(metadata?.document_title ?? "Documento");
+        emailContent = documentAvailableContent(clientName, documentType, documentTitle);
+        subject = `📄 Novo documento disponível - ${clinicName}`;
+        pushTitle = "Documento Disponível 📄";
+        pushBody = `Um novo documento foi emitido para você: "${documentTitle}". Acesse o portal para visualizar e assinar.`;
         break;
       }
     }

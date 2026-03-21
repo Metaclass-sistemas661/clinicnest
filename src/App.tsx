@@ -107,6 +107,7 @@ const PatientExames = lazyWithRetry(() => import("@/pages/paciente/PatientExames
 const PatientReceitas = lazyWithRetry(() => import("@/pages/paciente/PatientReceitas"));
 const PatientAtestados = lazyWithRetry(() => import("@/pages/paciente/PatientAtestados"));
 const PatientLaudos = lazyWithRetry(() => import("@/pages/paciente/PatientLaudos"));
+const PatientDocumentos = lazyWithRetry(() => import("@/pages/paciente/PatientDocumentos"));
 const PatientConsentSigning = lazyWithRetry(() => import("@/pages/paciente/PatientConsentSigning"));
 const PatientProfile = lazyWithRetry(() => import("@/pages/paciente/PatientProfile"));
 const PatientSettings = lazyWithRetry(() => import("@/pages/paciente/PatientSettings"));
@@ -1060,6 +1061,16 @@ const App = () => (
                     <PatientProtectedRoute>
                       <ConsentGate>
                         <PatientLaudos />
+                      </ConsentGate>
+                    </PatientProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/paciente/documentos"
+                  element={
+                    <PatientProtectedRoute>
+                      <ConsentGate>
+                        <PatientDocumentos />
                       </ConsentGate>
                     </PatientProtectedRoute>
                   }

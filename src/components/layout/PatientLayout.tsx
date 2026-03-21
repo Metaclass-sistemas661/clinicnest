@@ -24,6 +24,7 @@ import {
   Search,
   Users,
   CreditCard,
+  Files,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabasePatient } from "@/integrations/supabase/client";
@@ -49,6 +50,7 @@ const navItems: NavItem[] = [
   { label: "Teleconsulta", href: "/paciente/teleconsulta", icon: Video },
   { label: "Minha Saúde", href: "/paciente/saude", icon: Heart },
   { label: "Planos de Tratamento", href: "/paciente/planos", icon: ClipboardList },
+  { label: "Documentos", href: "/paciente/documentos", icon: Files },
   { label: "Questionários", href: "/paciente/proms", icon: ClipboardList },
   { label: "Cartão de Saúde", href: "/paciente/cartao-saude", icon: CreditCard },
   { label: "Mensagens", href: "/paciente/mensagens", icon: MessageCircle },
@@ -262,8 +264,8 @@ function PatientLayoutInner({
       !isMobile && "bg-teal-600 dark:bg-teal-700 p-2"
     )}>
     <div className={cn(
-      "h-full w-full bg-background relative flex",
-      !isMobile && "rounded-2xl overflow-hidden"
+      "h-full w-full bg-background relative flex overflow-hidden",
+      !isMobile && "rounded-2xl"
     )}>
       {/* Global Search */}
       <PatientGlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -272,7 +274,7 @@ function PatientLayoutInner({
       {!isMobile && (
         <aside
           className={cn(
-            "hidden lg:flex flex-col bg-teal-600 dark:bg-teal-700 transition-all duration-300 flex-shrink-0",
+            "hidden lg:flex flex-col bg-teal-600 dark:bg-teal-700 transition-all duration-300 flex-shrink-0 overflow-hidden",
             collapsed ? "w-[68px]" : "w-[260px]"
           )}
         >
@@ -299,7 +301,7 @@ function PatientLayoutInner({
       )}
 
       {/* Main content */}
-      <main className={cn("flex-1 min-w-0 overflow-y-auto flex flex-col", isMobile && "pb-20")}>
+      <main className={cn("flex-1 min-w-0 min-h-0 overflow-y-auto flex flex-col", isMobile && "pb-20")}>
         {/* Dependent context banner */}
         {dependentsContext?.activeDependent && (
           <DependentBanner
