@@ -886,7 +886,7 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
-          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-5 pb-20 md:px-8 md:pt-6 md:pb-24 lg:px-10 lg:pt-8 lg:pb-28 text-white">
+          <div className="relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-5 pb-14 md:px-8 md:pt-6 md:pb-16 lg:px-10 lg:pt-7 lg:pb-20 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
@@ -1209,13 +1209,13 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="relative z-20 -mt-16 md:-mt-20 lg:-mt-24 grid gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px]">
+          <div className="relative z-20 -mt-10 md:-mt-12 lg:-mt-16 grid gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
 
           {/* KPI METRICS GRID */}
-          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 auto-rows-fr">
             {/* Consultas hoje */}
             <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '0ms' }}>
               <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
@@ -1261,7 +1261,7 @@ export default function Dashboard() {
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-xl sm:text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none truncate">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
                   <p className="mt-1 text-sm text-white/80">Receita do mês</p>
                 </div>
               </Link>
@@ -2077,8 +2077,8 @@ export default function Dashboard() {
 
           {/* Right Column: Interactive Body Map */}
           <div className="hidden lg:block">
-            <div className="sticky top-20 z-40">
-              <Card className="h-[calc(100vh-6rem)] overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 bg-gradient-to-b from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/80">
+            <div className="sticky top-4 z-20">
+              <Card className="h-[calc(100vh-3rem)] overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 bg-gradient-to-b from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/80">
                 <CardContent className="h-full p-0">
                   <InteractiveBody />
                 </CardContent>
