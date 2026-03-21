@@ -54,6 +54,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
   const offscreenRef = useRef<HTMLDivElement | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frameCountRef = useRef(0);
+  const fallbackActiveRef = useRef(false);
 
   const [status, setStatus] = useState<
     "idle" | "loading" | "streaming" | "captured" | "error"
@@ -102,11 +103,22 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── Attach stream to <video> once the element is in the DOM ── */
+  useEffect(() => {
+    if (status === "streaming" && videoRef.current && streamRef.current) {
+      if (!videoRef.current.srcObject) {
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }, [status]);
+
   /* ── Start camera + optional Banuba face detection ───── */
   const startCamera = useCallback(async () => {
     setErrorMsg("");
     setFaceDetected(false);
     setFallbackActive(false);
+    fallbackActiveRef.current = false;
     setStatus("loading");
     frameCountRef.current = 0;
 
@@ -178,6 +190,8 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
             "framedata",
             ({ detail: frameData }: any) => {
               frameCountRef.current++;
+              // Once fallback is active, stop overriding faceDetected
+              if (fallbackActiveRef.current) return;
               try {
                 // Try compound key first (some SDK versions support dot-path)
                 let hasFace = frameData.get("frxRecognitionResult.faces.0.hasFace");
@@ -223,6 +237,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     } else {
       // Start timeout: if no face detected after N seconds, enable fallback capture
       timeoutRef.current = setTimeout(() => {
+        fallbackActiveRef.current = true;
         setFallbackActive(true);
         setFaceDetected(true);
         console.warn(
