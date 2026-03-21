@@ -105,11 +105,11 @@ BEGIN
 
   -- Validate document exists and belongs to this patient
   IF p_document_type = 'certificate' THEN
-    PERFORM 1 FROM medical_certificates WHERE id = p_document_id AND client_id = v_patient_id;
+    PERFORM 1 FROM medical_certificates WHERE id = p_document_id AND patient_id = v_patient_id;
   ELSIF p_document_type = 'prescription' THEN
-    PERFORM 1 FROM prescriptions WHERE id = p_document_id AND client_id = v_patient_id;
+    PERFORM 1 FROM prescriptions WHERE id = p_document_id AND patient_id = v_patient_id;
   ELSIF p_document_type = 'exam' THEN
-    PERFORM 1 FROM exam_results WHERE id = p_document_id AND client_id = v_patient_id;
+    PERFORM 1 FROM exam_results WHERE id = p_document_id AND patient_id = v_patient_id;
   ELSIF p_document_type = 'report' THEN
     PERFORM 1 FROM medical_reports WHERE id = p_document_id AND patient_id = v_patient_id;
   ELSE
