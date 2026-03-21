@@ -11,9 +11,9 @@ import { useAppStatus } from "@/contexts/AppStatusContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AreaChart, Area, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, PieChart, Pie, Cell } from "recharts";
-import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays } from "date-fns";
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, addDays, subMonths, addMonths, getDay, isSameMonth, isSameDay, isToday as isDateToday, eachDayOfInterval, format as fnsFormat } from "date-fns";
 import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
 import { fromZonedTime } from "date-fns-tz";
 import { fetchPatientSpendingByPeriod } from "@/lib/patientSpending";
@@ -138,6 +138,13 @@ export default function Dashboard() {
   const [bannerSlide, setBannerSlide] = useState(0);
   const [financeFilter, setFinanceFilter] = useState<'week' | 'month' | 'year'>('month');
   const [hoveredChart, setHoveredChart] = useState<string | null>(null);
+
+  // Enterprise calendar state
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [monthlyAppointmentCounts, setMonthlyAppointmentCounts] = useState<Record<string, { total: number; confirmed: number; pending: number; completed: number }>>({});
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   // Banner só aparece para usuários novos (< 7 dias) e que não dispensaram
   const showBanner = useMemo(() => {
@@ -316,6 +323,40 @@ export default function Dashboard() {
       if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, [profile?.tenant_id, profile?.user_id, profile?.id, user?.id, isAdmin]);
+
+  // Enterprise calendar: fetch monthly appointment counts per day
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    const fetchMonthCounts = async () => {
+      setCalendarLoading(true);
+      try {
+        const mStart = startOfMonth(calendarMonth);
+        const mEnd = endOfMonth(calendarMonth);
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("scheduled_at, status")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("scheduled_at", mStart.toISOString())
+          .lte("scheduled_at", mEnd.toISOString());
+        if (error) throw error;
+        const counts: Record<string, { total: number; confirmed: number; pending: number; completed: number }> = {};
+        (data || []).forEach((apt: { scheduled_at: string; status: string }) => {
+          const dateKey = formatInAppTz(new Date(apt.scheduled_at), "yyyy-MM-dd");
+          if (!counts[dateKey]) counts[dateKey] = { total: 0, confirmed: 0, pending: 0, completed: 0 };
+          counts[dateKey].total++;
+          if (apt.status === "confirmed") counts[dateKey].confirmed++;
+          else if (apt.status === "pending") counts[dateKey].pending++;
+          else if (apt.status === "completed") counts[dateKey].completed++;
+        });
+        setMonthlyAppointmentCounts(counts);
+      } catch (err) {
+        logger.error("Failed to fetch monthly appointment counts", err);
+      } finally {
+        setCalendarLoading(false);
+      }
+    };
+    fetchMonthCounts();
+  }, [profile?.tenant_id, calendarMonth]);
 
   const fetchCommissionTotals = async (
     tenantId: string,
@@ -781,17 +822,26 @@ export default function Dashboard() {
       .sort((a, b) => b.count - a.count);
   }, [todayAppointments]);
 
-  const weekDays = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = addDays(today, i - 3);
-      const dateStr = formatInAppTz(date, "yyyy-MM-dd");
-      const todayStr = formatInAppTz(today, "yyyy-MM-dd");
-      const isToday = dateStr === todayStr;
-      const count = isToday ? todayAppointments.length : 0;
-      return { date, dayName: formatInAppTz(date, "EEE"), dayNum: formatInAppTz(date, "dd"), isToday, count };
-    });
-  }, [todayAppointments]);
+  // Enterprise monthly calendar grid
+  const calendarGrid = useMemo(() => {
+    const mStart = startOfMonth(calendarMonth);
+    const mEnd = endOfMonth(calendarMonth);
+    const startDow = getDay(mStart); // 0 = Sunday
+    const allDays = eachDayOfInterval({ start: mStart, end: mEnd });
+    // Pad beginning with days from previous month
+    const prevPad: (Date | null)[] = Array.from({ length: startDow }, () => null);
+    const grid = [...prevPad, ...allDays];
+    // Pad end to complete the last row (rows of 7)
+    while (grid.length % 7 !== 0) grid.push(null);
+    // Split into weeks
+    const weeks: (Date | null)[][] = [];
+    for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7));
+    return weeks;
+  }, [calendarMonth]);
+
+  const calendarMonthLabel = useMemo(() => {
+    return formatInAppTz(calendarMonth, "MMMM yyyy");
+  }, [calendarMonth]);
 
   const getStatusBadge = useCallback((status: string) => {
     const styles = {
@@ -836,7 +886,7 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
-          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-6 pb-20 md:px-8 md:pt-8 md:pb-28 lg:px-10 lg:pt-10 lg:pb-36 text-white">
+          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-6 pb-28 md:px-8 md:pt-8 md:pb-36 lg:px-10 lg:pt-10 lg:pb-44 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
@@ -1159,7 +1209,7 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="relative z-20 -mt-16 md:-mt-24 lg:-mt-32 grid gap-6 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
+          <div className="relative z-20 -mt-24 md:-mt-32 lg:-mt-40 grid gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
@@ -1439,27 +1489,158 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Mini weekly calendar strip */}
-                  <Card>
-                    <CardContent className="py-3 px-4">
-                      <div className="flex items-center gap-1 justify-between overflow-x-auto scrollbar-hide">
-                        {weekDays.map((d) => (
-                          <Link
-                            key={d.dayNum}
-                            to="/agenda"
-                            className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-center transition-all hover:bg-teal-50 ${d.isToday ? "bg-teal-600 text-white hover:bg-teal-700" : ""}`}
+                  {/* Enterprise Monthly Calendar */}
+                  <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-800/80">
+                    <CardContent className="p-0">
+                      {/* Calendar Header */}
+                      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-base font-bold capitalize tracking-tight">{calendarMonthLabel}</h4>
+                          {calendarLoading && (
+                            <div className="h-4 w-4 rounded-full border-2 border-teal-500 border-t-transparent animate-spin" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                            onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
                           >
-                            <span className={`text-[10px] font-medium uppercase ${d.isToday ? "text-teal-100" : "text-muted-foreground"}`}>{d.dayName}</span>
-                            <span className={`text-sm font-bold tabular-nums ${d.isToday ? "text-white" : "text-foreground"}`}>{d.dayNum}</span>
-                            {d.count > 0 && (
-                              <div className={`mt-0.5 flex gap-0.5`}>
-                                {Array.from({ length: Math.min(d.count, 4) }).map((_, i) => (
-                                  <div key={i} className={`h-1 w-1 rounded-full ${d.isToday ? "bg-white/70" : "bg-teal-500"}`} />
-                                ))}
-                              </div>
-                            )}
-                          </Link>
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-xs font-semibold rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                            onClick={() => setCalendarMonth(new Date())}
+                          >
+                            Hoje
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                            onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Day of week headers */}
+                      <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-700/50">
+                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dow) => (
+                          <div key={dow} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {dow}
+                          </div>
                         ))}
+                      </div>
+
+                      {/* Calendar grid */}
+                      <div className="divide-y divide-slate-50 dark:divide-slate-700/30">
+                        {calendarGrid.map((week, wi) => (
+                          <div key={wi} className="grid grid-cols-7">
+                            {week.map((day, di) => {
+                              if (!day) {
+                                return <div key={`empty-${wi}-${di}`} className="min-h-[52px] bg-slate-50/50 dark:bg-slate-800/30" />;
+                              }
+                              const dateKey = formatInAppTz(day, "yyyy-MM-dd");
+                              const todayStr = formatInAppTz(new Date(), "yyyy-MM-dd");
+                              const isDayToday = dateKey === todayStr;
+                              const counts = monthlyAppointmentCounts[dateKey];
+                              const hasAppointments = counts && counts.total > 0;
+                              const isSelected = selectedCalendarDay === dateKey;
+                              const dayNum = fnsFormat(day, "d");
+                              const isWeekend = di === 0 || di === 6;
+
+                              return (
+                                <button
+                                  key={dateKey}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCalendarDay(isSelected ? null : dateKey);
+                                    if (hasAppointments) navigate("/agenda");
+                                  }}
+                                  className={`
+                                    group relative min-h-[52px] flex flex-col items-center justify-start pt-1.5 transition-all duration-150
+                                    ${isDayToday
+                                      ? "bg-teal-50 dark:bg-teal-900/20"
+                                      : isSelected
+                                        ? "bg-blue-50 dark:bg-blue-900/20"
+                                        : isWeekend
+                                          ? "bg-slate-25 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                                          : "hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                                    }
+                                    ${hasAppointments ? "cursor-pointer" : "cursor-default"}
+                                  `}
+                                >
+                                  {/* Day number */}
+                                  <span
+                                    className={`
+                                      flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-all
+                                      ${isDayToday
+                                        ? "bg-teal-600 text-white shadow-sm shadow-teal-600/30"
+                                        : isSelected
+                                          ? "bg-blue-600 text-white"
+                                          : isWeekend
+                                            ? "text-muted-foreground"
+                                            : "text-foreground group-hover:bg-slate-200 dark:group-hover:bg-slate-600"
+                                      }
+                                    `}
+                                  >
+                                    {dayNum}
+                                  </span>
+
+                                  {/* Appointment indicators */}
+                                  {hasAppointments && (
+                                    <div className="mt-0.5 flex items-center gap-0.5">
+                                      {counts.confirmed > 0 && (
+                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" title={`${counts.confirmed} confirmado(s)`} />
+                                      )}
+                                      {counts.pending > 0 && (
+                                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500" title={`${counts.pending} pendente(s)`} />
+                                      )}
+                                      {counts.completed > 0 && (
+                                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" title={`${counts.completed} concluído(s)`} />
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Count badge on hover */}
+                                  {hasAppointments && (
+                                    <div className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-teal-600 px-1 text-[9px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                                      {counts.total}
+                                    </div>
+                                  )}
+
+                                  {/* Today pulse ring */}
+                                  {isDayToday && (
+                                    <div className="absolute inset-0 rounded-none border-2 border-teal-400/40 animate-pulse pointer-events-none" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Calendar footer legend */}
+                      <div className="flex items-center justify-between px-5 py-2.5 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30">
+                        <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <div className="h-2 w-2 rounded-full bg-emerald-500" /> Confirmado
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <div className="h-2 w-2 rounded-full bg-amber-500" /> Pendente
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <div className="h-2 w-2 rounded-full bg-blue-500" /> Concluído
+                          </span>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild className="h-7 text-[10px] font-semibold text-teal-600 hover:bg-teal-50 hover:text-teal-700">
+                          <Link to="/agenda">Abrir agenda →</Link>
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1896,8 +2077,8 @@ export default function Dashboard() {
 
           {/* Right Column: Interactive Body Map */}
           <div className="hidden lg:block">
-            <div className="sticky top-4 z-10">
-              <Card className="h-[calc(100vh-6rem)] overflow-hidden shadow-xl border-0 ring-1 ring-black/5">
+            <div className="sticky top-2 z-10">
+              <Card className="h-[calc(100vh-5rem)] overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 bg-gradient-to-b from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/80">
                 <CardContent className="h-full p-0">
                   <InteractiveBody />
                 </CardContent>

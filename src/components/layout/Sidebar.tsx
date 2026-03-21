@@ -355,50 +355,57 @@ function CategoryGroup({
 
   if (isCollapsed) {
     return (
-      <div className="space-y-1 py-1">
-        <div
+      <div className="relative group/cat py-1">
+        {/* Category icon — only this is visible when collapsed */}
+        <Link
+          to={filteredItems.length > 0 ? (filteredItems.find(i => location.pathname === i.href)?.href ?? filteredItems[0].href) : "#"}
+          onClick={onNavigate}
           className={cn(
-            "mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg transition-all",
-            hasActiveChild ? `bg-gradient-to-br ${category.gradient} text-white shadow-md` : "bg-white/15"
+            "mx-auto flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200",
+            hasActiveChild
+              ? `bg-gradient-to-br ${category.gradient} text-white shadow-lg shadow-primary/20 scale-105`
+              : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white hover:scale-105"
           )}
           title={category.label}
         >
-          <category.icon className={cn("h-4 w-4", !hasActiveChild && "text-white/70")} />
+          <category.icon className="h-5 w-5" />
+        </Link>
+
+        {/* Flyout panel on hover */}
+        <div className="invisible opacity-0 group-hover/cat:visible group-hover/cat:opacity-100 transition-all duration-200 absolute left-full top-0 ml-2 z-50 min-w-[200px]">
+          <div className="bg-slate-800 border border-white/10 rounded-xl p-2 shadow-2xl shadow-black/40">
+            <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white/50 mb-1">{category.label}</p>
+            {filteredItems.map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
+                    isActive
+                      ? `bg-gradient-to-r ${category.gradient} text-white shadow-sm`
+                      : "text-white/70 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.title}</span>
+                </Link>
+              );
+            })}
+            {lockedItems.map((item) => (
+              <Link
+                key={item.href}
+                to="/assinatura"
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-white/40 hover:bg-amber-500/20 transition-all"
+              >
+                <Lock className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.title}</span>
+              </Link>
+            ))}
+          </div>
         </div>
-        {filteredItems.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={onNavigate}
-              onMouseEnter={() => prefetchRoute(item.href)}
-              className={cn(
-                "group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? `bg-gradient-to-r ${category.gradient} text-white shadow-lg shadow-primary/20`
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
-              )}
-              title={item.title}
-            >
-              <item.icon className={cn(
-                "h-5 w-5 shrink-0 transition-transform duration-200",
-                isActive && "scale-110",
-                !isActive && "group-hover:scale-110"
-              )} />
-            </Link>
-          );
-        })}
-        {lockedItems.map((item) => (
-          <Link
-            key={item.href}
-            to="/assinatura"
-            className="group flex items-center justify-center rounded-xl px-3 py-2.5 text-sm font-medium text-white/40 transition-all duration-200 hover:bg-amber-500/20"
-            title={`${item.title} - Upgrade necessário`}
-          >
-            <Lock className="h-4 w-4 shrink-0" />
-          </Link>
-        ))}
       </div>
     );
   }

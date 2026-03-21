@@ -83,7 +83,7 @@ export const InteractiveBody = memo(function InteractiveBody() {
           <img
             src="/MAPA-CORPORAL.png"
             alt="Mapa Corporal"
-            className="h-[88%] w-auto max-w-full object-contain pointer-events-none"
+            className="h-[94%] w-auto max-w-full object-contain pointer-events-none"
             draggable={false}
             style={{
               filter:

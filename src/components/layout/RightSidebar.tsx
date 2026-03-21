@@ -85,7 +85,7 @@ export function RightSidebar() {
           "absolute top-0 right-0 bottom-0 z-40 flex-col",
           "bg-background/95 backdrop-blur-xl border-l border-border/30",
           "transition-all duration-300 ease-out",
-          expanded ? cn("flex", PANEL_WIDTH) : cn("hidden 2xl:flex", RAIL_WIDTH),
+          expanded ? cn("flex", PANEL_WIDTH) : cn("hidden xl:flex", RAIL_WIDTH),
         )}
       >
         {/* ── Rail (always visible) ─────────────────────────── */}
