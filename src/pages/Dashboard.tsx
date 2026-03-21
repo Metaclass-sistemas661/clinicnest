@@ -886,7 +886,7 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
-          <div className="relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-5 pb-14 md:px-8 md:pt-6 md:pb-16 lg:px-10 lg:pt-7 lg:pb-20 text-white">
+          <div className="relative overflow-x-clip -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-4 pb-12 md:px-8 md:pt-5 md:pb-14 lg:px-10 lg:pt-5 lg:pb-16 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
