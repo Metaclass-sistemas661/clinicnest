@@ -29,7 +29,7 @@ import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
 import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, Stethoscope, TrendingUp, ShieldCheck } from "lucide-react";
-import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, format as fnsFormat } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
@@ -68,6 +68,9 @@ export default function Agenda() {
   const [products, setProducts] = useState<Product[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [monthlyAppointmentCounts, setMonthlyAppointmentCounts] = useState<Record<string, { total: number; confirmed: number; pending: number; completed: number; arrived: number }>>({});
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -163,6 +166,41 @@ export default function Agenda() {
       fetchData();
     }
   }, [profile?.tenant_id, currentDate, viewMode]);
+
+  // Enterprise calendar: fetch monthly appointment counts per day
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    const fetchMonthCounts = async () => {
+      setCalendarLoading(true);
+      try {
+        const mStart = startOfMonth(calendarMonth);
+        const mEnd = endOfMonth(calendarMonth);
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("scheduled_at, status")
+          .eq("tenant_id", profile.tenant_id)
+          .gte("scheduled_at", mStart.toISOString())
+          .lte("scheduled_at", mEnd.toISOString());
+        if (error) throw error;
+        const counts: Record<string, { total: number; confirmed: number; pending: number; completed: number; arrived: number }> = {};
+        (data || []).forEach((apt: { scheduled_at: string; status: string }) => {
+          const dateKey = formatInAppTz(new Date(apt.scheduled_at), "yyyy-MM-dd");
+          if (!counts[dateKey]) counts[dateKey] = { total: 0, confirmed: 0, pending: 0, completed: 0, arrived: 0 };
+          counts[dateKey].total++;
+          if (apt.status === "confirmed") counts[dateKey].confirmed++;
+          else if (apt.status === "pending") counts[dateKey].pending++;
+          else if (apt.status === "completed") counts[dateKey].completed++;
+          else if (apt.status === "arrived") counts[dateKey].arrived++;
+        });
+        setMonthlyAppointmentCounts(counts);
+      } catch (err) {
+        logger.error("Failed to fetch monthly appointment counts", err);
+      } finally {
+        setCalendarLoading(false);
+      }
+    };
+    fetchMonthCounts();
+  }, [profile?.tenant_id, calendarMonth]);
 
   const fetchData = async () => {
     if (!profile?.tenant_id) return;
@@ -755,6 +793,24 @@ export default function Agenda() {
     ).length;
   };
 
+  // Enterprise monthly calendar grid
+  const calendarGrid = useMemo(() => {
+    const mStart = startOfMonth(calendarMonth);
+    const mEnd = endOfMonth(calendarMonth);
+    const startDow = getDay(mStart); // 0 = Sunday
+    const allDays = eachDayOfInterval({ start: mStart, end: mEnd });
+    const prevPad: (Date | null)[] = Array.from({ length: startDow }, () => null);
+    const grid = [...prevPad, ...allDays];
+    while (grid.length % 7 !== 0) grid.push(null);
+    const weeks: (Date | null)[][] = [];
+    for (let i = 0; i < grid.length; i += 7) weeks.push(grid.slice(i, i + 7));
+    return weeks;
+  }, [calendarMonth]);
+
+  const calendarMonthLabel = useMemo(() => {
+    return formatInAppTz(calendarMonth, "MMMM yyyy");
+  }, [calendarMonth]);
+
   // Next patient: first confirmed/arrived today
   const nextPatient = useMemo(() => {
     const now = new Date();
@@ -1123,78 +1179,219 @@ export default function Agenda() {
           {/* Next patient dashboard */}
           {nextPatient && <NextPatientDashboard appointment={nextPatient} className="mb-5" />}
 
-          {/* Navigation */}
-          <div className="mb-4 md:mb-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2 md:gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 rounded-xl"
-                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}
-                aria-label={viewMode === "day" ? "Dia anterior" : "Semana anterior"}
-                data-tour="agenda-prev-period"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <h2 className="text-sm md:text-base font-semibold text-center min-w-0 text-foreground">
-                {viewMode === "day"
-                  ? formatInAppTz(currentDate, "EEE, d 'de' MMM")
-                  : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
-              </h2>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 rounded-xl"
-                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}
-                aria-label={viewMode === "day" ? "Próximo dia" : "Próxima semana"}
-                data-tour="agenda-next-period"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentDate(new Date())} data-tour="agenda-today">
-              Hoje
-            </Button>
-          </div>
-
-          {/* Week Overview - Mini Calendar */}
-          {viewMode === "week" && (
-            <div className="mb-4 md:mb-5 grid grid-cols-7 gap-1.5 md:gap-2">
-              {getWeekDays().map((day) => {
-                const count = getAppointmentsCountForDay(day);
-                const isToday = isSameDay(day, new Date());
-                const isSelected = isSameDay(day, currentDate);
-                return (
-                  <button
-                    key={day.toISOString()}
-                    onClick={() => {
-                      setCurrentDate(day);
-                      setViewMode("day");
-                    }}
-                    className={`
-                      flex flex-col items-center rounded-xl border p-1.5 md:p-3 transition-all hover:border-primary/50 hover:bg-accent
-                      ${isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}
-                      ${isSelected ? "bg-primary/10 border-primary" : "bg-card"}
-                    `}
+          {/* Enterprise Monthly Calendar */}
+          <Card className="mb-5 overflow-hidden border-0 shadow-lg bg-gradient-to-br from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-800/80">
+            <CardContent className="p-0">
+              {/* Calendar Header */}
+              <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-slate-100 dark:border-slate-700/50">
+                <div className="flex items-center gap-3">
+                  <CalendarDays className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                  <h4 className="text-base font-bold capitalize tracking-tight">{calendarMonthLabel}</h4>
+                  {calendarLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                    onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
                   >
-                    <span className="text-[10px] md:text-xs text-muted-foreground capitalize">
-                      {formatInAppTz(day, "EEE").slice(0, 3)}
-                    </span>
-                    <span className={`text-sm md:text-xl font-bold text-foreground ${isToday ? "text-primary" : ""}`}>
-                      {formatInAppTz(day, "d")}
-                    </span>
-                    {count > 0 && (
-                      <span className="mt-0.5 md:mt-1 rounded-full bg-primary/15 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-semibold text-primary">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-3 text-xs font-semibold rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                    onClick={() => {
+                      setCalendarMonth(new Date());
+                      setCurrentDate(new Date());
+                    }}
+                  >
+                    Hoje
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                    onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Day of week headers */}
+              <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-700/50">
+                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dow) => (
+                  <div key={dow} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {dow}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="divide-y divide-slate-50 dark:divide-slate-700/30">
+                {calendarGrid.map((week, wi) => (
+                  <div key={wi} className="grid grid-cols-7">
+                    {week.map((day, di) => {
+                      if (!day) {
+                        return <div key={`empty-${wi}-${di}`} className="min-h-[56px] bg-slate-50/50 dark:bg-slate-800/30" />;
+                      }
+                      const dateKey = formatInAppTz(day, "yyyy-MM-dd");
+                      const todayStr = formatInAppTz(new Date(), "yyyy-MM-dd");
+                      const isDayToday = dateKey === todayStr;
+                      const counts = monthlyAppointmentCounts[dateKey];
+                      const hasAppointments = counts && counts.total > 0;
+                      const isSelected = isSameDay(day, currentDate);
+                      const dayNum = fnsFormat(day, "d");
+                      const isWeekend = di === 0 || di === 6;
+
+                      return (
+                        <button
+                          key={dateKey}
+                          type="button"
+                          onClick={() => {
+                            setCurrentDate(day);
+                            setViewMode("day");
+                          }}
+                          className={`
+                            group relative min-h-[56px] flex flex-col items-center justify-start pt-1.5 transition-all duration-150 cursor-pointer
+                            ${isDayToday
+                              ? "bg-teal-50 dark:bg-teal-900/20"
+                              : isSelected
+                                ? "bg-blue-50 dark:bg-blue-900/20"
+                                : isWeekend
+                                  ? "bg-slate-25 dark:bg-slate-800/20 hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                                  : "hover:bg-slate-100 dark:hover:bg-slate-700/30"
+                            }
+                          `}
+                        >
+                          {/* Day number */}
+                          <span
+                            className={`
+                              flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-all
+                              ${isDayToday
+                                ? "bg-teal-600 text-white shadow-sm shadow-teal-600/30"
+                                : isSelected
+                                  ? "bg-blue-600 text-white shadow-sm"
+                                  : isWeekend
+                                    ? "text-muted-foreground"
+                                    : "text-foreground group-hover:bg-slate-200 dark:group-hover:bg-slate-600"
+                              }
+                            `}
+                          >
+                            {dayNum}
+                          </span>
+
+                          {/* Appointment indicators */}
+                          {hasAppointments && (
+                            <div className="mt-0.5 flex items-center gap-0.5">
+                              {counts.confirmed > 0 && (
+                                <div className="h-1.5 w-1.5 rounded-full bg-blue-500" title={`${counts.confirmed} confirmado(s)`} />
+                              )}
+                              {counts.pending > 0 && (
+                                <div className="h-1.5 w-1.5 rounded-full bg-amber-500" title={`${counts.pending} pendente(s)`} />
+                              )}
+                              {counts.arrived > 0 && (
+                                <div className="h-1.5 w-1.5 rounded-full bg-violet-500" title={`${counts.arrived} na sala`} />
+                              )}
+                              {counts.completed > 0 && (
+                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" title={`${counts.completed} concluído(s)`} />
+                              )}
+                            </div>
+                          )}
+
+                          {/* Count badge on hover */}
+                          {hasAppointments && (
+                            <div className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-teal-600 px-1 text-[9px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10">
+                              {counts.total}
+                            </div>
+                          )}
+
+                          {/* Today pulse ring */}
+                          {isDayToday && (
+                            <div className="absolute inset-0 border-2 border-teal-400/40 animate-pulse pointer-events-none" />
+                          )}
+
+                          {/* Selected indicator */}
+                          {isSelected && !isDayToday && (
+                            <div className="absolute inset-0 border-2 border-blue-400/50 pointer-events-none" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar footer legend */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-2.5 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30">
+                <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" /> Confirmado
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-amber-500" /> Pendente
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-violet-500" /> Chegou
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" /> Concluído
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("day")}
+                      className={`px-3 py-1 text-[11px] font-semibold transition-colors ${viewMode === "day" ? "bg-teal-600 text-white" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                    >
+                      Dia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("week")}
+                      className={`px-3 py-1 text-[11px] font-semibold transition-colors ${viewMode === "week" ? "bg-teal-600 text-white" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+                    >
+                      Semana
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Currently viewing label */}
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">
+              {viewMode === "day"
+                ? formatInAppTz(currentDate, "EEEE, d 'de' MMMM")
+                : `${formatInAppTz(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")} - ${formatInAppTz(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM")}`}
+            </h2>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? -1 : -7))}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-lg"
+                onClick={() => setCurrentDate(addDays(currentDate, viewMode === "day" ? 1 : 7))}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          )}
+          </div>
 
           {/* Filters */}
           <div className="mb-5">
