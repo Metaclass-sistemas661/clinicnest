@@ -94,21 +94,21 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-border/50">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 flex-shrink-0">
+      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/15">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 flex-shrink-0">
           <Heart className="h-4.5 w-4.5 text-white" />
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-none overflow-hidden">
             <div className="flex items-baseline gap-0">
-              <span className="font-display text-lg font-bold text-teal-600 dark:text-teal-400 tracking-tight leading-none">
+              <span className="font-display text-lg font-bold text-white tracking-tight leading-none">
                 Clinic
               </span>
-              <span className="font-display text-lg font-bold text-foreground tracking-tight leading-none">
+              <span className="font-display text-lg font-bold text-white/80 tracking-tight leading-none">
                 Nest
               </span>
             </div>
-            <span className="text-[9px] text-muted-foreground tracking-[0.12em] leading-none mt-0.5">
+            <span className="text-[9px] text-white/50 tracking-[0.12em] leading-none mt-0.5">
               Portal do Paciente
             </span>
           </div>
@@ -117,7 +117,7 @@ function SidebarContent({
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-7 w-7 hidden lg:flex"
+            className="ml-auto h-7 w-7 hidden lg:flex text-white/70 hover:bg-white/10 hover:text-white"
             onClick={onToggle}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -138,11 +138,11 @@ function SidebarContent({
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-white text-teal-700 shadow-sm"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
-              <Icon className={cn("h-4.5 w-4.5 flex-shrink-0", isActive && "text-teal-600 dark:text-teal-400")} />
+              <Icon className={cn("h-4.5 w-4.5 flex-shrink-0", isActive && "text-teal-600")} />
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           );
@@ -150,7 +150,7 @@ function SidebarContent({
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-border/50 px-3 py-3 space-y-1">
+      <div className="border-t border-white/15 px-3 py-3 space-y-1">
         {bottomItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.href;
@@ -162,8 +162,8 @@ function SidebarContent({
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-white text-teal-700 shadow-sm"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
@@ -174,7 +174,7 @@ function SidebarContent({
 
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors w-full"
+          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-200 transition-colors w-full"
         >
           <LogOut className="h-4 w-4 flex-shrink-0" />
           {!collapsed && <span>Sair</span>}
@@ -183,14 +183,14 @@ function SidebarContent({
 
       {/* User info */}
       {!collapsed && (
-        <div className="border-t border-border/50 px-4 py-3">
+        <div className="border-t border-white/15 px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900 flex-shrink-0">
-              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 flex-shrink-0">
+              <User className="h-4 w-4 text-white" />
             </div>
             <div className="overflow-hidden">
-              <div className="text-sm font-medium truncate">{userName}</div>
-              <div className="text-[11px] text-muted-foreground">Paciente</div>
+              <div className="text-sm font-medium truncate text-white">{userName}</div>
+              <div className="text-[11px] text-white/50">Paciente</div>
             </div>
           </div>
         </div>
@@ -257,7 +257,14 @@ function PatientLayoutInner({
   const dependentsContext = useDependentsOptional();
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={cn(
+      "h-screen w-screen overflow-hidden",
+      !isMobile && "bg-teal-600 dark:bg-teal-700 p-2"
+    )}>
+    <div className={cn(
+      "h-full w-full bg-background relative flex",
+      !isMobile && "rounded-2xl overflow-hidden"
+    )}>
       {/* Global Search */}
       <PatientGlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
@@ -265,7 +272,7 @@ function PatientLayoutInner({
       {!isMobile && (
         <aside
           className={cn(
-            "hidden lg:flex flex-col border-r border-border/50 bg-card transition-all duration-300 flex-shrink-0",
+            "hidden lg:flex flex-col bg-teal-600 dark:bg-teal-700 transition-all duration-300 flex-shrink-0",
             collapsed ? "w-[68px]" : "w-[260px]"
           )}
         >
@@ -285,14 +292,14 @@ function PatientLayoutInner({
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-[280px]">
+          <SheetContent side="left" className="p-0 w-[280px] bg-teal-600 dark:bg-teal-700 border-none">
             <SidebarContent collapsed={false} onNavigate={() => setSheetOpen(false)} />
           </SheetContent>
         </Sheet>
       )}
 
       {/* Main content */}
-      <main className={cn("flex-1 overflow-auto flex flex-col", isMobile && "pb-20")}>
+      <main className={cn("flex-1 min-w-0 overflow-y-auto flex flex-col", isMobile && "pb-20")}>
         {/* Dependent context banner */}
         {dependentsContext?.activeDependent && (
           <DependentBanner
@@ -301,13 +308,29 @@ function PatientLayoutInner({
           />
         )}
 
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border/50 px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className={cn(isMobile && "pl-12")}>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">{title}</h1>
-              {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        {/* Content */}
+        <div className={cn(
+          "animate-fade-in flex-1",
+          isMobile ? "p-4" : "px-8 pt-6 pb-8"
+        )}>
+          {/* Page title — inline, like clinic portal */}
+          <div className={cn(
+            "flex items-center justify-between mb-6",
+            isMobile && "flex-col gap-3"
+          )}>
+            <div className={cn("space-y-0.5", isMobile && "pl-12")}>
+              <h1 className={cn(
+                "font-display font-bold tracking-tight text-foreground",
+                isMobile ? "text-xl" : "text-2xl"
+              )}>
+                {title}
+              </h1>
+              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className={cn(
+              "flex items-center gap-2 sm:gap-3 flex-shrink-0",
+              isMobile && "w-full justify-center flex-wrap"
+            )}>
               <Button
                 variant="outline"
                 size="sm"
@@ -331,9 +354,7 @@ function PatientLayoutInner({
               {actions}
             </div>
           </div>
-        </header>
 
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
           <ModuleErrorBoundary moduleName="Portal do Paciente">
             {children}
           </ModuleErrorBoundary>
@@ -345,6 +366,7 @@ function PatientLayoutInner({
 
       {/* Chat IA para pacientes */}
       <AiPatientChat />
+    </div>
     </div>
   );
 }
