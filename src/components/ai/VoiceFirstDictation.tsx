@@ -75,7 +75,7 @@ export function VoiceFirstDictation({
       return data;
     },
     onSuccess: (data) => {
-      if (data.transcript && data.transcript.trim().length >= 20) {
+      if (data.transcript && data.transcript.trim().length >= 10) {
         setTranscript(data.transcript);
         setStep("generating");
         soapMutation.mutate(data.transcript);

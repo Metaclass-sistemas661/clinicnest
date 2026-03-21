@@ -118,9 +118,9 @@ serve(async (req) => {
     const body: GenerateSoapRequest = await req.json();
     const { transcript, specialty, patient_context } = body;
 
-    if (!transcript || transcript.trim().length < 20) {
+    if (!transcript || transcript.trim().length < 10) {
       return new Response(
-        JSON.stringify({ error: "Transcrição muito curta. Mínimo de 20 caracteres." }),
+        JSON.stringify({ error: "Transcrição muito curta. Mínimo de 10 caracteres." }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
