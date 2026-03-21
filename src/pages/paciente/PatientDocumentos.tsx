@@ -245,14 +245,16 @@ export default function PatientDocumentos() {
     setSignStep("capture");
   };
 
-  const handleSubmitSignature = async () => {
+  const handleSubmitSignature = async (overrideManualDataUrl?: string) => {
     if (!signTarget || !clientId) return;
+
+    const effectiveManualUrl = overrideManualDataUrl ?? manualDataUrl;
 
     if (signMethod === "facial" && !capturedBlob) {
       toast.error("Capture sua foto facial antes de assinar");
       return;
     }
-    if (signMethod === "manual" && !manualDataUrl) {
+    if (signMethod === "manual" && !effectiveManualUrl) {
       toast.error("Desenhe sua assinatura antes de confirmar");
       return;
     }
@@ -269,8 +271,8 @@ export default function PatientDocumentos() {
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
         if (error) throw error;
         facialPath = fileName;
-      } else if (signMethod === "manual" && manualDataUrl) {
-        const res = await fetch(manualDataUrl);
+      } else if (signMethod === "manual" && effectiveManualUrl) {
+        const res = await fetch(effectiveManualUrl);
         const blob = await res.blob();
         const fileName = `${clientId}/${signTarget.category}_${signTarget.id}_${Date.now()}.png`;
         const { error } = await supabasePatient.storage
@@ -523,21 +525,16 @@ export default function PatientDocumentos() {
             <div className="space-y-4">
               <SignatureCanvas
                 patientName={patientName}
-                onComplete={(dataUrl) => setManualDataUrl(dataUrl)}
+                onComplete={(dataUrl) => {
+                  setManualDataUrl(dataUrl);
+                  void handleSubmitSignature(dataUrl);
+                }}
                 onClear={() => setManualDataUrl(null)}
                 disabled={isSigning}
               />
-              <div className="flex justify-between">
-                <Button variant="ghost" size="sm" onClick={() => setSignStep("choose")}>
+              <div className="flex justify-start">
+                <Button variant="ghost" size="sm" onClick={() => setSignStep("choose")} disabled={isSigning}>
                   Voltar
-                </Button>
-                <Button
-                  onClick={handleSubmitSignature}
-                  disabled={!manualDataUrl || isSigning}
-                  className="gap-2"
-                >
-                  {isSigning && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Confirmar Assinatura
                 </Button>
               </div>
             </div>
