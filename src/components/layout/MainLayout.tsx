@@ -52,7 +52,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
 
           {/* Scrollable main area */}
           <main className={cn(
-            "flex-1 overflow-y-auto transition-all duration-300",
+            "flex-1 min-w-0 overflow-y-auto transition-all duration-300",
             isMobile ? "ml-0" : sidebarCollapsed ? "ml-[88px]" : "ml-[288px]",
             !isMobile && "mr-[56px]"
           )}>

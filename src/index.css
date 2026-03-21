@@ -245,9 +245,11 @@
     @apply bg-background relative z-10;
     @apply text-foreground font-semibold;
     margin-right: 0 !important;
-    border-radius: 0 !important;
-    margin-left: -0.5rem;
-    padding-left: calc(0.75rem + 0.5rem);
+    padding-right: 0.75rem;
+    border-radius: 0.75rem 0 0 0.75rem !important;
+    border-right: none !important;
+    margin-left: 0;
+    padding-left: 0.75rem;
     transition: all 0.2s ease-out;
   }
 

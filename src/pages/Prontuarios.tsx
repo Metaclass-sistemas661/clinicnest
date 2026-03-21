@@ -832,12 +832,12 @@ export default function Prontuarios() {
                 </div>
                 {expandedRecord === record.id && (
                   <Tabs defaultValue="vitais" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-5 h-auto gap-1 p-1">
-                      <TabsTrigger value="vitais" className="text-xs py-2"><Activity className="h-3 w-3 mr-1" />Vitais</TabsTrigger>
-                      <TabsTrigger value="anamnese" className="text-xs py-2"><FileText className="h-3 w-3 mr-1" />Anamnese</TabsTrigger>
-                      <TabsTrigger value="exame" className="text-xs py-2"><Heart className="h-3 w-3 mr-1" />Exame</TabsTrigger>
-                      <TabsTrigger value="diagnostico" className="text-xs py-2"><AlertCircle className="h-3 w-3 mr-1" />Diagnóstico</TabsTrigger>
-                      <TabsTrigger value="prescricao" className="text-xs py-2"><Pill className="h-3 w-3 mr-1" />Prescrição</TabsTrigger>
+                    <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto gap-1 p-1">
+                      <TabsTrigger value="vitais" className="text-xs py-2 shrink-0"><Activity className="h-3 w-3 mr-1" />Vitais</TabsTrigger>
+                      <TabsTrigger value="anamnese" className="text-xs py-2 shrink-0"><FileText className="h-3 w-3 mr-1" />Anamnese</TabsTrigger>
+                      <TabsTrigger value="exame" className="text-xs py-2 shrink-0"><Heart className="h-3 w-3 mr-1" />Exame</TabsTrigger>
+                      <TabsTrigger value="diagnostico" className="text-xs py-2 shrink-0"><AlertCircle className="h-3 w-3 mr-1" />Diagnóstico</TabsTrigger>
+                      <TabsTrigger value="prescricao" className="text-xs py-2 shrink-0"><Pill className="h-3 w-3 mr-1" />Prescrição</TabsTrigger>
                     </TabsList>
                     <TabsContent value="vitais" className="mt-3">
                       <VitalsDisplay record={record} />

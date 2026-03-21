@@ -837,7 +837,7 @@ export default function Equipe() {
                     data-tour="team-invite-full-name"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Email</Label>
                     <Input
@@ -863,7 +863,7 @@ export default function Equipe() {
             </FormDrawerSection>
 
             <FormDrawerSection title="Credenciais de Acesso">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Senha</Label>
                   <Input
@@ -945,7 +945,7 @@ export default function Equipe() {
                     </div>
 
                     {formData.professional_type && COUNCIL_BY_TYPE[formData.professional_type as ProfessionalType] && (
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-2">
                           <Label>Conselho</Label>
                           <Input value={formData.council_type} disabled className="bg-muted" />

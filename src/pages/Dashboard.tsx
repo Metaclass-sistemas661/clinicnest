@@ -836,7 +836,7 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
-          <div className="sticky top-0 z-30 relative overflow-hidden -mx-8 -mt-6 bg-teal-600 dark:bg-teal-700 px-8 pt-8 pb-16 sm:px-10 sm:pt-10 sm:pb-20 text-white">
+          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-6 pb-20 md:px-8 md:pt-8 md:pb-28 lg:px-10 lg:pt-10 lg:pb-36 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
@@ -896,7 +896,7 @@ export default function Dashboard() {
                 style={{ transform: `translateX(-${bannerSlide * 100}%)` }}
               >
                 {/* SLIDE 0 — Nest IA (NOVIDADE) */}
-                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-800 via-teal-700 to-emerald-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-800 via-teal-700 to-emerald-600 px-5 pt-6 pb-8 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute right-40 top-6 h-20 w-20 rounded-full bg-emerald-400/10" />
@@ -942,7 +942,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* SLIDE 1 — Indique e Ganhe */}
-                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-600 px-5 pt-6 pb-8 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute right-6 top-4 h-16 w-16 rounded-full bg-white/5" />
@@ -973,7 +973,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* SLIDE 2 — Teleconsulta */}
-                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 px-5 pt-6 pb-8 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
                   <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-6">
@@ -1034,7 +1034,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* SLIDE 3 — Prontuário Digital */}
-                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500 px-5 pt-6 pb-8 sm:pl-16 sm:pr-12 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="pointer-events-none absolute -bottom-10 right-20 h-36 w-36 rounded-full bg-white/5" />
                   <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-6">
@@ -1064,7 +1064,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* SLIDE 4 — ClinicNest Premium */}
-                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 pl-14 pr-10 pt-8 pb-10 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
+                <div className="relative w-full shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-cyan-600 px-5 pt-6 pb-8 sm:pl-16 sm:pr-8 sm:pt-10 sm:pb-10 text-white">
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
                   <div className="relative z-10 flex flex-col sm:flex-row sm:items-end gap-6">
                     <div className="flex-1 min-w-0 pb-0 sm:pb-2">
@@ -1159,13 +1159,13 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="relative z-20 -mt-14 sm:-mt-16 grid gap-6 lg:grid-cols-[1fr_240px] xl:grid-cols-[1fr_280px]">
+          <div className="relative z-20 -mt-16 md:-mt-24 lg:-mt-32 grid gap-6 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
 
           {/* KPI METRICS GRID */}
-          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
             {/* Consultas hoje */}
             <Link to="/agenda" data-tour="dashboard-today-stat-appointments" className="animate-fade-in-up [&:hover]:no-underline" style={{ animationDelay: '0ms' }}>
               <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 p-5 text-white shadow-md transition-all hover:shadow-xl hover:scale-[1.02]">
@@ -1176,7 +1176,7 @@ export default function Dashboard() {
                   </div>
                   <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Hoje</span>
                 </div>
-                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
+                <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : stats.todayAppointments}</p>
                 <p className="mt-1 text-sm text-teal-100">Consultas agendadas</p>
               </div>
             </Link>
@@ -1193,7 +1193,7 @@ export default function Dashboard() {
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider animate-pulse">Atenção</span>
                   )}
                 </div>
-                <p className="text-3xl font-extrabold tabular-nums leading-none">
+                <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">
                   {isLoading ? "—" : stats.pendingAppointments}
                 </p>
                 <p className="mt-1 text-sm text-white/80">Pendentes</p>
@@ -1211,7 +1211,7 @@ export default function Dashboard() {
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
+                  <p className="text-xl sm:text-2xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : formatCurrency(stats.monthlyIncome)}</p>
                   <p className="mt-1 text-sm text-white/80">Receita do mês</p>
                 </div>
               </Link>
@@ -1225,7 +1225,7 @@ export default function Dashboard() {
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Mês</span>
                   </div>
-                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : staffCompletedThisMonth}</p>
                   <p className="mt-1 text-sm text-teal-100">Atendimentos no mês</p>
                 </div>
               </Link>
@@ -1242,7 +1242,7 @@ export default function Dashboard() {
                     </div>
                     <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Total</span>
                   </div>
-                  <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : patientsCount}</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : patientsCount}</p>
                   <p className="mt-1 text-sm text-blue-100">Pacientes cadastrados</p>
                 </div>
               </Link>
@@ -1255,7 +1255,7 @@ export default function Dashboard() {
                   </div>
                   <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Meus</span>
                 </div>
-                <p className="text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyPatientsCount ?? 0)}</p>
+                <p className="text-2xl sm:text-3xl font-extrabold tabular-nums leading-none">{isLoading ? "—" : (staffMyPatientsCount ?? 0)}</p>
                 <p className="mt-1 text-sm text-blue-100">Pacientes atendidos</p>
               </div>
             )}
@@ -1442,7 +1442,7 @@ export default function Dashboard() {
                   {/* Mini weekly calendar strip */}
                   <Card>
                     <CardContent className="py-3 px-4">
-                      <div className="flex items-center gap-1 justify-between">
+                      <div className="flex items-center gap-1 justify-between overflow-x-auto scrollbar-hide">
                         {weekDays.map((d) => (
                           <Link
                             key={d.dayNum}
@@ -1874,7 +1874,7 @@ export default function Dashboard() {
 
                   {/* Secondary stat row */}
                   {!isAdmin && (
-                  <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Link to="/meu-financeiro" className="block [&:hover]:no-underline" data-tour="dashboard-monthly-my-commissions">
@@ -1896,11 +1896,13 @@ export default function Dashboard() {
 
           {/* Right Column: Interactive Body Map */}
           <div className="hidden lg:block">
-            <Card className="sticky top-6 h-[calc(100vh-10rem)] overflow-hidden shadow-xl">
-              <CardContent className="h-full p-4">
-                <InteractiveBody />
-              </CardContent>
-            </Card>
+            <div className="sticky top-4 z-10">
+              <Card className="h-[calc(100vh-6rem)] overflow-hidden shadow-xl border-0 ring-1 ring-black/5">
+                <CardContent className="h-full p-0">
+                  <InteractiveBody />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           </div>{/* end main grid */}

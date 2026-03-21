@@ -326,35 +326,35 @@ export default function PacienteDetalhe() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="consumo" className="gap-2">
+        <TabsList className="w-full overflow-x-auto scrollbar-hide h-auto gap-1 p-1">
+          <TabsTrigger value="consumo" className="gap-2 shrink-0">
             <DollarSign className="h-4 w-4" />
-            Consumo
+            <span className="hidden sm:inline">Consumo</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃1</kbd>
           </TabsTrigger>
-          <TabsTrigger value="clinico" className="gap-2">
+          <TabsTrigger value="clinico" className="gap-2 shrink-0">
             <ClipboardList className="h-4 w-4" />
-            Clínico
+            <span className="hidden sm:inline">Clínico</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃2</kbd>
           </TabsTrigger>
-          <TabsTrigger value="evolucoes" className="gap-2">
+          <TabsTrigger value="evolucoes" className="gap-2 shrink-0">
             <NotebookPen className="h-4 w-4" />
-            Evoluções
+            <span className="hidden sm:inline">Evoluções</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃3</kbd>
           </TabsTrigger>
-          <TabsTrigger value="pacotes" className="gap-2">
+          <TabsTrigger value="pacotes" className="gap-2 shrink-0">
             <Package className="h-4 w-4" />
-            Pacotes
+            <span className="hidden sm:inline">Pacotes</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃4</kbd>
           </TabsTrigger>
-          <TabsTrigger value="timeline" className="gap-2">
+          <TabsTrigger value="timeline" className="gap-2 shrink-0">
             <Clock className="h-4 w-4" />
-            Timeline
+            <span className="hidden sm:inline">Timeline</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃5</kbd>
           </TabsTrigger>
-          <TabsTrigger value="termos" className="gap-2">
+          <TabsTrigger value="termos" className="gap-2 shrink-0">
             <ShieldCheck className="h-4 w-4" />
-            Termos
+            <span className="hidden sm:inline">Termos</span>
             <kbd className="hidden sm:inline-block ml-1 rounded border border-border/50 bg-muted/60 px-1 py-0.5 text-[10px] font-mono text-muted-foreground leading-none">⌃6</kbd>
           </TabsTrigger>
         </TabsList>
