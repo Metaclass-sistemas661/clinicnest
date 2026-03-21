@@ -886,7 +886,7 @@ export default function Dashboard() {
         <div className="space-y-6">
 
           {/* ===== HERO BANNER — STICKY HEADER (same teal as sidebar) ===== */}
-          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-6 pb-28 md:px-8 md:pt-8 md:pb-36 lg:px-10 lg:pt-10 lg:pb-44 text-white">
+          <div className="sticky top-0 z-30 relative overflow-hidden -mx-4 md:-mx-8 -mt-4 md:-mt-6 bg-teal-600 dark:bg-teal-700 px-4 pt-5 pb-20 md:px-8 md:pt-6 md:pb-24 lg:px-10 lg:pt-8 lg:pb-28 text-white">
             {/* Decorative shapes — large ambient blobs */}
             <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/[0.04]" />
             <div className="pointer-events-none absolute -left-24 -bottom-24 h-80 w-80 rounded-full bg-cyan-300/[0.06]" />
@@ -909,13 +909,13 @@ export default function Dashboard() {
                 <p className="text-teal-100 text-xs sm:text-sm font-medium uppercase tracking-wider mb-1">
                   {todayFormatted}
                 </p>
-                <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight mb-1">
+                <h1 className="text-xl sm:text-2xl font-extrabold leading-tight mb-1">
                   Olá, {firstName}! 👋
                 </h1>
-                <p className="text-sm sm:text-base text-teal-100 max-w-md">
+                <p className="text-sm text-teal-100 max-w-md">
                   {summaryText}
                 </p>
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-3">
                   <Link
                     to="/agenda"
                     data-tour="dashboard-new-appointment"
@@ -1209,7 +1209,7 @@ export default function Dashboard() {
           )}
 
           {/* ===== MAIN CONTENT: KPIs + Interactive Body ===== */}
-          <div className="relative z-20 -mt-24 md:-mt-32 lg:-mt-40 grid gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px]">
+          <div className="relative z-20 -mt-16 md:-mt-20 lg:-mt-24 grid gap-6 lg:grid-cols-[1fr_300px] xl:grid-cols-[1fr_340px]">
 
           {/* Left Column: KPIs + Sections */}
           <div className="space-y-6">
@@ -2077,8 +2077,8 @@ export default function Dashboard() {
 
           {/* Right Column: Interactive Body Map */}
           <div className="hidden lg:block">
-            <div className="sticky top-2 z-10">
-              <Card className="h-[calc(100vh-5rem)] overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 bg-gradient-to-b from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/80">
+            <div className="sticky top-20 z-40">
+              <Card className="h-[calc(100vh-6rem)] overflow-hidden shadow-2xl border-0 ring-1 ring-black/5 bg-gradient-to-b from-white to-slate-50/80 dark:from-slate-900 dark:to-slate-900/80">
                 <CardContent className="h-full p-0">
                   <InteractiveBody />
                 </CardContent>
