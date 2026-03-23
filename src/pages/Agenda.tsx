@@ -28,7 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
 import { supabase } from "@/integrations/supabase/client";
 import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
-import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, Stethoscope, TrendingUp, ShieldCheck } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, ShieldCheck } from "lucide-react";
 import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, format as fnsFormat } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -76,37 +76,6 @@ export default function Agenda() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [pendingCancelAppointmentId, setPendingCancelAppointmentId] = useState<string | null>(null);
-
-  // Banner carousel
-  const bannerSlides = useMemo(() => [
-    {
-      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=600&q=80&auto=format&fit=crop",
-      icon: CalendarDays,
-      title: "Agora ficou mais fácil gerenciar seus agendamentos",
-      desc: "ClinicNest veio para inovar a gestão da sua clínica. Organize, confirme e acompanhe tudo em um só lugar.",
-    },
-    {
-      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
-      icon: Stethoscope,
-      title: "Atendimento de excelência começa com organização",
-      desc: "Gerencie sua equipe, procedimentos e horários com a praticidade que sua clínica merece.",
-    },
-    {
-      img: "https://images.unsplash.com/photo-1551190822-a9ce113ac100?w=600&q=80&auto=format&fit=crop",
-      icon: TrendingUp,
-      title: "Acompanhe o crescimento da sua clínica em tempo real",
-      desc: "Relatórios inteligentes, metas e comissões — tudo integrado para você focar no que importa.",
-    },
-  ], []);
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const bannerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    bannerTimerRef.current = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 5000);
-    return () => { if (bannerTimerRef.current) clearInterval(bannerTimerRef.current); };
-  }, [bannerSlides.length]);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | "all">("all");
@@ -1141,11 +1110,8 @@ export default function Agenda() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══ Main two-column layout: Content + Banner (right) ═══ */}
-      <div className="flex gap-6 items-stretch">
-
-        {/* ── Left: Main agenda content ── */}
-        <div className="flex-1 min-w-0">
+      {/* ═══ Main content ═══ */}
+      <div>
 
           {/* Stats overview card — above content, full width */}
           <div className="mb-5 grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -1477,58 +1443,6 @@ export default function Agenda() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* ── Right: Promotional Banner with auto-carousel (desktop only, stories-width) ── */}
-        <aside className="hidden xl:flex w-[280px] shrink-0">
-          <div className="w-full">
-            <div className="relative h-full min-h-[520px] rounded-2xl overflow-hidden shadow-lg">
-              {bannerSlides.map((slide, idx) => {
-                const SlideIcon = slide.icon;
-                return (
-                  <div
-                    key={idx}
-                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-                    style={{ opacity: bannerIndex === idx ? 1 : 0, pointerEvents: bannerIndex === idx ? "auto" : "none" }}
-                  >
-                    <img
-                      src={slide.img}
-                      alt={slide.title}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-9 w-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                          <SlideIcon className="h-4 w-4 text-white" />
-                        </div>
-                        <span className="text-white/80 text-xs font-semibold tracking-wider uppercase">ClinicNest</span>
-                      </div>
-                      <h3 className="text-white text-lg font-bold leading-snug">
-                        {slide.title}
-                      </h3>
-                      <p className="text-white/70 text-sm leading-relaxed">
-                        {slide.desc}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-              {/* Slide indicators (top, like Instagram stories) */}
-              <div className="absolute top-3 left-3 right-3 flex gap-1.5 z-10">
-                {bannerSlides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setBannerIndex(idx)}
-                    className="flex-1 h-[3px] rounded-full transition-all duration-300"
-                    style={{ background: bannerIndex === idx ? "white" : "rgba(255,255,255,0.35)" }}
-                    aria-label={`Slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
       </div>
     </MainLayout>
   );

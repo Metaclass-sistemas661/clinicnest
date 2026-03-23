@@ -416,6 +416,11 @@ export function AppointmentsTable({
                 </span>
               </div>
 
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3 w-3" />
+                <span>Agendado em {formatInAppTz(appointment.created_at, "dd/MM/yyyy 'às' HH:mm")}</span>
+              </div>
+
               <div className="flex items-center gap-2 pt-2 border-t border-border">
                 {isUpdating ? (
                   <Loader2 className="h-4 w-4 animate-spin mx-auto" />
@@ -535,6 +540,7 @@ export function AppointmentsTable({
               <TableHead>Profissional</TableHead>
               <TableHead className="text-right">Valor</TableHead>
               <TableHead className="w-[120px]">Status</TableHead>
+              <TableHead className="w-[140px]">Agendado em</TableHead>
               <TableHead className="w-[100px] text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -599,6 +605,16 @@ export function AppointmentsTable({
                       {(appointment.status === "pending" || appointment.status === "confirmed") && (
                         <AiCancelPrediction appointmentId={appointment.id} compact />
                       )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">
+                        {formatInAppTz(appointment.created_at, "dd/MM/yyyy")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatInAppTz(appointment.created_at, "HH:mm")}
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell>
