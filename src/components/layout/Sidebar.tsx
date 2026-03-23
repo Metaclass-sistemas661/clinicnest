@@ -532,6 +532,7 @@ function SidebarContent({
   const { unreadCount: chatUnreadCount } = useUnreadChatCount();
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const navRef = useRef<HTMLElement>(null);
+  const isRestoringScroll = useRef(false);
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
     const saved = loadOpenCategories();
@@ -566,13 +567,25 @@ function SidebarContent({
   }, [location.pathname]);
 
   useEffect(() => {
+    isRestoringScroll.current = true;
     if (navRef.current) {
       navRef.current.scrollTop = savedNavScroll;
     }
-  });
+    // Restore again after CSS transitions settle (category expand/collapse)
+    const timer = setTimeout(() => {
+      if (navRef.current) {
+        navRef.current.scrollTop = savedNavScroll;
+      }
+      isRestoringScroll.current = false;
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      isRestoringScroll.current = false;
+    };
+  }, [location.pathname]);
 
   const handleNavScroll = useCallback(() => {
-    if (navRef.current) {
+    if (navRef.current && !isRestoringScroll.current) {
       savedNavScroll = navRef.current.scrollTop;
     }
   }, []);
