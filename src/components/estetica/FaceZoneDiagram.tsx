@@ -144,59 +144,15 @@ export function FaceZoneDiagram({
           {activeZoneGradients}
         </defs>
 
-        {/* ── 3D Face base with skin tone ── */}
-        <g filter="url(#skin-shadow)">
-          {/* Hair */}
-          <path
-            d="M 30 195 Q 30 25, 150 20 Q 270 25, 270 195"
-            fill="url(#hair-3d)"
-            stroke="none"
-          />
-          {/* Face shape */}
-          <ellipse
-            cx={150} cy={200} rx={118} ry={165}
-            fill="url(#skin-3d)"
-            stroke="none"
-          />
-          {/* Jaw highlight */}
-          <ellipse
-            cx={150} cy={330} rx={70} ry={20}
-            fill="rgba(0,0,0,0.06)"
-            stroke="none"
-          />
-          {/* Neck */}
-          <rect x={115} y={355} width={70} height={40} rx={20} fill="url(#skin-3d)" stroke="none" />
-          <rect x={115} y={355} width={70} height={15} rx={5} fill="url(#neck-shadow)" stroke="none" />
-
-          {/* Eye shapes (reference) */}
-          <ellipse cx={108} cy={148} rx={20} ry={9} fill="white" stroke="#b8a090" strokeWidth={0.8} />
-          <circle cx={108} cy={148} r={6} fill="#6B4E3D" />
-          <circle cx={108} cy={148} r={3} fill="#1a1a1a" />
-          <circle cx={110} cy={146} r={1.5} fill="white" />
-
-          <ellipse cx={192} cy={148} rx={20} ry={9} fill="white" stroke="#b8a090" strokeWidth={0.8} />
-          <circle cx={192} cy={148} r={6} fill="#6B4E3D" />
-          <circle cx={192} cy={148} r={3} fill="#1a1a1a" />
-          <circle cx={194} cy={146} r={1.5} fill="white" />
-
-          {/* Eyebrows */}
-          <path d="M 82 128 Q 108 115, 134 125" fill="none" stroke="#5C4033" strokeWidth={2.5} strokeLinecap="round" />
-          <path d="M 166 125 Q 192 115, 218 128" fill="none" stroke="#5C4033" strokeWidth={2.5} strokeLinecap="round" />
-
-          {/* Nose */}
-          <path d="M 150 160 L 150 205 Q 140 218, 135 215 Q 140 210, 145 210 L 150 210 L 155 210 Q 160 210, 165 215 Q 160 218, 150 205" fill="none" stroke="#c9a58c" strokeWidth={1} />
-
-          {/* Lips */}
-          <path d="M 125 260 Q 137 252, 150 255 Q 163 252, 175 260" fill="#e8a0a0" stroke="#c47070" strokeWidth={0.8} />
-          <path d="M 125 260 Q 137 272, 150 270 Q 163 272, 175 260" fill="#d4908a" stroke="#c47070" strokeWidth={0.8} />
-
-          {/* Ears */}
-          <ellipse cx={32} cy={175} rx={10} ry={22} fill="url(#skin-3d)" stroke="#c9a58c" strokeWidth={0.8} />
-          <ellipse cx={268} cy={175} rx={10} ry={22} fill="url(#skin-3d)" stroke="#c9a58c" strokeWidth={0.8} />
-
-          {/* Nose highlight */}
-          <ellipse cx={148} cy={190} rx={3} ry={6} fill="rgba(255,255,255,0.25)" />
-        </g>
+        {/* ── 3D Face base (PNG from Whisk) ── */}
+        <image
+          href="/cabeca.png"
+          x={0} y={0}
+          width={300} height={400}
+          preserveAspectRatio="xMidYMid meet"
+          opacity={0.85}
+          style={{ pointerEvents: "none" }}
+        />
 
         {/* ═══════════════════════ ZONAS ═══════════════════════ */}
 

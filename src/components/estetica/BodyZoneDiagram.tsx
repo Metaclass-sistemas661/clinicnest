@@ -161,54 +161,15 @@ export function BodyZoneDiagram({
           {activeZoneGradients}
         </defs>
 
-        {/* ── 3D Body silhouette ── */}
-        <g filter="url(#body-shadow)">
-          {/* Head */}
-          <circle cx={100} cy={30} r={20} fill="url(#body-hair)" stroke="none" />
-          <ellipse cx={100} cy={34} rx={16} ry={14} fill="url(#body-skin)" stroke="none" />
-          {/* Eyes */}
-          <ellipse cx={93} cy={31} rx={3} ry={1.5} fill="white" stroke="#b8a090" strokeWidth={0.4} />
-          <circle cx={93} cy={31} r={1} fill="#1a1a1a" />
-          <ellipse cx={107} cy={31} rx={3} ry={1.5} fill="white" stroke="#b8a090" strokeWidth={0.4} />
-          <circle cx={107} cy={31} r={1} fill="#1a1a1a" />
-
-          {/* Neck */}
-          <rect x={90} y={48} width={20} height={16} rx={6} fill="url(#body-skin)" stroke="none" />
-
-          {/* Torso */}
-          <path
-            d="M 70 64 Q 65 64, 62 72 L 60 125 Q 62 220, 70 250 L 70 260 Q 90 268, 100 268 Q 110 268, 130 260 L 130 250 Q 138 220, 140 125 L 138 72 Q 135 64, 130 64 Z"
-            fill="url(#body-skin)" stroke="none"
-          />
-          {/* Torso shading */}
-          <path
-            d="M 70 64 Q 65 64, 62 72 L 60 125 Q 62 220, 70 250 L 70 260 Q 90 268, 100 268 Q 110 268, 130 260 L 130 250 Q 138 220, 140 125 L 138 72 Q 135 64, 130 64 Z"
-            fill="url(#torso-depth)" stroke="none"
-          />
-          {/* Chest line */}
-          <path d="M 80 85 Q 100 95, 120 85" fill="none" stroke="rgba(180,150,130,0.3)" strokeWidth={0.5} />
-          {/* Abs hint */}
-          <line x1={100} y1={130} x2={100} y2={210} stroke="rgba(180,150,130,0.15)" strokeWidth={0.5} />
-
-          {/* Arms */}
-          {/* Right arm */}
-          <path d="M 62 72 Q 50 75, 38 100 L 30 130 Q 25 145, 22 165 L 18 195 Q 15 210, 18 218 Q 22 228, 28 218 L 30 195 Q 32 170, 38 155 L 42 140 Q 52 115, 60 100 Z" fill="url(#body-skin)" stroke="none" />
-          {/* Left arm */}
-          <path d="M 138 72 Q 150 75, 162 100 L 170 130 Q 175 145, 178 165 L 182 195 Q 185 210, 182 218 Q 178 228, 172 218 L 170 195 Q 168 170, 162 155 L 158 140 Q 148 115, 140 100 Z" fill="url(#body-skin)" stroke="none" />
-
-          {/* Legs */}
-          {/* Right leg */}
-          <path d="M 72 258 L 68 300 Q 66 330, 68 360 L 70 400 Q 72 430, 74 455 L 72 472 Q 70 482, 62 482 L 58 480 Q 58 475, 62 472 L 74 468 Q 76 450, 76 430 L 78 360 Q 78 330, 80 300 L 82 268 Z" fill="url(#body-skin)" stroke="none" />
-          {/* Left leg */}
-          <path d="M 128 258 L 132 300 Q 134 330, 132 360 L 130 400 Q 128 430, 126 455 L 128 472 Q 130 482, 138 482 L 142 480 Q 142 475, 138 472 L 126 468 Q 124 450, 124 430 L 122 360 Q 122 330, 120 300 L 118 268 Z" fill="url(#body-skin)" stroke="none" />
-
-          {/* Knee caps */}
-          <ellipse cx={78} cy={360} rx={8} ry={6} fill="rgba(255,255,255,0.12)" stroke="none" />
-          <ellipse cx={122} cy={360} rx={8} ry={6} fill="rgba(255,255,255,0.12)" stroke="none" />
-
-          {/* Belly button */}
-          <circle cx={100} cy={185} r={2} fill="rgba(150,120,100,0.3)" stroke="none" />
-        </g>
+        {/* ── 3D Body base (PNG from Whisk) ── */}
+        <image
+          href="/corpo.png"
+          x={0} y={0}
+          width={200} height={500}
+          preserveAspectRatio="xMidYMid meet"
+          opacity={0.85}
+          style={{ pointerEvents: "none" }}
+        />
 
         {/* ═══ ZONAS ═══ */}
 
