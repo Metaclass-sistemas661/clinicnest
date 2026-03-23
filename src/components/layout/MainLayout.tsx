@@ -53,7 +53,7 @@ export function MainLayout({ children, title, subtitle, actions }: MainLayoutPro
           {/* Scrollable main area */}
           <main className={cn(
             "flex-1 min-w-0 overflow-y-auto transition-all duration-300",
-            isMobile ? "ml-0 pt-14" : sidebarCollapsed ? "ml-[88px]" : "ml-[288px]",
+            isMobile ? "ml-0 pt-16" : sidebarCollapsed ? "ml-[88px]" : "ml-[288px]",
             !isMobile && "xl:mr-[56px]"
           )}>
             <GoalsProgressBar />

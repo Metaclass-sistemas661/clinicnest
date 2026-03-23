@@ -36,7 +36,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AestheticChart } from "@/components/estetica/AestheticChart";
-import { BeforeAfterGallery } from "@/components/estetica/BeforeAfterGallery";
+import { type BeforeAfterPair, BeforeAfterGallery } from "@/components/estetica/BeforeAfterGallery";
 import { ProductUsagePanel, type ProductUsageRecord } from "@/components/estetica/ProductUsagePanel";
 import {
   GLOGAU_SCALE,
@@ -148,6 +148,43 @@ export default function EsteticaMapping() {
   const [newProtocol, setNewProtocol] = useState({
     name: "", procedure: "", total_sessions: 4, interval_days: 30, notes: "",
   });
+
+  // ── Before/After Photos ──
+  const [photoPairs, setPhotoPairs] = useState<BeforeAfterPair[]>([]);
+
+  const handleAddPair = useCallback(() => {
+    const id = crypto.randomUUID();
+    setPhotoPairs((prev) => [...prev, { id, label: `Par ${prev.length + 1}` }]);
+  }, []);
+
+  const handleRemovePair = useCallback((pairId: string) => {
+    setPhotoPairs((prev) => prev.filter((p) => p.id !== pairId));
+  }, []);
+
+  const handleAddPhoto = useCallback(async (pairId: string, type: "before" | "after", file: File) => {
+    if (!profile?.tenant_id || !selectedPatient) return;
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${profile.tenant_id}/estetica/${selectedPatient}/${pairId}_${type}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("clinic-assets")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("clinic-assets").getPublicUrl(path);
+      const photo = {
+        id: crypto.randomUUID(),
+        type,
+        url: urlData.publicUrl,
+        date: new Date().toISOString(),
+      };
+      setPhotoPairs((prev) =>
+        prev.map((p) => (p.id === pairId ? { ...p, [type]: photo } : p))
+      );
+      toast.success("Foto adicionada com sucesso");
+    } catch {
+      toast.error("Erro ao fazer upload da foto");
+    }
+  }, [profile?.tenant_id, selectedPatient]);
 
   // ── Patient search with debounce ──
   useEffect(() => {
@@ -687,7 +724,12 @@ export default function EsteticaMapping() {
         {/* Tab 3 – Fotos Antes/Depois */}
         <TabsContent value="fotos">
           {selectedPatient ? (
-            <BeforeAfterGallery pairs={[]} onPairsChange={() => {}} />
+            <BeforeAfterGallery
+              pairs={photoPairs}
+              onAddPhoto={handleAddPhoto}
+              onRemovePair={handleRemovePair}
+              onAddPair={handleAddPair}
+            />
           ) : (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">

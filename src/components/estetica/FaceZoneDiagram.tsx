@@ -1,13 +1,12 @@
 /**
- * FaceZoneDiagram — Diagrama SVG interativo do rosto com zonas clicáveis.
+ * FaceZoneDiagram — Diagrama SVG 3D do rosto com zonas clicáveis.
  * Cada zona muda de cor de acordo com os procedimentos aplicados.
- * Blueprint: ToothDiagram.tsx (zonas clicáveis com cores).
+ * Usa gradientes radiais e filtros SVG para efeito tridimensional.
  */
 import { cn } from "@/lib/utils";
 import {
   FACE_ZONES,
   AESTHETIC_PROCEDURES,
-  type AestheticProcedureKey,
   type ZoneApplication,
 } from "./aestheticConstants";
 
@@ -19,11 +18,9 @@ interface FaceZoneDiagramProps {
   readOnly?: boolean;
 }
 
-/* Cores por zonas baseadas no procedimento dominante */
 function getZoneColor(zoneId: string, apps: ZoneApplication[]): string {
   const zoneApps = apps.filter(a => a.zoneId === zoneId);
   if (zoneApps.length === 0) return "#e5e7eb";
-  // Use cor do último procedimento aplicado
   const last = zoneApps[zoneApps.length - 1];
   return AESTHETIC_PROCEDURES.find(p => p.value === last.procedure)?.color ?? "#e5e7eb";
 }
@@ -36,10 +33,6 @@ function getQuantityLabel(zoneId: string, apps: ZoneApplication[]): string {
   return `${total}${unit}`;
 }
 
-/**
- * SVG face diagram (300×400 viewBox)
- * Zonas são elipses/paths posicionadas anatomicamente.
- */
 export function FaceZoneDiagram({
   applications,
   selectedZone,
@@ -49,7 +42,6 @@ export function FaceZoneDiagram({
 }: FaceZoneDiagramProps) {
   const w = compact ? 200 : 300;
   const h = compact ? 270 : 400;
-  const scale = compact ? 0.67 : 1;
 
   const handleClick = (zoneId: string) => {
     if (!readOnly && onZoneClick) onZoneClick(zoneId);
@@ -58,15 +50,11 @@ export function FaceZoneDiagram({
   const zoneLabel = (zoneId: string) =>
     FACE_ZONES.find(z => z.id === zoneId)?.label ?? zoneId;
 
-  /* Render helpers */
-  const renderZone = (
-    zoneId: string,
-    shape: React.ReactNode,
-  ) => {
+  const renderZone = (zoneId: string, shape: React.ReactNode) => {
     const fill = getZoneColor(zoneId, applications);
     const isSelected = selectedZone === zoneId;
-    const qty = getQuantityLabel(zoneId, applications);
     const hasApp = applications.some(a => a.zoneId === zoneId);
+    const qty = getQuantityLabel(zoneId, applications);
 
     return (
       <g
@@ -74,12 +62,13 @@ export function FaceZoneDiagram({
         onClick={() => handleClick(zoneId)}
         style={{ cursor: readOnly ? "default" : "pointer" }}
         className="transition-all"
+        filter={isSelected ? "url(#zone-glow)" : "url(#zone-shadow)"}
       >
         <g
-          opacity={hasApp ? 0.85 : 0.4}
-          stroke={isSelected ? "#2563eb" : "#64748b"}
-          strokeWidth={isSelected ? 2.5 : 1}
-          fill={fill}
+          opacity={hasApp ? 0.9 : 0.5}
+          stroke={isSelected ? "#3b82f6" : "rgba(100,116,139,0.6)"}
+          strokeWidth={isSelected ? 2.5 : 0.8}
+          fill={hasApp ? `url(#grad-zone-${zoneId})` : "url(#grad-inactive)"}
         >
           {shape}
         </g>
@@ -88,189 +77,185 @@ export function FaceZoneDiagram({
     );
   };
 
+  /* Generate gradient defs for active zones */
+  const activeZoneGradients = FACE_ZONES.map(z => {
+    const color = getZoneColor(z.id, applications);
+    if (color === "#e5e7eb") return null;
+    return (
+      <radialGradient key={`grad-zone-${z.id}`} id={`grad-zone-${z.id}`} cx="40%" cy="35%" r="60%">
+        <stop offset="0%" stopColor={lighten(color, 40)} />
+        <stop offset="50%" stopColor={color} />
+        <stop offset="100%" stopColor={darken(color, 25)} />
+      </radialGradient>
+    );
+  });
+
   return (
     <div className={cn("flex flex-col items-center", compact ? "gap-1" : "gap-2")}>
-      <svg
-        width={w}
-        height={h}
-        viewBox="0 0 300 400"
-        className="select-none"
-      >
-        {/* ── Contorno do rosto (referência) ── */}
-        <ellipse
-          cx={150} cy={195} rx={120} ry={170}
-          fill="none"
-          stroke="#d1d5db"
-          strokeWidth={1.5}
-          strokeDasharray="4,3"
-        />
+      <svg width={w} height={h} viewBox="0 0 300 400" className="select-none">
+        <defs>
+          {/* 3D Lighting filters */}
+          <filter id="zone-shadow" x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="1" dy="2" stdDeviation="2" floodColor="rgba(0,0,0,0.25)" />
+          </filter>
+          <filter id="zone-glow" x="-20%" y="-20%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#3b82f6" floodOpacity="0.6" />
+          </filter>
+          <filter id="skin-shadow" x="-5%" y="-5%" width="115%" height="115%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="blur" />
+            <feOffset dx="3" dy="5" result="offsetBlur" />
+            <feFlood floodColor="rgba(0,0,0,0.2)" result="color" />
+            <feComposite in="color" in2="offsetBlur" operator="in" result="shadow" />
+            <feMerge>
+              <feMergeNode in="shadow" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
 
-        {/* ── Cabelo/topo referência ── */}
-        <path
-          d="M 30 195 Q 30 30, 150 25 Q 270 30, 270 195"
-          fill="none"
-          stroke="#d1d5db"
-          strokeWidth={1}
-          strokeDasharray="3,3"
-        />
+          {/* Skin 3D gradient */}
+          <radialGradient id="skin-3d" cx="40%" cy="30%" r="65%">
+            <stop offset="0%" stopColor="#fce4d6" />
+            <stop offset="40%" stopColor="#f5d0b5" />
+            <stop offset="70%" stopColor="#e8b896" />
+            <stop offset="100%" stopColor="#d4a07a" />
+          </radialGradient>
+
+          {/* Hair gradient */}
+          <radialGradient id="hair-3d" cx="50%" cy="20%" r="55%">
+            <stop offset="0%" stopColor="#8B6F47" />
+            <stop offset="60%" stopColor="#5C4033" />
+            <stop offset="100%" stopColor="#3E2723" />
+          </radialGradient>
+
+          {/* Inactive zone gradient */}
+          <radialGradient id="grad-inactive" cx="40%" cy="35%" r="55%">
+            <stop offset="0%" stopColor="#f8fafc" />
+            <stop offset="50%" stopColor="#e5e7eb" />
+            <stop offset="100%" stopColor="#c8ccd2" />
+          </radialGradient>
+
+          {/* Neck shadow */}
+          <linearGradient id="neck-shadow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(0,0,0,0.15)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </linearGradient>
+
+          {/* Active zone gradients */}
+          {activeZoneGradients}
+        </defs>
+
+        {/* ── 3D Face base with skin tone ── */}
+        <g filter="url(#skin-shadow)">
+          {/* Hair */}
+          <path
+            d="M 30 195 Q 30 25, 150 20 Q 270 25, 270 195"
+            fill="url(#hair-3d)"
+            stroke="none"
+          />
+          {/* Face shape */}
+          <ellipse
+            cx={150} cy={200} rx={118} ry={165}
+            fill="url(#skin-3d)"
+            stroke="none"
+          />
+          {/* Jaw highlight */}
+          <ellipse
+            cx={150} cy={330} rx={70} ry={20}
+            fill="rgba(0,0,0,0.06)"
+            stroke="none"
+          />
+          {/* Neck */}
+          <rect x={115} y={355} width={70} height={40} rx={20} fill="url(#skin-3d)" stroke="none" />
+          <rect x={115} y={355} width={70} height={15} rx={5} fill="url(#neck-shadow)" stroke="none" />
+
+          {/* Eye shapes (reference) */}
+          <ellipse cx={108} cy={148} rx={20} ry={9} fill="white" stroke="#b8a090" strokeWidth={0.8} />
+          <circle cx={108} cy={148} r={6} fill="#6B4E3D" />
+          <circle cx={108} cy={148} r={3} fill="#1a1a1a" />
+          <circle cx={110} cy={146} r={1.5} fill="white" />
+
+          <ellipse cx={192} cy={148} rx={20} ry={9} fill="white" stroke="#b8a090" strokeWidth={0.8} />
+          <circle cx={192} cy={148} r={6} fill="#6B4E3D" />
+          <circle cx={192} cy={148} r={3} fill="#1a1a1a" />
+          <circle cx={194} cy={146} r={1.5} fill="white" />
+
+          {/* Eyebrows */}
+          <path d="M 82 128 Q 108 115, 134 125" fill="none" stroke="#5C4033" strokeWidth={2.5} strokeLinecap="round" />
+          <path d="M 166 125 Q 192 115, 218 128" fill="none" stroke="#5C4033" strokeWidth={2.5} strokeLinecap="round" />
+
+          {/* Nose */}
+          <path d="M 150 160 L 150 205 Q 140 218, 135 215 Q 140 210, 145 210 L 150 210 L 155 210 Q 160 210, 165 215 Q 160 218, 150 205" fill="none" stroke="#c9a58c" strokeWidth={1} />
+
+          {/* Lips */}
+          <path d="M 125 260 Q 137 252, 150 255 Q 163 252, 175 260" fill="#e8a0a0" stroke="#c47070" strokeWidth={0.8} />
+          <path d="M 125 260 Q 137 272, 150 270 Q 163 272, 175 260" fill="#d4908a" stroke="#c47070" strokeWidth={0.8} />
+
+          {/* Ears */}
+          <ellipse cx={32} cy={175} rx={10} ry={22} fill="url(#skin-3d)" stroke="#c9a58c" strokeWidth={0.8} />
+          <ellipse cx={268} cy={175} rx={10} ry={22} fill="url(#skin-3d)" stroke="#c9a58c" strokeWidth={0.8} />
+
+          {/* Nose highlight */}
+          <ellipse cx={148} cy={190} rx={3} ry={6} fill="rgba(255,255,255,0.25)" />
+        </g>
 
         {/* ═══════════════════════ ZONAS ═══════════════════════ */}
 
-        {/* ── FRONTAL ── */}
-        {renderZone("frontal",
-          <ellipse cx={150} cy={80} rx={70} ry={30} />
-        )}
-        {!compact && (
-          <text x={150} y={83} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Frontal</text>
-        )}
+        {renderZone("frontal", <ellipse cx={150} cy={80} rx={70} ry={30} />)}
+        {!compact && <text x={150} y={83} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Frontal</text>}
 
-        {/* ── GLABELA ── */}
-        {renderZone("glabela",
-          <ellipse cx={150} cy={118} rx={18} ry={12} />
-        )}
-        {!compact && (
-          <text x={150} y={121} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Glab.</text>
-        )}
+        {renderZone("glabela", <ellipse cx={150} cy={118} rx={18} ry={12} />)}
+        {!compact && <text x={150} y={121} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Glab.</text>}
 
-        {/* ── TEMPORAL D ── */}
-        {renderZone("temporal_d",
-          <ellipse cx={60} cy={110} rx={22} ry={35} />
-        )}
-        {!compact && (
-          <text x={60} y={113} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Temp.D</text>
-        )}
+        {renderZone("temporal_d", <ellipse cx={60} cy={110} rx={22} ry={35} />)}
+        {!compact && <text x={60} y={113} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Temp.D</text>}
 
-        {/* ── TEMPORAL E ── */}
-        {renderZone("temporal_e",
-          <ellipse cx={240} cy={110} rx={22} ry={35} />
-        )}
-        {!compact && (
-          <text x={240} y={113} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Temp.E</text>
-        )}
+        {renderZone("temporal_e", <ellipse cx={240} cy={110} rx={22} ry={35} />)}
+        {!compact && <text x={240} y={113} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Temp.E</text>}
 
-        {/* ── PERIOCULAR D ── */}
-        {renderZone("periocular_d",
-          <ellipse cx={108} cy={145} rx={28} ry={16} />
-        )}
-        {!compact && (
-          <text x={108} y={148} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Perioc.D</text>
-        )}
+        {renderZone("periocular_d", <ellipse cx={108} cy={145} rx={28} ry={16} />)}
+        {!compact && <text x={108} y={148} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Perioc.D</text>}
 
-        {/* ── PERIOCULAR E ── */}
-        {renderZone("periocular_e",
-          <ellipse cx={192} cy={145} rx={28} ry={16} />
-        )}
-        {!compact && (
-          <text x={192} y={148} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Perioc.E</text>
-        )}
+        {renderZone("periocular_e", <ellipse cx={192} cy={145} rx={28} ry={16} />)}
+        {!compact && <text x={192} y={148} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Perioc.E</text>}
 
-        {/* ── NASAL ── */}
-        {renderZone("nasal",
-          <path d="M 140 165 L 150 215 L 160 165 Z" />
-        )}
-        {!compact && (
-          <text x={150} y={195} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Nasal</text>
-        )}
+        {renderZone("nasal", <path d="M 140 165 L 150 215 L 160 165 Z" />)}
+        {!compact && <text x={150} y={195} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Nasal</text>}
 
-        {/* ── MALAR D ── */}
-        {renderZone("malar_d",
-          <ellipse cx={85} cy={195} rx={32} ry={25} />
-        )}
-        {!compact && (
-          <text x={85} y={198} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Malar D</text>
-        )}
+        {renderZone("malar_d", <ellipse cx={85} cy={195} rx={32} ry={25} />)}
+        {!compact && <text x={85} y={198} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Malar D</text>}
 
-        {/* ── MALAR E ── */}
-        {renderZone("malar_e",
-          <ellipse cx={215} cy={195} rx={32} ry={25} />
-        )}
-        {!compact && (
-          <text x={215} y={198} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Malar E</text>
-        )}
+        {renderZone("malar_e", <ellipse cx={215} cy={195} rx={32} ry={25} />)}
+        {!compact && <text x={215} y={198} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Malar E</text>}
 
-        {/* ── SULCO NASOGENIANO D ── */}
-        {renderZone("sulco_ng_d",
-          <path d="M 125 215 Q 118 240, 125 265 L 132 265 Q 128 240, 132 215 Z" />
-        )}
-        {!compact && (
-          <text x={116} y={242} textAnchor="middle" fontSize="6" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(-10,116,242)">SNG D</text>
-        )}
+        {renderZone("sulco_ng_d", <path d="M 125 215 Q 118 240, 125 265 L 132 265 Q 128 240, 132 215 Z" />)}
+        {!compact && <text x={116} y={242} textAnchor="middle" fontSize="6" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(-10,116,242)">SNG D</text>}
 
-        {/* ── SULCO NASOGENIANO E ── */}
-        {renderZone("sulco_ng_e",
-          <path d="M 175 215 Q 182 240, 175 265 L 168 265 Q 172 240, 168 215 Z" />
-        )}
-        {!compact && (
-          <text x={184} y={242} textAnchor="middle" fontSize="6" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(10,184,242)">SNG E</text>
-        )}
+        {renderZone("sulco_ng_e", <path d="M 175 215 Q 182 240, 175 265 L 168 265 Q 172 240, 168 215 Z" />)}
+        {!compact && <text x={184} y={242} textAnchor="middle" fontSize="6" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(10,184,242)">SNG E</text>}
 
-        {/* ── LÁBIO SUPERIOR ── */}
-        {renderZone("labio_superior",
-          <ellipse cx={150} cy={260} rx={28} ry={10} />
-        )}
-        {!compact && (
-          <text x={150} y={263} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Láb.Sup</text>
-        )}
+        {renderZone("labio_superior", <ellipse cx={150} cy={260} rx={28} ry={10} />)}
+        {!compact && <text x={150} y={263} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Láb.Sup</text>}
 
-        {/* ── LÁBIO INFERIOR ── */}
-        {renderZone("labio_inferior",
-          <ellipse cx={150} cy={282} rx={30} ry={10} />
-        )}
-        {!compact && (
-          <text x={150} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Láb.Inf</text>
-        )}
+        {renderZone("labio_inferior", <ellipse cx={150} cy={282} rx={30} ry={10} />)}
+        {!compact && <text x={150} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Láb.Inf</text>}
 
-        {/* ── COMISSURA D ── */}
-        {renderZone("comissura_d",
-          <circle cx={116} cy={270} r={8} />
-        )}
+        {renderZone("comissura_d", <circle cx={116} cy={270} r={8} />)}
+        {renderZone("comissura_e", <circle cx={184} cy={270} r={8} />)}
 
-        {/* ── COMISSURA E ── */}
-        {renderZone("comissura_e",
-          <circle cx={184} cy={270} r={8} />
-        )}
+        {renderZone("mento", <ellipse cx={150} cy={310} rx={30} ry={18} />)}
+        {!compact && <text x={150} y={313} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Mento</text>}
 
-        {/* ── MENTO ── */}
-        {renderZone("mento",
-          <ellipse cx={150} cy={310} rx={30} ry={18} />
-        )}
-        {!compact && (
-          <text x={150} y={313} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Mento</text>
-        )}
+        {renderZone("linha_marionete_d", <path d="M 118 280 Q 112 298, 118 315 L 124 315 Q 120 298, 124 280 Z" />)}
+        {renderZone("linha_marionete_e", <path d="M 182 280 Q 188 298, 182 315 L 176 315 Q 180 298, 176 280 Z" />)}
 
-        {/* ── LINHA MARIONETE D ── */}
-        {renderZone("linha_marionete_d",
-          <path d="M 118 280 Q 112 298, 118 315 L 124 315 Q 120 298, 124 280 Z" />
-        )}
+        {renderZone("mandibula_d", <path d="M 45 235 Q 38 290, 80 335 L 100 335 Q 60 290, 65 235 Z" />)}
+        {!compact && <text x={65} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(-20,65,285)">Mand.D</text>}
 
-        {/* ── LINHA MARIONETE E ── */}
-        {renderZone("linha_marionete_e",
-          <path d="M 182 280 Q 188 298, 182 315 L 176 315 Q 180 298, 176 280 Z" />
-        )}
+        {renderZone("mandibula_e", <path d="M 255 235 Q 262 290, 220 335 L 200 335 Q 240 290, 235 235 Z" />)}
+        {!compact && <text x={235} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(20,235,285)">Mand.E</text>}
 
-        {/* ── MANDÍBULA D ── */}
-        {renderZone("mandibula_d",
-          <path d="M 45 235 Q 38 290, 80 335 L 100 335 Q 60 290, 65 235 Z" />
-        )}
-        {!compact && (
-          <text x={65} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(-20,65,285)">Mand.D</text>
-        )}
-
-        {/* ── MANDÍBULA E ── */}
-        {renderZone("mandibula_e",
-          <path d="M 255 235 Q 262 290, 220 335 L 200 335 Q 240 290, 235 235 Z" />
-        )}
-        {!compact && (
-          <text x={235} y={285} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none" transform="rotate(20,235,285)">Mand.E</text>
-        )}
-
-        {/* ── SUBMENTO ── */}
-        {renderZone("submento",
-          <ellipse cx={150} cy={355} rx={42} ry={15} />
-        )}
-        {!compact && (
-          <text x={150} y={358} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Submento</text>
-        )}
+        {renderZone("submento", <ellipse cx={150} cy={355} rx={42} ry={15} />)}
+        {!compact && <text x={150} y={358} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Submento</text>}
 
         {/* ══ Quantity badges ══ */}
         {applications.length > 0 && FACE_ZONES.map(z => {
@@ -280,8 +265,8 @@ export function FaceZoneDiagram({
           if (!pos) return null;
           return (
             <g key={`badge-${z.id}`} pointerEvents="none">
-              <rect x={pos.x - 12} y={pos.y - 7} width={24} height={14} rx={4} fill="white" fillOpacity={0.9} stroke="#94a3b8" strokeWidth={0.5} />
-              <text x={pos.x} y={pos.y + 3} textAnchor="middle" fontSize="8" fill="#1e293b" fontWeight="bold">{qty}</text>
+              <rect x={pos.x - 14} y={pos.y - 8} width={28} height={16} rx={8} fill="white" fillOpacity={0.95} stroke="#94a3b8" strokeWidth={0.5} filter="url(#zone-shadow)" />
+              <text x={pos.x} y={pos.y + 4} textAnchor="middle" fontSize="8" fill="#1e293b" fontWeight="bold">{qty}</text>
             </g>
           );
         })}
@@ -290,7 +275,23 @@ export function FaceZoneDiagram({
   );
 }
 
-/* Badge position offsets for quantity labels */
+/* Color helpers */
+function lighten(hex: string, pct: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, ((num >> 16) & 0xff) + Math.round(255 * pct / 100));
+  const g = Math.min(255, ((num >> 8) & 0xff) + Math.round(255 * pct / 100));
+  const b = Math.min(255, (num & 0xff) + Math.round(255 * pct / 100));
+  return `rgb(${r},${g},${b})`;
+}
+
+function darken(hex: string, pct: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, ((num >> 16) & 0xff) - Math.round(255 * pct / 100));
+  const g = Math.max(0, ((num >> 8) & 0xff) - Math.round(255 * pct / 100));
+  const b = Math.max(0, (num & 0xff) - Math.round(255 * pct / 100));
+  return `rgb(${r},${g},${b})`;
+}
+
 const ZONE_BADGE_POS: Record<string, { x: number; y: number }> = {
   frontal:          { x: 150, y: 65 },
   glabela:          { x: 150, y: 134 },
