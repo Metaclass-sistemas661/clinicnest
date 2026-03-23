@@ -20,7 +20,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Settings, PanelRightClose, Stethoscope, CreditCard, Bell, BookOpen, Plus, Calendar, Users, DollarSign, Package } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Settings, PanelRightClose, Stethoscope, CreditCard, Bell, BookOpen, Plus, Calendar, Users, DollarSign, Package, ChevronLeft } from "lucide-react";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { AiAgentChatPanel } from "@/components/ai/AiAgentChatPanel";
@@ -50,6 +51,9 @@ export function RightSidebar() {
   const showNest = hasFeature("aiAgentChat");
   const showCopilot = copilot.active;
 
+  // Mobile drawer state
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   // Close on Escape
   useEffect(() => {
     if (!expanded) return;
@@ -70,8 +74,115 @@ export function RightSidebar() {
     }
   }, [showCopilot]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Hide on mobile — the chat is accessible elsewhere
-  if (isMobile) return null;
+  // ── Mobile: floating button + Sheet drawer ──────────────────
+  if (isMobile) {
+    if (!showNest && !showCopilot) return null;
+
+    return (
+      <>
+        {/* Floating pulsing toggle button */}
+        {!mobileOpen && (
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex items-center justify-center h-12 w-7 rounded-l-xl bg-teal-600 dark:bg-teal-700 text-white shadow-lg shadow-teal-600/30 animate-pulse hover:animate-none hover:w-9 transition-all"
+            aria-label="Abrir assistente IA"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
+
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="right" className="w-[340px] sm:w-[380px] p-0 border-l border-border/30 bg-background flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                {activeTab === "nest" ? (
+                  <NestAvatar size={28} className="ring-1 ring-teal-500/30" />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                    <Stethoscope className="h-4 w-4 text-primary" />
+                  </div>
+                )}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {activeTab === "nest" ? "Copilot Nest" : "Copilot Clínico"}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    {activeTab === "nest" ? "Assistente IA" : "Sugestões do prontuário"}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                onClick={() => setMobileOpen(false)}
+              >
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Tab Switcher */}
+            {showNest && showCopilot && (
+              <div className="flex border-b border-border/50">
+                <button
+                  onClick={() => setActiveTab("nest")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                    activeTab === "nest"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <NestAvatar size={16} />
+                  Nest
+                </button>
+                <button
+                  onClick={() => setActiveTab("copilot")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                    activeTab === "copilot"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Stethoscope className="h-3.5 w-3.5" />
+                  Clínico
+                  {aiActive && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+                </button>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {activeTab === "nest" && <AiAgentChatPanel />}
+              {activeTab === "copilot" && copilot.input && (
+                <div className="h-full overflow-y-auto p-3 space-y-3">
+                  <AiGpsNavigator input={copilot.input} />
+                  <div className="border-t border-border/30 pt-2">
+                    <AiCopilotPanel
+                      input={copilot.input}
+                      onSelectCid={copilot.callbacks.onSelectCid}
+                      onAppendPrescription={copilot.callbacks.onAppendPrescription}
+                      onAppendExam={copilot.callbacks.onAppendExam}
+                      onAppendPlan={copilot.callbacks.onAppendPlan}
+                      className="border-0 shadow-none"
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTab === "copilot" && !copilot.input && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-6 text-muted-foreground gap-3">
+                  <Stethoscope className="h-10 w-10 opacity-30" />
+                  <p className="text-sm">Abra um prontuário para ativar o Copilot Clínico.</p>
+                </div>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
 
   const openTab = (tab: SidebarTab) => {
     setActiveTab(tab);
