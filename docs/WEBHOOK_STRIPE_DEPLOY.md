@@ -37,7 +37,7 @@ supabase link --project-ref pijjuhtyxcidqceukogv
 ```bash
 supabase secrets set STRIPE_SECRET_KEY=sk_test_...
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
-supabase secrets set SITE_URL=https://seusite.vercel.app
+supabase secrets set SITE_URL=https://clinicnest.metaclass.com.br
 supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...   # (após criar endpoint no Stripe)
 ```
 

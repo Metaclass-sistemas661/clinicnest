@@ -420,7 +420,7 @@ No painel do Supabase externo, vá em **Authentication > Providers** e configure
 
 ---
 
-## 🚀 Passo 6: Deploy no Vercel/Netlify
+## 🚀 Passo 6: Deploy no Firebase Hosting
 
 ### 6.1 Variáveis de Ambiente
 
@@ -432,12 +432,11 @@ VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...  # anon/public key do Supabase Dashboard
 VITE_SUPABASE_PROJECT_ID=SEU_PROJECT_REF
 ```
 
-### 6.2 Build Settings (Vercel)
+### 6.2 Build Settings (Firebase Hosting)
 
-- **Framework Preset**: Vite
 - **Build Command**: `npm run build`
 - **Output Directory**: `dist`
-- **Install Command**: `npm install`
+- **Deploy**: `firebase deploy --only hosting`
 
 ### 6.3 Build Settings (Netlify)
 
@@ -478,5 +477,5 @@ VITE_SUPABASE_PROJECT_ID=SEU_PROJECT_REF
 
 Se tiver dúvidas durante a migração, consulte:
 - [Documentação Supabase](https://supabase.com/docs)
-- [Documentação Vercel](https://vercel.com/docs)
+- [Documentação Firebase Hosting](https://firebase.google.com/docs/hosting)
 - [Documentação Netlify](https://docs.netlify.com)

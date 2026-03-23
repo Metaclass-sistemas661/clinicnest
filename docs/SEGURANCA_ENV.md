@@ -9,7 +9,7 @@
   - `STRIPE_WEBHOOK_SECRET`
   - Chaves de API privadas (Resend, etc.)
 - O arquivo `.env` não deve ser commitado (está no `.gitignore`). Use `.env.example` como modelo.
-- Em produção (Vercel etc.), configure as variáveis no painel do provedor; apenas `VITE_*` serão expostas no bundle.
+- Em produção (Firebase Hosting), configure as variáveis via `.env` no build; apenas `VITE_*` serão expostas no bundle.
 
 ## Edge Functions (Supabase)
 

@@ -69,7 +69,7 @@ O Firebase é usado **EXCLUSIVAMENTE para Push Notifications (FCM)**. O fluxo co
 | Storage | **NÃO** — Supabase Storage |
 | Analytics | **NÃO** — Google Analytics (gtag) separado |
 | Functions | **NÃO** — Supabase Edge Functions (Deno) |
-| Hosting | **NÃO** — Vercel |
+| Hosting | **SIM** — Firebase Hosting |
 | Performance Monitoring | **NÃO** |
 | Remote Config | **NÃO** |
 | Crashlytics | **NÃO** |
@@ -88,7 +88,7 @@ Nenhum `firebase-admin`, `@firebase/*` direto, ou `firebase-tools` no `package.j
 
 ## 4. Variáveis de Ambiente
 
-### Frontend (Vercel)
+### Frontend (Firebase Hosting)
 
 | Variável | Onde é lida | Propósito |
 |----------|------------|-----------|
@@ -120,7 +120,7 @@ storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`
 
 Nenhum valor hardcoded. Para descobrir o Project ID atual, consulte:
 
-1. **Vercel** → Settings → Environment Variables → `VITE_FIREBASE_PROJECT_ID`
+1. **Firebase Console** → Hosting → Configurações ou variáveis `.env` local → `VITE_FIREBASE_PROJECT_ID`
 2. **Supabase** → Edge Function Secrets → `FCM_SERVER_KEY` (identifica indiretamente)
 3. **Firebase Console** → console.firebase.google.com → seus projetos
 
@@ -227,7 +227,7 @@ await fetch("https://fcm.googleapis.com/fcm/send", {
 | `firebase-tools` no package.json | **Não presente** (só global) |
 | Firebase script tags em `index.html` | **Nenhum** |
 | `gcm_sender_id` em `manifest.json` | **Não presente** |
-| Firebase refs em `vercel.json` | **Nenhum** |
+| Firebase refs em `firebase.json` | **Rewrites + headers configurados** |
 | Arquivo `.env` ou `.env.local` no workspace | **Não existe** (apenas `.env.example`) |
 
 ---
@@ -253,5 +253,5 @@ await fetch("https://fcm.googleapis.com/fcm/send", {
 | Refs em config/docs | 3 (vite.config.ts, .env.example, roadmap.md) |
 | Pacotes npm | 1 (`firebase ^12.9.0`) |
 | Variáveis de ambiente | 6 (5 `VITE_FIREBASE_*` + 1 `FCM_SERVER_KEY`) |
-| Project ID | Não hardcoded — consultar Vercel env vars |
+| Project ID | Não hardcoded — consultar `.env` local ou Firebase Console |
 | API usada no backend | FCM Legacy HTTP (⚠️ depreciada) |

@@ -148,8 +148,8 @@ export const PLANO_CONTINUIDADE = {
     ],
     
     recuperacaoAplicacao: [
-      "1. Verificar status dos serviços (Supabase, Vercel, Cloudflare)",
-      "2. Se Vercel indisponível: deploy em ambiente alternativo",
+      "1. Verificar status dos serviços (Supabase, Firebase Hosting)",
+      "2. Se Firebase Hosting indisponível: deploy em ambiente alternativo",
       "3. Atualizar DNS se necessário",
       "4. Limpar cache CDN",
       "5. Testar fluxos críticos",

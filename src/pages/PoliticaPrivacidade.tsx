@@ -116,7 +116,7 @@ export default function PoliticaPrivacidade() {
               <p className="text-base leading-relaxed mb-3">Podemos compartilhar dados com:</p>
               <ul className="list-disc pl-6 space-y-1 text-base mb-3">
                 <li><strong>Processadores de pagamento:</strong> Asaas, para processamento de cobranças</li>
-                <li><strong>Provedores de infraestrutura:</strong> Supabase (banco de dados), Vercel (hospedagem)</li>
+                <li><strong>Provedores de infraestrutura:</strong> Supabase (banco de dados), Firebase Hosting (hospedagem)</li>
                 <li><strong>Serviços de comunicação:</strong> WhatsApp Business API, provedores de e-mail</li>
                 <li><strong>Autoridades:</strong> Quando exigido por lei ou ordem judicial</li>
                 <li><strong>Operadoras de saúde:</strong> Para faturamento TISS, mediante autorização</li>

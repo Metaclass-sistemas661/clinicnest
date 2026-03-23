@@ -360,7 +360,7 @@
 | **Estado** | React Query + Context API |
 | **Backend** | Supabase (PostgreSQL + Auth + Realtime) |
 | **Edge Functions** | Deno (Supabase Functions) |
-| **Hospedagem** | Vercel (frontend) + Supabase Cloud |
+| **Hospedagem** | Firebase Hosting (frontend) + Supabase Cloud |
 | **Pagamentos** | Stripe + Asaas |
 | **WhatsApp** | Evolution API |
 | **Email** | Resend |
@@ -546,7 +546,7 @@ O ClinicaFlow está **pronto para competir** com os principais softwares do merc
 | **Lazy Loading** | Todas as páginas com retry automático |
 | **Cache** | React Query com stale-while-revalidate |
 | **Realtime** | Supabase Realtime (WebSocket) |
-| **CDN** | Vercel Edge Network |
+| **CDN** | Firebase CDN (global edge) |
 | **Database** | PostgreSQL com índices otimizados |
 
 ---

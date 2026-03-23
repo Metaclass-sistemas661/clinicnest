@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -16,16 +17,15 @@ import {
 import {
   FileText,
   RefreshCw,
-  Building2,
-  Stethoscope,
-  Calendar,
   Download,
   PenTool,
   CheckCircle2,
-  ClipboardList,
-  Pill,
+  Clock,
   Loader2,
-  Files,
+  ShieldCheck,
+  ChevronRight,
+  ArrowLeft,
+  Eye,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -35,198 +35,112 @@ import { toast } from "sonner";
 import { SignatureMethodSelector, type SignatureMethod } from "@/components/signature/SignatureMethodSelector";
 import { SignatureCanvas } from "@/components/signature/SignatureCanvas";
 import { FacialCapture } from "@/components/consent/FacialCapture";
-import {
-  generateCertificatePdf,
-  generatePrescriptionPdf,
-  generateExamPdf,
-  generateMedicalReportPdf,
-} from "@/utils/patientDocumentPdf";
+import { replaceVariables, buildVariablesFromClientAndTenant, type ConsentVariablesData } from "@/lib/consent-variables";
 
 /* ── Types ── */
-type DocCategory = "certificate" | "prescription" | "exam" | "report";
-
-interface UnifiedDocument {
-  id: string;
-  category: DocCategory;
+interface ConsentRow {
+  template_id: string;
   title: string;
-  subtitle: string;
-  date: string;
-  professional_name: string;
-  clinic_name: string;
-  status: string;
-  signed: boolean;
-  raw: any; // original data for PDF generation
-}
-
-/* ── Helpers ── */
-const categoryMeta: Record<DocCategory, { label: string; icon: React.ElementType; color: string }> = {
-  certificate: { label: "Atestado", icon: ClipboardList, color: "text-amber-500" },
-  prescription: { label: "Receita", icon: Pill, color: "text-teal-500" },
-  exam: { label: "Exame", icon: FileText, color: "text-blue-500" },
-  report: { label: "Laudo", icon: Stethoscope, color: "text-purple-500" },
-};
-
-function categoryBadgeVariant(cat: DocCategory) {
-  switch (cat) {
-    case "certificate": return "secondary" as const;
-    case "prescription": return "default" as const;
-    case "exam": return "outline" as const;
-    case "report": return "secondary" as const;
-  }
+  body_html: string;
+  is_required: boolean;
+  template_type: string | null;
+  sort_order: number;
+  consent_id: string | null;
+  signed_at: string | null;
+  signature_method: string | null;
+  sealed_pdf_path: string | null;
+  is_signed: boolean;
 }
 
 /* ── Component ── */
 export default function PatientDocumentos() {
-  const [documents, setDocuments] = useState<UnifiedDocument[]>([]);
-  const [signatures, setSignatures] = useState<Set<string>>(new Set());
+  const [consents, setConsents] = useState<ConsentRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
 
-  // Signature dialog state
-  const [signTarget, setSignTarget] = useState<UnifiedDocument | null>(null);
-  const [signStep, setSignStep] = useState<"choose" | "capture">("choose");
+  // Patient info
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [patientName, setPatientName] = useState("Paciente");
+  const [varsData, setVarsData] = useState<ConsentVariablesData>({});
+
+  // Signing dialog state
+  const [signTarget, setSignTarget] = useState<ConsentRow | null>(null);
+  type SignStep = "read" | "choose-method" | "capture";
+  const [signStep, setSignStep] = useState<SignStep>("read");
   const [signMethod, setSignMethod] = useState<SignatureMethod | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [manualDataUrl, setManualDataUrl] = useState<string | null>(null);
   const [isSigning, setIsSigning] = useState(false);
-  const [patientName, setPatientName] = useState("Paciente");
-  const [clientId, setClientId] = useState<string | null>(null);
+
+  // View dialog state
+  const [viewTarget, setViewTarget] = useState<ConsentRow | null>(null);
 
   const resolvePatient = useCallback(async () => {
     try {
       const { data: { user } } = await supabasePatient.auth.getUser();
-      if (!user) return;
-      const { data } = await supabasePatient
+      if (!user) return null;
+      const { data } = await (supabasePatient as any)
         .from("patients")
-        .select("id, name")
+        .select("id, tenant_id, name, cpf, date_of_birth, birth_date, email, phone, street, street_number, neighborhood, city, state, zip_code, address_street, address_city, address_state, address_zip")
         .eq("email", user.email!)
         .limit(1)
         .maybeSingle();
-      if (data) {
-        setClientId(data.id);
-        setPatientName(data.name || "Paciente");
+      if (!data) return null;
+
+      let tenantData: any = null;
+      if (data.tenant_id) {
+        const { data: t } = await (supabasePatient as any)
+          .from("tenants")
+          .select("name, cnpj, address, responsible_doctor, responsible_crm")
+          .eq("id", data.tenant_id)
+          .maybeSingle();
+        tenantData = t;
       }
+
+      setVarsData(buildVariablesFromClientAndTenant(data as any, tenantData));
+      setPatientId(data.id);
+      setPatientName(data.name || "Paciente");
+      return data.id as string;
     } catch {
-      // silent
+      return null;
     }
   }, []);
 
-  const fetchAll = useCallback(async () => {
+  const fetchConsents = useCallback(async (pId: string) => {
     setIsLoading(true);
     try {
-      const [certsRes, rxRes, examsRes, reportsRes, sigsRes] = await Promise.all([
-        (supabasePatient as any).rpc("get_patient_certificates"),
-        (supabasePatient as any).rpc("get_patient_prescriptions"),
-        (supabasePatient as any).rpc("get_patient_exam_results"),
-        (supabasePatient as any).rpc("get_patient_medical_reports"),
-        (supabasePatient as any).rpc("get_patient_document_signatures"),
-      ]);
-
-      const docs: UnifiedDocument[] = [];
-
-      // Certificates
-      for (const c of (certsRes.data ?? []) as any[]) {
-        docs.push({
-          id: c.id,
-          category: "certificate",
-          title: certTypeLabel(c.certificate_type),
-          subtitle: c.content?.substring(0, 100) || "",
-          date: c.issued_at,
-          professional_name: c.professional_name ?? "",
-          clinic_name: c.clinic_name ?? "",
-          status: "emitido",
-          signed: false,
-          raw: c,
-        });
-      }
-
-      // Prescriptions
-      for (const rx of (rxRes.data ?? []) as any[]) {
-        docs.push({
-          id: rx.id,
-          category: "prescription",
-          title: `Receita ${rxTypeLabel(rx.prescription_type)}`,
-          subtitle: rx.medications?.substring(0, 100) || "",
-          date: rx.issued_at,
-          professional_name: rx.professional_name ?? "",
-          clinic_name: rx.clinic_name ?? "",
-          status: rx.status || "ativo",
-          signed: false,
-          raw: rx,
-        });
-      }
-
-      // Exams
-      for (const ex of (examsRes.data ?? []) as any[]) {
-        docs.push({
-          id: ex.id,
-          category: "exam",
-          title: ex.exam_name || ex.exam_type || "Exame",
-          subtitle: ex.interpretation?.substring(0, 100) || "",
-          date: ex.performed_at || ex.created_at || "",
-          professional_name: ex.requested_by_name ?? "",
-          clinic_name: ex.clinic_name ?? "",
-          status: ex.status || "pendente",
-          signed: false,
-          raw: ex,
-        });
-      }
-
-      // Medical reports
-      for (const r of (reportsRes.data ?? []) as any[]) {
-        docs.push({
-          id: r.id,
-          category: "report",
-          title: reportTypeLabel(r.tipo),
-          subtitle: r.conclusao?.substring(0, 100) || r.diagnostico?.substring(0, 100) || "",
-          date: r.created_at,
-          professional_name: r.professional_name ?? "",
-          clinic_name: r.clinic_name ?? "",
-          status: r.status || "finalizado",
-          signed: false,
-          raw: r,
-        });
-      }
-
-      // Sort by date desc
-      docs.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-
-      // Mark signatures
-      const sigSet = new Set<string>();
-      if (sigsRes.data && Array.isArray(sigsRes.data)) {
-        for (const sig of sigsRes.data as any[]) {
-          sigSet.add(`${sig.document_type}:${sig.document_id}`);
-        }
-      }
-      setSignatures(sigSet);
-
-      // Update signed flags
-      for (const doc of docs) {
-        doc.signed = sigSet.has(`${doc.category}:${doc.id}`);
-      }
-
-      setDocuments(docs);
+      const { data, error } = await (supabasePatient as any).rpc("get_patient_all_consents", {
+        p_patient_id: pId,
+      });
+      if (error) throw error;
+      setConsents((data as ConsentRow[]) ?? []);
     } catch (err) {
-      logger.error("PatientDocumentos fetchAll:", err);
+      logger.error("PatientDocumentos fetchConsents:", err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void resolvePatient();
-    void fetchAll();
-  }, [resolvePatient, fetchAll]);
+    const init = async () => {
+      const pId = await resolvePatient();
+      if (pId) void fetchConsents(pId);
+      else setIsLoading(false);
+    };
+    void init();
+  }, [resolvePatient, fetchConsents]);
 
-  const filtered = activeTab === "all"
-    ? documents
-    : documents.filter((d) => d.category === activeTab);
+  const pending = consents.filter((c) => !c.is_signed);
+  const signed = consents.filter((c) => c.is_signed);
+  const filtered = activeTab === "all" ? consents
+    : activeTab === "pending" ? pending
+    : signed;
 
-  // ── Signature flow ──
+  // ── Signing flow ──
 
-  const openSignDialog = (doc: UnifiedDocument) => {
-    setSignTarget(doc);
-    setSignStep("choose");
+  const openSignDialog = (consent: ConsentRow) => {
+    setSignTarget(consent);
+    setSignStep("read");
     setSignMethod(null);
     setCapturedBlob(null);
     setManualDataUrl(null);
@@ -234,112 +148,127 @@ export default function PatientDocumentos() {
 
   const closeSignDialog = () => {
     setSignTarget(null);
-    setSignStep("choose");
+    setSignStep("read");
     setSignMethod(null);
     setCapturedBlob(null);
     setManualDataUrl(null);
   };
 
-  const handleMethodSelect = (method: SignatureMethod) => {
-    setSignMethod(method);
-    setSignStep("capture");
-  };
-
-  const handleSubmitSignature = async (overrideManualDataUrl?: string) => {
-    if (!signTarget || !clientId) return;
-
-    const effectiveManualUrl = overrideManualDataUrl ?? manualDataUrl;
+  const handleSign = async () => {
+    if (!signTarget || !patientId) return;
 
     if (signMethod === "facial" && !capturedBlob) {
       toast.error("Capture sua foto facial antes de assinar");
       return;
     }
-    if (signMethod === "manual" && !effectiveManualUrl) {
+    if (signMethod === "manual" && !manualDataUrl) {
       toast.error("Desenhe sua assinatura antes de confirmar");
       return;
     }
 
     setIsSigning(true);
     try {
-      let signaturePath: string | null = null;
-      let facialPath: string | null = null;
+      let facialPhotoPath: string | null = null;
+      let manualSignaturePath: string | null = null;
 
       if (signMethod === "facial" && capturedBlob) {
-        const fileName = `${clientId}/${signTarget.category}_${signTarget.id}_${Date.now()}.jpg`;
-        const { error } = await supabasePatient.storage
-          .from("document-signatures")
+        const fileName = `${patientId}/${signTarget.template_id}_${Date.now()}.jpg`;
+        const { error: uploadError } = await supabasePatient.storage
+          .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
-        if (error) throw error;
-        facialPath = fileName;
-      } else if (signMethod === "manual" && effectiveManualUrl) {
-        const res = await fetch(effectiveManualUrl);
+        if (uploadError) throw uploadError;
+        facialPhotoPath = fileName;
+      } else if (signMethod === "manual" && manualDataUrl) {
+        const res = await fetch(manualDataUrl);
         const blob = await res.blob();
-        const fileName = `${clientId}/${signTarget.category}_${signTarget.id}_${Date.now()}.png`;
-        const { error } = await supabasePatient.storage
-          .from("document-signatures")
+        const fileName = `${patientId}/${signTarget.template_id}_${Date.now()}.png`;
+        const { error: uploadError } = await supabasePatient.storage
+          .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });
-        if (error) throw error;
-        signaturePath = fileName;
+        if (uploadError) throw uploadError;
+        manualSignaturePath = fileName;
       }
 
-      const { data, error } = await (supabasePatient as any).rpc("patient_sign_document", {
-        p_document_type: signTarget.category,
-        p_document_id: signTarget.id,
-        p_signature_method: signMethod,
-        p_signature_path: signaturePath,
-        p_facial_photo_path: facialPath,
-        p_user_agent: navigator.userAgent,
-      });
+      // Use sign_consent_v2 for hybrid support
+      const rpcName = signMethod === "manual" ? "sign_consent_v2" : "sign_consent";
+      const rpcParams = signMethod === "manual"
+        ? {
+            p_client_id: patientId,
+            p_template_id: signTarget.template_id,
+            p_signature_method: "manual" as const,
+            p_facial_photo_path: null,
+            p_manual_signature_path: manualSignaturePath,
+            p_ip_address: null,
+            p_user_agent: navigator.userAgent,
+          }
+        : {
+            p_client_id: patientId,
+            p_template_id: signTarget.template_id,
+            p_facial_photo_path: facialPhotoPath,
+            p_ip_address: null,
+            p_user_agent: navigator.userAgent,
+          };
 
+      const { data, error } = await supabasePatient.rpc(rpcName as any, rpcParams as any);
       if (error) throw error;
 
-      const result = data as { success?: boolean; message?: string } | null;
-      if (result?.success) {
-        toast.success(result.message || "Documento assinado com sucesso!");
-        setSignatures((prev) => new Set(prev).add(`${signTarget.category}:${signTarget.id}`));
-        setDocuments((prev) =>
-          prev.map((d) =>
-            d.id === signTarget.id && d.category === signTarget.category
-              ? { ...d, signed: true }
-              : d,
-          ),
-        );
-      } else {
-        toast.error(result?.message || "Erro ao assinar documento");
+      const result = data as any;
+
+      // Update snapshot with filled variables
+      const consentId = result?.consent_id;
+      if (consentId) {
+        const filledHtml = replaceVariables(signTarget.body_html, varsData);
+        await (supabasePatient as any)
+          .from("patient_consents")
+          .update({ template_snapshot_html: filledHtml })
+          .eq("id", consentId);
+
+        // Trigger seal-consent-pdf (fire & forget)
+        supabasePatient.functions
+          .invoke("seal-consent-pdf", { body: { consent_id: consentId } })
+          .then(({ error: sealErr }) => {
+            if (sealErr) logger.warn("[PatientDocumentos] seal-consent-pdf:", sealErr);
+          });
       }
 
+      toast.success(`Termo "${signTarget.title}" assinado com sucesso!`);
+
+      // Refresh consents list
       closeSignDialog();
+      void fetchConsents(patientId);
     } catch (err: any) {
       logger.error("PatientDocumentos sign:", err);
-      toast.error(err?.message || "Erro ao assinar documento");
+      toast.error(err?.message || "Erro ao assinar termo");
     } finally {
       setIsSigning(false);
     }
   };
 
-  const handleDownloadPdf = (doc: UnifiedDocument) => {
-    switch (doc.category) {
-      case "certificate":
-        void generateCertificatePdf(doc.raw);
-        break;
-      case "prescription":
-        void generatePrescriptionPdf(doc.raw);
-        break;
-      case "exam":
-        void generateExamPdf(doc.raw);
-        break;
-      case "report":
-        void generateMedicalReportPdf(doc.raw);
-        break;
+  const handleDownloadSealedPdf = async (consent: ConsentRow) => {
+    if (!consent.sealed_pdf_path) return;
+    try {
+      const { data, error } = await supabasePatient.storage
+        .from("consent-sealed-pdfs")
+        .createSignedUrl(consent.sealed_pdf_path, 300);
+      if (error) throw error;
+      window.open(data.signedUrl, "_blank");
+    } catch (err: any) {
+      logger.error("Download sealed PDF:", err);
+      toast.error("Erro ao baixar PDF. Tente novamente.");
     }
   };
 
   return (
     <PatientLayout
       title="Documentos"
-      subtitle="Todos os seus documentos clínicos em um só lugar"
+      subtitle="Termos de consentimento e contratos"
       actions={
-        <Button variant="outline" size="sm" onClick={() => void fetchAll()} disabled={isLoading}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => patientId && void fetchConsents(patientId)}
+          disabled={isLoading}
+        >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
           Atualizar
         </Button>
@@ -348,24 +277,19 @@ export default function PatientDocumentos() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="all">
-            Todos ({documents.length})
+            Todos ({consents.length})
           </TabsTrigger>
-          <TabsTrigger value="certificate">
-            Atestados ({documents.filter((d) => d.category === "certificate").length})
+          <TabsTrigger value="pending">
+            <Clock className="h-3.5 w-3.5 mr-1.5" />
+            Pendentes ({pending.length})
           </TabsTrigger>
-          <TabsTrigger value="prescription">
-            Receitas ({documents.filter((d) => d.category === "prescription").length})
-          </TabsTrigger>
-          <TabsTrigger value="exam">
-            Exames ({documents.filter((d) => d.category === "exam").length})
-          </TabsTrigger>
-          <TabsTrigger value="report">
-            Laudos ({documents.filter((d) => d.category === "report").length})
+          <TabsTrigger value="signed">
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+            Assinados ({signed.length})
           </TabsTrigger>
         </TabsList>
 
-        {/* All tabs share the same content renderer */}
-        {["all", "certificate", "prescription", "exam", "report"].map((tab) => (
+        {["all", "pending", "signed"].map((tab) => (
           <TabsContent key={tab} value={tab} className="mt-0">
             {isLoading ? (
               <div className="space-y-4">
@@ -380,200 +304,280 @@ export default function PatientDocumentos() {
               </div>
             ) : filtered.length === 0 ? (
               <EmptyState
-                icon={Files}
-                title="Nenhum documento encontrado"
-                description="Quando a clínica emitir documentos para você, eles aparecerão aqui."
+                icon={FileText}
+                title={
+                  tab === "pending"
+                    ? "Nenhum termo pendente"
+                    : tab === "signed"
+                    ? "Nenhum termo assinado"
+                    : "Nenhum documento encontrado"
+                }
+                description={
+                  tab === "pending"
+                    ? "Todos os termos de consentimento já foram assinados."
+                    : "Quando a clínica cadastrar termos de consentimento ou contratos, eles aparecerão aqui."
+                }
               />
             ) : (
               <div className="space-y-4">
-                {filtered.map((doc) => {
-                  const meta = categoryMeta[doc.category];
-                  const Icon = meta.icon;
-                  return (
-                    <Card key={`${doc.category}-${doc.id}`} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Icon className={`h-4 w-4 ${meta.color}`} />
-                            {doc.title}
-                          </CardTitle>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={categoryBadgeVariant(doc.category)}>
-                              {meta.label}
+                {filtered.map((c) => (
+                  <Card
+                    key={c.template_id}
+                    className={`hover:shadow-md transition-shadow ${!c.is_signed ? "border-amber-200 dark:border-amber-800" : ""}`}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileText className={`h-4 w-4 ${c.is_signed ? "text-green-500" : "text-amber-500"}`} />
+                          {c.title}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          {c.is_required && (
+                            <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
+                          )}
+                          {c.is_signed ? (
+                            <Badge variant="default" className="bg-green-600 gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Assinado
                             </Badge>
-                            {doc.signed && (
-                              <Badge variant="default" className="bg-green-600 gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Assinado
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                          {doc.date && (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>{format(new Date(doc.date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                            </div>
-                          )}
-                          {doc.professional_name && (
-                            <div className="flex items-center gap-2">
-                              <Stethoscope className="h-3.5 w-3.5" />
-                              <span>{doc.professional_name}</span>
-                            </div>
-                          )}
-                          {doc.clinic_name && (
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-3.5 w-3.5" />
-                              <span>{doc.clinic_name}</span>
-                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="gap-1 text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30">
+                              <Clock className="h-3 w-3" />
+                              Pendente
+                            </Badge>
                           )}
                         </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {c.is_signed && c.signed_at && (
+                        <p className="text-xs text-muted-foreground">
+                          Assinado em {format(new Date(c.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          {c.signature_method === "facial" && " — Reconhecimento facial"}
+                          {c.signature_method === "manual" && " — Assinatura manual"}
+                        </p>
+                      )}
 
-                        {doc.subtitle && (
-                          <div className="bg-muted/50 rounded-lg p-3">
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {doc.subtitle}
-                            </p>
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setViewTarget(c)}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Visualizar
+                        </Button>
 
-                        <div className="flex items-center gap-2 flex-wrap">
+                        {c.is_signed && c.sealed_pdf_path && (
                           <Button
                             size="sm"
                             variant="outline"
                             className="gap-1.5"
-                            onClick={() => handleDownloadPdf(doc)}
+                            onClick={() => void handleDownloadSealedPdf(c)}
                           >
                             <Download className="h-3.5 w-3.5" />
                             Baixar PDF
                           </Button>
-                          {!doc.signed && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="gap-1.5"
-                              onClick={() => openSignDialog(doc)}
-                            >
-                              <PenTool className="h-3.5 w-3.5" />
-                              Assinar
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        )}
+
+                        {!c.is_signed && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="gap-1.5 bg-teal-600 hover:bg-teal-700"
+                            onClick={() => openSignDialog(c)}
+                          >
+                            <PenTool className="h-3.5 w-3.5" />
+                            Assinar
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
         ))}
       </Tabs>
 
-      {/* Signature Dialog */}
+      {/* ── View Dialog ── */}
+      <Dialog open={!!viewTarget} onOpenChange={(open) => !open && setViewTarget(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-teal-500" />
+              {viewTarget?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {viewTarget?.is_signed
+                ? `Assinado em ${viewTarget.signed_at ? format(new Date(viewTarget.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : ""}`
+                : "Pendente de assinatura"}
+            </DialogDescription>
+          </DialogHeader>
+          {viewTarget && (
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-muted/30"
+              dangerouslySetInnerHTML={{
+                __html: replaceVariables(viewTarget.body_html, varsData),
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Signing Dialog ── */}
       <Dialog open={!!signTarget} onOpenChange={(open) => !open && closeSignDialog()}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PenTool className="h-5 w-5 text-teal-500" />
-              Assinar Documento
+              Assinar Termo
             </DialogTitle>
             <DialogDescription>
-              {signTarget && (
-                <>
-                  {categoryMeta[signTarget.category].label}: <strong>{signTarget.title}</strong>
-                  {signTarget.date && (
-                    <> — {format(new Date(signTarget.date), "dd/MM/yyyy", { locale: ptBR })}</>
-                  )}
-                </>
-              )}
+              {signTarget?.title}
+              {signTarget?.is_required && " — Obrigatório"}
             </DialogDescription>
           </DialogHeader>
 
-          {signStep === "choose" && (
-            <SignatureMethodSelector
-              onSelect={handleMethodSelect}
-              disabled={isSigning}
-            />
-          )}
+          {signTarget && (
+            <>
+              {/* Step 1: Read the document */}
+              {signStep === "read" && (
+                <div className="space-y-6">
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
+                    dangerouslySetInnerHTML={{
+                      __html: replaceVariables(signTarget.body_html, varsData),
+                    }}
+                  />
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={() => setSignStep("choose-method")}
+                      className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                      size="lg"
+                    >
+                      Li e concordo — Prosseguir
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          {signStep === "capture" && signMethod === "facial" && (
-            <div className="space-y-4">
-              <FacialCapture
-                onCapture={(blob: Blob) => setCapturedBlob(blob)}
-                disabled={isSigning}
-              />
-              <div className="flex justify-between">
-                <Button variant="ghost" size="sm" onClick={() => setSignStep("choose")}>
-                  Voltar
-                </Button>
-                <Button
-                  onClick={handleSubmitSignature}
-                  disabled={!capturedBlob || isSigning}
-                  className="gap-2"
-                >
-                  {isSigning && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Confirmar Assinatura
-                </Button>
-              </div>
-            </div>
-          )}
+              {/* Step 2: Choose signature method */}
+              {signStep === "choose-method" && (
+                <div className="space-y-6">
+                  <SignatureMethodSelector
+                    onSelect={(method) => {
+                      setSignMethod(method);
+                      setCapturedBlob(null);
+                      setManualDataUrl(null);
+                      setSignStep("capture");
+                    }}
+                    disabled={isSigning}
+                  />
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSignStep("read")}
+                      className="gap-2 text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Voltar ao termo
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-          {signStep === "capture" && signMethod === "manual" && (
-            <div className="space-y-4">
-              <SignatureCanvas
-                patientName={patientName}
-                onComplete={(dataUrl) => {
-                  setManualDataUrl(dataUrl);
-                  void handleSubmitSignature(dataUrl);
-                }}
-                onClear={() => setManualDataUrl(null)}
-                disabled={isSigning}
-              />
-              <div className="flex justify-start">
-                <Button variant="ghost" size="sm" onClick={() => setSignStep("choose")} disabled={isSigning}>
-                  Voltar
-                </Button>
-              </div>
-            </div>
+              {/* Step 3: Facial capture */}
+              {signStep === "capture" && signMethod === "facial" && (
+                <div className="space-y-6">
+                  <FacialCapture
+                    onCapture={(blob: Blob) => setCapturedBlob(blob)}
+                    disabled={isSigning}
+                  />
+
+                  <Separator />
+
+                  <p className="text-xs text-center text-muted-foreground max-w-md mx-auto">
+                    Ao assinar, declaro que li e compreendi o conteúdo do termo e concordo
+                    com todos os termos descritos.
+                  </p>
+
+                  <div className="flex justify-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSignStep("choose-method"); setCapturedBlob(null); }}
+                      className="gap-2"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Trocar método
+                    </Button>
+                    <Button
+                      onClick={handleSign}
+                      disabled={isSigning || !capturedBlob}
+                      className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                      size="lg"
+                    >
+                      {isSigning ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</>
+                      ) : (
+                        <><ShieldCheck className="mr-2 h-4 w-4" />Assinar Termo</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Manual signature */}
+              {signStep === "capture" && signMethod === "manual" && (
+                <div className="space-y-6">
+                  <SignatureCanvas
+                    patientName={patientName}
+                    onComplete={(dataUrl) => setManualDataUrl(dataUrl)}
+                    onClear={() => setManualDataUrl(null)}
+                    disabled={isSigning}
+                  />
+
+                  <Separator />
+
+                  <p className="text-xs text-center text-muted-foreground max-w-md mx-auto">
+                    Ao assinar, declaro que li e compreendi o conteúdo do termo e concordo
+                    com todos os termos descritos.
+                  </p>
+
+                  <div className="flex justify-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setSignStep("choose-method"); setManualDataUrl(null); }}
+                      className="gap-2"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Trocar método
+                    </Button>
+                    <Button
+                      onClick={handleSign}
+                      disabled={isSigning || !manualDataUrl}
+                      className="bg-teal-600 hover:bg-teal-700 text-white min-w-[200px]"
+                      size="lg"
+                    >
+                      {isSigning ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Registrando...</>
+                      ) : (
+                        <><ShieldCheck className="mr-2 h-4 w-4" />Assinar Termo</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>
     </PatientLayout>
   );
-}
-
-/* ── Label helpers ── */
-
-function certTypeLabel(t: string) {
-  switch (t) {
-    case "atestado": return "Atestado Médico";
-    case "declaracao_comparecimento": return "Declaração de Comparecimento";
-    case "laudo": return "Laudo";
-    case "relatorio": return "Relatório";
-    default: return t || "Atestado";
-  }
-}
-
-function rxTypeLabel(t: string) {
-  switch (t) {
-    case "simples": return "Simples";
-    case "especial_b": return "Especial B";
-    case "especial_a": return "Especial A";
-    case "antimicrobiano": return "Antimicrobiano";
-    default: return t || "";
-  }
-}
-
-function reportTypeLabel(t: string) {
-  switch (t) {
-    case "laudo_medico": return "Laudo Médico";
-    case "laudo_pericial": return "Laudo Pericial";
-    case "parecer_tecnico": return "Parecer Técnico";
-    case "relatorio_medico": return "Relatório Médico";
-    case "laudo_complementar": return "Laudo Complementar";
-    default: return t?.replace(/_/g, " ") ?? "Laudo";
-  }
 }

@@ -107,7 +107,7 @@ export const INVENTARIO_ATIVOS: Ativo[] = [
     custodiante: "Desenvolvimento",
     classificacao: "INTERNO",
     criticidade: "CRITICA",
-    localizacao: "Vercel/Cloudflare",
+    localizacao: "Firebase Hosting/CDN",
     dependencias: ["SRV-001", "SRV-002"],
   },
   {

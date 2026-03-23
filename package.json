@@ -9,7 +9,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:vercel": "npm run ci:checks",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
     "ci:checks": "npm run lint && npm run test -- --passWithNoTests && npm run build",
@@ -107,7 +106,6 @@
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@vercel/node": "^3.2.27",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
