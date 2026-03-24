@@ -3,276 +3,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import {
+  BRAND,
+  confirmationEmailHtml,
+  confirmationEmailText,
+  passwordResetEmailHtml,
+  passwordResetEmailText,
+  passwordChangedEmailHtml,
+  passwordChangedEmailText,
+} from "../_shared/emailTemplate.ts";
 
 const log = createLogger("SEND-CUSTOM-AUTH-EMAIL");
-
-// ─── Paleta ClinicNest ─────────────────────────────────────────────────────
-// Primary:  Teal médico  hsl(174 72% 38%) ≈ #17a096
-// Accent:   Azul         hsl(195 80% 40%) ≈ #0d7fa8
-const BRAND_GRADIENT = "linear-gradient(135deg, #17a096 0%, #0d7fa8 100%)";
-const BRAND_SHADOW   = "rgba(23, 160, 150, 0.35)";
-const BRAND_NAME     = "ClinicNest";
-const BRAND_TAGLINE  = "Gestão Profissional para Clínicas";
-
-// ─── Header HTML compartilhado ─────────────────────────────────────────────
-function brandHeader(): string {
-  return `
-          <!-- Header -->
-          <tr>
-            <td style="background: ${BRAND_GRADIENT}; padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">
-                ${BRAND_NAME}
-              </h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 15px; opacity: 0.88;">
-                ${BRAND_TAGLINE}
-              </p>
-            </td>
-          </tr>`;
-}
-
-// ─── Footer HTML compartilhado ─────────────────────────────────────────────
-function brandFooter(): string {
-  return `
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f9fafb; padding: 28px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 6px; color: #6b7280; font-size: 14px;">
-                Precisa de ajuda? Entre em contato com o suporte do ${BRAND_NAME}.
-              </p>
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                &copy; ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-              </p>
-            </td>
-          </tr>`;
-}
-
-// ─── Button HTML compartilhado ─────────────────────────────────────────────
-function brandButton(href: string, label: string): string {
-  return `
-              <!-- Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 24px 0;">
-                    <a href="${href}"
-                       style="display: inline-block; background: ${BRAND_GRADIENT}; color: #ffffff;
-                              text-decoration: none; padding: 16px 44px; border-radius: 8px;
-                              font-size: 16px; font-weight: 600;
-                              box-shadow: 0 4px 14px ${BRAND_SHADOW};">
-                      ${label}
-                    </a>
-                  </td>
-                </tr>
-              </table>`;
-}
-
-// ─── Layout base ──────────────────────────────────────────────────────────
-function wrapEmail(title: string, content: string): string {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} - ${BRAND_NAME}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f0f9f9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9f9; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="background-color: #ffffff; border-radius: 10px; overflow: hidden;
-                      box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-          ${brandHeader()}
-          ${content}
-          ${brandFooter()}
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}
-
-// ─── Template: Confirmação de conta ───────────────────────────────────────
-function getConfirmationEmailHtml(name: string, confirmationUrl: string): string {
-  const greeting = name ? `Olá, <strong>${name}</strong>!` : "Olá!";
-  const content = `
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <h2 style="margin: 0 0 20px; color: #134e4a; font-size: 24px;">
-                Bem-vindo ao ${BRAND_NAME}! 🏥
-              </h2>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                ${greeting}
-              </p>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Obrigado por se cadastrar no <strong>${BRAND_NAME}</strong>!
-                Estamos felizes em ter você na nossa plataforma de gestão clínica.
-              </p>
-
-              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Para ativar sua conta, confirme seu e-mail clicando no botão abaixo:
-              </p>
-
-              ${brandButton(confirmationUrl, "Confirmar E-mail")}
-
-              <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                Se você não criou uma conta no ${BRAND_NAME}, pode ignorar este e-mail com segurança.
-              </p>
-
-              <p style="margin: 12px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6;">
-                <strong>Atenção:</strong> Este link expira em <strong>24 horas</strong> por motivos de segurança.
-              </p>
-            </td>
-          </tr>`;
-  return wrapEmail("Confirme sua conta", content);
-}
-
-function getConfirmationEmailText(name: string, confirmationUrl: string): string {
-  return `
-Bem-vindo ao ${BRAND_NAME}!
-
-Olá${name ? `, ${name}` : ""}!
-
-Obrigado por se cadastrar no ${BRAND_NAME}! Estamos felizes em ter você na nossa plataforma de gestão clínica.
-
-Para ativar sua conta, acesse o link abaixo:
-${confirmationUrl}
-
-Se você não criou uma conta no ${BRAND_NAME}, pode ignorar este e-mail.
-
-Atenção: Este link expira em 24 horas por motivos de segurança.
-
-© ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-  `.trim();
-}
-
-// ─── Template: Redefinir senha ─────────────────────────────────────────────
-function getPasswordResetEmailHtml(name: string, resetUrl: string): string {
-  const greeting = name ? `Olá, <strong>${name}</strong>!` : "Olá!";
-  const content = `
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <h2 style="margin: 0 0 20px; color: #134e4a; font-size: 24px;">
-                Redefinir sua senha 🔐
-              </h2>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                ${greeting}
-              </p>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Recebemos uma solicitação para redefinir a senha da sua conta no <strong>${BRAND_NAME}</strong>.
-              </p>
-
-              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Clique no botão abaixo para criar uma nova senha:
-              </p>
-
-              ${brandButton(resetUrl, "Redefinir Senha")}
-
-              <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                Se você não solicitou esta alteração, pode ignorar este e-mail.
-                Sua senha permanecerá a mesma.
-              </p>
-
-              <p style="margin: 12px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6;">
-                <strong>Atenção:</strong> Este link expira em <strong>1 hora</strong> por motivos de segurança.
-              </p>
-            </td>
-          </tr>`;
-  return wrapEmail("Redefinir sua senha", content);
-}
-
-function getPasswordResetEmailText(name: string, resetUrl: string): string {
-  return `
-Redefinir sua senha - ${BRAND_NAME}
-
-Olá${name ? `, ${name}` : ""}!
-
-Recebemos uma solicitação para redefinir a senha da sua conta no ${BRAND_NAME}.
-
-Acesse o link abaixo para criar uma nova senha:
-${resetUrl}
-
-Se você não solicitou esta alteração, pode ignorar este e-mail. Sua senha permanecerá a mesma.
-
-Atenção: Este link expira em 1 hora por motivos de segurança.
-
-© ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-  `.trim();
-}
-
-// ─── Template: Senha alterada ──────────────────────────────────────────────
-function getPasswordChangedEmailHtml(name: string, loginUrl: string): string {
-  const greeting = name ? `Olá, <strong>${name}</strong>!` : "Olá!";
-  const changedAt = new Date().toLocaleString("pt-BR", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
-  });
-  const content = `
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <h2 style="margin: 0 0 20px; color: #134e4a; font-size: 24px;">
-                Senha alterada com sucesso ✅
-              </h2>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                ${greeting}
-              </p>
-
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Sua senha foi alterada com sucesso. Sua conta está segura e protegida.
-              </p>
-
-              <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 16px;
-                          margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #166534; font-size: 14px; font-weight: 600;">
-                  ✓ Alteração realizada em ${changedAt}
-                </p>
-              </div>
-
-              <p style="margin: 20px 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Agora você pode fazer login com sua nova senha:
-              </p>
-
-              ${brandButton(loginUrl, "Fazer Login")}
-
-              <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 16px;
-                          margin: 24px 0 0; border-radius: 4px;">
-                <p style="margin: 0; color: #92400e; font-size: 14px;">
-                  <strong>Dica de segurança:</strong> Se você não realizou esta alteração,
-                  entre em contato com o suporte imediatamente.
-                </p>
-              </div>
-            </td>
-          </tr>`;
-  return wrapEmail("Senha alterada", content);
-}
-
-function getPasswordChangedEmailText(name: string, loginUrl: string): string {
-  return `
-Senha alterada com sucesso - ${BRAND_NAME}
-
-Olá${name ? `, ${name}` : ""}!
-
-Sua senha foi alterada com sucesso. Sua conta está segura e protegida.
-
-Alteração realizada em: ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" })}
-
-Acesse o link abaixo para fazer login com sua nova senha:
-${loginUrl}
-
-Dica de segurança: Se você não realizou esta alteração, entre em contato com o suporte imediatamente.
-
-© ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-  `.trim();
-}
 
 // ─── Envio via Resend ──────────────────────────────────────────────────────
 async function sendEmailViaResend(
@@ -290,7 +31,7 @@ async function sendEmailViaResend(
   log("EMAIL: Tentando enviar email via Resend", { to, subject });
 
   try {
-    const emailFrom = Deno.env.get("EMAIL_FROM") || `${BRAND_NAME} <no-reply@metaclass.com.br>`;
+    const emailFrom = Deno.env.get("EMAIL_FROM") || `${BRAND.name} <no-reply@metaclass.com.br>`;
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -473,9 +214,9 @@ serve(async (req) => {
     let subject: string;
 
     if (type === "password_changed") {
-      subject = `Senha alterada com sucesso - ${BRAND_NAME}`;
-      emailHtml = getPasswordChangedEmailHtml(nameTrim, loginUrl);
-      emailText = getPasswordChangedEmailText(nameTrim, loginUrl);
+      subject = `Senha alterada com sucesso — ${BRAND.name}`;
+      emailHtml = passwordChangedEmailHtml(nameTrim, loginUrl);
+      emailText = passwordChangedEmailText(nameTrim, loginUrl);
     } else {
       let linkData;
       if (type === "password_reset") {
@@ -513,13 +254,13 @@ serve(async (req) => {
       log("Link gerado", { link: actionLink.substring(0, 50) + "..." });
 
       if (type === "password_reset") {
-        subject = `Redefinir sua senha - ${BRAND_NAME}`;
-        emailHtml = getPasswordResetEmailHtml(nameTrim, actionLink);
-        emailText = getPasswordResetEmailText(nameTrim, actionLink);
+        subject = `Redefinir sua senha — ${BRAND.name}`;
+        emailHtml = passwordResetEmailHtml(nameTrim, actionLink);
+        emailText = passwordResetEmailText(nameTrim, actionLink);
       } else {
-        subject = `Confirme sua conta - ${BRAND_NAME}`;
-        emailHtml = getConfirmationEmailHtml(nameTrim, actionLink);
-        emailText = getConfirmationEmailText(nameTrim, actionLink);
+        subject = `Confirme sua conta — ${BRAND.name}`;
+        emailHtml = confirmationEmailHtml(nameTrim, actionLink);
+        emailText = confirmationEmailText(nameTrim, actionLink);
       }
     }
 

@@ -3,143 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import {
+  BRAND,
+  confirmationEmailHtml,
+  confirmationEmailText,
+} from "../_shared/emailTemplate.ts";
 
 const log = createLogger("REGISTER-USER");
-
-// ─── Paleta ClinicNest ─────────────────────────────────────────────────────
-const BRAND_GRADIENT = "linear-gradient(135deg, #17a096 0%, #0d7fa8 100%)";
-const BRAND_SHADOW = "rgba(23, 160, 150, 0.35)";
-const BRAND_NAME = "ClinicNest";
-const BRAND_TAGLINE = "Gestão Profissional para Clínicas";
-
-// ─── Email HTML helpers ────────────────────────────────────────────────────
-function brandHeader(): string {
-  return `
-          <tr>
-            <td style="background: ${BRAND_GRADIENT}; padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">
-                ${BRAND_NAME}
-              </h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 15px; opacity: 0.88;">
-                ${BRAND_TAGLINE}
-              </p>
-            </td>
-          </tr>`;
-}
-
-function brandFooter(): string {
-  return `
-          <tr>
-            <td style="background-color: #f9fafb; padding: 28px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 6px; color: #6b7280; font-size: 14px;">
-                Precisa de ajuda? Entre em contato com o suporte do ${BRAND_NAME}.
-              </p>
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                &copy; ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-              </p>
-            </td>
-          </tr>`;
-}
-
-function brandButton(href: string, label: string): string {
-  return `
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 24px 0;">
-                    <a href="${href}"
-                       style="display: inline-block; background: ${BRAND_GRADIENT}; color: #ffffff;
-                              text-decoration: none; padding: 16px 44px; border-radius: 8px;
-                              font-size: 16px; font-weight: 600;
-                              box-shadow: 0 4px 14px ${BRAND_SHADOW};">
-                      ${label}
-                    </a>
-                  </td>
-                </tr>
-              </table>`;
-}
-
-function wrapEmail(title: string, content: string): string {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} - ${BRAND_NAME}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f0f9f9;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0f9f9; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0"
-               style="background-color: #ffffff; border-radius: 10px; overflow: hidden;
-                      box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-          ${brandHeader()}
-          ${content}
-          ${brandFooter()}
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}
-
-function getConfirmationEmailHtml(name: string, confirmationUrl: string): string {
-  const greeting = name ? `Olá, <strong>${escapeHtml(name)}</strong>!` : "Olá!";
-  const content = `
-          <tr>
-            <td style="padding: 40px 30px;">
-              <h2 style="margin: 0 0 20px; color: #134e4a; font-size: 24px;">
-                Bem-vindo ao ${BRAND_NAME}! 🏥
-              </h2>
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                ${greeting}
-              </p>
-              <p style="margin: 0 0 14px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Obrigado por se cadastrar no <strong>${BRAND_NAME}</strong>!
-                Estamos felizes em ter você na nossa plataforma de gestão clínica.
-              </p>
-              <p style="margin: 0 0 24px; color: #4b5563; font-size: 16px; line-height: 1.6;">
-                Para ativar sua conta, confirme seu e-mail clicando no botão abaixo:
-              </p>
-              ${brandButton(confirmationUrl, "Confirmar E-mail")}
-              <p style="margin: 20px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
-                Se você não criou uma conta no ${BRAND_NAME}, pode ignorar este e-mail com segurança.
-              </p>
-              <p style="margin: 12px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6;">
-                <strong>Atenção:</strong> Este link expira em <strong>24 horas</strong> por motivos de segurança.
-              </p>
-            </td>
-          </tr>`;
-  return wrapEmail("Confirme sua conta", content);
-}
-
-function getConfirmationEmailText(name: string, confirmationUrl: string): string {
-  return `
-Bem-vindo ao ${BRAND_NAME}!
-
-Olá${name ? `, ${name}` : ""}!
-
-Obrigado por se cadastrar no ${BRAND_NAME}! Estamos felizes em ter você na nossa plataforma de gestão clínica.
-
-Para ativar sua conta, acesse o link abaixo:
-${confirmationUrl}
-
-Se você não criou uma conta no ${BRAND_NAME}, pode ignorar este e-mail.
-
-Atenção: Este link expira em 24 horas por motivos de segurança.
-
-© ${new Date().getFullYear()} ${BRAND_NAME}. Todos os direitos reservados.
-  `.trim();
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 // ─── Envio via Resend ──────────────────────────────────────────────────────
 async function sendEmailViaResend(
@@ -156,7 +26,7 @@ async function sendEmailViaResend(
 
   try {
     const emailFrom =
-      Deno.env.get("EMAIL_FROM") || `${BRAND_NAME} <no-reply@metaclass.com.br>`;
+      Deno.env.get("EMAIL_FROM") || `${BRAND.name} <no-reply@metaclass.com.br>`;
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -382,9 +252,9 @@ serve(async (req) => {
     log("Link de confirmação gerado");
 
     // ── 3. Enviar email customizado via Resend ───────────────────────────
-    const subject = `Confirme sua conta - ${BRAND_NAME}`;
-    const emailHtml = getConfirmationEmailHtml(nameTrim, confirmationUrl);
-    const emailText = getConfirmationEmailText(nameTrim, confirmationUrl);
+    const subject = `Confirme sua conta — ${BRAND.name}`;
+    const emailHtml = confirmationEmailHtml(nameTrim, confirmationUrl);
+    const emailText = confirmationEmailText(nameTrim, confirmationUrl);
 
     const emailSent = await sendEmailViaResend(emailTrim, subject, emailHtml, emailText);
 
