@@ -560,10 +560,10 @@ export function verificationCodeEmailHtml(name: string, code: string): string {
   const digits = code.split("");
   const digitBoxes = digits.map(
     (d) =>
-      `<td style="width: 48px; height: 56px; background: ${C.softer}; border: 2px solid ${C.primary}; border-radius: 10px; text-align: center; vertical-align: middle;">
-        <span style="font-size: 28px; font-weight: 800; color: ${C.primaryDeep}; font-family: 'Courier New', monospace; letter-spacing: 1px;">${d}</span>
+      `<td style="width: 40px; height: 48px; background: ${C.softer}; border: 2px solid ${C.primary}; border-radius: 8px; text-align: center; vertical-align: middle;">
+        <span style="font-size: 24px; font-weight: 800; color: ${C.primaryDeep}; font-family: 'Courier New', monospace;">${d}</span>
       </td>`
-  ).join(`<td style="width: 8px;"></td>`);
+  ).join(`<td style="width: 4px;"></td>`);
 
   const content = `
           <!-- Content -->
@@ -588,7 +588,7 @@ export function verificationCodeEmailHtml(name: string, code: string): string {
 
           <!-- OTP Code Box -->
           <tr>
-            <td style="padding: 8px 40px 24px;">
+            <td style="padding: 8px 16px 24px;">
               <table cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
                 <tr>
                   ${digitBoxes}
