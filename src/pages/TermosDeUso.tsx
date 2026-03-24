@@ -111,7 +111,7 @@ export default function TermosDeUso() {
 
               <h3 className="font-semibold text-lg mb-2 text-foreground">5.2 Período de Teste</h3>
               <p className="text-base leading-relaxed mb-4">
-                Novos usuários têm direito a 5 dias de teste gratuito com acesso completo às funcionalidades do plano escolhido. Não é necessário cartão de crédito para o período de teste.
+                Novos usuários têm direito a 7 dias de teste gratuito com acesso completo às funcionalidades do plano escolhido. Não é necessário cartão de crédito para o período de teste.
               </p>
 
               <h3 className="font-semibold text-lg mb-2 text-foreground">5.3 Cobrança</h3>

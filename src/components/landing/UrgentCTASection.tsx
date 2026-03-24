@@ -61,7 +61,7 @@ export function UrgentCTASection() {
             <div className="flex justify-center mb-8">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 border border-white/30 text-white font-semibold text-sm">
                 <Zap className="h-4 w-4 text-cyan-300" />
-                <span>5 dias grátis para começar</span>
+                <span>7 dias grátis para começar</span>
               </div>
             </div>
 
@@ -72,7 +72,7 @@ export function UrgentCTASection() {
               </h2>
 
               <p className="text-lg sm:text-xl text-white/90 mb-8">
-                Cadastre-se nas próximas 24 horas e aproveite 5 dias grátis + benefícios especiais
+                Cadastre-se nas próximas 24 horas e aproveite 7 dias grátis + benefícios especiais
                 para sua clínica começar com o pé direito!
               </p>
 
@@ -98,7 +98,7 @@ export function UrgentCTASection() {
               <div className="flex flex-wrap justify-center gap-4 mb-10">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
                   <Gift className="h-5 w-5 text-cyan-300" aria-hidden="true" />
-                  <span className="text-sm font-medium text-white">5 dias grátis</span>
+                  <span className="text-sm font-medium text-white">7 dias grátis</span>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
                   <Clock className="h-5 w-5 text-teal-300" aria-hidden="true" />

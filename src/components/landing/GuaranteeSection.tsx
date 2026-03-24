@@ -5,7 +5,7 @@ import { ScrollReveal } from "./ScrollReveal";
 const guarantees = [
   {
     icon: Clock,
-    title: "5 Dias Grátis",
+    title: "7 Dias Grátis",
     description: "Teste todas as funcionalidades sem compromisso. Sem cartão de crédito.",
     color: "teal"
   },

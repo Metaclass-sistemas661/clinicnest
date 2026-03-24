@@ -241,7 +241,7 @@ export function DifferentialsSection() {
               size="lg"
               className="bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white px-8 py-6 h-auto text-lg font-bold group"
             >
-              Experimente 5 dias grátis
+              Experimente 7 dias grátis
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>

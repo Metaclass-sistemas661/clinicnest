@@ -240,9 +240,7 @@ export default function Login() {
               theme="light"
               className="flex justify-center"
             />
-            {isTurnstileEnabled && !captchaToken && (
-              <p className="text-xs text-amber-600 text-center">Aguarde a verificação de segurança acima...</p>
-            )}
+
 
             <Button
               type="submit"
@@ -277,7 +275,7 @@ export default function Login() {
               to="/cadastro"
               className="font-semibold text-teal-600 hover:text-teal-700 transition-colors"
             >
-              Comece grátis por 5 dias
+              Comece grátis por 7 dias
             </Link>
           </p>
 

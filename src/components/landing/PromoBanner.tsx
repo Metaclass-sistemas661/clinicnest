@@ -29,7 +29,7 @@ export function PromoBanner() {
 
   const formatNumber = (num: number) => num.toString().padStart(2, '0');
 
-  const promoText = "5 dias grátis + benefícios exclusivos!";
+  const promoText = "7 dias grátis + benefícios exclusivos!";
   const timerText = `${formatNumber(timeLeft.hours)}h:${formatNumber(timeLeft.minutes)}m:${formatNumber(timeLeft.seconds)}s`;
 
   return (

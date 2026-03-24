@@ -293,7 +293,7 @@ export default function Register() {
               <span className="text-cyan-300">Sem cartão de crédito.</span>
             </h1>
             <p className="text-white/70 text-base max-w-sm leading-relaxed">
-              5 dias para explorar tudo. Configure sua clínica em menos de 10 minutos.
+              7 dias para explorar tudo. Configure sua clínica em menos de 10 minutos.
             </p>
           </div>
 
@@ -728,7 +728,7 @@ export default function Register() {
                 <span className="opacity-30">·</span>
                 <span>LGPD</span>
                 <span className="opacity-30">·</span>
-                <span>5 dias grátis</span>
+                <span>7 dias grátis</span>
               </div>
 
               {/* Footer */}

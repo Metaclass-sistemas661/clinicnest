@@ -316,7 +316,7 @@ export function ProductShowcaseSection() {
           </p>
           <a href="/cadastro">
             <Button size="lg" className="bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-lg px-8 py-6 h-auto">
-              Começar Teste Grátis de 5 Dias
+              Começar Teste Grátis de 7 Dias
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </a>

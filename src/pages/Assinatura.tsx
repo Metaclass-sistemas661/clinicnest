@@ -428,7 +428,7 @@ export default function Assinatura() {
 
       <div className="mt-8 text-center space-y-2">
         <p className="text-sm text-muted-foreground">
-          5 dias grátis · Sem cartão de crédito · Cancele a qualquer momento
+          7 dias grátis · Sem cartão de crédito · Cancele a qualquer momento
         </p>
         <p className="text-xs text-muted-foreground">
           Precisa de um plano personalizado?{" "}
