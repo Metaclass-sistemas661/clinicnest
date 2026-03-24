@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  ArrowLeft,
   ArrowRight,
   ShieldCheck,
   Stethoscope,
@@ -161,7 +162,16 @@ export default function Login() {
       </div>
 
       {/* ── Painel Direito — Formulário ── */}
-      <div className="flex w-full lg:w-[45%] xl:w-[40%] flex-col items-center justify-center bg-white px-6 py-12 sm:px-10 xl:px-16">
+      <div className="flex w-full lg:w-[45%] xl:w-[40%] flex-col items-center justify-center bg-white px-6 py-12 sm:px-10 xl:px-16 relative">
+
+        {/* Botão Voltar */}
+        <Link
+          to="/"
+          className="absolute top-6 left-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </Link>
 
         {/* Logo mobile */}
         <div className="flex lg:hidden items-center gap-3 mb-10">
