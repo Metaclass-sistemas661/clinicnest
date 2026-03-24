@@ -235,6 +235,7 @@ serve(async (req) => {
       await supabaseAdmin.auth.admin.generateLink({
         type: "signup",
         email: emailTrim,
+        password,
         options: { redirectTo: loginUrl },
       });
 
