@@ -71,9 +71,13 @@ interface EmailBody {
   redirectTo?: string;
 }
 
+const PRODUCTION_URL = "https://clinicnest.metaclass.com.br";
+
 function normalizeSiteUrl(raw: string | undefined | null): string {
   const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return "https://clinicnest.metaclass.com.br";
+  if (!s) return PRODUCTION_URL;
+  // Rejeitar localhost/127.0.0.1 — sempre usar produção
+  if (s.includes("localhost") || s.includes("127.0.0.1")) return PRODUCTION_URL;
   if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
   return `https://${s}`.replace(/\/+$/, "");
 }
