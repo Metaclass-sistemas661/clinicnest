@@ -1,6 +1,9 @@
 project_id = "cxficwktocdouerhamhh"
 
 # ── Auth / Onboarding ────────────────────────────────────────────────────────
+[functions.register-user]
+verify_jwt = false
+
 [functions.send-custom-auth-email]
 verify_jwt = false
 

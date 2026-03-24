@@ -240,44 +240,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       council_number?: string;
       council_state?: string;
     },
-    captchaToken?: string,
+    _captchaToken?: string,
   ) => {
-    // Cria usuário no Auth. O trigger handle_new_user() cria automaticamente:
-    // tenant, profile, user_roles (admin) e subscription - garantindo admin sempre
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
-        ...(captchaToken ? { captchaToken } : {}),
-        data: {
-          full_name: fullName,
-          clinic_name: clinicName,
+    // Usa Edge Function register-user para:
+    // 1. Criar usuário via admin.createUser (NÃO envia email padrão do Supabase)
+    // 2. Gerar link de confirmação
+    // 3. Enviar email customizado via Resend com template ClinicNest
+    // O trigger handle_new_user() continua criando tenant, profile, user_roles e subscription
+    try {
+      const { data, error } = await supabase.functions.invoke("register-user", {
+        body: {
+          email,
+          password,
+          fullName,
+          clinicName,
           phone,
-          terms_accepted: true,
-          privacy_policy_accepted: true,
-          legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
-          ...(professionalData?.professional_type && {
-            professional_type: professionalData.professional_type,
-          }),
-          ...(professionalData?.council_type && {
-            council_type: professionalData.council_type,
-          }),
-          ...(professionalData?.council_number && {
-            council_number: professionalData.council_number,
-          }),
-          ...(professionalData?.council_state && {
-            council_state: professionalData.council_state,
-          }),
+          legalAcceptedAt,
+          professionalData,
         },
-      },
-    });
+      });
 
-    if (authError) {
+      if (error) {
+        // Fallback: se a Edge Function falhar, usar signUp padrão do Supabase
+        const { error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
+            data: {
+              full_name: fullName,
+              clinic_name: clinicName,
+              phone,
+              terms_accepted: true,
+              privacy_policy_accepted: true,
+              legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
+              ...(professionalData?.professional_type && {
+                professional_type: professionalData.professional_type,
+              }),
+              ...(professionalData?.council_type && {
+                council_type: professionalData.council_type,
+              }),
+              ...(professionalData?.council_number && {
+                council_number: professionalData.council_number,
+              }),
+              ...(professionalData?.council_state && {
+                council_state: professionalData.council_state,
+              }),
+            },
+          },
+        });
+        return { error: authError };
+      }
+
+      if (data && !data.success) {
+        return { error: new Error(data.error || "Erro ao criar conta") };
+      }
+
+      return { error: null };
+    } catch {
+      // Fallback final: usar signUp padrão do Supabase
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
+          data: {
+            full_name: fullName,
+            clinic_name: clinicName,
+            phone,
+            terms_accepted: true,
+            privacy_policy_accepted: true,
+            legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
+            ...(professionalData?.professional_type && {
+              professional_type: professionalData.professional_type,
+            }),
+            ...(professionalData?.council_type && {
+              council_type: professionalData.council_type,
+            }),
+            ...(professionalData?.council_number && {
+              council_number: professionalData.council_number,
+            }),
+            ...(professionalData?.council_state && {
+              council_state: professionalData.council_state,
+            }),
+          },
+        },
+      });
       return { error: authError };
     }
-
-    return { error: null };
   };
 
   const resetPassword = async (email: string, captchaToken?: string) => {
