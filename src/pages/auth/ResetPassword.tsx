@@ -9,6 +9,21 @@ import { Sparkles, Loader2, ArrowLeft, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
+function normalizeResetError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("same password") || m.includes("same_password"))
+    return "A nova senha deve ser diferente da senha atual.";
+  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("length")))
+    return "A senha é muito fraca. Use no mínimo 6 caracteres.";
+  if (m.includes("session expired") || m.includes("refresh_token") || m.includes("not authenticated"))
+    return "Sessão expirada. Solicite um novo link de recuperação.";
+  if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  if (m.includes("rate limit") || m.includes("too many"))
+    return "Muitas tentativas. Aguarde alguns minutos.";
+  return message;
+}
+
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -110,7 +125,7 @@ export default function ResetPassword() {
         });
         if (fallbackError) {
           toast.error("Erro ao atualizar senha", {
-            description: fallbackError.message,
+            description: normalizeResetError(fallbackError.message),
           });
           setIsLoading(false);
           return;
@@ -128,7 +143,7 @@ export default function ResetPassword() {
         });
         if (fallbackError) {
           toast.error("Erro ao atualizar senha", {
-            description: fallbackError.message,
+            description: normalizeResetError(fallbackError.message),
           });
           setIsLoading(false);
           return;
@@ -159,7 +174,7 @@ export default function ResetPassword() {
         setTimeout(() => navigate("/login"), 2000);
       } catch (fallbackErr) {
         toast.error("Erro ao atualizar senha", {
-          description: fallbackErr instanceof Error ? fallbackErr.message : "Erro desconhecido",
+          description: fallbackErr instanceof Error ? normalizeResetError(fallbackErr.message) : "Erro desconhecido. Tente novamente.",
         });
         setIsLoading(false);
       }

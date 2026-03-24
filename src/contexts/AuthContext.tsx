@@ -67,6 +67,58 @@ function getAuthRedirectOrigin(): string {
   return import.meta.env.VITE_APP_URL || "https://clinicnest.metaclass.com.br";
 }
 
+/** Normaliza erros de signup/auth do Supabase e Edge Functions para PT-BR */
+function normalizeSignUpError(message: string): string {
+  const m = message.toLowerCase();
+  // Email já existe
+  if (m.includes("already been registered") || m.includes("already exists") || m.includes("já está cadastrado") || m.includes("already registered"))
+    return "Este e-mail já está cadastrado. Tente fazer login ou recuperar sua senha.";
+  // Senha fraca
+  if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("length")))
+    return "A senha é muito fraca. Use no mínimo 6 caracteres.";
+  // Rate limit
+  if (m.includes("rate limit") || m.includes("too many") || m.includes("exceeded"))
+    return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  // Captcha
+  if (m.includes("captcha"))
+    return "Erro na verificação de segurança. Recarregue a página e tente novamente.";
+  // Email inválido
+  if (m.includes("invalid") && m.includes("email"))
+    return "O e-mail informado não é válido.";
+  // Signup desabilitado
+  if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+    return "O cadastro de novas contas está temporariamente desabilitado.";
+  // Network / fetch
+  if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  // Já está em PT-BR ou mensagem desconhecida — retornar como está
+  return message;
+}
+
+/** Normaliza erros genéricos de auth (login, reset, etc.) para PT-BR */
+function normalizeAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
+    return "E-mail ou senha incorretos.";
+  if (m.includes("email not confirmed"))
+    return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
+  if (m.includes("too many requests") || m.includes("rate limit"))
+    return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+  if (m.includes("user not found"))
+    return "Nenhuma conta encontrada com esse e-mail.";
+  if (m.includes("captcha"))
+    return "Erro na verificação de segurança. Recarregue a página e tente novamente.";
+  if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
+    return "Erro de conexão. Verifique sua internet e tente novamente.";
+  if (m.includes("session expired") || m.includes("refresh_token"))
+    return "Sua sessão expirou. Faça login novamente.";
+  if (m.includes("password") && (m.includes("weak") || m.includes("short")))
+    return "A senha é muito fraca. Use no mínimo 6 caracteres.";
+  if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+    return "O cadastro está temporariamente desabilitado.";
+  return message;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -260,45 +312,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      if (error) {
-        // Fallback: se a Edge Function falhar, usar signUp padrão do Supabase
-        const { error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
-            data: {
-              full_name: fullName,
-              clinic_name: clinicName,
-              phone,
-              terms_accepted: true,
-              privacy_policy_accepted: true,
-              legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
-              ...(professionalData?.professional_type && {
-                professional_type: professionalData.professional_type,
-              }),
-              ...(professionalData?.council_type && {
-                council_type: professionalData.council_type,
-              }),
-              ...(professionalData?.council_number && {
-                council_number: professionalData.council_number,
-              }),
-              ...(professionalData?.council_state && {
-                council_state: professionalData.council_state,
-              }),
-            },
-          },
-        });
-        return { error: authError };
+      // Edge Function retornou resposta (pode ser erro de negócio no body)
+      if (!error && data) {
+        if (data.success) {
+          return { error: null };
+        }
+        // Erro de negócio (email já existe, validação, etc.)
+        const msg = data.error || "Erro ao criar conta";
+        return { error: new Error(normalizeSignUpError(msg)) };
       }
 
-      if (data && !data.success) {
-        return { error: new Error(data.error || "Erro ao criar conta") };
-      }
-
-      return { error: null };
-    } catch {
-      // Fallback final: usar signUp padrão do Supabase
+      // Edge Function falhou (rede, 500, etc.) — fallback para Supabase nativo
+      console.warn("[signUp] Edge Function falhou, usando fallback:", error?.message);
       const { error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -326,7 +351,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
         },
       });
-      return { error: authError };
+      if (authError) {
+        return { error: new Error(normalizeSignUpError(authError.message)) };
+      }
+      return { error: null };
+    } catch (err) {
+      // Fallback final: usar signUp padrão do Supabase
+      console.warn("[signUp] Exceção, usando fallback:", err);
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
+          data: {
+            full_name: fullName,
+            clinic_name: clinicName,
+            phone,
+            terms_accepted: true,
+            privacy_policy_accepted: true,
+            legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
+            ...(professionalData?.professional_type && {
+              professional_type: professionalData.professional_type,
+            }),
+            ...(professionalData?.council_type && {
+              council_type: professionalData.council_type,
+            }),
+            ...(professionalData?.council_number && {
+              council_number: professionalData.council_number,
+            }),
+            ...(professionalData?.council_state && {
+              council_state: professionalData.council_state,
+            }),
+          },
+        },
+      });
+      if (authError) {
+        return { error: new Error(normalizeSignUpError(authError.message)) };
+      }
+      return { error: null };
     }
   };
 

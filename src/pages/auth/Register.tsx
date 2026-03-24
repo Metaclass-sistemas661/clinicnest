@@ -212,7 +212,7 @@ export default function Register() {
       setIsLoading(false);
       return;
     }
-    toast.success("Conta criada! Verifique seu e-mail para confirmar.");
+    toast.success("Conta criada com sucesso!", { description: "Verifique seu e-mail para confirmar." });
     setSubmitted(true);
     setIsLoading(false);
   };

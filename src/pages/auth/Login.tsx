@@ -44,9 +44,22 @@ export default function Login() {
 
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
-    if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
-    if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
-    if (m.includes("too many requests")) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
+      return "E-mail ou senha incorretos.";
+    if (m.includes("email not confirmed"))
+      return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
+    if (m.includes("too many requests") || m.includes("rate limit"))
+      return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    if (m.includes("user not found"))
+      return "Nenhuma conta encontrada com esse e-mail.";
+    if (m.includes("captcha"))
+      return "Erro na verificação de segurança. Recarregue a página e tente novamente.";
+    if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
+      return "Erro de conexão. Verifique sua internet e tente novamente.";
+    if (m.includes("session expired") || m.includes("refresh_token"))
+      return "Sua sessão expirou. Faça login novamente.";
+    if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+      return "O cadastro está temporariamente desabilitado.";
     return message;
   };
 

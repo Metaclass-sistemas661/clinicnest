@@ -27,8 +27,18 @@ export default function ForgotPassword() {
     const { error } = await resetPassword(email, captchaToken ?? undefined);
 
     if (error) {
+      const msg = error.message?.toLowerCase() || "";
+      let description = error.message;
+      if (msg.includes("rate limit") || msg.includes("too many"))
+        description = "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+      else if (msg.includes("user not found"))
+        description = "Nenhuma conta encontrada com esse e-mail.";
+      else if (msg.includes("fetch") || msg.includes("network"))
+        description = "Erro de conexão. Verifique sua internet e tente novamente.";
+      else if (msg.includes("captcha"))
+        description = "Erro na verificação de segurança. Recarregue a página e tente novamente.";
       toast.error("Erro ao enviar email de recuperação", {
-        description: error.message,
+        description,
       });
       resetCaptcha();
       setIsLoading(false);

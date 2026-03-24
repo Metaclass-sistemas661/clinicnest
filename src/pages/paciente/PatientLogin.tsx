@@ -56,9 +56,18 @@ export default function PatientLogin() {
 
   const normalizeAuthError = (message: string) => {
     const m = message.toLowerCase();
-    if (m.includes("invalid login credentials")) return "Senha incorreta.";
-    if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
-    if (m.includes("too many requests")) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
+      return "Senha incorreta.";
+    if (m.includes("email not confirmed"))
+      return "Confirme seu e-mail antes de entrar.";
+    if (m.includes("too many requests") || m.includes("rate limit"))
+      return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+    if (m.includes("user not found"))
+      return "Conta não encontrada. Verifique seus dados.";
+    if (m.includes("captcha"))
+      return "Erro na verificação de segurança. Recarregue a página e tente novamente.";
+    if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
+      return "Erro de conexão. Verifique sua internet e tente novamente.";
     return message;
   };
 
@@ -75,7 +84,13 @@ export default function PatientLogin() {
 
       if (error) {
         logger.error("validate_patient_access error:", error);
-        toast.error("Erro ao verificar código");
+        const msg = error.message?.toLowerCase() || "";
+        if (msg.includes("timeout") || msg.includes("statement"))
+          toast.error("Servidor lento", { description: "Tente novamente em alguns segundos." });
+        else if (msg.includes("fetch") || msg.includes("network"))
+          toast.error("Erro de conexão", { description: "Verifique sua internet e tente novamente." });
+        else
+          toast.error("Erro ao verificar código", { description: "Tente novamente ou entre em contato com a clínica." });
         return;
       }
 
@@ -179,7 +194,13 @@ export default function PatientLogin() {
 
       if (error) {
         logger.error("activate-patient-account invoke error:", error);
-        toast.error("Erro ao criar conta");
+        const msg = error.message?.toLowerCase() || "";
+        if (msg.includes("already") || msg.includes("exists") || msg.includes("já"))
+          toast.error("Este e-mail já está em uso", { description: "Tente fazer login ou use outro e-mail." });
+        else if (msg.includes("fetch") || msg.includes("network"))
+          toast.error("Erro de conexão", { description: "Verifique sua internet e tente novamente." });
+        else
+          toast.error("Erro ao criar conta", { description: "Tente novamente ou entre em contato com a clínica." });
         return;
       }
 
