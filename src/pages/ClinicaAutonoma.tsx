@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 
@@ -115,7 +116,7 @@ export default function ClinicaAutonoma() {
       toast.success("Configuração atualizada!");
       queryClient.invalidateQueries({ queryKey: ["autonomous-config"] });
     },
-    onError: () => toast.error("Erro ao salvar configuração."),
+    onError: (err) => toast.error("Erro ao salvar configuração", { description: normalizeError(err, "Não foi possível salvar a configuração.") }),
   });
 
   const handleToggle = (key: keyof AutonomousConfig) => {

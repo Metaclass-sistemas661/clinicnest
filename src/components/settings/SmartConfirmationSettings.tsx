@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { Loader2, Bell, Clock, ShieldCheck, ClipboardList } from "lucide-react";
 
 type ChannelOption = "whatsapp" | "email" | "sms";
@@ -99,7 +100,7 @@ export function SmartConfirmationSettings() {
       if (error) throw error;
       toast.success("Configurações salvas!");
     } catch (err: any) {
-      toast.error(err?.message || "Erro ao salvar configurações");
+      toast.error("Erro ao salvar configurações", { description: normalizeError(err, "Não foi possível salvar as configurações de confirmação.") });
     } finally {
       setIsSaving(false);
     }

@@ -21,17 +21,20 @@ async function sendEmailViaResend(
   subject: string,
   html: string,
   text: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; status?: number; error?: string }> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) {
     log("EMAIL: RESEND_API_KEY não configurada. E-mail não enviado.");
-    return false;
+    return { ok: false, error: "RESEND_API_KEY não configurada" };
   }
 
   log("EMAIL: Tentando enviar email via Resend", { to, subject });
 
   try {
-    const emailFrom = Deno.env.get("EMAIL_FROM") || `${BRAND.name} <no-reply@metaclass.com.br>`;
+    const emailFrom =
+      Deno.env.get("EMAIL_FROM") ||
+      Deno.env.get("RESEND_FROM") ||
+      `${BRAND.name} <onboarding@resend.dev>`;
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -48,18 +51,19 @@ async function sendEmailViaResend(
         statusText: response.statusText,
         error: errorText,
       });
-      return false;
+      return { ok: false, status: response.status, error: errorText };
     }
 
     const result = await response.json();
     log("EMAIL: E-mail enviado com sucesso via Resend", { emailId: result.id, to });
-    return true;
+    return { ok: true };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     log("EMAIL: Exceção ao enviar e-mail", {
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
       stack: error instanceof Error ? error.stack : undefined,
     });
-    return false;
+    return { ok: false, error: message };
   }
 }
 
@@ -268,20 +272,26 @@ serve(async (req) => {
       }
     }
 
-    const emailSent = await sendEmailViaResend(emailTrim, subject, emailHtml, emailText);
+    const emailResult = await sendEmailViaResend(emailTrim, subject, emailHtml, emailText);
 
-    if (emailSent) {
+    if (emailResult.ok) {
       log("SUCCESS: Email enviado com sucesso", { email: emailTrim, type });
       return new Response(
         JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
         { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     } else {
-      log("WARNING: Email não foi enviado", { email: emailTrim });
+      log("WARNING: Email não foi enviado", {
+        email: emailTrim,
+        status: emailResult.status,
+        error: emailResult.error,
+      });
       return new Response(
         JSON.stringify({
           success: false,
-          message: "Erro ao enviar email. Verifique as configurações do Resend.",
+          message: "Erro ao enviar email via Resend. Verifique as configurações.",
+          resendStatus: emailResult.status ?? null,
+          resendError: emailResult.error ?? null,
         }),
         { status: 500, headers: { ...cors, "Content-Type": "application/json" } }
       );

@@ -3,6 +3,7 @@ import { ArrowRightLeft, Printer, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import {
   Sheet,
@@ -166,7 +167,7 @@ export function EncaminhamentoDrawer({
       onOpenChange(false);
     } catch (err) {
       logger.error("Erro ao salvar encaminhamento:", err);
-      toast.error("Erro ao salvar encaminhamento");
+      toast.error("Erro ao salvar encaminhamento", { description: normalizeError(err, "Não foi possível registrar o encaminhamento.") });
     } finally {
       setIsSaving(false);
     }

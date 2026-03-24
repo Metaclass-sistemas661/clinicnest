@@ -11,6 +11,7 @@ import {
   PushNotificationPayload
 } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
 
 export interface PushSubscription {
@@ -107,7 +108,7 @@ export function usePushNotifications() {
 
     } catch (error) {
       logger.error('Erro ao habilitar notificações:', error);
-      toast.error('Erro ao habilitar notificações');
+      toast.error('Erro ao habilitar notificações', { description: normalizeError(error, 'Verifique as permissões do navegador.') });
       return false;
     } finally {
       setIsLoading(false);

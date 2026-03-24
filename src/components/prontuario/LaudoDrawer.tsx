@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LAUDO_TIPOS } from "@/data/exam-types";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import type { DocumentContext } from "./QuickDocumentActions";
 
@@ -146,7 +147,7 @@ export function LaudoDrawer({
       onOpenChange(false);
     } catch (err) {
       logger.error("Erro ao salvar laudo:", err);
-      toast.error("Erro ao salvar laudo médico");
+      toast.error("Erro ao salvar laudo médico", { description: normalizeError(err, "Não foi possível salvar o laudo.") });
     } finally {
       setIsSaving(false);
     }

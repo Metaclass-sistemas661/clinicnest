@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 export interface RetentionStatistics {
   total_clients: number;
@@ -147,7 +148,7 @@ export function useArchivePatient() {
       toast.success("Dados arquivados com sucesso");
     },
     onError: (error) => {
-      toast.error("Erro ao arquivar: " + error.message);
+      toast.error("Erro ao arquivar", { description: normalizeError(error, "Não foi possível arquivar os dados.") });
     },
   });
 }
@@ -174,7 +175,7 @@ export function useUpdateRetentionYears() {
       toast.success("Período de retenção atualizado");
     },
     onError: (error) => {
-      toast.error(error.message);
+      toast.error("Erro ao atualizar retenção", { description: normalizeError(error, "Não foi possível salvar o período de retenção. Tente novamente.") });
     },
   });
 }

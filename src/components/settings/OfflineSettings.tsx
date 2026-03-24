@@ -9,6 +9,7 @@ import { useAppStatus } from "@/contexts/AppStatusContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { offlineCache } from "@/lib/offline-cache";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import {
   Wifi, WifiOff, RefreshCw, Trash2, Database, Calendar, Users, Briefcase, UserCog,
   CheckCircle2, AlertCircle, Loader2, CloudOff, Cloud
@@ -44,7 +45,7 @@ export function OfflineSettings() {
       const cacheStats = await offlineCache.getCacheStats(tenantId);
       setStats(cacheStats);
     } catch (e) {
-      console.error("Error loading cache stats:", e);
+      console.error("Erro ao carregar estatísticas do cache:", e);
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export function OfflineSettings() {
       await loadStats();
       toast.success("Cache limpo com sucesso!");
     } catch (e) {
-      toast.error("Erro ao limpar cache");
+      toast.error("Erro ao limpar cache", { description: normalizeError(e, "Não foi possível limpar o cache local.") });
     } finally {
       setClearing(false);
     }

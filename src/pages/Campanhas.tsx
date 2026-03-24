@@ -27,6 +27,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { Send, Plus, Loader2, Eye, Mail, Users, UserCheck } from "lucide-react";
 import type { CampaignRow, CampaignDeliveryRow, CampaignStatus } from "@/types/supabase-extensions";
@@ -89,7 +90,7 @@ export default function Campanhas() {
       setCampaigns((data as CampaignRow[]) || []);
     } catch (err) {
       logger.error("[Campanhas] fetch error", err);
-      toast.error("Erro ao carregar campanhas");
+      toast.error("Erro ao carregar campanhas", { description: normalizeError(err, "Não foi possível listar as campanhas.") });
     } finally {
       setIsLoading(false);
     }
@@ -122,7 +123,7 @@ export default function Campanhas() {
       await fetchCampaigns();
     } catch (err) {
       logger.error("[Campanhas] create error", err);
-      toast.error("Erro ao criar campanha");
+      toast.error("Erro ao criar campanha", { description: normalizeError(err, "Não foi possível criar a campanha.") });
     } finally {
       setIsSaving(false);
     }
@@ -213,12 +214,12 @@ export default function Campanhas() {
         headers,
         body: { campaignId: sendCampaign.id, testEmail: testEmail.trim() },
       });
-      if (error) { toast.error(error.message || "Erro ao enviar teste"); return; }
-      if (!data?.success) { toast.error(data?.error || "Erro ao enviar teste"); return; }
+      if (error) { toast.error("Erro ao enviar teste", { description: normalizeError(error, "Verifique os dados e tente novamente.") }); return; }
+      if (!data?.success) { toast.error("Erro ao enviar teste", { description: normalizeError(data?.error, "O servidor não conseguiu processar o envio.") }); return; }
       toast.success("Email de teste enviado! Verifique sua caixa de entrada.");
     } catch (err) {
       logger.error("[Campanhas] test send error", err);
-      toast.error("Erro ao enviar teste");
+      toast.error("Erro ao enviar teste", { description: normalizeError(err, "Não foi possível enviar o teste.") });
     } finally {
       setIsSending(false);
     }
@@ -246,8 +247,8 @@ export default function Campanhas() {
       }
 
       const { data, error } = await supabase.functions.invoke("run-campaign", { headers, body });
-      if (error) { toast.error(error.message || "Erro ao enviar"); return; }
-      if (!data?.success) { toast.error(data?.error || "Erro ao enviar"); return; }
+      if (error) { toast.error("Erro ao enviar campanha", { description: normalizeError(error, "Verifique os dados e tente novamente.") }); return; }
+      if (!data?.success) { toast.error("Erro ao enviar campanha", { description: normalizeError(data?.error, "O servidor não conseguiu processar o envio.") }); return; }
 
       setSendStats((prev) => ({
         sent:         prev.sent         + Number(data?.sent         || 0),
@@ -262,7 +263,7 @@ export default function Campanhas() {
       toast.success(`Lote concluído: ${Number(data?.sent || 0)} enviados`);
     } catch (err) {
       logger.error("[Campanhas] batch send error", err);
-      toast.error("Erro ao enviar");
+      toast.error("Erro ao enviar campanha", { description: normalizeError(err, "Não foi possível enviar a campanha.") });
     } finally {
       setIsSending(false);
     }
@@ -284,7 +285,7 @@ export default function Campanhas() {
       setDeliveries((data as CampaignDeliveryRow[]) || []);
     } catch (err) {
       logger.error("[Campanhas] deliveries error", err);
-      toast.error("Erro ao carregar entregas");
+      toast.error("Erro ao carregar entregas", { description: normalizeError(err, "Não foi possível listar as entregas.") });
     } finally {
       setIsLoadingDeliveries(false);
     }

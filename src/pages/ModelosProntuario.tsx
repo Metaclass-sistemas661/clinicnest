@@ -39,6 +39,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -321,7 +322,7 @@ export default function ModelosProntuario() {
       void fetchTemplates();
     } catch (err) {
       logger.error("Templates save:", err);
-      toast.error("Erro ao salvar modelo");
+      toast.error("Erro ao salvar modelo", { description: normalizeError(err, "Não foi possível salvar o modelo de prontuário.") });
     } finally {
       setIsSaving(false);
     }
@@ -340,7 +341,7 @@ export default function ModelosProntuario() {
       void fetchTemplates();
     } catch (err) {
       logger.error("Templates delete:", err);
-      toast.error("Erro ao excluir");
+      toast.error("Erro ao excluir modelo", { description: normalizeError(err, "Não foi possível excluir o modelo.") });
     }
   };
 
@@ -404,7 +405,7 @@ export default function ModelosProntuario() {
       void fetchTemplates();
     } catch (err) {
       logger.error("Builder save:", err);
-      toast.error("Erro ao salvar modelo");
+      toast.error("Erro ao salvar modelo", { description: normalizeError(err, "Não foi possível salvar o modelo via builder.") });
     }
   };
 

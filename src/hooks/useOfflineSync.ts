@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { offlineCache } from "@/lib/offline-cache";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 interface UseOfflineSyncOptions {
   autoSync?: boolean;
@@ -116,7 +117,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
       toast.success(`${successCount} alterações sincronizadas`);
     }
     if (errorCount > 0) {
-      toast.error(`${errorCount} alterações falharam ao sincronizar`);
+      toast.error(`${errorCount} alterações falharam ao sincronizar`, { description: "Verifique sua conexão e tente novamente." });
     }
 
     setPendingSyncs(errorCount);

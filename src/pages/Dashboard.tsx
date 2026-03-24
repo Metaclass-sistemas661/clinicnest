@@ -18,6 +18,7 @@ import { APP_TIMEZONE, formatInAppTz } from "@/lib/date";
 import { fromZonedTime } from "date-fns-tz";
 import { fetchPatientSpendingByPeriod } from "@/lib/patientSpending";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import type { DashboardStats, Appointment, Product } from "@/types/database";
 import {
@@ -769,8 +770,8 @@ export default function Dashboard() {
 
       didSucceed = true;
     } catch (error) {
-      logger.error("Error fetching dashboard data:", error);
-      toast.error("Erro ao carregar painel. Tente novamente.");
+      logger.error("Erro ao carregar dados do painel:", error);
+      toast.error("Erro ao carregar painel", { description: normalizeError(error, "Não foi possível carregar o painel. Tente novamente.") });
     } finally {
       setIsLoading(false);
       if (didSucceed) markRefreshed("dashboard");

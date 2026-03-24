@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import {
   CreditCard,
@@ -134,11 +135,11 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
         toast.success("Credenciais válidas!");
       } else {
         setConfig((prev) => ({ ...prev, validationStatus: "invalid" }));
-        toast.error(result.error || "Credenciais inválidas");
+        toast.error("Credenciais inválidas", { description: normalizeError(result.error, "Verifique suas credenciais do gateway.") });
       }
     } catch (error) {
       setConfig((prev) => ({ ...prev, validationStatus: "invalid" }));
-      toast.error("Erro ao validar credenciais");
+      toast.error("Erro ao validar credenciais", { description: normalizeError(error, "Não foi possível validar. Tente novamente.") });
     } finally {
       setIsValidating(false);
     }
@@ -185,8 +186,8 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
       toast.success("Gateway configurado com sucesso!");
       loadConfig();
     } catch (error) {
-      logger.error("Error saving gateway config:", error);
-      toast.error("Erro ao salvar configurações");
+      logger.error("Erro ao salvar configuração do gateway:", error);
+      toast.error("Erro ao salvar configurações", { description: normalizeError(error, "Não foi possível salvar o gateway de pagamento.") });
     } finally {
       setIsSaving(false);
     }
@@ -215,7 +216,7 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
       });
       toast.success("Gateway removido");
     } catch (error) {
-      toast.error("Erro ao remover gateway");
+      toast.error("Erro ao remover gateway", { description: normalizeError(error, "Não foi possível remover o gateway.") });
     } finally {
       setIsSaving(false);
       setShowRemoveDialog(false);

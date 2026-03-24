@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 const IMAGE_TYPES = {
   intraoral: [
@@ -196,7 +197,7 @@ export function DentalImagesGallery({
       await fetchImages();
     } catch (err: any) {
       console.error('Erro ao enviar imagem:', err);
-      toast.error(err.message || "Erro ao enviar imagem");
+      toast.error("Erro ao enviar imagem", { description: normalizeError(err, "Não foi possível enviar a imagem.") });
     } finally {
       setIsUploading(false);
     }
@@ -218,7 +219,7 @@ export function DentalImagesGallery({
       }
     } catch (err) {
       console.error('Erro ao carregar imagem:', err);
-      toast.error("Erro ao carregar imagem");
+      toast.error("Erro ao carregar imagem", { description: normalizeError(err, "Não foi possível carregar a imagem.") });
     }
   };
 
@@ -232,7 +233,7 @@ export function DentalImagesGallery({
       await fetchImages();
     } catch (err: any) {
       console.error('Erro ao excluir:', err);
-      toast.error(err.message || "Erro ao excluir imagem");
+      toast.error("Erro ao excluir imagem", { description: normalizeError(err, "Não foi possível excluir a imagem.") });
     }
   };
 

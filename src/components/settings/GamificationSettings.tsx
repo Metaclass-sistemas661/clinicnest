@@ -7,6 +7,7 @@ import { Trophy, Loader2, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 
 interface GamificationSettingsProps {
@@ -52,8 +53,8 @@ export function GamificationSettings({ isAdmin = false }: GamificationSettingsPr
       toast.success("Configuração de gamificação salva");
       refreshProfile();
     } catch (err) {
-      logger.error("Error saving tenant gamification setting:", err);
-      toast.error("Erro ao salvar configuração");
+      logger.error("Erro ao salvar configuração de gamificação:", err);
+      toast.error("Erro ao salvar configuração", { description: normalizeError(err, "Não foi possível salvar a configuração de gamificação.") });
     } finally {
       setIsSaving(false);
     }
@@ -74,8 +75,8 @@ export function GamificationSettings({ isAdmin = false }: GamificationSettingsPr
       toast.success("Preferência de notificações salva");
       refreshProfile();
     } catch (err) {
-      logger.error("Error saving user gamification setting:", err);
-      toast.error("Erro ao salvar preferência");
+      logger.error("Erro ao salvar preferência de gamificação:", err);
+      toast.error("Erro ao salvar preferência", { description: normalizeError(err, "Não foi possível salvar a preferência de notificações.") });
     } finally {
       setIsSaving(false);
     }

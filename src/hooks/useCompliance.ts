@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
 
 // Tipos TSA
@@ -123,7 +124,7 @@ export function useCompliance() {
       return true;
     } catch (err) {
       logger.error('Compliance saveTSAConfig:', err);
-      toast.error('Erro ao salvar configuração');
+      toast.error('Erro ao salvar configuração', { description: normalizeError(err, 'Não foi possível salvar a configuração TSA.') });
       return false;
     } finally {
       setIsLoading(false);
@@ -215,7 +216,7 @@ export function useCompliance() {
       return data;
     } catch (err) {
       logger.error('Compliance createExport:', err);
-      toast.error('Erro ao criar exportação');
+      toast.error('Erro ao criar exportação', { description: normalizeError(err, 'Não foi possível iniciar a exportação.') });
       return null;
     } finally {
       setIsLoading(false);
@@ -272,7 +273,7 @@ export function useCompliance() {
       return data;
     } catch (err) {
       logger.error('Compliance createRIPDReport:', err);
-      toast.error('Erro ao criar RIPD');
+      toast.error('Erro ao criar RIPD', { description: normalizeError(err, 'Não foi possível gerar o relatório RIPD.') });
       return null;
     } finally {
       setIsLoading(false);

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import {
@@ -133,7 +134,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
       toast.success("Configurações de NFS-e salvas!");
     } catch (e) {
       logger.error("[NFSeConfig] save error", e);
-      toast.error("Erro ao salvar. Verifique se as colunas nfeio_* existem na tabela tenants.");
+      toast.error("Erro ao salvar configuração NFS-e", { description: normalizeError(e, "Verifique se as colunas nfeio_* existem na tabela tenants.") });
     } finally {
       setIsSaving(false);
     }
@@ -163,7 +164,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
       }
     } catch (e: any) {
       logger.error("[NFSeConfig] test connection error", e);
-      toast.error(`Erro na conexão: ${e.message}`);
+      toast.error("Erro na conexão NFE.io", { description: normalizeError(e, "Verifique a API Key e tente novamente.") });
     } finally {
       setIsTestingConnection(false);
     }
@@ -213,7 +214,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
       }
     } catch (e: any) {
       logger.error("[NFSeConfig] upload certificate error", e);
-      toast.error(`Erro ao enviar certificado: ${e.message}`);
+      toast.error("Erro ao enviar certificado", { description: normalizeError(e, "Verifique o arquivo e a senha do certificado.") });
     } finally {
       setIsUploadingCert(false);
       e.target.value = "";
@@ -248,7 +249,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
 
       toast.success("Integração NFE.io removida.");
     } catch (e) {
-      toast.error("Erro ao remover integração.");
+      toast.error("Erro ao remover integração", { description: normalizeError(e, "Não foi possível remover a integração NFE.io.") });
     } finally {
       setIsSaving(false);
     }

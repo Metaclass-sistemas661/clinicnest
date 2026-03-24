@@ -4,6 +4,9 @@ project_id = "cxficwktocdouerhamhh"
 [functions.register-user]
 verify_jwt = false
 
+[functions.verify-email-code]
+verify_jwt = false
+
 [functions.send-custom-auth-email]
 verify_jwt = false
 

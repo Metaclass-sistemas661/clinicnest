@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { readPfxFile, parsePfxCertificateInfo, type ICPCertificateInfo } from "@/lib/icp-brasil-signature";
 import { format } from "date-fns";
@@ -142,7 +143,7 @@ export default function CertificateManager() {
       }
     } catch (err) {
       logger.error("CertificateManager.fetch", err);
-      toast.error("Erro ao carregar certificados");
+      toast.error("Erro ao carregar certificados", { description: normalizeError(err, "Não foi possível listar os certificados.") });
     } finally {
       setIsLoading(false);
     }
@@ -223,7 +224,7 @@ export default function CertificateManager() {
       fetchCertificates();
     } catch (err) {
       logger.error("CertificateManager.upload", err);
-      toast.error(err instanceof Error ? err.message : "Erro ao cadastrar certificado");
+      toast.error("Erro ao cadastrar certificado", { description: normalizeError(err, "Verifique o arquivo e a senha do certificado.") });
     } finally {
       setIsUploading(false);
     }
@@ -240,7 +241,7 @@ export default function CertificateManager() {
       fetchCertificates();
     } catch (err) {
       logger.error("CertificateManager.setDefault", err);
-      toast.error("Erro ao definir certificado padrão");
+      toast.error("Erro ao definir certificado padrão", { description: normalizeError(err, "Não foi possível alterar o certificado padrão.") });
     }
   };
 
@@ -258,7 +259,7 @@ export default function CertificateManager() {
       fetchCertificates();
     } catch (err) {
       logger.error("CertificateManager.delete", err);
-      toast.error("Erro ao remover certificado");
+      toast.error("Erro ao remover certificado", { description: normalizeError(err, "Não foi possível remover o certificado.") });
     }
   };
 

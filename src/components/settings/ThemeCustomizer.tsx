@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Palette, RotateCcw, Check, Loader2 } from "lucide-react";
@@ -88,7 +89,7 @@ export function ThemeCustomizer() {
         setSettings(data as ThemeSettings);
       }
     } catch (e) {
-      console.error("Error loading theme:", e);
+      console.error("Erro ao carregar tema:", e);
     } finally {
       setLoading(false);
     }
@@ -141,7 +142,7 @@ export function ThemeCustomizer() {
       if (error) throw error;
       toast.success("Tema salvo com sucesso!");
     } catch (e: any) {
-      toast.error("Erro ao salvar tema: " + e.message);
+      toast.error("Erro ao salvar tema", { description: normalizeError(e, "Não foi possível salvar o tema. Tente novamente.") });
     } finally {
       setSaving(false);
     }

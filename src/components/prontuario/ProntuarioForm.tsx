@@ -17,6 +17,7 @@ import { useCertificateSign } from "@/hooks/useCertificateSign";
 import { supabase } from "@/integrations/supabase/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { AiDrugInteractionAlert } from "@/components/ai";
 import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
@@ -664,7 +665,7 @@ export function ProntuarioForm({
       onSaved();
     } catch (err) {
       logger.error("Save record:", err);
-      toast.error("Erro ao salvar prontuário");
+      toast.error("Erro ao salvar prontuário", { description: normalizeError(err, "Não foi possível salvar o registro. Tente novamente.") });
     } finally {
       setIsSaving(false);
     }

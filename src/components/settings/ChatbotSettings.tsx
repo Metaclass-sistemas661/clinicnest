@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { Loader2, Save, Bot, MessageSquare, Clock, Phone } from "lucide-react";
 
@@ -140,7 +141,7 @@ export default function ChatbotSettings() {
       await fetchSettings();
     } catch (err) {
       logger.error("[ChatbotSettings] save error", err);
-      toast.error("Erro ao salvar configurações do chatbot");
+      toast.error("Erro ao salvar configurações do chatbot", { description: normalizeError(err, "Não foi possível salvar as configurações. Tente novamente.") });
     } finally {
       setIsSaving(false);
     }

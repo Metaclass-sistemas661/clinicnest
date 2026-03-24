@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 const db: any = supabase;
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import {
@@ -232,7 +233,7 @@ export function FinanceiroBillsReceivableTab() {
       setPixData({ charge_id: data.charge_id, pix_copy_paste: data.pix_copy_paste, pix_encoded_image: data.pix_encoded_image ?? null });
       toast.success("Cobrança PIX gerada com sucesso");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro desconhecido");
+      toast.error("Erro ao gerar cobrança PIX", { description: normalizeError(err, "Não foi possível gerar a cobrança PIX. Verifique os dados e tente novamente.") });
     } finally { setIsPixLoading(false); }
   };
 

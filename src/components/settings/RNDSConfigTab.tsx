@@ -41,6 +41,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateCNES, validateUF } from '@/lib/rnds-client';
@@ -125,7 +126,7 @@ export function RNDSConfigTab() {
       }
     } catch (error) {
       console.error('Erro ao carregar configuração RNDS:', error);
-      toast.error('Erro ao carregar configuração');
+      toast.error('Erro ao carregar configuração', { description: normalizeError(error, 'Não foi possível carregar a configuração RNDS.') });
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +176,7 @@ export function RNDSConfigTab() {
       loadConfig();
     } catch (error) {
       console.error('Erro ao salvar configuração:', error);
-      toast.error('Erro ao salvar configuração');
+      toast.error('Erro ao salvar configuração', { description: normalizeError(error, 'Não foi possível salvar a configuração RNDS.') });
     } finally {
       setIsSaving(false);
     }
@@ -194,7 +195,7 @@ export function RNDSConfigTab() {
         const base64 = (e.target?.result as string)?.split(',')[1];
         
         if (!base64) {
-          toast.error('Erro ao ler certificado');
+          toast.error('Erro ao ler certificado', { description: 'Não foi possível processar o arquivo do certificado.' });
           setIsUploading(false);
           return;
         }
@@ -220,7 +221,7 @@ export function RNDSConfigTab() {
       reader.readAsDataURL(certificateFile);
     } catch (error) {
       console.error('Erro ao enviar certificado:', error);
-      toast.error('Erro ao enviar certificado');
+      toast.error('Erro ao enviar certificado', { description: normalizeError(error, 'Verifique o arquivo e a senha do certificado.') });
     } finally {
       setIsUploading(false);
     }

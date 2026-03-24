@@ -26,6 +26,7 @@ import {
   Layers,
 } from "lucide-react";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useSimpleMode } from "@/lib/simple-mode";
@@ -140,7 +141,7 @@ export default function Configuracoes() {
       toast.success("Configurações salvas com sucesso!");
       refreshProfile();
     } catch (error) {
-      toast.error("Erro ao salvar configurações");
+      toast.error("Erro ao salvar configurações", { description: normalizeError(error, "Não foi possível salvar as configurações da clínica.") });
       logger.error(error);
     } finally {
       setIsSaving(false);
@@ -162,8 +163,8 @@ export default function Configuracoes() {
       toast.success("Configuração de gamificação salva");
       refreshProfile();
     } catch (err) {
-      logger.error("Error saving tenant gamification setting:", err);
-      toast.error("Erro ao salvar configuração");
+      logger.error("Erro ao salvar configuração de gamificação:", err);
+      toast.error("Erro ao salvar configuração", { description: normalizeError(err, "Não foi possível salvar a gamificação.") });
     } finally {
       setIsSavingGamification(false);
     }
@@ -188,8 +189,8 @@ export default function Configuracoes() {
       toast.success("Configuração de agendamento do portal salva");
       refreshProfile();
     } catch (err) {
-      logger.error("Error saving patient booking setting:", err);
-      toast.error("Erro ao salvar configuração");
+      logger.error("Erro ao salvar configuração de agendamento pelo paciente:", err);
+      toast.error("Erro ao salvar configuração", { description: normalizeError(err, "Não foi possível salvar a configuração.") });
     } finally {
       setIsSavingBooking(false);
     }

@@ -547,3 +547,95 @@ Por segurança, todas as sessões anteriores foram encerradas.
 Precisa de ajuda? ${BRAND.supportEmail}
 `.trim();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  OTP CODE TEMPLATES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Template: Código de verificação de e-mail (OTP 6 dígitos)
+ */
+export function verificationCodeEmailHtml(name: string, code: string): string {
+  const greeting = name ? `Olá, <strong>${escapeHtml(name)}</strong>!` : "Olá!";
+  const digits = code.split("");
+  const digitBoxes = digits.map(
+    (d) =>
+      `<td style="width: 48px; height: 56px; background: ${C.softer}; border: 2px solid ${C.primary}; border-radius: 10px; text-align: center; vertical-align: middle;">
+        <span style="font-size: 28px; font-weight: 800; color: ${C.primaryDeep}; font-family: 'Courier New', monospace; letter-spacing: 1px;">${d}</span>
+      </td>`
+  ).join(`<td style="width: 8px;"></td>`);
+
+  const content = `
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 40px 16px;">
+              <h2 style="margin: 0 0 8px; color: ${C.primaryDeep}; font-size: 24px; font-weight: 700; line-height: 1.3;">
+                Confirme seu e-mail
+              </h2>
+              <p style="margin: 0 0 24px; color: ${C.textLight}; font-size: 15px; line-height: 1.5;">
+                Use o código abaixo para verificar sua conta
+              </p>
+
+              <p style="margin: 0 0 20px; color: ${C.text}; font-size: 16px; line-height: 1.6;">
+                ${greeting}
+              </p>
+              <p style="margin: 0 0 8px; color: ${C.text}; font-size: 15px; line-height: 1.7;">
+                Obrigado por se cadastrar no <strong>${BRAND.name}</strong>. Para ativar sua conta,
+                insira o código de verificação abaixo na tela de cadastro:
+              </p>
+            </td>
+          </tr>
+
+          <!-- OTP Code Box -->
+          <tr>
+            <td style="padding: 8px 40px 24px;">
+              <table cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  ${digitBoxes}
+                </tr>
+              </table>
+              <p style="margin: 16px 0 0; text-align: center; color: ${C.textLight}; font-size: 13px;">
+                Código válido por <strong>15 minutos</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Features preview -->
+          <tr>
+            <td style="padding: 8px 40px 12px;">
+              ${infoBox("🚀", "Após confirmar, você terá acesso imediato à plataforma completa.", "teal")}
+            </td>
+          </tr>
+
+          <!-- Security note -->
+          <tr>
+            <td style="padding: 16px 40px 32px;">
+              ${securityFootnote("Se você não criou esta conta, ignore este e-mail. O código expira automaticamente.")}
+            </td>
+          </tr>`;
+
+  return wrapEmail(
+    "Código de verificação",
+    `${name ? name + ", s" : "S"}eu código de verificação ${BRAND.name}: ${code}`,
+    content,
+  );
+}
+
+export function verificationCodeEmailText(name: string, code: string): string {
+  return `
+Código de Verificação — ${BRAND.name}
+
+Olá${name ? `, ${name}` : ""}!
+
+Obrigado por se cadastrar no ${BRAND.name}! Para ativar sua conta, use o código abaixo:
+
+    ${code}
+
+Este código é válido por 15 minutos.
+
+Se você não criou esta conta, ignore este e-mail.
+
+© ${BRAND.year} ${BRAND.name} — ${BRAND.tagline}
+Precisa de ajuda? ${BRAND.supportEmail}
+`.trim();
+}

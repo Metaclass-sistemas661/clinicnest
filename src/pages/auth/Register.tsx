@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,14 @@ import {
   ArrowRight,
   BadgeCheck,
   CalendarDays,
+  CheckCircle2,
   Clock,
   Eye,
   EyeOff,
   FileText,
   Loader2,
   Mail,
+  RotateCcw,
   ShieldCheck,
   Star,
   Stethoscope,
@@ -65,7 +67,118 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [emailSent, setEmailSent] = useState(true);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // OTP verification state
+  const [otpValues, setOtpValues] = useState<string[]>(["" , "", "", "", "", ""]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Countdown para reenvio
+  useEffect(() => {
+    if (!submitted || !emailSent) return;
+    if (resendCooldown <= 0) {
+      setCanResend(true);
+      return;
+    }
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown, submitted, emailSent]);
+
+  const handleOtpChange = useCallback((index: number, value: string) => {
+    // Aceitar somente dígitos
+    const digit = value.replace(/\D/g, "").slice(-1);
+    setOtpError("");
+    setOtpValues((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
+    // Auto-focus no próximo campo
+    if (digit && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  }, []);
+
+  const handleOtpKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  }, [otpValues]);
+
+  const handleOtpPaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    setOtpError("");
+    const next = [...otpValues];
+    for (let i = 0; i < 6; i++) {
+      next[i] = pasted[i] || "";
+    }
+    setOtpValues(next);
+    // Focus no último dígito colado ou no próximo vazio
+    const focusIdx = Math.min(pasted.length, 5);
+    otpRefs.current[focusIdx]?.focus();
+  }, [otpValues]);
+
+  const handleVerifyCode = async () => {
+    const code = otpValues.join("");
+    if (code.length !== 6) {
+      setOtpError("Digite os 6 dígitos do código.");
+      return;
+    }
+    setIsVerifying(true);
+    setOtpError("");
+    const { error, message } = await verifyEmailCode(email.trim().toLowerCase(), code);
+    setIsVerifying(false);
+    if (error) {
+      setOtpError(error.message);
+      // Limpar inputs em caso de erro
+      setOtpValues(["" , "", "", "", "", ""]);
+      otpRefs.current[0]?.focus();
+      return;
+    }
+    toast.success(message || "E-mail verificado com sucesso!", {
+      description: "Faça login para acessar sua conta.",
+    });
+    navigate("/login");
+  };
+
+  const handleResendCode = async () => {
+    if (!canResend) return;
+    setCanResend(false);
+    setResendCooldown(60);
+    setOtpValues(["" , "", "", "", "", ""]);
+    setOtpError("");
+    // Re-registrar para gerar novo código (a edge function limpa códigos anteriores)
+    const { error } = await signUp(
+      email,
+      password,
+      fullName,
+      clinicName,
+      phone,
+      new Date().toISOString(),
+      {
+        professional_type: professionalType || undefined,
+        council_type: councilType || undefined,
+        council_number: needsCouncil ? councilNumber.trim() : undefined,
+        council_state: needsCouncil ? councilState : undefined,
+      },
+    );
+    if (error) {
+      // Se o usuário já existe, precisa de uma edge function de reenvio (resend-verification-code)
+      // Por ora, mostrar mensagem
+      toast.error("Não foi possível reenviar o código.", { description: error.message });
+      setCanResend(true);
+      return;
+    }
+    toast.success("Novo código enviado!", { description: "Verifique sua caixa de entrada." });
+    otpRefs.current[0]?.focus();
+  };
 
   // Campos profissionais
   const [professionalType, setProfessionalType] = useState<ProfessionalType | "">("");
@@ -75,7 +188,7 @@ export default function Register() {
   const [isValidatingCouncil, setIsValidatingCouncil] = useState(false);
   const [councilValidated, setCouncilValidated] = useState(false);
 
-  const { signUp } = useAuth();
+  const { signUp, verifyEmailCode } = useAuth();
   const navigate = useNavigate();
   const { token: captchaToken, onVerify, onExpire, onError, reset: resetCaptcha } = useTurnstile();
 
@@ -191,7 +304,7 @@ export default function Register() {
     if (!legalAccepted) { toast.error("Você precisa aceitar os Termos de Uso e a Política de Privacidade."); return; }
 
     setIsLoading(true);
-    const { error } = await signUp(
+    const { error, emailSent: sent } = await signUp(
       email,
       password,
       fullName,
@@ -212,7 +325,12 @@ export default function Register() {
       setIsLoading(false);
       return;
     }
-    toast.success("Conta criada com sucesso!", { description: "Verifique seu e-mail para confirmar." });
+    if (sent === false) {
+      toast.warning("Conta criada, mas o e-mail não foi enviado.", { description: "Use o botão abaixo para reenviar ou entre em contato com o suporte." });
+    } else {
+      toast.success("Conta criada com sucesso!", { description: "Verifique seu e-mail para confirmar." });
+    }
+    setEmailSent(sent !== false);
     setSubmitted(true);
     setIsLoading(false);
   };
@@ -350,27 +468,111 @@ export default function Register() {
         <div className="w-full max-w-sm">
 
           {submitted ? (
-            /* ── Tela de confirmação de e-mail ── */
+            /* ── Tela de verificação por código OTP ── */
             <div className="flex flex-col items-center text-center py-8">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
-                <Mail className="h-8 w-8 text-teal-600" />
+              <div className={`mb-5 flex h-16 w-16 items-center justify-center rounded-full ${emailSent ? "bg-teal-100" : "bg-amber-100"}`}>
+                <Mail className={`h-8 w-8 ${emailSent ? "text-teal-600" : "text-amber-600"}`} />
               </div>
-              <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">Verifique seu e-mail</h2>
+              <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+                {emailSent ? "Digite o código de verificação" : "Conta criada!"}
+              </h2>
               <p className="text-sm text-muted-foreground mb-6">
-                Enviamos um link de confirmação para{" "}
-                <span className="font-semibold text-gray-800">{email}</span>.
-                Abra sua caixa de entrada e confirme para continuar.
+                {emailSent ? (
+                  <>
+                    Enviamos um código de 6 dígitos para{" "}
+                    <span className="font-semibold text-gray-800">{email}</span>.
+                    Verifique sua caixa de entrada e digite o código abaixo.
+                  </>
+                ) : (
+                  <>
+                    Sua conta foi criada, mas houve um problema ao enviar o e-mail de verificação para{" "}
+                    <span className="font-semibold text-gray-800">{email}</span>.
+                    Acesse o login e clique em <strong>"Reenviar e-mail de confirmação"</strong>.
+                  </>
+                )}
               </p>
-              <Button
-                onClick={() => navigate("/login")}
-                className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25"
-              >
-                Ir para o login
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Não encontrou? Verifique o spam ou promoções.
-              </p>
+
+              {emailSent && (
+                <>
+                  {/* 6 inputs para código OTP */}
+                  <div className="flex gap-2.5 justify-center mb-4" onPaste={handleOtpPaste}>
+                    {otpValues.map((val, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={val}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        autoFocus={i === 0}
+                        className={`w-12 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all outline-none ${
+                          otpError
+                            ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                            : val
+                            ? "border-teal-500 bg-teal-50/50 focus:border-teal-600 focus:ring-teal-200"
+                            : "border-gray-200 focus:border-teal-500 focus:ring-teal-200"
+                        } focus:ring-2`}
+                        aria-label={`Dígito ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  {otpError && (
+                    <p className="text-sm text-red-600 mb-4">{otpError}</p>
+                  )}
+
+                  <Button
+                    onClick={handleVerifyCode}
+                    disabled={isVerifying || otpValues.join("").length !== 6}
+                    className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25 mb-3"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Verificando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Verificar código
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {canResend ? (
+                      <button
+                        type="button"
+                        onClick={handleResendCode}
+                        className="flex items-center gap-1.5 text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Reenviar código
+                      </button>
+                    ) : (
+                      <span>
+                        Reenviar em <span className="font-semibold text-gray-700">{resendCooldown}s</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Não encontrou? Verifique o spam ou promoções.
+                  </p>
+                </>
+              )}
+
+              {!emailSent && (
+                <Button
+                  onClick={() => navigate("/login")}
+                  className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-cyan-500 hover:from-teal-700 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-teal-500/25"
+                >
+                  Ir para o login
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              )}
             </div>
           ) : (
             <>

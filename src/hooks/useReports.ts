@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
 
 // Tipos
@@ -177,7 +178,7 @@ export function useReports() {
       return data;
     } catch (err) {
       logger.error('Reports saveReport:', err);
-      toast.error('Erro ao salvar relatório');
+      toast.error('Erro ao salvar relatório', { description: normalizeError(err, 'Não foi possível salvar o relatório.') });
       return null;
     } finally {
       setIsLoading(false);
@@ -212,7 +213,7 @@ export function useReports() {
       await fetchSavedReports();
     } catch (err) {
       logger.error('Reports deleteSavedReport:', err);
-      toast.error('Erro ao remover relatório');
+      toast.error('Erro ao remover relatório', { description: normalizeError(err, 'Não foi possível remover o relatório salvo.') });
     }
   }, [fetchSavedReports]);
 
@@ -318,7 +319,7 @@ export function useReports() {
       return data;
     } catch (err) {
       logger.error('Reports createSchedule:', err);
-      toast.error('Erro ao criar agendamento');
+      toast.error('Erro ao criar agendamento', { description: normalizeError(err, 'Não foi possível criar o agendamento de relatório.') });
       return null;
     } finally {
       setIsLoading(false);

@@ -38,6 +38,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { normalizeError } from "@/utils/errorMessages";
 import { 
   Plus, 
   Loader2, 
@@ -156,7 +157,7 @@ export default function AdminOverrides() {
       setOverrides(overridesData || { features: [], limits: [] });
     } catch (err) {
       logger.error("[AdminOverrides] fetch error", err);
-      toast.error("Erro ao carregar dados");
+      toast.error("Erro ao carregar dados", { description: normalizeError(err, "Não foi possível carregar os overrides. Tente novamente.") });
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +187,7 @@ export default function AdminOverrides() {
       fetchData();
     } catch (err: any) {
       logger.error("[AdminOverrides] create feature error", err);
-      toast.error(err.message || "Erro ao criar override");
+      toast.error("Erro ao criar override de funcionalidade", { description: normalizeError(err, "Não foi possível criar o override. Tente novamente.") });
     } finally {
       setIsSaving(false);
     }
@@ -222,7 +223,7 @@ export default function AdminOverrides() {
       fetchData();
     } catch (err: any) {
       logger.error("[AdminOverrides] create limit error", err);
-      toast.error(err.message || "Erro ao criar override");
+      toast.error("Erro ao criar override de limite", { description: normalizeError(err, "Não foi possível criar o override. Tente novamente.") });
     } finally {
       setIsSaving(false);
     }
@@ -247,7 +248,7 @@ export default function AdminOverrides() {
       fetchData();
     } catch (err: any) {
       logger.error("[AdminOverrides] delete error", err);
-      toast.error(err.message || "Erro ao remover override");
+      toast.error("Erro ao remover override", { description: normalizeError(err, "Não foi possível remover o override. Tente novamente.") });
     } finally {
       setIsSaving(false);
     }

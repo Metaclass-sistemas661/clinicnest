@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -245,8 +246,8 @@ export default function Auditoria() {
       pageRef.current = nextPage + 1;
       setPage(pageRef.current);
     } catch (e) {
-      logger.error("Error fetching audit logs:", e);
-      toast.error("Erro ao carregar auditoria");
+      logger.error("Erro ao carregar logs de auditoria:", e);
+      toast.error("Erro ao carregar auditoria", { description: normalizeError(e, "Não foi possível carregar os registros de auditoria.") });
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -288,8 +289,8 @@ export default function Auditoria() {
       if (error) throw error;
       setClinicalRows((data ?? []) as ClinicalAccessRow[]);
     } catch (e) {
-      logger.error("Error fetching clinical access report:", e);
-      toast.error("Erro ao carregar acessos clínicos");
+      logger.error("Erro ao carregar relatório de acessos clínicos:", e);
+      toast.error("Erro ao carregar acessos clínicos", { description: normalizeError(e, "Não foi possível carregar o relatório de acessos.") });
     } finally {
       setClinicalLoading(false);
     }
@@ -439,7 +440,7 @@ export default function Auditoria() {
       }
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao carregar dados LGPD");
+      toast.error("Erro ao carregar dados LGPD", { description: normalizeError(e, "Não foi possível carregar os dados de proteção.") });
     } finally {
       setIsLoadingLgpd(false);
     }
@@ -482,7 +483,7 @@ export default function Auditoria() {
       await fetchLgpdData();
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao salvar política de retenção");
+      toast.error("Erro ao salvar política de retenção", { description: normalizeError(e, "Não foi possível salvar a política.") });
     } finally {
       setIsSavingRetention(false);
     }
@@ -519,7 +520,7 @@ export default function Auditoria() {
       await fetchLgpdData();
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao atualizar solicitação LGPD");
+      toast.error("Erro ao atualizar solicitação LGPD", { description: normalizeError(e, "Não foi possível atualizar a solicitação.") });
     } finally {
       setIsUpdatingRequests(false);
     }
@@ -575,7 +576,7 @@ export default function Auditoria() {
       toast.success(`Exportação ${format.toUpperCase()} concluída`);
     } catch (e) {
       logger.error(e);
-      toast.error(`Erro ao exportar dados em ${format.toUpperCase()}`);
+      toast.error(`Erro ao exportar dados em ${format.toUpperCase()}`, { description: normalizeError(e, "Não foi possível gerar a exportação.") });
     } finally {
       setExportingRequestKey(null);
     }
@@ -603,7 +604,7 @@ export default function Auditoria() {
       toast.success("Prévia de anonimização gerada");
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao gerar prévia de anonimização");
+      toast.error("Erro ao gerar prévia de anonimização", { description: normalizeError(e, "Não foi possível gerar a prévia.") });
     } finally {
       setPreviewingRequestId(null);
     }
@@ -632,7 +633,7 @@ export default function Auditoria() {
       await fetchLgpdData();
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao executar anonimização");
+      toast.error("Erro ao executar anonimização", { description: normalizeError(e, "Não foi possível anonimizar os dados.") });
     } finally {
       setExecutingAnonymizationRequestId(null);
     }

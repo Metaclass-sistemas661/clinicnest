@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { signWithCertificate, type ICPSignatureResult } from "@/lib/icp-brasil-signature";
 import { decryptPfx } from "@/components/settings/CertificateManager";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 
 interface CertificateInfo {
@@ -128,7 +129,7 @@ export function useCertificateSign(): UseSignatureReturn {
         toast.error("Senha do certificado incorreta");
       } else {
         setState(s => ({ ...s, isLoading: false, error: msg }));
-        toast.error(msg);
+        toast.error("Erro ao assinar documento", { description: normalizeError(msg, "Não foi possível assinar. Verifique o certificado e tente novamente.") });
       }
       
       return null;

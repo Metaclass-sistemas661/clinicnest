@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { notifyUser } from "@/lib/notifications";
 import { toastRpcError } from "@/lib/rpc-error";
+import { normalizeError } from "@/utils/errorMessages";
 import { AgendaFilters } from "@/components/agenda/AgendaFilters";
 import { TimeSlotPicker } from "@/components/agenda/TimeSlotPicker";
 import { AppointmentsTable, type EditAppointmentData } from "@/components/agenda/AppointmentsTable";
@@ -422,8 +423,8 @@ export default function Agenda() {
       })();
 
       if (error) {
-        logger.error("Error updating appointment status:", error);
-        toast.error(`Erro ao atualizar status: ${error.message}`);
+        logger.error("Erro ao atualizar status do agendamento:", error);
+        toast.error("Erro ao atualizar status", { description: normalizeError(error, "Não foi possível alterar o status do agendamento. Tente novamente.") });
         return;
       }
 
@@ -483,8 +484,8 @@ export default function Agenda() {
 
       fetchData();
     } catch (error: any) {
-      logger.error("Exception updating appointment status:", error);
-      toast.error(`Erro ao atualizar status: ${error?.message || "Erro desconhecido"}`);
+      logger.error("Exceção ao atualizar status do agendamento:", error);
+      toast.error("Erro ao atualizar status", { description: normalizeError(error, "Ocorreu um erro inesperado. Tente novamente.") });
     }
   };
 
@@ -501,8 +502,8 @@ export default function Agenda() {
       });
 
       if (error) {
-        logger.error("Error cancelling appointment:", error);
-        toast.error(error.message || "Erro ao cancelar agendamento");
+        logger.error("Erro ao cancelar agendamento:", error);
+        toast.error("Erro ao cancelar agendamento", { description: normalizeError(error, "Não foi possível cancelar o agendamento. Tente novamente.") });
         return;
       }
 
@@ -528,8 +529,8 @@ export default function Agenda() {
       setCancelReason("");
       fetchData();
     } catch (error: any) {
-      logger.error("Exception cancelling appointment:", error);
-      toast.error(error?.message || "Erro ao cancelar agendamento");
+      logger.error("Exceção ao cancelar agendamento:", error);
+      toast.error("Erro ao cancelar agendamento", { description: normalizeError(error, "Ocorreu um erro inesperado. Tente novamente.") });
     }
   };
 
@@ -567,7 +568,7 @@ export default function Agenda() {
       toast.success("Agendamento atualizado com sucesso!");
       fetchData();
     } catch (error) {
-      toast.error("Erro ao atualizar agendamento");
+      toast.error("Erro ao atualizar agendamento", { description: normalizeError(error, "Não foi possível salvar as alterações. Tente novamente.") });
       logger.error(error);
     }
   };
@@ -586,7 +587,7 @@ export default function Agenda() {
       toast.success("Agendamento excluído com sucesso!");
       fetchData();
     } catch (error) {
-      toast.error("Erro ao excluir agendamento");
+      toast.error("Erro ao excluir agendamento", { description: normalizeError(error, "Não foi possível excluir o agendamento. Tente novamente.") });
       logger.error(error);
     }
   };

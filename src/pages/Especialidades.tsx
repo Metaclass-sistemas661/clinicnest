@@ -31,6 +31,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 interface Especialidade {
   id: string;
@@ -145,8 +146,8 @@ export default function Especialidades() {
       setIsDialogOpen(false);
       fetchEspecialidades();
     } catch (err) {
-      logger.error("Error saving specialty:", err);
-      toast.error("Erro ao salvar especialidade");
+      logger.error("Erro ao salvar especialidade:", err);
+      toast.error("Erro ao salvar especialidade", { description: normalizeError(err, "Não foi possível salvar a especialidade.") });
     } finally {
       setIsSaving(false);
     }
@@ -164,8 +165,8 @@ export default function Especialidades() {
         prev.map((e) => (e.id === id ? { ...e, is_active: !current } : e))
       );
     } catch (err) {
-      logger.error("Error toggling specialty:", err);
-      toast.error("Erro ao atualizar status");
+      logger.error("Erro ao alternar especialidade:", err);
+      toast.error("Erro ao atualizar status", { description: normalizeError(err, "Não foi possível alterar o status da especialidade.") });
     }
   };
 

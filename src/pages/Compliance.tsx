@@ -18,6 +18,7 @@ import {
 import { useCompliance, TSAProvider } from "@/hooks/useCompliance";
 import { createSerproTSAService } from "@/lib/tsa-service";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -72,10 +73,10 @@ export default function Compliance() {
       if (result.success) {
         toast.success(`${result.message} (${result.latencyMs}ms)`);
       } else {
-        toast.error(result.message);
+        toast.error("Falha na conexão TSA", { description: normalizeError(result.message, "O servidor TSA não respondeu corretamente.") });
       }
     } catch (error) {
-      toast.error('Erro ao testar conexão TSA');
+      toast.error('Erro ao testar conexão TSA', { description: normalizeError(error, 'Não foi possível conectar ao servidor TSA.') });
     } finally {
       setTestingTSA(false);
     }

@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 interface ReturnData {
   valid: boolean;
@@ -101,7 +102,7 @@ export default function ConfirmarRetornoPublico() {
         toast.error("Não foi possível confirmar o retorno");
       }
     } catch (e: any) {
-      toast.error(e.message || "Erro ao confirmar retorno");
+      toast.error("Erro ao confirmar retorno", { description: normalizeError(e, "Não foi possível confirmar. Tente novamente.") });
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +127,7 @@ export default function ConfirmarRetornoPublico() {
         toast.error("Não foi possível cancelar o retorno");
       }
     } catch (e: any) {
-      toast.error(e.message || "Erro ao cancelar retorno");
+      toast.error("Erro ao cancelar retorno", { description: normalizeError(e, "Não foi possível cancelar. Tente novamente.") });
     } finally {
       setIsSubmitting(false);
     }

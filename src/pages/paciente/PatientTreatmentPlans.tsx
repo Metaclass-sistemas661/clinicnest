@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
 
 interface TreatmentPlan {
@@ -117,8 +118,8 @@ export default function PatientTreatmentPlans() {
       if (error) throw error;
       setPlans((data as TreatmentPlan[]) || []);
     } catch (err) {
-      console.error("Error loading plans:", err);
-      toast.error("Erro ao carregar planos de tratamento");
+      console.error("Erro ao carregar planos de tratamento:", err);
+      toast.error("Erro ao carregar planos de tratamento", { description: normalizeError(err, "Não foi possível carregar seus planos. Tente novamente.") });
     } finally {
       setIsLoading(false);
     }
@@ -143,8 +144,8 @@ export default function PatientTreatmentPlans() {
       const parsed = typeof data === "string" ? JSON.parse(data) : data;
       setPlanItems((parsed?.items as PlanItem[]) || []);
     } catch (err) {
-      console.error("Error loading items:", err);
-      toast.error("Erro ao carregar itens do plano");
+      console.error("Erro ao carregar itens do plano:", err);
+      toast.error("Erro ao carregar itens do plano", { description: normalizeError(err, "Não foi possível carregar os itens. Tente novamente.") });
     } finally {
       setLoadingItems(false);
     }
@@ -220,8 +221,8 @@ export default function PatientTreatmentPlans() {
       setApproveDialog({ open: false, planId: "", title: "" });
       void loadPlans();
     } catch (err) {
-      console.error("Error approving plan:", err);
-      toast.error("Erro ao aprovar plano");
+      console.error("Erro ao aprovar plano:", err);
+      toast.error("Erro ao aprovar plano", { description: normalizeError(err, "Não foi possível aprovar o plano. Tente novamente.") });
     } finally {
       setIsSubmitting(false);
     }
@@ -244,8 +245,8 @@ export default function PatientTreatmentPlans() {
       setRejectReason("");
       void loadPlans();
     } catch (err) {
-      console.error("Error rejecting plan:", err);
-      toast.error("Erro ao recusar plano");
+      console.error("Erro ao recusar plano:", err);
+      toast.error("Erro ao recusar plano", { description: normalizeError(err, "Não foi possível recusar o plano. Tente novamente.") });
     } finally {
       setIsSubmitting(false);
     }

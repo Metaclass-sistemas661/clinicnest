@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Trash2, CreditCard, Package, Stethoscope, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toastRpcError } from "@/lib/rpc-error";
@@ -118,8 +119,8 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       if (itemsError) throw itemsError;
       setItems((itemsData as unknown as OrderItem[]) || []);
     } catch (error) {
-      logger.error("Error fetching order:", error);
-      toast.error("Erro ao carregar conta do paciente.");
+      logger.error("Erro ao carregar conta:", error);
+      toast.error("Erro ao carregar conta do paciente", { description: normalizeError(error, "Não foi possível carregar os dados da conta.") });
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +138,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       setProducts((pRes.data as unknown as Product[]) || []);
       setPaymentMethods((pmRes.data as unknown as PaymentMethod[]) || []);
     } catch (error) {
-      logger.error("Error fetching reference data:", error);
+      logger.error("Erro ao carregar dados de referência:", error);
     }
   };
 
@@ -188,7 +189,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       fetchOrder();
       onUpdated();
     } catch (error) {
-      toast.error("Erro ao adicionar item");
+      toast.error("Erro ao adicionar item", { description: normalizeError(error, "Não foi possível adicionar o item.") });
     } finally {
       setIsAddingItem(false);
     }
@@ -206,7 +207,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       fetchOrder();
       onUpdated();
     } catch {
-      toast.error("Erro ao remover item");
+      toast.error("Erro ao remover item", { description: "Não foi possível remover o item da conta." });
     }
   };
 
@@ -227,7 +228,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       fetchOrder();
       onUpdated();
     } catch {
-      toast.error("Erro ao salvar desconto");
+      toast.error("Erro ao salvar desconto", { description: "Não foi possível aplicar o desconto." });
     } finally {
       setIsSavingDiscount(false);
     }
@@ -285,7 +286,7 @@ export function ComandaDetail({ open, onOpenChange, orderId, onUpdated }: Comand
       fetchOrder();
       onUpdated();
     } catch {
-      toast.error("Erro ao finalizar conta");
+      toast.error("Erro ao finalizar conta", { description: "Não foi possível finalizar a conta. Tente novamente." });
     } finally {
       setIsFinalizing(false);
     }

@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -220,7 +221,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
       setConnected(false);
       setCalendarEmail(null);
       toast.success("Google Calendar desconectado.");
-    } catch { toast.error("Erro ao desconectar."); }
+    } catch { toast.error("Erro ao desconectar", { description: "Não foi possível desconectar o Google Calendar." }); }
     finally { setIsDisconnecting(false); }
   };
 
@@ -405,7 +406,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
       load();
     } catch (e) {
       logger.error("[Webhooks] save error", e);
-      toast.error("Erro ao salvar. Verifique se a tabela outbound_webhooks existe no banco.");
+      toast.error("Erro ao salvar webhook", { description: normalizeError(e, "Verifique se a tabela outbound_webhooks existe no banco.") });
     } finally { setIsSaving(false); }
   };
 
@@ -438,7 +439,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
       if (res.ok) {
         toast.success(`Teste enviado! Resposta: ${res.status}`);
       } else {
-        toast.error(`Servidor retornou ${res.status}`);
+        toast.error("Erro no teste de webhook", { description: `O servidor retornou status ${res.status}.` });
       }
     } catch {
       toast.info("Teste enviado (CORS bloqueou a resposta, verifique no seu servidor)");
@@ -716,7 +717,7 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
       load();
     } catch (e) {
       logger.error("[ApiKeys] generate error", e);
-      toast.error("Erro ao gerar chave. Verifique se a tabela api_keys existe no banco.");
+      toast.error("Erro ao gerar chave de API", { description: normalizeError(e, "Verifique se a tabela api_keys existe no banco.") });
     } finally { setIsSaving(false); }
   };
 
@@ -967,7 +968,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
       toast.success("Gateway de pagamento configurado!");
     } catch (e) {
       logger.error("[PaymentGateway] save error", e);
-      toast.error("Erro ao salvar configurações.");
+      toast.error("Erro ao salvar configurações de pagamento", { description: normalizeError(e, "Não foi possível salvar o gateway.") });
     } finally {
       setIsSaving(false);
     }
@@ -982,7 +983,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
         .eq("id", tenantId);
       setGateway(""); setApiKey("");
       toast.success("Gateway de pagamento removido.");
-    } catch { toast.error("Erro ao remover."); }
+    } catch { toast.error("Erro ao remover gateway", { description: "Não foi possível remover o gateway de pagamento." }); }
     finally { setIsSaving(false); }
   };
 
@@ -1201,7 +1202,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
       toast.success("Configurações da maquininha salvas!");
     } catch (e) {
       logger.error("[Stone] save error", e);
-      toast.error("Erro ao salvar. Execute a migration stone_terminal_settings primeiro.");
+      toast.error("Erro ao salvar configurações da maquininha", { description: normalizeError(e, "Execute a migration stone_terminal_settings primeiro.") });
     } finally {
       setIsSaving(false);
     }
@@ -1216,7 +1217,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
         .eq("id", tenantId);
       setApiKey(""); setTerminalSerial(""); setActive(false);
       toast.success("Integração Stone removida.");
-    } catch { toast.error("Erro ao remover."); }
+    } catch { toast.error("Erro ao remover integração Stone", { description: "Não foi possível remover a integração." }); }
     finally { setIsSaving(false); }
   };
 
@@ -1482,7 +1483,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
       }
     } catch (err) {
       logger.error("[WhatsApp] connect error", err);
-      toast.error(err instanceof Error ? err.message : "Erro ao conectar WhatsApp");
+      toast.error("Erro ao conectar WhatsApp", { description: normalizeError(err, "Não foi possível iniciar a conexão.") });
     } finally {
       setIsActioning(false);
     }
@@ -1549,7 +1550,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
       toast.success("WhatsApp desconectado.");
     } catch (err) {
       logger.error("[WhatsApp] disconnect error", err);
-      toast.error("Erro ao desconectar.");
+      toast.error("Erro ao desconectar WhatsApp", { description: normalizeError(err, "Não foi possível desconectar.") });
     } finally {
       setIsActioning(false);
     }
@@ -1568,7 +1569,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
       toast.success("Integração WhatsApp removida.");
     } catch (err) {
       logger.error("[WhatsApp] delete error", err);
-      toast.error("Erro ao remover integração.");
+      toast.error("Erro ao remover integração WhatsApp", { description: normalizeError(err, "Não foi possível remover a integração.") });
     } finally {
       setIsActioning(false);
     }
@@ -1591,17 +1592,17 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
         },
       });
       if (error) {
-        toast.error(error.message || "Falha ao testar conexão");
+        toast.error("Falha ao testar conexão", { description: normalizeError(error, "O servidor não conseguiu enviar a mensagem.") });
         return;
       }
       if (!data?.success) {
-        toast.error(data?.error || "Falha ao testar conexão");
+        toast.error("Falha ao testar conexão", { description: normalizeError(data?.error, "O WhatsApp não retornou sucesso.") });
         return;
       }
       toast.success("Mensagem de teste enviada com sucesso!");
     } catch (err) {
       logger.error("[WhatsApp] test error", err);
-      toast.error("Erro ao testar WhatsApp");
+      toast.error("Erro ao testar WhatsApp", { description: normalizeError(err, "Não foi possível enviar a mensagem de teste.") });
     } finally {
       setIsTesting(false);
     }
@@ -1623,7 +1624,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
       toast.success("Configurações salvas!");
     } catch (e) {
       logger.error("[WhatsApp] manual save error", e);
-      toast.error("Erro ao salvar.");
+      toast.error("Erro ao salvar configurações WhatsApp", { description: normalizeError(e, "Não foi possível salvar as configurações.") });
     } finally {
       setIsSaving(false);
     }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 export interface ReturnReminder {
   id: string;
@@ -136,7 +137,7 @@ export function useCreateReturnReminder() {
       toast.success("Lembrete de retorno criado");
     },
     onError: (error) => {
-      toast.error("Erro ao criar lembrete: " + error.message);
+      toast.error("Erro ao criar lembrete de retorno", { description: normalizeError(error, "Não foi possível criar o lembrete. Tente novamente.") });
     },
   });
 }
@@ -164,7 +165,7 @@ export function useLinkAppointmentToReturn() {
       toast.success("Agendamento vinculado ao retorno");
     },
     onError: (error) => {
-      toast.error("Erro ao vincular: " + error.message);
+      toast.error("Erro ao vincular agendamento", { description: normalizeError(error, "Não foi possível vincular o agendamento ao retorno. Tente novamente.") });
     },
   });
 }
@@ -193,7 +194,7 @@ export function useUpdateReturnStatus() {
       toast.success("Status atualizado");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar: " + error.message);
+      toast.error("Erro ao atualizar status do retorno", { description: normalizeError(error, "Não foi possível atualizar o status. Tente novamente.") });
     },
   });
 }

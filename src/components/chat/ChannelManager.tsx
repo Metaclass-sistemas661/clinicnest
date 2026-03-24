@@ -21,6 +21,7 @@ import { Plus, Hash, Lock, Trash2, Users, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 
 interface ChatChannel {
@@ -86,7 +87,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
       setChannels(data ?? []);
     } catch (err) {
       logger.error("ChannelManager fetchChannels:", err);
-      toast.error("Erro ao carregar canais");
+      toast.error("Erro ao carregar canais", { description: normalizeError(err, "Não foi possível listar os canais de chat.") });
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +132,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
       if (err.message?.includes("duplicate")) {
         toast.error("Já existe um canal com este nome");
       } else {
-        toast.error("Erro ao criar canal");
+        toast.error("Erro ao criar canal", { description: normalizeError(err, "Não foi possível criar o canal.") });
       }
     } finally {
       setIsCreating(false);
@@ -153,7 +154,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
       onChannelCreated?.();
     } catch (err) {
       logger.error("ChannelManager deleteChannel:", err);
-      toast.error("Erro ao excluir canal");
+      toast.error("Erro ao excluir canal", { description: normalizeError(err, "Não foi possível excluir o canal.") });
     }
   };
 

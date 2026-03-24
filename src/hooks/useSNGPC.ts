@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
 import { encrypt } from '@/lib/crypto';
 
@@ -134,7 +135,7 @@ export function useSNGPC() {
       return true;
     } catch (err) {
       logger.error('SNGPC saveCredenciais:', err);
-      toast.error('Erro ao salvar credenciais');
+      toast.error('Erro ao salvar credenciais', { description: normalizeError(err, 'Não foi possível salvar as credenciais SNGPC.') });
       return false;
     } finally {
       setIsLoading(false);
@@ -291,7 +292,7 @@ export function useSNGPC() {
       return data;
     } catch (err) {
       logger.error('SNGPC criarTransmissao:', err);
-      toast.error('Erro ao criar transmissão');
+      toast.error('Erro ao criar transmissão', { description: normalizeError(err, 'Não foi possível criar a transmissão SNGPC.') });
       return null;
     } finally {
       setIsLoading(false);
@@ -325,7 +326,7 @@ export function useSNGPC() {
       return true;
     } catch (err) {
       logger.error('SNGPC atualizarTransmissao:', err);
-      toast.error('Erro ao atualizar status');
+      toast.error('Erro ao atualizar status', { description: normalizeError(err, 'Não foi possível atualizar o status da transmissão.') });
       return false;
     }
   }, [profile?.tenant_id, fetchTransmissoes]);

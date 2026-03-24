@@ -17,6 +17,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
 
 interface RefillRequest {
@@ -76,7 +77,7 @@ export function RefillRequestsPanel() {
       setNotes("");
       queryClient.invalidateQueries({ queryKey: ["refill-requests"] });
     },
-    onError: () => toast.error("Erro ao processar."),
+    onError: (err) => toast.error("Erro ao processar", { description: normalizeError(err, "Não foi possível processar o pedido de renovação.") }),
   });
 
   const pendingRequests = requests?.filter((r) => r.status === "pending") || [];

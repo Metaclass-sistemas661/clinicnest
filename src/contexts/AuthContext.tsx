@@ -31,8 +31,9 @@ interface AuthContextType {
       council_state?: string;
     },
     captchaToken?: string,
-  ) => Promise<{ error: Error | null }>;
+  ) => Promise<{ error: Error | null; emailSent?: boolean }>;
   resetPassword: (email: string, captchaToken?: string) => Promise<{ error: Error | null }>;
+  verifyEmailCode: (email: string, code: string) => Promise<{ error: Error | null; message?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -315,80 +316,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Edge Function retornou resposta (pode ser erro de negócio no body)
       if (!error && data) {
         if (data.success) {
-          return { error: null };
+          return { error: null, emailSent: data.emailSent !== false };
         }
         // Erro de negócio (email já existe, validação, etc.)
         const msg = data.error || "Erro ao criar conta";
         return { error: new Error(normalizeSignUpError(msg)) };
       }
 
-      // Edge Function falhou (rede, 500, etc.) — fallback para Supabase nativo
-      console.warn("[signUp] Edge Function falhou, usando fallback:", error?.message);
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
-          data: {
-            full_name: fullName,
-            clinic_name: clinicName,
-            phone,
-            terms_accepted: true,
-            privacy_policy_accepted: true,
-            legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
-            ...(professionalData?.professional_type && {
-              professional_type: professionalData.professional_type,
-            }),
-            ...(professionalData?.council_type && {
-              council_type: professionalData.council_type,
-            }),
-            ...(professionalData?.council_number && {
-              council_number: professionalData.council_number,
-            }),
-            ...(professionalData?.council_state && {
-              council_state: professionalData.council_state,
-            }),
-          },
-        },
-      });
-      if (authError) {
-        return { error: new Error(normalizeSignUpError(authError.message)) };
-      }
-      return { error: null };
+      // A partir daqui, não usamos fallback nativo:
+      // o fluxo oficial de cadastro deve passar pela edge function (Resend + template customizado).
+      const edgeMsg =
+        error?.message ||
+        data?.error ||
+        data?.message ||
+        "Falha ao criar conta via serviço de cadastro";
+      return { error: new Error(normalizeSignUpError(edgeMsg)) };
     } catch (err) {
-      // Fallback final: usar signUp padrão do Supabase
-      console.warn("[signUp] Exceção, usando fallback:", err);
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
-          data: {
-            full_name: fullName,
-            clinic_name: clinicName,
-            phone,
-            terms_accepted: true,
-            privacy_policy_accepted: true,
-            legal_accepted_at: legalAcceptedAt || new Date().toISOString(),
-            ...(professionalData?.professional_type && {
-              professional_type: professionalData.professional_type,
-            }),
-            ...(professionalData?.council_type && {
-              council_type: professionalData.council_type,
-            }),
-            ...(professionalData?.council_number && {
-              council_number: professionalData.council_number,
-            }),
-            ...(professionalData?.council_state && {
-              council_state: professionalData.council_state,
-            }),
-          },
-        },
+      const msg = err instanceof Error ? err.message : String(err);
+      return { error: new Error(normalizeSignUpError(msg)) };
+    }
+  };
+
+  const verifyEmailCode = async (email: string, code: string): Promise<{ error: Error | null; message?: string }> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-email-code", {
+        body: { email, code },
       });
-      if (authError) {
-        return { error: new Error(normalizeSignUpError(authError.message)) };
+
+      if (!error && data) {
+        if (data.success) {
+          return { error: null, message: data.message };
+        }
+        const msg = data.error || "Código inválido";
+        return { error: new Error(msg) };
       }
-      return { error: null };
+
+      const edgeMsg = error?.message || data?.error || "Erro ao verificar código";
+      return { error: new Error(edgeMsg) };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { error: new Error(msg) };
     }
   };
 
@@ -461,6 +428,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         resetPassword,
+        verifyEmailCode,
         signOut,
         refreshProfile,
       }}

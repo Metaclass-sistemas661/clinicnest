@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { Loader2, Save, Smartphone, Key, Send } from "lucide-react";
 
@@ -113,7 +114,7 @@ export default function SmsConfig() {
       refreshProfile();
     } catch (err) {
       logger.error("[SmsConfig] save error", err);
-      toast.error("Erro ao salvar configuração de SMS");
+      toast.error("Erro ao salvar configuração de SMS", { description: normalizeError(err, "Verifique os dados e tente novamente.") });
     } finally {
       setIsSaving(false);
     }
@@ -150,7 +151,7 @@ export default function SmsConfig() {
       toast.success("SMS de teste enviado!");
     } catch (err: any) {
       logger.error("[SmsConfig] test error", err);
-      toast.error(`Erro ao enviar SMS de teste: ${err.message}`);
+      toast.error("Erro ao enviar SMS de teste", { description: normalizeError(err, "Verifique o número e tente novamente.") });
     } finally {
       setIsTesting(false);
     }

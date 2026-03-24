@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -105,7 +106,7 @@ export function HL7ConfigTab() {
       if (statsRes.data) setStats(statsRes.data as HL7Stats);
       if (logsRes.data) setLogs(logsRes.data);
     } catch (e) {
-      console.error("Error loading HL7 data:", e);
+      console.error("Erro ao carregar dados HL7:", e);
     } finally {
       setLoading(false);
     }
@@ -145,7 +146,7 @@ export function HL7ConfigTab() {
     });
 
     if (error) {
-      toast.error("Erro ao criar conexão: " + error.message);
+      toast.error("Erro ao criar conexão", { description: normalizeError(error, "Verifique os dados e tente novamente.") });
       return;
     }
 
@@ -162,7 +163,7 @@ export function HL7ConfigTab() {
   async function toggleConnection(id: string, active: boolean) {
     const { error } = await supabase.from("hl7_connections").update({ is_active: active }).eq("id", id);
     if (error) {
-      toast.error("Erro ao atualizar conexão");
+      toast.error("Erro ao atualizar conexão", { description: normalizeError(error, "Não foi possível atualizar a conexão.") });
       return;
     }
     setConnections(prev => prev.map(c => c.id === id ? { ...c, is_active: active } : c));
@@ -172,7 +173,7 @@ export function HL7ConfigTab() {
   async function deleteConnection(id: string) {
     const { error } = await supabase.from("hl7_connections").delete().eq("id", id);
     if (error) {
-      toast.error("Erro ao excluir conexão");
+      toast.error("Erro ao excluir conexão", { description: normalizeError(error, "Não foi possível excluir a conexão.") });
       return;
     }
     setConnections(prev => prev.filter(c => c.id !== id));

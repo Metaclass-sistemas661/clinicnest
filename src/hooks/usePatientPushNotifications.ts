@@ -12,6 +12,7 @@ import {
   showLocalNotification,
 } from "@/lib/firebase";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 
 export function usePatientPushNotifications() {
@@ -96,7 +97,7 @@ export function usePatientPushNotifications() {
       return true;
     } catch (error) {
       logger.error("Erro ao habilitar notificações (paciente):", error);
-      toast.error("Erro ao habilitar notificações");
+      toast.error("Erro ao habilitar notificações", { description: normalizeError(error, "Verifique as permissões do navegador.") });
       return false;
     } finally {
       setIsLoading(false);

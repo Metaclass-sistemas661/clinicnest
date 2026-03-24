@@ -15,6 +15,7 @@ import {
 import { Smile, Trash2, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { Link } from "react-router-dom";
 
 import { OdontogramChart, type ToothRecord } from "@/components/odontograma/OdontogramChart";
@@ -170,7 +171,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
       await loadLatestOdontogram();
     } catch (err: any) {
       console.error("Erro ao salvar odontograma:", err);
-      toast.error(err.message || "Erro ao salvar odontograma");
+      toast.error("Erro ao salvar odontograma", { description: normalizeError(err, "Não foi possível salvar o odontograma.") });
     } finally {
       setIsSaving(false);
     }

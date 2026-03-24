@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 interface ClinicUnit {
   id: string;
@@ -143,7 +144,7 @@ export default function Unidades() {
       void fetchUnits();
     } catch (err) {
       logger.error("Unidades save:", err);
-      toast.error("Erro ao salvar unidade");
+      toast.error("Erro ao salvar unidade", { description: normalizeError(err, "Não foi possível salvar a unidade.") });
     } finally {
       setIsSaving(false);
     }
@@ -162,7 +163,7 @@ export default function Unidades() {
       void fetchUnits();
     } catch (err) {
       logger.error("Unidades delete:", err);
-      toast.error("Erro ao excluir");
+      toast.error("Erro ao excluir unidade", { description: normalizeError(err, "Não foi possível excluir a unidade.") });
     }
   };
 

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
 
 interface ExamParameter {
@@ -103,15 +104,15 @@ export function ExamOcrAnalyzer({ patientId }: { patientId?: string }) {
 
       const data = resp.data as { results: OcrResult };
       if (data.results?.error) {
-        toast.error(data.results.error);
+        toast.error("Erro na análise do exame", { description: normalizeError(data.results.error, "O OCR retornou um erro ao processar a imagem.") });
         setResult(null);
       } else {
         setResult(data.results);
         toast.success("Exame analisado com sucesso!");
       }
     } catch (err) {
-      console.error("OCR error:", err);
-      toast.error("Erro ao analisar exame.");
+      console.error("Erro no OCR:", err);
+      toast.error("Erro ao analisar exame", { description: normalizeError(err, "Não foi possível processar a imagem do exame.") });
     } finally {
       setAnalyzing(false);
     }

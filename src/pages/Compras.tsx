@@ -38,6 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import { cancelPurchaseV1, createPurchaseV1 } from "@/lib/supabase-typed-rpc";
@@ -179,7 +180,7 @@ export default function Compras() {
         setPurchases((purchaseRes.data || []) as unknown as PurchaseListRow[]);
       } catch (e) {
         logger.error(e);
-        toast.error("Erro ao carregar dados");
+        toast.error("Erro ao carregar dados", { description: normalizeError(e, "Não foi possível carregar os dados de compras.") });
       } finally {
         setIsLoading(false);
       }
@@ -205,7 +206,7 @@ export default function Compras() {
       setPurchases((data || []) as unknown as PurchaseListRow[]);
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao carregar compras");
+      toast.error("Erro ao carregar compras", { description: normalizeError(e, "Não foi possível listar as compras.") });
     } finally {
       setIsPurchasesLoading(false);
     }
@@ -231,7 +232,7 @@ export default function Compras() {
       setSelectedPurchaseItems((data || []) as unknown as PurchaseItemRow[]);
     } catch (e) {
       logger.error(e);
-      toast.error("Erro ao carregar itens da compra");
+      toast.error("Erro ao carregar itens da compra", { description: normalizeError(e, "Não foi possível listar os itens.") });
     } finally {
       setIsLoadingItems(false);
     }
@@ -255,7 +256,7 @@ export default function Compras() {
       }
 
       if (!data?.success) {
-        toast.error("Erro ao cancelar compra");
+        toast.error("Erro ao cancelar compra", { description: "O servidor não conseguiu processar o cancelamento." });
         return;
       }
 
@@ -267,7 +268,7 @@ export default function Compras() {
       await fetchPurchases();
     } catch (err) {
       logger.error(err);
-      toast.error("Erro ao cancelar compra");
+      toast.error("Erro ao cancelar compra", { description: normalizeError(err, "Não foi possível cancelar a compra.") });
     } finally {
       setIsSaving(false);
     }
@@ -335,7 +336,7 @@ export default function Compras() {
       }
 
       if (!data?.success) {
-        toast.error("Erro ao registrar compra");
+        toast.error("Erro ao registrar compra", { description: "O servidor não conseguiu processar o registro." });
         return;
       }
 
@@ -350,7 +351,7 @@ export default function Compras() {
       await fetchPurchases();
     } catch (err) {
       logger.error(err);
-      toast.error("Erro ao registrar compra");
+      toast.error("Erro ao registrar compra", { description: normalizeError(err, "Não foi possível registrar a compra.") });
     } finally {
       setIsSaving(false);
     }
@@ -382,7 +383,7 @@ export default function Compras() {
         .maybeSingle();
 
       if (error) {
-        toast.error(error.message || "Erro ao criar fornecedor");
+        toast.error("Erro ao criar fornecedor", { description: normalizeError(error, "Verifique os dados do fornecedor.") });
         return;
       }
 
@@ -396,7 +397,7 @@ export default function Compras() {
       setSupplierForm({ name: "", phone: "", email: "" });
     } catch (err) {
       logger.error(err);
-      toast.error("Erro ao criar fornecedor");
+      toast.error("Erro ao criar fornecedor", { description: normalizeError(err, "Não foi possível criar o fornecedor.") });
     } finally {
       setIsSaving(false);
     }

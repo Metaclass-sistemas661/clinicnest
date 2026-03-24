@@ -33,6 +33,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -330,7 +331,7 @@ export default function Chat() {
       inputRef.current?.focus();
     } catch (err) {
       logger.error("Chat sendMessage:", err);
-      toast.error("Erro ao enviar mensagem");
+      toast.error("Erro ao enviar mensagem", { description: normalizeError(err, "Não foi possível enviar a mensagem.") });
     } finally {
       setIsSending(false);
     }
@@ -365,7 +366,7 @@ export default function Chat() {
       );
     } catch (err) {
       logger.error("Chat search:", err);
-      toast.error("Erro na busca");
+      toast.error("Erro na busca", { description: normalizeError(err, "Não foi possível buscar mensagens.") });
     } finally {
       setIsSearching(false);
     }
@@ -386,7 +387,7 @@ export default function Chat() {
       }
     } catch (err) {
       logger.error("Chat editMessage:", err);
-      toast.error("Erro ao editar mensagem");
+      toast.error("Erro ao editar mensagem", { description: normalizeError(err, "Não foi possível editar a mensagem.") });
     }
   };
 
@@ -402,7 +403,7 @@ export default function Chat() {
       }
     } catch (err) {
       logger.error("Chat deleteMessage:", err);
-      toast.error("Erro ao excluir mensagem");
+      toast.error("Erro ao excluir mensagem", { description: normalizeError(err, "Não foi possível excluir a mensagem.") });
     }
   };
 

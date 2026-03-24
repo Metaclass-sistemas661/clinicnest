@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { useEffect } from "react";
 
 export interface PatientCall {
@@ -133,7 +134,7 @@ export function useCallNextPatient() {
       }
     },
     onError: (error) => {
-      toast.error("Erro ao chamar paciente: " + error.message);
+      toast.error("Erro ao chamar paciente", { description: normalizeError(error, "Não foi possível chamar o próximo paciente. Tente novamente.") });
     },
   });
 }
@@ -154,7 +155,7 @@ export function useRecallPatient() {
       toast.success("Paciente rechamado");
     },
     onError: (error) => {
-      toast.error("Erro ao rechamar: " + error.message);
+      toast.error("Erro ao rechamar paciente", { description: normalizeError(error, "Não foi possível rechamar o paciente. Tente novamente.") });
     },
   });
 }
@@ -177,7 +178,7 @@ export function useStartService() {
       toast.success("Atendimento iniciado");
     },
     onError: (error) => {
-      toast.error("Erro: " + error.message);
+      toast.error("Erro ao iniciar atendimento", { description: normalizeError(error, "Não foi possível iniciar o atendimento. Tente novamente.") });
     },
   });
 }
@@ -261,7 +262,7 @@ export function useAddToQueue() {
       toast.success("Paciente adicionado à fila");
     },
     onError: (error) => {
-      toast.error("Erro ao adicionar à fila: " + error.message);
+      toast.error("Erro ao adicionar à fila", { description: normalizeError(error, "Não foi possível adicionar o paciente à fila. Tente novamente.") });
     },
   });
 }

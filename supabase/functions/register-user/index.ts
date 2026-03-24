@@ -5,11 +5,20 @@ import { createLogger } from "../_shared/logging.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import {
   BRAND,
-  confirmationEmailHtml,
-  confirmationEmailText,
+  verificationCodeEmailHtml,
+  verificationCodeEmailText,
 } from "../_shared/emailTemplate.ts";
 
 const log = createLogger("REGISTER-USER");
+
+const OTP_EXPIRY_MINUTES = 15;
+
+// ─── Gerar código OTP de 6 dígitos ────────────────────────────────────────
+function generateOTP(): string {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return String(array[0] % 1000000).padStart(6, "0");
+}
 
 // ─── Envio via Resend ──────────────────────────────────────────────────────
 async function sendEmailViaResend(
@@ -17,16 +26,18 @@ async function sendEmailViaResend(
   subject: string,
   html: string,
   text: string,
-): Promise<boolean> {
+): Promise<{ ok: boolean; status?: number; error?: string }> {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   if (!resendApiKey) {
     log("RESEND_API_KEY não configurada");
-    return false;
+    return { ok: false, error: "RESEND_API_KEY não configurada" };
   }
 
   try {
     const emailFrom =
-      Deno.env.get("EMAIL_FROM") || `${BRAND.name} <no-reply@metaclass.com.br>`;
+      Deno.env.get("EMAIL_FROM") ||
+      Deno.env.get("RESEND_FROM") ||
+      `${BRAND.name} <onboarding@resend.dev>`;
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -40,30 +51,17 @@ async function sendEmailViaResend(
     if (!response.ok) {
       const errorText = await response.text();
       log("Erro ao enviar via Resend", { status: response.status, error: errorText });
-      return false;
+      return { ok: false, status: response.status, error: errorText };
     }
 
     const result = await response.json();
     log("Email enviado via Resend", { emailId: result.id });
-    return true;
+    return { ok: true };
   } catch (error) {
-    log("Exceção ao enviar email", {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
+    const message = error instanceof Error ? error.message : String(error);
+    log("Exceção ao enviar email", { error: message });
+    return { ok: false, error: message };
   }
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-const PRODUCTION_URL = "https://clinicnest.metaclass.com.br";
-
-function normalizeSiteUrl(raw: string | undefined | null): string {
-  const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return PRODUCTION_URL;
-  // Rejeitar localhost/127.0.0.1 — sempre usar produção
-  if (s.includes("localhost") || s.includes("127.0.0.1")) return PRODUCTION_URL;
-  if (s.startsWith("http://") || s.startsWith("https://")) return s.replace(/\/+$/, "");
-  return `https://${s}`.replace(/\/+$/, "");
 }
 
 interface RegisterBody {
@@ -223,64 +221,87 @@ serve(async (req) => {
       );
     }
 
-    log("Usuário criado", { userId: createData.user.id });
+    const userId = createData.user.id;
+    log("Usuário criado", { userId });
 
-    // ── 2. Gerar link de confirmação ─────────────────────────────────────
-    const siteUrl = normalizeSiteUrl(
-      Deno.env.get("SITE_URL") || Deno.env.get("PUBLIC_SITE_URL"),
-    );
-    const loginUrl = `${siteUrl}/login`;
+    // ── 2. Gerar código OTP de 6 dígitos ─────────────────────────────────
+    const otpCode = generateOTP();
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
-    const { data: linkData, error: linkError } =
-      await supabaseAdmin.auth.admin.generateLink({
-        type: "signup",
+    // Invalidar códigos anteriores para este email
+    await supabaseAdmin
+      .from("email_verification_codes")
+      .delete()
+      .eq("email", emailTrim);
+
+    // Inserir novo código
+    const { error: insertError } = await supabaseAdmin
+      .from("email_verification_codes")
+      .insert({
+        user_id: userId,
         email: emailTrim,
-        password,
-        options: { redirectTo: loginUrl },
+        code: otpCode,
+        expires_at: expiresAt,
+        attempts: 0,
+        verified: false,
       });
 
-    if (linkError || !linkData?.properties?.action_link) {
-      log("Erro ao gerar link de confirmação", { error: linkError?.message });
-      // Usuário foi criado mas não conseguimos gerar o link.
-      // Não é fatal — o usuário pode solicitar reenvio depois.
+    if (insertError) {
+      log("Erro ao salvar código de verificação", { error: insertError.message });
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        log("Usuário removido após falha ao salvar código", { userId });
+      } catch (cleanupErr) {
+        log("Falha ao remover usuário", { error: String(cleanupErr) });
+      }
       return new Response(
-        JSON.stringify({
-          success: true,
-          emailSent: false,
-          message: "Conta criada, mas houve erro ao enviar email de confirmação. Use 'reenviar email' no login.",
-        }),
-        { status: 201, headers: { ...cors, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Erro interno ao gerar código de verificação. Tente novamente." }),
+        { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
-    const confirmationUrl = linkData.properties.action_link;
-    log("Link de confirmação gerado");
+    log("Código OTP gerado", { email: emailTrim, expiresAt });
 
-    // ── 3. Enviar email customizado via Resend ───────────────────────────
-    const subject = `Confirme sua conta — ${BRAND.name}`;
-    const emailHtml = confirmationEmailHtml(nameTrim, confirmationUrl);
-    const emailText = confirmationEmailText(nameTrim, confirmationUrl);
+    // ── 3. Enviar email com código via Resend ────────────────────────────
+    const subject = `${otpCode} — Código de verificação ${BRAND.name}`;
+    const emailHtml = verificationCodeEmailHtml(nameTrim, otpCode);
+    const emailText = verificationCodeEmailText(nameTrim, otpCode);
 
-    const emailSent = await sendEmailViaResend(emailTrim, subject, emailHtml, emailText);
+    const emailResult = await sendEmailViaResend(emailTrim, subject, emailHtml, emailText);
 
-    if (!emailSent) {
-      log("Falha ao enviar email de confirmação via Resend");
+    if (!emailResult.ok) {
+      log("Falha ao enviar email com código via Resend", {
+        status: emailResult.status,
+        error: emailResult.error,
+      });
+      // Limpar usuário e código
+      try {
+        await supabaseAdmin.from("email_verification_codes").delete().eq("user_id", userId);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        log("Usuário e código removidos após falha no envio", { userId });
+      } catch (cleanupErr) {
+        log("Falha ao remover usuário após erro de email", { error: String(cleanupErr) });
+      }
       return new Response(
         JSON.stringify({
-          success: true,
+          success: false,
           emailSent: false,
-          message: "Conta criada, mas houve erro ao enviar email. Use 'reenviar email' no login.",
+          error: "Falha no envio de e-mail via Resend. Verifique a configuração do remetente e da API key.",
+          resendStatus: emailResult.status ?? null,
+          resendError: emailResult.error ?? null,
         }),
-        { status: 201, headers: { ...cors, "Content-Type": "application/json" } },
+        { status: 502, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
-    log("Registro completo com sucesso");
+    log("Registro com código OTP completo", { email: emailTrim });
+
     return new Response(
       JSON.stringify({
         success: true,
         emailSent: true,
-        message: "Conta criada! Verifique seu e-mail para confirmar.",
+        requiresCode: true,
+        message: "Código de verificação enviado para seu e-mail.",
       }),
       { status: 201, headers: { ...cors, "Content-Type": "application/json" } },
     );

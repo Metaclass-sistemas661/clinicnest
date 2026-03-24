@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { Loader2, Plus, Zap } from "lucide-react";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -161,7 +162,7 @@ export default function Automacoes() {
       setRows(((data as any) ?? []) as AutomationRow[]);
     } catch (err) {
       logger.error("[Automacoes] fetch error", err);
-      toast.error("Erro ao carregar automações");
+      toast.error("Erro ao carregar automações", { description: normalizeError(err, "Não foi possível listar as automações.") });
     } finally {
       setIsLoading(false);
     }
@@ -180,8 +181,8 @@ export default function Automacoes() {
       if (error) throw error;
     } catch (err) {
       setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, is_active: row.is_active } : r)));
-      logger.error("[Automacoes] toggle error", err);
-      toast.error("Erro ao atualizar automação");
+      logger.error("[Automacoes] erro ao alternar:", err);
+      toast.error("Erro ao atualizar automação", { description: normalizeError(err, "Não foi possível alterar o status.") });
     }
   };
 
@@ -233,7 +234,7 @@ export default function Automacoes() {
       await fetchAutomations();
     } catch (err) {
       logger.error("[Automacoes] create error", err);
-      toast.error("Erro ao criar automação");
+      toast.error("Erro ao criar automação", { description: normalizeError(err, "Não foi possível criar a automação.") });
     } finally {
       setIsSaving(false);
     }

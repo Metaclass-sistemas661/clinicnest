@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -149,7 +150,7 @@ export default function PatientProfile() {
       const { data, error } = await (supabasePatient as any).rpc("get_patient_profile");
 
       if (error) {
-        console.error("[PatientProfile] RPC get_patient_profile error:", error);
+        console.error("[PatientProfile] Erro no RPC get_patient_profile:", error);
         throw error;
       }
 
@@ -245,8 +246,8 @@ export default function PatientProfile() {
       setIsEditing(false);
       fetchProfile();
     } catch (err) {
-      console.error("[PatientProfile] Save error:", err);
-      toast.error("Erro ao salvar. Tente novamente ou entre em contato com a clínica.");
+      console.error("[PatientProfile] Erro ao salvar:", err);
+      toast.error("Erro ao salvar", { description: normalizeError(err, "Tente novamente ou entre em contato com a clínica.") });
     } finally {
       setIsSaving(false);
     }

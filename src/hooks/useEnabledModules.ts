@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
 import {
   MODULE_DEFINITIONS,
@@ -86,7 +87,7 @@ export function useEnabledModules() {
         await refreshProfile();
       } catch (err) {
         logger.error('useEnabledModules.persist', err);
-        toast.error('Erro ao salvar módulos');
+        toast.error('Erro ao salvar módulos', { description: normalizeError(err, 'Não foi possível salvar os módulos habilitados.') });
       } finally {
         setIsSaving(false);
       }
@@ -132,7 +133,7 @@ export function useEnabledModules() {
         await refreshProfile();
       } catch (err) {
         logger.error('useEnabledModules.saveClinicType', err);
-        toast.error('Erro ao salvar tipo de clínica');
+        toast.error('Erro ao salvar tipo de clínica', { description: normalizeError(err, 'Não foi possível salvar o tipo de clínica.') });
       } finally {
         setIsSaving(false);
       }

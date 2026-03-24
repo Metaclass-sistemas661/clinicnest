@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 
 export interface ONAIndicators {
   id: string;
@@ -169,7 +170,7 @@ export function useCalculateONAIndicators() {
       toast.success("Indicadores calculados com sucesso");
     },
     onError: (error) => {
-      toast.error("Erro ao calcular indicadores: " + error.message);
+      toast.error("Erro ao calcular indicadores", { description: normalizeError(error, "Não foi possível calcular os indicadores. Tente novamente.") });
     },
   });
 }
@@ -251,7 +252,7 @@ export function useCreateAdverseEvent() {
       toast.success("Evento adverso notificado com sucesso");
     },
     onError: (error) => {
-      toast.error("Erro ao notificar evento: " + error.message);
+      toast.error("Erro ao notificar evento adverso", { description: normalizeError(error, "Não foi possível registrar o evento. Tente novamente.") });
     },
   });
 }
@@ -280,7 +281,7 @@ export function useUpdateAdverseEvent() {
       toast.success("Evento atualizado com sucesso");
     },
     onError: (error) => {
-      toast.error("Erro ao atualizar evento: " + error.message);
+      toast.error("Erro ao atualizar evento adverso", { description: normalizeError(error, "Não foi possível atualizar o evento. Tente novamente.") });
     },
   });
 }

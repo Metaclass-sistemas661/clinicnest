@@ -4,6 +4,7 @@ import { Pill, Plus, Trash2, Printer, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import {
   Sheet,
@@ -163,7 +164,7 @@ export function ReceitaDrawer({
       onOpenChange(false);
     } catch (err) {
       logger.error("Erro ao salvar receita:", err);
-      toast.error("Erro ao salvar receita");
+      toast.error("Erro ao salvar receita", { description: normalizeError(err, "Não foi possível salvar a receita.") });
     } finally {
       setIsSaving(false);
     }

@@ -4,6 +4,7 @@ import { FileSignature, Printer, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import {
   Sheet,
@@ -145,7 +146,7 @@ export function AtestadoDrawer({
       onOpenChange(false);
     } catch (err) {
       logger.error("Erro ao salvar atestado:", err);
-      toast.error("Erro ao salvar atestado");
+      toast.error("Erro ao salvar atestado", { description: normalizeError(err, "Não foi possível gerar o atestado.") });
     } finally {
       setIsSaving(false);
     }

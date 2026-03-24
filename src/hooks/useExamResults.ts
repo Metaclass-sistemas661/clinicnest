@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 
 // ─── Interfaces ───────────────────────────────────────────
@@ -206,7 +207,7 @@ export function useExamResults(options?: {
     },
     onError: (err) => {
       logger.error("Erro ao registrar exame:", err);
-      toast.error("Erro ao registrar exame");
+      toast.error("Erro ao registrar exame", { description: normalizeError(err, "Não foi possível registrar o exame.") });
     },
   });
 
@@ -266,7 +267,7 @@ export function useExamResults(options?: {
     },
     onError: (err) => {
       logger.error("Erro ao atualizar exame:", err);
-      toast.error("Erro ao atualizar exame");
+      toast.error("Erro ao atualizar exame", { description: normalizeError(err, "Não foi possível atualizar o exame.") });
     },
   });
 
@@ -286,7 +287,7 @@ export function useExamResults(options?: {
     },
     onError: (err) => {
       logger.error("Erro ao excluir exame:", err);
-      toast.error("Erro ao excluir exame");
+      toast.error("Erro ao excluir exame", { description: normalizeError(err, "Não foi possível excluir o exame.") });
     },
   });
 
