@@ -1,6 +1,6 @@
 import { useState, useCallback, memo } from "react";
 import { cn } from "@/lib/utils";
-import { Focus, Layers, Sparkles, X } from "lucide-react";
+import { Focus, Layers, RotateCcw, X } from "lucide-react";
 
 /* ─── Body pin / point data ─── */
 interface BodyPin {
@@ -169,20 +169,21 @@ export const InteractiveBody = memo(function InteractiveBody() {
         })()}
 
         {/* Floating Toolbar */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 rounded-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/50 dark:border-slate-700/50 p-1.5 shadow-lg">
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-1 rounded-2xl bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-white/50 dark:border-slate-700/50 p-1.5 shadow-lg">
           {[
-            { icon: Focus, title: "Foco", action: resetView },
-            { icon: Layers, title: "Camadas", action: () => setActiveLayer(prev => { const idx = LAYERS.findIndex(l => l.id === prev); return LAYERS[(idx + 1) % LAYERS.length].id; }) },
-            { icon: Sparkles, title: "IA", action: () => {} },
-          ].map(({ icon: Icon, title, action }) => (
+            { icon: Focus, label: "Foco", action: resetView },
+            { icon: Layers, label: "Camada", action: () => setActiveLayer(prev => { const idx = LAYERS.findIndex(l => l.id === prev); return LAYERS[(idx + 1) % LAYERS.length].id; }) },
+            { icon: RotateCcw, label: "Reset", action: resetView },
+          ].map(({ icon: Icon, label, action }) => (
             <button
-              key={title}
+              key={label}
               type="button"
               onClick={action}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/70 transition-all hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/40 dark:hover:text-blue-400"
-              title={title}
+              className="flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-muted-foreground/70 transition-all hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/40 dark:hover:text-blue-400"
+              title={label}
             >
               <Icon className="h-4 w-4" />
+              <span className="text-[7px] font-medium leading-none">{label}</span>
             </button>
           ))}
         </div>

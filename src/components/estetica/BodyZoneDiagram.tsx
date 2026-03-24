@@ -56,8 +56,8 @@ export function BodyZoneDiagram({
   compact = false,
   readOnly = false,
 }: BodyZoneDiagramProps) {
-  const w = compact ? 220 : 340;
-  const h = compact ? 232 : 360;
+  const w = compact ? 260 : 380;
+  const h = compact ? 340 : 520;
 
   const handleClick = (zoneId: string) => {
     if (!readOnly && onZoneClick) onZoneClick(zoneId);
@@ -108,7 +108,7 @@ export function BodyZoneDiagram({
 
   return (
     <div className={cn("flex flex-col items-center", compact ? "gap-1" : "gap-2")}>
-      <svg width={w} height={h} viewBox="0 0 340 360" className="select-none">
+      <svg width={w} height={h} viewBox="0 0 380 520" className="select-none">
         <defs>
           {/* 3D Filters */}
           <filter id="body-zone-shadow" x="-10%" y="-10%" width="130%" height="130%">
@@ -129,11 +129,11 @@ export function BodyZoneDiagram({
           {activeZoneGradients}
         </defs>
 
-        {/* ── 3D Body base (PNG) — square image filling viewBox width ── */}
+        {/* ── 3D Body base (PNG) — imagem mais alta, centralizada no viewBox ── */}
         <image
           href="/corpo.png"
-          x={0} y={5}
-          width={340} height={340}
+          x={10} y={10}
+          width={360} height={490}
           preserveAspectRatio="xMidYMid meet"
           opacity={0.9}
           style={{ pointerEvents: "none" }}
@@ -142,69 +142,69 @@ export function BodyZoneDiagram({
         {/* ═══ ZONAS — posicionadas sobre a anatomia da imagem ═══ */}
 
         {/* Face */}
-        {renderZone("face", <circle cx={170} cy={32} r={22} />)}
-        {!compact && <text x={170} y={36} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Face</text>}
+        {renderZone("face", <circle cx={190} cy={52} r={26} />)}
+        {!compact && <text x={190} y={56} textAnchor="middle" fontSize="10" fill="#374151" fontWeight="600" pointerEvents="none">Face</text>}
 
         {/* Pescoço */}
-        {renderZone("pescoco", <rect x={155} y={52} width={30} height={14} rx={5} />)}
+        {renderZone("pescoco", <rect x={173} y={76} width={34} height={16} rx={6} />)}
 
         {/* Colo */}
-        {renderZone("colo", <ellipse cx={170} cy={78} rx={42} ry={10} />)}
-        {!compact && <text x={170} y={82} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Colo</text>}
+        {renderZone("colo", <ellipse cx={190} cy={108} rx={48} ry={14} />)}
+        {!compact && <text x={190} y={112} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Colo</text>}
 
         {/* Costas (indicador no peito superior) */}
-        {renderZone("costas", <rect x={148} y={90} width={44} height={16} rx={6} />)}
-        {!compact && <text x={170} y={101} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Costas</text>}
+        {renderZone("costas", <rect x={164} y={124} width={52} height={20} rx={7} />)}
+        {!compact && <text x={190} y={138} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Costas</text>}
 
         {/* Braço D (direito da pessoa = esquerda na tela) */}
-        {renderZone("braco_d", <rect x={55} y={92} width={28} height={52} rx={10} transform="rotate(12,69,118)" />)}
-        {!compact && <text x={62} y={120} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">BrD</text>}
+        {renderZone("braco_d", <rect x={62} y={125} width={30} height={60} rx={12} transform="rotate(10,77,155)" />)}
+        {!compact && <text x={68} y={158} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">BrD</text>}
 
         {/* Braço E */}
-        {renderZone("braco_e", <rect x={257} y={92} width={28} height={52} rx={10} transform="rotate(-12,271,118)" />)}
-        {!compact && <text x={278} y={120} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">BrE</text>}
+        {renderZone("braco_e", <rect x={288} y={125} width={30} height={60} rx={12} transform="rotate(-10,303,155)" />)}
+        {!compact && <text x={312} y={158} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">BrE</text>}
 
         {/* Antebraço D */}
-        {renderZone("antebraco_d", <rect x={38} y={148} width={22} height={42} rx={8} transform="rotate(6,49,169)" />)}
+        {renderZone("antebraco_d", <rect x={42} y={195} width={24} height={48} rx={9} transform="rotate(5,54,219)" />)}
 
         {/* Antebraço E */}
-        {renderZone("antebraco_e", <rect x={280} y={148} width={22} height={42} rx={8} transform="rotate(-6,291,169)" />)}
+        {renderZone("antebraco_e", <rect x={314} y={195} width={24} height={48} rx={9} transform="rotate(-5,326,219)" />)}
 
         {/* Mão D */}
-        {renderZone("mao_d", <ellipse cx={42} cy={200} rx={14} ry={12} />)}
+        {renderZone("mao_d", <ellipse cx={44} cy={260} rx={16} ry={14} />)}
 
         {/* Mão E */}
-        {renderZone("mao_e", <ellipse cx={298} cy={200} rx={14} ry={12} />)}
+        {renderZone("mao_e", <ellipse cx={336} cy={260} rx={16} ry={14} />)}
 
         {/* Abdômen */}
-        {renderZone("abdomen", <ellipse cx={170} cy={145} rx={38} ry={35} />)}
-        {!compact && <text x={170} y={149} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Abdômen</text>}
+        {renderZone("abdomen", <ellipse cx={190} cy={195} rx={44} ry={42} />)}
+        {!compact && <text x={190} y={199} textAnchor="middle" fontSize="10" fill="#374151" fontWeight="600" pointerEvents="none">Abdômen</text>}
 
         {/* Flancos */}
         {renderZone("flancos", <>
-          <ellipse cx={120} cy={145} rx={14} ry={28} />
-          <ellipse cx={220} cy={145} rx={14} ry={28} />
+          <ellipse cx={132} cy={195} rx={16} ry={32} />
+          <ellipse cx={248} cy={195} rx={16} ry={32} />
         </>)}
 
         {/* Glúteo D */}
-        {renderZone("gluteo_d", <ellipse cx={148} cy={190} rx={22} ry={14} />)}
+        {renderZone("gluteo_d", <ellipse cx={164} cy={255} rx={24} ry={16} />)}
 
         {/* Glúteo E */}
-        {renderZone("gluteo_e", <ellipse cx={192} cy={190} rx={22} ry={14} />)}
+        {renderZone("gluteo_e", <ellipse cx={216} cy={255} rx={24} ry={16} />)}
 
         {/* Coxa D */}
-        {renderZone("coxa_d", <rect x={122} y={210} width={30} height={60} rx={10} />)}
-        {!compact && <text x={137} y={243} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">CxD</text>}
+        {renderZone("coxa_d", <rect x={132} y={285} width={36} height={76} rx={12} />)}
+        {!compact && <text x={150} y={328} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">CxD</text>}
 
         {/* Coxa E */}
-        {renderZone("coxa_e", <rect x={188} y={210} width={30} height={60} rx={10} />)}
-        {!compact && <text x={203} y={243} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">CxE</text>}
+        {renderZone("coxa_e", <rect x={212} y={285} width={36} height={76} rx={12} />)}
+        {!compact && <text x={230} y={328} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">CxE</text>}
 
         {/* Joelho D */}
-        {renderZone("joelho_d", <ellipse cx={137} cy={282} rx={16} ry={12} />)}
+        {renderZone("joelho_d", <ellipse cx={150} cy={378} rx={18} ry={14} />)}
 
         {/* Joelho E */}
-        {renderZone("joelho_e", <ellipse cx={203} cy={282} rx={16} ry={12} />)}
+        {renderZone("joelho_e", <ellipse cx={230} cy={378} rx={18} ry={14} />)}
 
         {/* ══ Quantity badges ══ */}
         {applications.length > 0 && BODY_ZONES.map(z => {
@@ -225,22 +225,22 @@ export function BodyZoneDiagram({
 }
 
 const BODY_BADGE_POS: Record<string, { x: number; y: number }> = {
-  face:       { x: 170, y: 16 },
-  pescoco:    { x: 170, y: 50 },
-  colo:       { x: 170, y: 92 },
-  braco_d:    { x: 45,  y: 108 },
-  braco_e:    { x: 295, y: 108 },
-  antebraco_d:{ x: 32,  y: 162 },
-  antebraco_e:{ x: 308, y: 162 },
-  mao_d:      { x: 42,  y: 218 },
-  mao_e:      { x: 298, y: 218 },
-  abdomen:    { x: 170, y: 180 },
-  flancos:    { x: 235, y: 145 },
-  costas:     { x: 170, y: 112 },
-  gluteo_d:   { x: 130, y: 188 },
-  gluteo_e:   { x: 210, y: 188 },
-  coxa_d:     { x: 118, y: 240 },
-  coxa_e:     { x: 222, y: 240 },
-  joelho_d:   { x: 120, y: 282 },
-  joelho_e:   { x: 220, y: 282 },
+  face:       { x: 190, y: 30 },
+  pescoco:    { x: 190, y: 74 },
+  colo:       { x: 190, y: 125 },
+  braco_d:    { x: 50,  y: 142 },
+  braco_e:    { x: 330, y: 142 },
+  antebraco_d:{ x: 36,  y: 212 },
+  antebraco_e:{ x: 344, y: 212 },
+  mao_d:      { x: 44,  y: 280 },
+  mao_e:      { x: 336, y: 280 },
+  abdomen:    { x: 190, y: 240 },
+  flancos:    { x: 262, y: 195 },
+  costas:     { x: 190, y: 147 },
+  gluteo_d:   { x: 142, y: 252 },
+  gluteo_e:   { x: 238, y: 252 },
+  coxa_d:     { x: 126, y: 328 },
+  coxa_e:     { x: 254, y: 328 },
+  joelho_d:   { x: 132, y: 378 },
+  joelho_e:   { x: 248, y: 378 },
 };

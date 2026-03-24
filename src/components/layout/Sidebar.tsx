@@ -59,6 +59,7 @@ import {
   Plus,
   Bot,
   Gem,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -533,6 +534,8 @@ function SidebarContent({
   const { enabled: simpleModeEnabled } = useSimpleMode(profile?.tenant_id);
   const navRef = useRef<HTMLElement>(null);
   const isRestoringScroll = useRef(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(() => {
     const saved = loadOpenCategories();
@@ -632,20 +635,26 @@ function SidebarContent({
       {/* Search */}
       {!isCollapsed && (
         <div className="px-3 pt-3 pb-1">
-          <button
-            type="button"
-            onClick={() => {
-              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true });
-              document.dispatchEvent(event);
-            }}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/60 transition-all hover:border-white/30 hover:bg-white/15"
-          >
-            <Search className="h-4 w-4" />
-            <span className="flex-1 text-left">Buscar...</span>
-            <kbd className="hidden rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-medium text-white/50 sm:inline-block">
-              ⌘K
-            </kbd>
-          </button>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar menu..."
+              className="w-full rounded-lg border border-white/20 bg-white/10 pl-9 pr-8 py-2 text-sm text-white placeholder:text-white/50 outline-none transition-all focus:border-white/40 focus:bg-white/15 focus:ring-1 focus:ring-white/20"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/80"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -687,10 +696,15 @@ function SidebarContent({
           const accessibleItems: NavItem[] = [];
           const lockedItems: NavItem[] = [];
           
+          const sq = searchQuery.trim().toLowerCase();
+          
           category.items.forEach((item) => {
             if (item.staffOnly && isAdmin) return;
             if (!item.staffOnly && !isAdmin && item.resource && !can(item.resource, 'view')) return;
             if (simpleModeEnabled && item.href === "/auditoria") return;
+            
+            // Filtrar pela busca
+            if (sq && !item.title.toLowerCase().includes(sq) && !category.label.toLowerCase().includes(sq)) return;
             
             if (item.requiredFeature && !hasFeature(item.requiredFeature)) {
               lockedItems.push(item);
@@ -714,7 +728,7 @@ function SidebarContent({
               filteredItems={accessibleItems}
               lockedItems={lockedItems}
               isCollapsed={isCollapsed}
-              isOpen={openCategories[category.label] ?? true}
+              isOpen={sq ? true : (openCategories[category.label] ?? true)}
               onToggle={() => toggleCategory(category.label)}
               location={location}
               onNavigate={onNavigate}
