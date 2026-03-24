@@ -147,6 +147,7 @@ export function BodyZoneDiagram({
 
         {/* Pescoço */}
         {renderZone("pescoco", <rect x={173} y={76} width={34} height={16} rx={6} />)}
+        {!compact && <text x={190} y={88} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Pescoço</text>}
 
         {/* Colo */}
         {renderZone("colo", <ellipse cx={190} cy={108} rx={48} ry={14} />)}
@@ -156,25 +157,33 @@ export function BodyZoneDiagram({
         {renderZone("costas", <rect x={164} y={124} width={52} height={20} rx={7} />)}
         {!compact && <text x={190} y={138} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">Costas</text>}
 
-        {/* Braço D (direito da pessoa = esquerda na tela) */}
+        {/* Braço Dir. (direito da pessoa = esquerda na tela) */}
         {renderZone("braco_d", <rect x={62} y={125} width={30} height={60} rx={12} transform="rotate(10,77,155)" />)}
-        {!compact && <text x={68} y={158} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">BrD</text>}
+        {!compact && <text x={68} y={152} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Braço</text>}
+        {!compact && <text x={68} y={162} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Dir.</text>}
 
-        {/* Braço E */}
+        {/* Braço Esq. */}
         {renderZone("braco_e", <rect x={288} y={125} width={30} height={60} rx={12} transform="rotate(-10,303,155)" />)}
-        {!compact && <text x={312} y={158} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">BrE</text>}
+        {!compact && <text x={312} y={152} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Braço</text>}
+        {!compact && <text x={312} y={162} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Esq.</text>}
 
-        {/* Antebraço D */}
+        {/* Antebraço Dir. */}
         {renderZone("antebraco_d", <rect x={42} y={195} width={24} height={48} rx={9} transform="rotate(5,54,219)" />)}
+        {!compact && <text x={54} y={216} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Antebr.</text>}
+        {!compact && <text x={54} y={225} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Dir.</text>}
 
-        {/* Antebraço E */}
+        {/* Antebraço Esq. */}
         {renderZone("antebraco_e", <rect x={314} y={195} width={24} height={48} rx={9} transform="rotate(-5,326,219)" />)}
+        {!compact && <text x={326} y={216} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Antebr.</text>}
+        {!compact && <text x={326} y={225} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Esq.</text>}
 
-        {/* Mão D */}
+        {/* Mão Dir. */}
         {renderZone("mao_d", <ellipse cx={44} cy={260} rx={16} ry={14} />)}
+        {!compact && <text x={44} y={263} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Mão D</text>}
 
-        {/* Mão E */}
+        {/* Mão Esq. */}
         {renderZone("mao_e", <ellipse cx={336} cy={260} rx={16} ry={14} />)}
+        {!compact && <text x={336} y={263} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Mão E</text>}
 
         {/* Abdômen */}
         {renderZone("abdomen", <ellipse cx={190} cy={195} rx={44} ry={42} />)}
@@ -185,26 +194,38 @@ export function BodyZoneDiagram({
           <ellipse cx={132} cy={195} rx={16} ry={32} />
           <ellipse cx={248} cy={195} rx={16} ry={32} />
         </>)}
+        {!compact && <text x={132} y={199} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Flanco</text>}
+        {!compact && <text x={248} y={199} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Flanco</text>}
 
-        {/* Glúteo D */}
+        {/* Glúteo Dir. */}
         {renderZone("gluteo_d", <ellipse cx={164} cy={255} rx={24} ry={16} />)}
+        {!compact && <text x={164} y={253} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Glúteo</text>}
+        {!compact && <text x={164} y={262} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Dir.</text>}
 
-        {/* Glúteo E */}
+        {/* Glúteo Esq. */}
         {renderZone("gluteo_e", <ellipse cx={216} cy={255} rx={24} ry={16} />)}
+        {!compact && <text x={216} y={253} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Glúteo</text>}
+        {!compact && <text x={216} y={262} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Esq.</text>}
 
-        {/* Coxa D */}
+        {/* Coxa Dir. */}
         {renderZone("coxa_d", <rect x={132} y={285} width={36} height={76} rx={12} />)}
-        {!compact && <text x={150} y={328} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">CxD</text>}
+        {!compact && <text x={150} y={322} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Coxa</text>}
+        {!compact && <text x={150} y={332} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Dir.</text>}
 
-        {/* Coxa E */}
+        {/* Coxa Esq. */}
         {renderZone("coxa_e", <rect x={212} y={285} width={36} height={76} rx={12} />)}
-        {!compact && <text x={230} y={328} textAnchor="middle" fontSize="9" fill="#374151" fontWeight="600" pointerEvents="none">CxE</text>}
+        {!compact && <text x={230} y={322} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Coxa</text>}
+        {!compact && <text x={230} y={332} textAnchor="middle" fontSize="8" fill="#374151" fontWeight="600" pointerEvents="none">Esq.</text>}
 
-        {/* Joelho D */}
+        {/* Joelho Dir. */}
         {renderZone("joelho_d", <ellipse cx={150} cy={378} rx={18} ry={14} />)}
+        {!compact && <text x={150} y={376} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Joelho</text>}
+        {!compact && <text x={150} y={385} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Dir.</text>}
 
-        {/* Joelho E */}
+        {/* Joelho Esq. */}
         {renderZone("joelho_e", <ellipse cx={230} cy={378} rx={18} ry={14} />)}
+        {!compact && <text x={230} y={376} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Joelho</text>}
+        {!compact && <text x={230} y={385} textAnchor="middle" fontSize="7" fill="#374151" fontWeight="600" pointerEvents="none">Esq.</text>}
 
         {/* ══ Quantity badges ══ */}
         {applications.length > 0 && BODY_ZONES.map(z => {
