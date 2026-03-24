@@ -128,10 +128,10 @@ self.addEventListener('notificationclose', (event) => {
 });
 
 // Cache para modo offline (PWA)
-const CACHE_NAME = 'clinicnest-v1';
+// Incrementar a versão a cada deploy para forçar atualização
+const CACHE_VERSION = Date.now();
+const CACHE_NAME = `clinicnest-v${CACHE_VERSION}`;
 const OFFLINE_URLS = [
-  '/',
-  '/index.html',
   '/offline.html',
 ];
 
@@ -173,10 +173,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navegação (HTML) → sempre rede, nunca cachear index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/offline.html').then((r) => r || new Response('Offline', { status: 503 }));
+      })
+    );
+    return;
+  }
+
+  // Assets estáticos (JS/CSS/imagens) → network-first com cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Cachear resposta válida
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -186,14 +196,9 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => {
-        // Fallback para cache
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
-          }
-          // Página offline para navegação
-          if (event.request.mode === 'navigate') {
-            return caches.match('/offline.html');
           }
           return new Response('Offline', { status: 503 });
         });
