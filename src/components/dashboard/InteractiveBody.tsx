@@ -1,6 +1,6 @@
 import { useState, useCallback, memo } from "react";
 import { cn } from "@/lib/utils";
-import { Focus, Layers, RotateCcw, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Focus, Layers, RotateCcw, X } from "lucide-react";
 
 /* ─── Body pin / point data ─── */
 interface BodyPin {
@@ -10,22 +10,78 @@ interface BodyPin {
   emoji: string;
   description: string;
   specialties: string[];
-  /** Position over the anatomical figure — percentage-based */
   top: string;
   left: string;
-  /** Tooltip card anchor direction */
   cardSide: "left" | "right";
 }
 
-/** Pins mapped on the anatomical figure */
-const BODY_PINS: BodyPin[] = [
-  { id: "head", label: "Neurológico", value: "Normal", emoji: "🧠", description: "Funções cognitivas, cefaleias, enxaquecas.", specialties: ["Neurologia"], top: "6%", left: "50%", cardSide: "right" },
-  { id: "chest", label: "Freq. Cardíaca", value: "72 bpm", emoji: "🫀", description: "Ritmo cardíaco, dores torácicas, arritmias.", specialties: ["Cardiologia", "Pneumologia"], top: "28%", left: "44%", cardSide: "left" },
-  { id: "lungs", label: "Respiratório", value: "SpO₂ 98%", emoji: "🫁", description: "Capacidade pulmonar, asma, bronquite.", specialties: ["Pneumologia"], top: "28%", left: "56%", cardSide: "right" },
-  { id: "abdomen", label: "Digestivo", value: "Normal", emoji: "🩺", description: "Aparelho digestivo, fígado, estômago.", specialties: ["Gastroenterologia"], top: "43%", left: "50%", cardSide: "right" },
-  { id: "pelvis", label: "Urológico", value: "Normal", emoji: "💧", description: "Sistema urinário, rins, bexiga.", specialties: ["Urologia", "Nefrologia"], top: "54%", left: "50%", cardSide: "left" },
-  { id: "knee-l", label: "Joelho Esq.", value: "Sem dor", emoji: "🦴", description: "Articulação, menisco, ligamentos.", specialties: ["Ortopedia"], top: "72%", left: "42%", cardSide: "left" },
-  { id: "knee-r", label: "Joelho Dir.", value: "Sem dor", emoji: "🦴", description: "Articulação, menisco, ligamentos.", specialties: ["Ortopedia"], top: "72%", left: "58%", cardSide: "right" },
+/* ─── View system — each view has its own image + pins ─── */
+interface BodyView {
+  id: string;
+  label: string;
+  /** Image path — swap when real PNGs arrive */
+  image: string;
+  /** CSS transform applied to the image (e.g. mirror for back) */
+  imageTransform?: string;
+  pins: BodyPin[];
+}
+
+const VIEWS: BodyView[] = [
+  {
+    id: "anterior",
+    label: "Vista Anterior",
+    image: "/MAPA-CORPORAL.png",
+    pins: [
+      { id: "head", label: "Neurológico", value: "Normal", emoji: "🧠", description: "Funções cognitivas, cefaleias, enxaquecas.", specialties: ["Neurologia"], top: "6%", left: "50%", cardSide: "right" },
+      { id: "chest", label: "Freq. Cardíaca", value: "72 bpm", emoji: "🫀", description: "Ritmo cardíaco, dores torácicas, arritmias.", specialties: ["Cardiologia", "Pneumologia"], top: "28%", left: "44%", cardSide: "left" },
+      { id: "lungs", label: "Respiratório", value: "SpO₂ 98%", emoji: "🫁", description: "Capacidade pulmonar, asma, bronquite.", specialties: ["Pneumologia"], top: "28%", left: "56%", cardSide: "right" },
+      { id: "abdomen", label: "Digestivo", value: "Normal", emoji: "🩺", description: "Aparelho digestivo, fígado, estômago.", specialties: ["Gastroenterologia"], top: "43%", left: "50%", cardSide: "right" },
+      { id: "pelvis", label: "Urológico", value: "Normal", emoji: "💧", description: "Sistema urinário, rins, bexiga.", specialties: ["Urologia", "Nefrologia"], top: "54%", left: "50%", cardSide: "left" },
+      { id: "knee-l", label: "Joelho Esq.", value: "Sem dor", emoji: "🦴", description: "Articulação, menisco, ligamentos.", specialties: ["Ortopedia"], top: "72%", left: "42%", cardSide: "left" },
+      { id: "knee-r", label: "Joelho Dir.", value: "Sem dor", emoji: "🦴", description: "Articulação, menisco, ligamentos.", specialties: ["Ortopedia"], top: "72%", left: "58%", cardSide: "right" },
+    ],
+  },
+  {
+    id: "posterior",
+    label: "Vista Posterior",
+    image: "/MAPA-CORPORAL.png",
+    imageTransform: "scaleX(-1)",
+    pins: [
+      { id: "cervical", label: "Cervical", value: "Normal", emoji: "🦴", description: "Vértebras cervicais, tensão muscular, hérnia.", specialties: ["Ortopedia", "Neurologia"], top: "12%", left: "50%", cardSide: "right" },
+      { id: "trapezio", label: "Trapézio", value: "Tensão leve", emoji: "💪", description: "Musculatura do trapézio, contraturas, dor.", specialties: ["Ortopedia", "Fisioterapia"], top: "22%", left: "38%", cardSide: "left" },
+      { id: "escapula", label: "Escápula", value: "Normal", emoji: "🦴", description: "Região escapular, mobilidade, dor referida.", specialties: ["Ortopedia"], top: "26%", left: "60%", cardSide: "right" },
+      { id: "coluna", label: "Coluna Torácica", value: "Normal", emoji: "🦴", description: "Vértebras torácicas, postura, escoliose.", specialties: ["Ortopedia", "Reumatologia"], top: "34%", left: "50%", cardSide: "left" },
+      { id: "lombar", label: "Lombar", value: "Dor crônica", emoji: "⚠️", description: "Região lombar, hérnia de disco, lombalgia.", specialties: ["Ortopedia", "Neurologia"], top: "46%", left: "50%", cardSide: "right" },
+      { id: "gluteo", label: "Glúteo", value: "Normal", emoji: "💪", description: "Musculatura glútea, ciática, bursite.", specialties: ["Ortopedia", "Fisioterapia"], top: "56%", left: "50%", cardSide: "left" },
+      { id: "panturrilha", label: "Panturrilha", value: "Sem dor", emoji: "🦵", description: "Musculatura posterior da perna, câimbras.", specialties: ["Ortopedia", "Angiologia"], top: "78%", left: "44%", cardSide: "left" },
+    ],
+  },
+  {
+    id: "lateral-dir",
+    label: "Lateral Direita",
+    image: "/MAPA-CORPORAL.png",
+    imageTransform: "perspective(600px) rotateY(-25deg)",
+    pins: [
+      { id: "temporal", label: "Temporal", value: "Normal", emoji: "🧠", description: "Região temporal, cefaleia tensional.", specialties: ["Neurologia"], top: "8%", left: "48%", cardSide: "right" },
+      { id: "ombro-dir", label: "Ombro Dir.", value: "Normal", emoji: "🦴", description: "Articulação do ombro, manguito rotador.", specialties: ["Ortopedia"], top: "22%", left: "34%", cardSide: "left" },
+      { id: "cotovelo-dir", label: "Cotovelo Dir.", value: "Normal", emoji: "🦴", description: "Epicondilite, bursite, mobilidade.", specialties: ["Ortopedia"], top: "38%", left: "30%", cardSide: "left" },
+      { id: "quadril-dir", label: "Quadril Dir.", value: "Normal", emoji: "🦴", description: "Articulação coxofemoral, artrose.", specialties: ["Ortopedia", "Reumatologia"], top: "52%", left: "46%", cardSide: "right" },
+      { id: "tornozelo-dir", label: "Tornozelo Dir.", value: "Sem dor", emoji: "🦶", description: "Entorse, tendinite, mobilidade articular.", specialties: ["Ortopedia"], top: "88%", left: "48%", cardSide: "right" },
+    ],
+  },
+  {
+    id: "lateral-esq",
+    label: "Lateral Esquerda",
+    image: "/MAPA-CORPORAL.png",
+    imageTransform: "perspective(600px) rotateY(25deg)",
+    pins: [
+      { id: "temporal-e", label: "Temporal", value: "Normal", emoji: "🧠", description: "Região temporal, cefaleia tensional.", specialties: ["Neurologia"], top: "8%", left: "52%", cardSide: "left" },
+      { id: "ombro-esq", label: "Ombro Esq.", value: "Normal", emoji: "🦴", description: "Articulação do ombro, manguito rotador.", specialties: ["Ortopedia"], top: "22%", left: "66%", cardSide: "right" },
+      { id: "cotovelo-esq", label: "Cotovelo Esq.", value: "Normal", emoji: "🦴", description: "Epicondilite, bursite, mobilidade.", specialties: ["Ortopedia"], top: "38%", left: "70%", cardSide: "right" },
+      { id: "quadril-esq", label: "Quadril Esq.", value: "Normal", emoji: "🦴", description: "Articulação coxofemoral, artrose.", specialties: ["Ortopedia", "Reumatologia"], top: "52%", left: "54%", cardSide: "left" },
+      { id: "tornozelo-esq", label: "Tornozelo Esq.", value: "Sem dor", emoji: "🦶", description: "Entorse, tendinite, mobilidade articular.", specialties: ["Ortopedia"], top: "88%", left: "52%", cardSide: "left" },
+    ],
+  },
 ];
 
 /** Layer thumbnails for the bottom gallery */
@@ -43,26 +99,43 @@ const LAYERS: LayerOption[] = [
   { id: "skeleton", label: "Esqueleto", emoji: "🦴", gradient: "from-slate-300 to-slate-500" },
 ];
 
+/** Rotation angles per view index for the CSS 3D transition */
+const VIEW_ANGLES = [0, 180, 270, 90];
+
 export const InteractiveBody = memo(function InteractiveBody() {
   const [selectedPin, setSelectedPin] = useState<BodyPin | null>(null);
   const [hoveredPin, setHoveredPin] = useState<string | null>(null);
   const [activeLayer, setActiveLayer] = useState<BodyLayer>("skin");
+  const [viewIndex, setViewIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const currentView = VIEWS[viewIndex];
+
+  const rotateView = useCallback((direction: 1 | -1) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setSelectedPin(null);
+    setHoveredPin(null);
+    setViewIndex(prev => (prev + direction + VIEWS.length) % VIEWS.length);
+    setTimeout(() => setIsTransitioning(false), 500);
+  }, [isTransitioning]);
 
   const resetView = useCallback(() => {
     setSelectedPin(null);
     setHoveredPin(null);
+    setViewIndex(0);
   }, []);
 
-  const activePinForCard = selectedPin ?? (hoveredPin ? BODY_PINS.find(p => p.id === hoveredPin) : null);
+  const activePinForCard = selectedPin ?? (hoveredPin ? currentView.pins.find(p => p.id === hoveredPin) : null);
 
   return (
     <div className="relative flex flex-col h-full rounded-2xl overflow-hidden">
       {/* Header bar */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1 z-10">
         <div>
-          <h3 className="text-sm font-bold text-foreground tracking-tight">Mapa Corporal</h3>
+          <h3 className="text-sm font-bold text-foreground tracking-tight">Mapa Corporal 360°</h3>
           <p className="text-[10px] text-muted-foreground/70">
-            Vista anterior · Clique nos pontos
+            {currentView.label} · Clique nos pontos
           </p>
         </div>
         <button
@@ -76,34 +149,93 @@ export const InteractiveBody = memo(function InteractiveBody() {
         </button>
       </div>
 
+      {/* View indicator dots */}
+      <div className="flex items-center justify-center gap-1.5 pb-1 z-10">
+        {VIEWS.map((v, i) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => { if (!isTransitioning) { setIsTransitioning(true); setSelectedPin(null); setHoveredPin(null); setViewIndex(i); setTimeout(() => setIsTransitioning(false), 500); }}}
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === viewIndex
+                ? "w-4 bg-blue-500"
+                : "w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50",
+            )}
+            title={v.label}
+          />
+        ))}
+      </div>
+
       {/* Main viewport */}
       <div className="relative flex-1 min-h-0">
-        {/* PNG Body Image — no background */}
-        <div className="absolute inset-0 flex items-center justify-center select-none">
-          <img
-            src="/MAPA-CORPORAL.png"
-            alt="Mapa Corporal"
-            className="h-[94%] w-auto max-w-full object-contain pointer-events-none"
-            draggable={false}
+        {/* 3D Perspective Container */}
+        <div className="absolute inset-0" style={{ perspective: "1200px" }}>
+          {/* Rotating body image */}
+          <div
+            className="absolute inset-0 flex items-center justify-center select-none"
             style={{
-              filter:
-                activeLayer === "muscle" ? "saturate(1.3) contrast(1.05)"
-                : activeLayer === "organs" ? "hue-rotate(-10deg) saturate(1.2)"
-                : activeLayer === "skeleton" ? "saturate(0.35) contrast(1.2)"
-                : undefined,
-              transition: "filter 0.3s ease",
+              transform: `rotateY(${VIEW_ANGLES[viewIndex]}deg)`,
+              transition: "transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+              transformStyle: "preserve-3d",
+              backfaceVisibility: "hidden",
+            }}
+          >
+            <img
+              src={currentView.image}
+              alt={currentView.label}
+              className="h-[94%] w-auto max-w-full object-contain pointer-events-none"
+              draggable={false}
+              style={{
+                transform: currentView.imageTransform || undefined,
+                filter:
+                  activeLayer === "muscle" ? "saturate(1.3) contrast(1.05)"
+                  : activeLayer === "organs" ? "hue-rotate(-10deg) saturate(1.2)"
+                  : activeLayer === "skeleton" ? "saturate(0.35) contrast(1.2)"
+                  : undefined,
+                transition: "filter 0.3s ease",
+              }}
+            />
+          </div>
+
+          {/* Fade overlay for smooth view transitions */}
+          <div
+            className="absolute inset-0 bg-background/80 pointer-events-none z-[5]"
+            style={{
+              opacity: isTransitioning ? 1 : 0,
+              transition: "opacity 0.25s ease",
             }}
           />
         </div>
 
+        {/* Rotation Arrow — LEFT */}
+        <button
+          type="button"
+          onClick={() => rotateView(-1)}
+          className="absolute left-1 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/50 dark:border-slate-700/50 shadow-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 dark:hover:text-blue-400 transition-all active:scale-90"
+          title="Girar para esquerda"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+
+        {/* Rotation Arrow — RIGHT */}
+        <button
+          type="button"
+          onClick={() => rotateView(1)}
+          className="absolute right-12 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/50 dark:border-slate-700/50 shadow-lg text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 dark:hover:text-blue-400 transition-all active:scale-90"
+          title="Girar para direita"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+
         {/* Pulsing Blue Pins */}
-        {BODY_PINS.map((pin) => {
+        {!isTransitioning && currentView.pins.map((pin) => {
           const isActive = activePinForCard?.id === pin.id;
           return (
             <button
               key={pin.id}
               type="button"
-              className="absolute z-10 -translate-x-1/2 -translate-y-1/2 group"
+              className="absolute z-10 -translate-x-1/2 -translate-y-1/2 group animate-in fade-in duration-300"
               style={{ top: pin.top, left: pin.left }}
               onClick={() => setSelectedPin(isActive && selectedPin?.id === pin.id ? null : pin)}
               onMouseEnter={() => setHoveredPin(pin.id)}
@@ -123,7 +255,7 @@ export const InteractiveBody = memo(function InteractiveBody() {
         })}
 
         {/* Floating Tooltip Card */}
-        {activePinForCard && (() => {
+        {!isTransitioning && activePinForCard && (() => {
           const pin = activePinForCard;
           const pinTopNum = parseFloat(pin.top);
           const pinLeftNum = parseFloat(pin.left);
