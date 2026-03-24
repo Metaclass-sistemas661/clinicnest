@@ -13,12 +13,6 @@ import type {
   ProfessionalWithSalaryRow,
   PaySalaryResult,
   GoalWithProgressRow,
-  CreateWalkinOrderResult,
-  CreateOrderForAppointmentResult,
-  AddOrderItemResult,
-  RemoveOrderItemResult,
-  SetOrderDiscountResult,
-  FinalizeOrderResult,
   OpenCashSessionResult,
   AddCashMovementResult,
   CashSessionSummaryResult,
@@ -573,92 +567,6 @@ export type SecurityDiagnosticsV1 = {
 
 export async function getSecurityDiagnosticsV1(): Promise<{ data: SecurityDiagnosticsV1 | null; error: unknown }> {
   return rpc<SecurityDiagnosticsV1>("get_security_diagnostics_v1");
-}
-
-// ─── Orders / Checkout RPCs ──────────────────────────────────
-
-/**
- * Cria comanda/pedido avulso (walk-in, sem agendamento prévio).
- * @param params.p_client_id - UUID do paciente (opcional)
- * @param params.p_professional_id - UUID do profissional (opcional)
- * @returns ID do pedido criado
- */
-export async function createWalkinOrderV1(params: {
-  p_client_id?: string | null;
-  p_professional_id?: string | null;
-  p_notes?: string | null;
-}): Promise<{ data: CreateWalkinOrderResult | null; error: unknown }> {
-  return rpc<CreateWalkinOrderResult>("create_walkin_order_v1", params as Record<string, unknown>);
-}
-
-/**
- * Cria comanda vinculada a um agendamento existente.
- * Herda paciente, profissional e procedimento do agendamento.
- * @param params.p_appointment_id - UUID do agendamento
- */
-export async function createOrderForAppointmentV1(params: {
-  p_appointment_id: string;
-}): Promise<{ data: CreateOrderForAppointmentResult | null; error: unknown }> {
-  return rpc<CreateOrderForAppointmentResult>("create_order_for_appointment_v1", params as Record<string, unknown>);
-}
-
-/**
- * Adiciona item (procedimento ou produto) a um pedido aberto.
- * @param params.p_order_id - UUID do pedido
- * @param params.p_kind - 'service' | 'product'
- * @param params.p_unit_price - Preço unitário
- * @param params.p_quantity - Quantidade (default: 1)
- */
-export async function addOrderItemV1(params: {
-  p_order_id: string;
-  p_kind: "service" | "product";
-  p_service_id?: string | null;
-  p_product_id?: string | null;
-  p_quantity?: number;
-  p_unit_price: number;
-  p_professional_id?: string | null;
-}): Promise<{ data: AddOrderItemResult | null; error: unknown }> {
-  return rpc<AddOrderItemResult>("add_order_item_v1", params as Record<string, unknown>);
-}
-
-/**
- * Remove item de um pedido aberto.
- * @param params.p_order_item_id - UUID do item
- */
-export async function removeOrderItemV1(params: {
-  p_order_item_id: string;
-}): Promise<{ data: RemoveOrderItemResult | null; error: unknown }> {
-  return rpc<RemoveOrderItemResult>("remove_order_item_v1", params as Record<string, unknown>);
-}
-
-/**
- * Aplica desconto fixo ao pedido.
- * @param params.p_order_id - UUID do pedido
- * @param params.p_discount_amount - Valor absoluto do desconto em BRL
- */
-export async function setOrderDiscountV1(params: {
-  p_order_id: string;
-  p_discount_amount: number;
-}): Promise<{ data: SetOrderDiscountResult | null; error: unknown }> {
-  return rpc<SetOrderDiscountResult>("set_order_discount_v1", params as Record<string, unknown>);
-}
-
-export type FinalizePaymentInput = {
-  payment_method_id: string;
-  amount: number;
-};
-
-/**
- * Finaliza pedido com pagamento(s). Aceita split de pagamento (múltiplos métodos).
- * Gera transações financeiras, baixa estoque, calcula comissões.
- * @param params.p_order_id - UUID do pedido
- * @param params.p_payments - Array de {payment_method_id, amount}
- */
-export async function finalizeOrderV1(params: {
-  p_order_id: string;
-  p_payments: FinalizePaymentInput[];
-}): Promise<{ data: FinalizeOrderResult | null; error: unknown }> {
-  return rpc<FinalizeOrderResult>("finalize_order_v1", params as Record<string, unknown>);
 }
 
 // ─── Cash Register / Caixa RPCs ─────────────────────────────

@@ -21,16 +21,6 @@ export const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
   default: "bg-muted text-muted-foreground border-border",
 };
 
-/** Order/comanda status → semantic classes */
-export const ORDER_STATUS_COLORS: Record<string, string> = {
-  draft: "bg-muted text-muted-foreground",
-  open: "bg-info/10 text-info",
-  paid: "bg-success/10 text-success",
-  cancelled: "bg-destructive/10 text-destructive",
-  refunded: "bg-warning/10 text-warning",
-  default: "bg-muted text-muted-foreground",
-};
-
 /** Generic priority → semantic classes */
 export const PRIORITY_COLORS: Record<string, string> = {
   high: "bg-destructive/10 text-destructive border-destructive/20",

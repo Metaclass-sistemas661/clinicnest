@@ -76,41 +76,6 @@ export interface DashboardCommissionTotals {
   paid?: number;
 }
 
-// ─── Orders / Checkout RPC results ──────────────────────────
-
-export interface CreateWalkinOrderResult {
-  success: boolean;
-  order_id: string;
-  appointment_id: string;
-}
-
-export interface CreateOrderForAppointmentResult {
-  success: boolean;
-  order_id: string;
-}
-
-export interface AddOrderItemResult {
-  success: boolean;
-  item_id: string;
-  subtotal: number;
-}
-
-export interface RemoveOrderItemResult {
-  success: boolean;
-  subtotal: number;
-}
-
-export interface SetOrderDiscountResult {
-  success: boolean;
-  total_amount: number;
-}
-
-export interface FinalizeOrderResult {
-  success: boolean;
-  order_id: string;
-  status: string;
-}
-
 // ─── Cash Register / Caixa RPC results ──────────────────────
 
 export interface OpenCashSessionResult {
