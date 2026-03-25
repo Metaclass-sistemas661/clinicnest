@@ -33,6 +33,7 @@ export default function PatientConsentSigning() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [varsData, setVarsData] = useState<ConsentVariablesData>({});
 
@@ -47,6 +48,8 @@ export default function PatientConsentSigning() {
     try {
       const { data: { user } } = await supabasePatient.auth.getUser();
       if (!user) return null;
+
+      setAuthUserId(user.id);
 
       const email = user.email;
       if (!email) return null;
@@ -134,8 +137,9 @@ export default function PatientConsentSigning() {
       let manualSignaturePath: string | null = null;
 
       if (signatureMethod === "facial" && capturedBlob) {
-        // Upload facial photo
-        const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.jpg`;
+        // Upload facial photo — use auth user ID as folder (matches RLS policy)
+        const storageFolder = authUserId || patientId;
+        const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.jpg`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
@@ -151,7 +155,8 @@ export default function PatientConsentSigning() {
         // Convert data URL to blob and upload
         const res = await fetch(manualSignatureDataUrl);
         const blob = await res.blob();
-        const fileName = `${patientId}/${currentTemplate.id}_${Date.now()}.png`;
+        const storageFolder = authUserId || patientId;
+        const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.png`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });

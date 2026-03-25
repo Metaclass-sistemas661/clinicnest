@@ -142,8 +142,15 @@ export default function AssinarTermosPublico() {
 
     setIsSigning(true);
     try {
+      // Determine storage folder: use auth.uid() if authenticated (matches RLS policy)
+      let storageFolder = tokenData.client.id;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) storageFolder = user.id;
+      } catch { /* anon — keep client.id */ }
+
       // 1) Upload facial photo
-      const fileName = `${tokenData.client.id}/${currentTemplate.id}_${Date.now()}.jpg`;
+      const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from("consent-photos")
         .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
