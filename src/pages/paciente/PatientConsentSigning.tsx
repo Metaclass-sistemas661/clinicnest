@@ -133,13 +133,25 @@ export default function PatientConsentSigning() {
 
     setIsSigning(true);
     try {
+      // Resolve auth user ID at sign time (state may lag on mount)
+      let resolvedAuthId = authUserId;
+      if (!resolvedAuthId) {
+        const { data: { user: freshUser } } = await supabasePatient.auth.getUser();
+        resolvedAuthId = freshUser?.id ?? null;
+        if (resolvedAuthId) setAuthUserId(resolvedAuthId);
+      }
+      if (!resolvedAuthId) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        setIsSigning(false);
+        return;
+      }
+
       let facialPhotoPath: string | null = null;
       let manualSignaturePath: string | null = null;
 
       if (signatureMethod === "facial" && capturedBlob) {
         // Upload facial photo — use auth user ID as folder (matches RLS policy)
-        const storageFolder = authUserId || patientId;
-        const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.jpg`;
+        const fileName = `${resolvedAuthId}/${currentTemplate.id}_${Date.now()}.jpg`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
@@ -155,8 +167,7 @@ export default function PatientConsentSigning() {
         // Convert data URL to blob and upload
         const res = await fetch(manualSignatureDataUrl);
         const blob = await res.blob();
-        const storageFolder = authUserId || patientId;
-        const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.png`;
+        const fileName = `${resolvedAuthId}/${currentTemplate.id}_${Date.now()}.png`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });
