@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Bell, ClipboardList, Pill, FileText, Check, CheckCheck } from "lucide-react";
+import { Bell, ClipboardList, Pill, FileText, Check, CheckCheck, FileSignature, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -23,6 +23,8 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
   certificate_released: ClipboardList,
   prescription_released: Pill,
   exam_released: FileText,
+  consent_pending: FileSignature,
+  consent_signed: ShieldCheck,
 };
 
 export function PatientNotificationsBell() {
