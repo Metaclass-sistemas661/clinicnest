@@ -144,6 +144,7 @@ serve(async (req) => {
     }
 
     // Fetch patient data
+    console.log(`[ai-summary] Looking up patient: ${resolvedClientId}, tenant: ${profile.tenant_id}`);
     const { data: client, error: clientError } = await adminClient
       .from("patients")
       .select(`
@@ -155,7 +156,6 @@ serve(async (req) => {
         phone,
         email,
         allergies,
-        chronic_conditions,
         blood_type,
         notes
       `)
@@ -164,6 +164,7 @@ serve(async (req) => {
       .single();
 
     if (clientError || !client) {
+      console.error(`[ai-summary] Patient query failed:`, JSON.stringify({ clientError, resolvedClientId, tenant: profile.tenant_id }));
       return new Response(JSON.stringify({ error: "Patient not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -177,7 +178,6 @@ serve(async (req) => {
       sexo: client.gender,
       tipo_sanguineo: client.blood_type,
       alergias: client.allergies || "Não informado",
-      condicoes_cronicas: client.chronic_conditions || "Não informado",
       observacoes: client.notes,
     };
 
