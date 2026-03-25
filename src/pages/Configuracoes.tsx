@@ -24,6 +24,7 @@ import {
   Shield,
   Plug,
   Layers,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -38,6 +39,7 @@ import { SmartConfirmationSettings } from "@/components/settings/SmartConfirmati
 const LazyGerenciarPermissoes = lazy(() => import("@/pages/GerenciarPermissoes"));
 const LazyIntegracoes = lazy(() => import("@/pages/Integracoes"));
 const LazyModulePanel = lazy(() => import("@/components/settings/ModulePanel"));
+const LazyHealthCredits = lazy(() => import("@/components/settings/HealthCreditsSettings"));
 
 export default function Configuracoes() {
   const { user, profile: _profile, tenant, isAdmin, refreshProfile } = useAuth();
@@ -249,6 +251,10 @@ export default function Configuracoes() {
           <TabsTrigger value="integracoes" className="gap-2">
             <Plug className="h-4 w-4" />
             Integrações
+          </TabsTrigger>
+          <TabsTrigger value="fidelidade" className="gap-2">
+            <Coins className="h-4 w-4" />
+            Fidelidade
           </TabsTrigger>
           <TabsTrigger value="modulos" className="gap-2">
             <Layers className="h-4 w-4" />
@@ -553,7 +559,16 @@ export default function Configuracoes() {
         </TabsContent>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            Tab 9 — Módulos
+            Tab 9 — Fidelidade / Créditos de Saúde
+        ═══════════════════════════════════════════════════════════════════ */}
+        <TabsContent value="fidelidade">
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
+            <LazyHealthCredits />
+          </Suspense>
+        </TabsContent>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            Tab 10 — Módulos
         ═══════════════════════════════════════════════════════════════════ */}
         <TabsContent value="modulos">
           <Suspense fallback={<div className="flex items-center justify-center py-12"><Spinner size="lg" /></div>}>
