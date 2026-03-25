@@ -115,7 +115,30 @@ export default function PatientDocumentos() {
         p_patient_id: pId,
       });
       if (error) throw error;
-      setConsents((data as ConsentRow[]) ?? []);
+      const rows = (data as ConsentRow[]) ?? [];
+      setConsents(rows);
+
+      // Auto-trigger seal for signed consents without PDF (fire & forget)
+      for (const c of rows) {
+        if (c.is_signed && c.consent_id && !c.sealed_pdf_path) {
+          supabasePatient.functions
+            .invoke("seal-consent-pdf", { body: { consent_id: c.consent_id } })
+            .then(({ error: sealErr }) => {
+              if (!sealErr) {
+                // Refresh to show updated PDF path
+                setConsents((prev) =>
+                  prev.map((p) =>
+                    p.consent_id === c.consent_id
+                      ? { ...p, sealed_pdf_path: "pending" }
+                      : p
+                  )
+                );
+              } else {
+                logger.warn("[PatientDocumentos] auto-seal failed:", c.consent_id, sealErr);
+              }
+            });
+        }
+      }
     } catch (err) {
       logger.error("PatientDocumentos fetchConsents:", err);
     } finally {
