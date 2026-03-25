@@ -28,10 +28,12 @@ const BANUBA_CDN = `https://cdn.jsdelivr.net/npm/@banuba/webar@${BANUBA_SDK_VERS
 const BANUBA_TOKEN = (import.meta.env.VITE_BANUBA_CLIENT_TOKEN as string) || "";
 
 const FACE_DETECT_TIMEOUT_MS = 8_000;
-/** Consecutive frames with face detected before auto-capture triggers */
-const AUTO_CAPTURE_DELAY_MS = 2_000;
+/** Time face must remain detected before auto-capture fires */
+const AUTO_CAPTURE_DELAY_MS = 2_500;
+/** Minimum time camera must be visible before auto-capture is allowed */
+const MIN_STREAMING_MS = 1_500;
 /** Simulated verification time after capture */
-const VERIFY_DURATION_MS = 2_000;
+const VERIFY_DURATION_MS = 1_800;
 
 let _sdkPromise: Promise<any | null> | null = null;
 
@@ -70,6 +72,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
   const fallbackActiveRef = useRef(false);
   const autoCaptureRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const captureTriggeredRef = useRef(false);
+  const streamingStartRef = useRef(0);
 
   const [phase, setPhase] = useState<"instructions" | "capture">("instructions");
   const [status, setStatus] = useState<
@@ -278,7 +281,11 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
 
     setBanubaActive(banubaOk);
     if (!banubaOk) {
+      // No face detection → don't auto-capture, show manual button
+      setFallbackActive(true);
+      fallbackActiveRef.current = true;
       setFaceDetected(true);
+      setInstruction(INSTRUCTIONS.fallback);
     } else {
       timeoutRef.current = setTimeout(() => {
         fallbackActiveRef.current = true;
@@ -286,6 +293,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
         setFaceDetected(true);
       }, FACE_DETECT_TIMEOUT_MS);
     }
+    streamingStartRef.current = Date.now();
     setStatus("streaming");
   }, []);
 
@@ -297,35 +305,43 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     }
   }, [faceDetected, fallbackActive]);
 
-  /* ── Auto-capture when face stays detected ──────────── */
+  /* ── Auto-capture when face stays detected (only with Banuba) ── */
   useEffect(() => {
     if (status !== "streaming") return;
+    // Only auto-capture when Banuba is active (real face detection)
+    if (!banubaActive || fallbackActive) return;
+    // Ensure camera has been streaming for a minimum duration
+    const elapsed = Date.now() - streamingStartRef.current;
+    if (elapsed < MIN_STREAMING_MS) {
+      const remaining = MIN_STREAMING_MS - elapsed;
+      const t = setTimeout(() => setInstruction((prev) => prev), remaining);
+      return () => clearTimeout(t);
+    }
 
     if (faceDetected && !captureTriggeredRef.current) {
       if (!autoCaptureRef.current) {
         setInstruction(INSTRUCTIONS.detected);
         setAutoCaptureCountdown(true);
         autoCaptureRef.current = setTimeout(() => {
+          if (captureTriggeredRef.current) return;
           captureTriggeredRef.current = true;
           setInstruction(INSTRUCTIONS.capturing);
-          // Small delay so user sees "Capturando..." message
-          setTimeout(() => capture(), 300);
+          setTimeout(() => capture(), 400);
         }, AUTO_CAPTURE_DELAY_MS);
       }
     } else if (!faceDetected) {
-      // Face lost — cancel auto-capture
       if (autoCaptureRef.current) {
         clearTimeout(autoCaptureRef.current);
         autoCaptureRef.current = null;
       }
       setAutoCaptureCountdown(false);
-      if (banubaActive && frameCountRef.current > 30) {
+      if (frameCountRef.current > 30) {
         setInstruction(INSTRUCTIONS.tooFar);
       } else {
         setInstruction(INSTRUCTIONS.noFace);
       }
     }
-  }, [faceDetected, status, banubaActive, capture]);
+  }, [faceDetected, status, banubaActive, fallbackActive, capture]);
 
   /* ── Retake ────────────────────────────────────────── */
   const retake = useCallback(() => {
@@ -549,17 +565,18 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
           </div>
         )}
 
-        {/* Fallback manual capture button — only when auto-capture timeout */}
-        {status === "streaming" && fallbackActive && !autoCaptureCountdown && (
-          <div className="absolute bottom-14 left-0 right-0 flex justify-center z-20">
+        {/* Manual capture button — shown when no Banuba or fallback timeout */}
+        {status === "streaming" && fallbackActive && (
+          <div className="absolute bottom-14 left-0 right-0 flex flex-col items-center gap-2 z-20">
             <button
               type="button"
               onClick={capture}
               disabled={disabled}
-              className="flex items-center justify-center h-14 w-14 rounded-full bg-white/90 shadow-lg active:scale-95 transition-all"
+              className="flex items-center justify-center h-16 w-16 rounded-full bg-white shadow-lg shadow-black/20 active:scale-95 transition-all ring-4 ring-white/30"
             >
-              <ScanFace className="h-6 w-6 text-teal-700" />
+              <ScanFace className="h-7 w-7 text-teal-700" />
             </button>
+            <p className="text-xs text-white/80 font-medium">Toque para capturar</p>
           </div>
         )}
 
