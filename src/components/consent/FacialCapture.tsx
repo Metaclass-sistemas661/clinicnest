@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   RefreshCw,
@@ -145,8 +145,8 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     const vw = video.videoWidth;
     const vh = video.videoHeight;
 
-    const cropW = Math.round(vw * 0.55);
-    const cropH = Math.round(vh * 0.85);
+    const cropW = Math.round(vw * 0.62);
+    const cropH = Math.round(vh * 0.88);
     const cropX = Math.round((vw - cropW) / 2);
     const cropY = Math.round((vh - cropH) / 2) - Math.round(vh * 0.02);
 
@@ -446,6 +446,25 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     );
   }
 
+  /* ── Dynamic oval sizing — animates to guide user ── */
+  const ovalScale = useMemo(() => {
+    const isVC = status === "verifying" || status === "captured";
+    if (isVC) return 1.0;
+    switch (instruction) {
+      case INSTRUCTIONS.noFace:
+      case INSTRUCTIONS.preparing:
+        return 1.1;
+      case INSTRUCTIONS.tooFar:
+        return 0.9;
+      case INSTRUCTIONS.tooClose:
+        return 1.18;
+      case INSTRUCTIONS.detected:
+      case INSTRUCTIONS.capturing:
+      default:
+        return 1.0;
+    }
+  }, [instruction, status]);
+
   /* ── Phase: Capture ─────────────────────────────────── */
   const isVerifyingOrCaptured = status === "verifying" || status === "captured";
 
@@ -472,14 +491,22 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
           />
         )}
 
-        {/* TEAL overlay with oval cutout — the key visual */}
+        {/* TEAL overlay with dynamic oval cutout */}
         {(status === "streaming" || isVerifyingOrCaptured) && (
           <div className="absolute inset-0 pointer-events-none z-10">
             <svg viewBox="0 0 300 400" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
               <defs>
                 <mask id="faceMask">
                   <rect width="300" height="400" fill="white" />
-                  <ellipse cx="150" cy="180" rx="90" ry="118" fill="black" />
+                  <ellipse
+                    cx="150" cy="180" rx="100" ry="130"
+                    fill="black"
+                    style={{
+                      transformOrigin: "150px 180px",
+                      transform: `scale(${ovalScale})`,
+                      transition: "transform 0.8s cubic-bezier(0.4,0,0.2,1)",
+                    }}
+                  />
                 </mask>
               </defs>
               {/* TEAL overlay outside the oval */}
@@ -488,49 +515,41 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
                 fill={isVerifyingOrCaptured ? "rgba(13,155,139,0.75)" : "rgba(13,155,139,0.85)"}
                 mask="url(#faceMask)"
               />
-              {/* Oval border — changes color based on state */}
+              {/* Oval border — dynamically resizes and changes color */}
               <ellipse
-                cx="150" cy="180" rx="90" ry="118"
+                cx="150" cy="180" rx="100" ry="130"
                 fill="none"
                 stroke={
                   isVerifyingOrCaptured
                     ? "#2dd4bf"
                     : faceDetected
                       ? autoCaptureCountdown ? "#2dd4bf" : "#5eead4"
-                      : "rgba(255,255,255,0.4)"
+                      : "rgba(255,255,255,0.5)"
                 }
-                strokeWidth={isVerifyingOrCaptured || (faceDetected && autoCaptureCountdown) ? "3.5" : "2"}
+                strokeWidth={isVerifyingOrCaptured || (faceDetected && autoCaptureCountdown) ? "3" : "2"}
                 strokeDasharray={faceDetected || isVerifyingOrCaptured ? "none" : "8 4"}
-                className="transition-all duration-500"
+                style={{
+                  transformOrigin: "150px 180px",
+                  transform: `scale(${ovalScale})`,
+                  transition: "all 0.8s cubic-bezier(0.4,0,0.2,1)",
+                }}
               />
-              {/* Scanning animation ring when counting down */}
+              {/* Outer glow ring during auto-capture countdown */}
               {autoCaptureCountdown && status === "streaming" && (
                 <ellipse
-                  cx="150" cy="180" rx="95" ry="123"
+                  cx="150" cy="180" rx="106" ry="136"
                   fill="none"
                   stroke="#2dd4bf"
                   strokeWidth="1.5"
-                  opacity="0.6"
+                  opacity="0.5"
                   className="animate-pulse"
+                  style={{
+                    transformOrigin: "150px 180px",
+                    transform: `scale(${ovalScale})`,
+                    transition: "transform 0.8s cubic-bezier(0.4,0,0.2,1)",
+                  }}
                 />
               )}
-              {/* Corner brackets */}
-              {[
-                "M 75 82 L 75 67 Q 75 55 87 55 L 102 55",
-                "M 225 82 L 225 67 Q 225 55 213 55 L 198 55",
-                "M 75 278 L 75 293 Q 75 305 87 305 L 102 305",
-                "M 225 278 L 225 293 Q 225 305 213 305 L 198 305",
-              ].map((d, i) => (
-                <path
-                  key={i}
-                  d={d}
-                  fill="none"
-                  stroke={faceDetected || isVerifyingOrCaptured ? "#2dd4bf" : "rgba(255,255,255,0.5)"}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  className="transition-all duration-300"
-                />
-              ))}
             </svg>
           </div>
         )}
