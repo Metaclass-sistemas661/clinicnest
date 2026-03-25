@@ -27,7 +27,7 @@ function stripHtml(html: string): string {
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/li>/gi, "\n")
-    .replace(/<li[^>]*>/gi, "  • ")
+    .replace(/<li[^>]*>/gi, "  - ")
     .replace(/<\/h[1-6]>/gi, "\n\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
@@ -462,7 +462,7 @@ serve(async (req: Request) => {
       borderColor: rgb(0.2, 0.65, 0.3),
       borderWidth: 1,
     });
-    page.drawText("✓ DOCUMENTO SELADO DIGITALMENTE", {
+    page.drawText("DOCUMENTO SELADO DIGITALMENTE", {
       x: MARGIN + 10,
       y: y - 15,
       size: 10,
@@ -533,9 +533,10 @@ serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    log.error("Unexpected error", err);
+    const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    console.error("[SEAL-CONSENT-PDF] Unexpected error:", errMsg);
     return new Response(
-      JSON.stringify({ error: "Erro interno ao gerar PDF selado" }),
+      JSON.stringify({ error: "Erro interno ao gerar PDF selado", details: err instanceof Error ? err.message : String(err) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
