@@ -193,17 +193,30 @@ serve(async (req: Request) => {
     // ── 4. Buscar tenant ──
     const { data: tenant } = await supabaseAdmin
       .from("tenants")
-      .select("name, cnpj")
+      .select("name, cnpj, address, phone, email, logo_url")
       .eq("id", consent.tenant_id)
       .single();
 
     const patientName = client?.name ?? "Paciente";
     const templateTitle = template?.title ?? "Termo de Consentimento";
     const clinicName = tenant?.name ?? "Clínica";
+    const clinicAddress = tenant?.address ?? "";
+    const clinicPhone = tenant?.phone ?? "";
+    const clinicEmail = tenant?.email ?? "";
+    const clinicCnpj = tenant?.cnpj ?? "";
     const signedAt = formatDateBR(consent.signed_at);
     const signatureMethod = consent.signature_method === "manual"
       ? "Assinatura Manual (Canvas)"
       : "Reconhecimento Facial";
+
+    // ── Teal palette ──
+    const TEAL      = rgb(0.047, 0.608, 0.545);  // #0C9B8B
+    const TEAL_DARK = rgb(0.035, 0.478, 0.427);   // #097A6D
+    const TEAL_LIGHT = rgb(0.878, 0.965, 0.949);  // #E0F6F2
+    const TEXT_DARK  = rgb(0.12, 0.12, 0.12);
+    const TEXT_MID   = rgb(0.35, 0.35, 0.35);
+    const TEXT_LIGHT = rgb(0.5, 0.5, 0.5);
+    const BORDER     = rgb(0.82, 0.85, 0.88);
 
     // ── 5. Gerar PDF com pdf-lib ──
     console.log("[seal-consent-pdf] Generating PDF for consent:", consent_id, "method:", consent.signature_method);
@@ -223,103 +236,137 @@ serve(async (req: Request) => {
 
     const addNewPageIfNeeded = (needed: number) => {
       if (y - needed < MARGIN + 60) {
-        // Rodapé na página atual
-        drawFooter(page, y);
+        drawFooter(page);
         page = pdfDoc.addPage([PAGE_W, PAGE_H]);
         y = PAGE_H - MARGIN;
       }
     };
 
-    const drawFooter = (pg: typeof page, _currentY: number) => {
-      const footerY = 30;
-      pg.drawLine({
-        start: { x: MARGIN, y: footerY + 15 },
-        end: { x: PAGE_W - MARGIN, y: footerY + 15 },
-        thickness: 0.5,
-        color: rgb(0.7, 0.7, 0.7),
+    const drawFooter = (pg: typeof page) => {
+      const footerY = 25;
+      // Bottom teal bar
+      pg.drawRectangle({
+        x: 0, y: 0, width: PAGE_W, height: 6,
+        color: TEAL,
       });
-      pg.drawText("Documento selado digitalmente por ClinicNest — Verificação: clinicnest.com.br/verificar", {
+      pg.drawLine({
+        start: { x: MARGIN, y: footerY + 12 },
+        end: { x: PAGE_W - MARGIN, y: footerY + 12 },
+        thickness: 0.5,
+        color: BORDER,
+      });
+      pg.drawText("Documento selado digitalmente por ClinicNest — clinicnest.metaclass.com.br", {
         x: MARGIN,
         y: footerY,
         size: 7,
         font: helvetica,
-        color: rgb(0.5, 0.5, 0.5),
+        color: TEXT_LIGHT,
       });
     };
 
-    // ── Cabeçalho ──
+    // ── Top accent bar ──
+    page.drawRectangle({
+      x: 0, y: PAGE_H - 6, width: PAGE_W, height: 6,
+      color: TEAL,
+    });
+    y = PAGE_H - MARGIN - 10;
+
+    // ── Cabeçalho da clínica ──
     page.drawText(clinicName.toUpperCase(), {
       x: MARGIN,
       y,
       size: 16,
       font: helveticaBold,
-      color: rgb(0.15, 0.35, 0.6),
+      color: TEAL_DARK,
     });
-    y -= 8;
+    y -= 14;
+
+    // Info da clínica em uma linha
+    const clinicInfoParts = [clinicAddress, clinicPhone, clinicEmail, clinicCnpj ? `CNPJ: ${clinicCnpj}` : ""].filter(Boolean);
+    if (clinicInfoParts.length > 0) {
+      page.drawText(clinicInfoParts.join("  ·  "), {
+        x: MARGIN,
+        y,
+        size: 7.5,
+        font: helvetica,
+        color: TEXT_LIGHT,
+      });
+      y -= 10;
+    }
+
+    // Teal line separator
     page.drawLine({
       start: { x: MARGIN, y },
       end: { x: PAGE_W - MARGIN, y },
       thickness: 2,
-      color: rgb(0.15, 0.35, 0.6),
+      color: TEAL,
     });
-    y -= 25;
+    y -= 22;
 
-    // ── Título do documento ──
-    page.drawText("TERMO DE CONSENTIMENTO ASSINADO", {
-      x: MARGIN,
-      y,
-      size: 14,
-      font: helveticaBold,
-      color: rgb(0.1, 0.1, 0.1),
+    // ── Banner do tipo de documento ──
+    page.drawRectangle({
+      x: MARGIN, y: y - 22, width: CONTENT_W, height: 22,
+      color: TEAL,
     });
-    y -= LINE_H;
+    page.drawText("TERMO DE CONSENTIMENTO ASSINADO", {
+      x: MARGIN + 10,
+      y: y - 16,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(1, 1, 1),
+    });
+    y -= 32;
+
+    // ── Subtítulo do template ──
     page.drawText(templateTitle, {
       x: MARGIN,
       y,
       size: 11,
       font: helvetica,
-      color: rgb(0.3, 0.3, 0.3),
+      color: TEXT_MID,
     });
-    y -= 25;
+    y -= 22;
 
-    // ── Dados do paciente ──
+    // ── Dados do paciente — caixa ──
+    const fieldCount = 6;
+    const boxH = LINE_H * fieldCount + 16;
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - boxH,
+      width: CONTENT_W,
+      height: boxH,
+      color: TEAL_LIGHT,
+      borderColor: BORDER,
+      borderWidth: 0.5,
+    });
+    y -= 10;
+
     const drawField = (label: string, value: string) => {
       addNewPageIfNeeded(LINE_H * 2);
       page.drawText(label, {
-        x: MARGIN,
+        x: MARGIN + 10,
         y,
         size: 8,
         font: helveticaBold,
-        color: rgb(0.4, 0.4, 0.4),
+        color: TEAL_DARK,
       });
       page.drawText(value, {
-        x: MARGIN + 120,
+        x: MARGIN + 130,
         y,
         size: 9,
         font: helvetica,
-        color: rgb(0.1, 0.1, 0.1),
+        color: TEXT_DARK,
       });
       y -= LINE_H;
     };
-
-    page.drawRectangle({
-      x: MARGIN,
-      y: y - (LINE_H * 6 + 10),
-      width: CONTENT_W,
-      height: LINE_H * 6 + 10,
-      color: rgb(0.96, 0.97, 0.98),
-      borderColor: rgb(0.85, 0.87, 0.9),
-      borderWidth: 0.5,
-    });
-    y -= 5;
 
     drawField("PACIENTE:", patientName);
     drawField("CPF:", client?.cpf ?? "Não informado");
     drawField("DATA ASSINATURA:", signedAt);
     drawField("MÉTODO:", signatureMethod);
-    drawField("IP:", consent.ip_address ?? "N/A");
-    drawField("USER-AGENT:", (consent.user_agent ?? "N/A").substring(0, 60));
-    y -= 15;
+    drawField("IP:", consent.ip_address ?? "Não capturado");
+    drawField("USER-AGENT:", (consent.user_agent ?? "N/A").substring(0, 55));
+    y -= 12;
 
     // ── Conteúdo do termo ──
     addNewPageIfNeeded(30);
@@ -328,14 +375,14 @@ serve(async (req: Request) => {
       y,
       size: 10,
       font: helveticaBold,
-      color: rgb(0.15, 0.35, 0.6),
+      color: TEAL_DARK,
     });
     y -= 5;
     page.drawLine({
       start: { x: MARGIN, y },
       end: { x: PAGE_W - MARGIN, y },
       thickness: 0.5,
-      color: rgb(0.15, 0.35, 0.6),
+      color: TEAL,
     });
     y -= LINE_H;
 
@@ -389,7 +436,7 @@ serve(async (req: Request) => {
             y,
             size: 8,
             font: helveticaBold,
-            color: rgb(0.4, 0.4, 0.4),
+            color: TEAL_DARK,
           });
           y -= 5;
           page.drawImage(sigImage, {
@@ -434,7 +481,7 @@ serve(async (req: Request) => {
             y,
             size: 8,
             font: helveticaBold,
-            color: rgb(0.4, 0.4, 0.4),
+            color: TEAL_DARK,
           });
           y -= 5;
           page.drawImage(photoImage, {
@@ -458,28 +505,28 @@ serve(async (req: Request) => {
       y: y - 45,
       width: CONTENT_W,
       height: 45,
-      color: rgb(0.93, 0.97, 0.93),
-      borderColor: rgb(0.2, 0.65, 0.3),
+      color: TEAL_LIGHT,
+      borderColor: TEAL,
       borderWidth: 1,
     });
-    page.drawText("DOCUMENTO SELADO DIGITALMENTE", {
+    page.drawText("\u2713 DOCUMENTO SELADO DIGITALMENTE", {
       x: MARGIN + 10,
       y: y - 15,
       size: 10,
       font: helveticaBold,
-      color: rgb(0.1, 0.5, 0.2),
+      color: TEAL_DARK,
     });
     page.drawText(`Selado em: ${formatDateBR(new Date().toISOString())}  |  ID: ${consent_id}`, {
       x: MARGIN + 10,
       y: y - 30,
       size: 7,
       font: helvetica,
-      color: rgb(0.3, 0.3, 0.3),
+      color: TEXT_MID,
     });
     y -= 55;
 
     // Rodapé da última página
-    drawFooter(page, y);
+    drawFooter(page);
 
     // ── 6. Serializar e calcular hash ──
     console.log("[seal-consent-pdf] Serializing PDF");

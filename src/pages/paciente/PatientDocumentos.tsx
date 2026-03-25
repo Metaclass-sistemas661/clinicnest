@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/utils/getClientIp";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -258,6 +259,7 @@ export default function PatientDocumentos() {
       }
 
       // Use sign_consent_v2 for hybrid support
+      const clientIp = await getClientIp();
       const rpcName = signMethod === "manual" ? "sign_consent_v2" : "sign_consent";
       const rpcParams = signMethod === "manual"
         ? {
@@ -266,14 +268,14 @@ export default function PatientDocumentos() {
             p_signature_method: "manual" as const,
             p_facial_photo_path: null,
             p_manual_signature_path: manualSignaturePath,
-            p_ip_address: null,
+            p_ip_address: clientIp,
             p_user_agent: navigator.userAgent,
           }
         : {
             p_client_id: patientId,
             p_template_id: signTarget.template_id,
             p_facial_photo_path: facialPhotoPath,
-            p_ip_address: null,
+            p_ip_address: clientIp,
             p_user_agent: navigator.userAgent,
           };
 

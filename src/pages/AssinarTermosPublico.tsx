@@ -9,6 +9,7 @@ import { FacialCapture } from "@/components/consent/FacialCapture";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/utils/getClientIp";
 import { replaceVariables, type ConsentVariablesData } from "@/lib/consent-variables";
 import {
   ShieldCheck,
@@ -163,11 +164,12 @@ export default function AssinarTermosPublico() {
       }
 
       // 2) Sign via RPC
+      const clientIp = await getClientIp();
       const { data, error } = await supabase.rpc("sign_consent_via_token", {
         p_token: token,
         p_template_id: currentTemplate.id,
         p_facial_photo_path: fileName,
-        p_ip_address: null,
+        p_ip_address: clientIp,
         p_user_agent: navigator.userAgent,
       });
 

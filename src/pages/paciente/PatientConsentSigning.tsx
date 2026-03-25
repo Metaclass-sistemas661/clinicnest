@@ -12,6 +12,7 @@ import { SignatureCanvas } from "@/components/signature/SignatureCanvas";
 import { toast } from "sonner";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/utils/getClientIp";
 import { replaceVariables, buildVariablesFromClientAndTenant, type ConsentVariablesData } from "@/lib/consent-variables";
 import type { ConsentTemplate } from "@/types/database";
 import {
@@ -182,6 +183,7 @@ export default function PatientConsentSigning() {
       }
 
       // Try v2 first (hybrid), fallback to v1
+      const clientIp = await getClientIp();
       const rpcName = signatureMethod === "manual" ? "sign_consent_v2" : "sign_consent";
       const rpcParams = signatureMethod === "manual"
         ? {
@@ -190,14 +192,14 @@ export default function PatientConsentSigning() {
             p_signature_method: "manual" as const,
             p_facial_photo_path: null,
             p_manual_signature_path: manualSignaturePath,
-            p_ip_address: null,
+            p_ip_address: clientIp,
             p_user_agent: navigator.userAgent,
           }
         : {
             p_client_id: patientId,
             p_template_id: currentTemplate.id,
             p_facial_photo_path: facialPhotoPath,
-            p_ip_address: null,
+            p_ip_address: clientIp,
             p_user_agent: navigator.userAgent,
           };
 
