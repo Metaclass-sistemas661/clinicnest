@@ -92,6 +92,15 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verificação básica: requer header Authorization (JWT verificado manualmente)
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ") || authHeader.length < 30) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     console.log("[seal-consent-pdf] Request received");
     const { consent_id } = await req.json() as { consent_id?: string };
     console.log("[seal-consent-pdf] consent_id:", consent_id);

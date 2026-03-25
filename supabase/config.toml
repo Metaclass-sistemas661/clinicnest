@@ -138,6 +138,10 @@ verify_jwt = false
 [functions.validate-council-number]
 verify_jwt = false
 
+# ── Consentimentos / PDF ──────────────────────────────────────────────────────
+[functions.seal-consent-pdf]
+verify_jwt = false
+
 # ── Relatórios ────────────────────────────────────────────────────────────────
 [functions.generate-patient-extract]
 verify_jwt = false
