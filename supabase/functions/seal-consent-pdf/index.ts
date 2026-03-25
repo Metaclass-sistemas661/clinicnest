@@ -14,7 +14,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
 import { createLogger } from "../_shared/logging.ts";
@@ -93,31 +92,6 @@ serve(async (req: Request) => {
   }
 
   try {
-    // ── Auth: validar JWT real via Supabase Auth API ──
-    const authHeader = req.headers.get("authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } },
-    );
-    const { data: { user }, error: authErr } = await supabaseAuth.auth.getUser(token);
-    if (authErr || !user) {
-      log.warn("Invalid JWT", { error: authErr?.message });
-      return new Response(
-        JSON.stringify({ error: "Invalid or expired token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-    console.log("[seal-consent-pdf] Authenticated user:", user.id);
-
     console.log("[seal-consent-pdf] Request received");
     const { consent_id } = await req.json() as { consent_id?: string };
     console.log("[seal-consent-pdf] consent_id:", consent_id);
@@ -131,6 +105,25 @@ serve(async (req: Request) => {
 
     const supabaseAdmin = createSupabaseAdmin();
     console.log("[seal-consent-pdf] Admin client created");
+
+    // ── Auth: validar JWT real via Auth Admin API (service_role) ──
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    if (authErr || !user) {
+      log.warn("Invalid JWT", { error: authErr?.message });
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    console.log("[seal-consent-pdf] Authenticated user:", user.id);
 
     // ── 1. Buscar consent com dados relacionados ──
     const { data: consent, error: consentErr } = await supabaseAdmin
