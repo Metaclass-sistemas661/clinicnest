@@ -60,6 +60,7 @@ export default function PatientDocumentos() {
 
   // Patient info
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [patientName, setPatientName] = useState("Paciente");
   const [varsData, setVarsData] = useState<ConsentVariablesData>({});
 
@@ -79,6 +80,7 @@ export default function PatientDocumentos() {
     try {
       const { data: { user } } = await supabasePatient.auth.getUser();
       if (!user) return null;
+      setAuthUserId(user.id);
       const { data } = await (supabasePatient as any)
         .from("patients")
         .select("id, tenant_id, name, cpf, date_of_birth, birth_date, email, phone, street, street_number, neighborhood, city, state, zip_code, address_street, address_city, address_state, address_zip")
@@ -171,8 +173,21 @@ export default function PatientDocumentos() {
       let facialPhotoPath: string | null = null;
       let manualSignaturePath: string | null = null;
 
+      // Resolve auth user ID for storage folder (matches RLS policy)
+      let resolvedAuthId = authUserId;
+      if (!resolvedAuthId) {
+        const { data: { user: freshUser } } = await supabasePatient.auth.getUser();
+        resolvedAuthId = freshUser?.id ?? null;
+        if (resolvedAuthId) setAuthUserId(resolvedAuthId);
+      }
+      if (!resolvedAuthId) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        setIsSigning(false);
+        return;
+      }
+
       if (signMethod === "facial" && capturedBlob) {
-        const fileName = `${patientId}/${signTarget.template_id}_${Date.now()}.jpg`;
+        const fileName = `${resolvedAuthId}/${signTarget.template_id}_${Date.now()}.jpg`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
@@ -181,7 +196,7 @@ export default function PatientDocumentos() {
       } else if (signMethod === "manual" && manualDataUrl) {
         const res = await fetch(manualDataUrl);
         const blob = await res.blob();
-        const fileName = `${patientId}/${signTarget.template_id}_${Date.now()}.png`;
+        const fileName = `${resolvedAuthId}/${signTarget.template_id}_${Date.now()}.png`;
         const { error: uploadError } = await supabasePatient.storage
           .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });
@@ -390,6 +405,18 @@ export default function PatientDocumentos() {
                           >
                             <PenTool className="h-3.5 w-3.5" />
                             Assinar
+                          </Button>
+                        )}
+
+                        {c.is_signed && !c.signature_method && !c.sealed_pdf_path && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300"
+                            onClick={() => openSignDialog({ ...c, is_signed: false })}
+                          >
+                            <PenTool className="h-3.5 w-3.5" />
+                            Reassinar
                           </Button>
                         )}
                       </div>
