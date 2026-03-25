@@ -4,6 +4,7 @@ import { completeText } from "../_shared/vertex-ai-client.ts";
 import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
+import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 const SYSTEM_PROMPT = `Você é um assistente médico especializado em resumir prontuários de pacientes.
 
@@ -71,6 +72,9 @@ serve(async (req) => {
       });
     }
 
+    // Admin client for data queries (bypasses RLS after manual auth checks)
+    const adminClient = createSupabaseAdmin();
+
     // Rate limiting: generation category (8 req/min)
     const rl = await checkAiRateLimit(user.id, "ai-summary", "generation");
     if (!rl.allowed) {
@@ -81,7 +85,7 @@ serve(async (req) => {
     }
 
     // Check medical role
-    const { data: profile } = await supabaseClient
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("professional_type, tenant_id")
       .eq("user_id", user.id)
@@ -95,7 +99,7 @@ serve(async (req) => {
     }
 
     // Check admin via user_roles OR professional_type
-    const { data: userRole } = await supabaseClient
+    const { data: userRole } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -140,7 +144,7 @@ serve(async (req) => {
     }
 
     // Fetch patient data
-    const { data: client, error: clientError } = await supabaseClient
+    const { data: client, error: clientError } = await adminClient
       .from("patients")
       .select(`
         id,
@@ -179,7 +183,7 @@ serve(async (req) => {
 
     // Fetch recent appointments
     if (include_appointments) {
-      const { data: appointments } = await supabaseClient
+      const { data: appointments } = await adminClient
         .from("appointments")
         .select(`
           scheduled_at,
@@ -204,7 +208,7 @@ serve(async (req) => {
 
     // Fetch active prescriptions
     if (include_prescriptions) {
-      const { data: prescriptions } = await supabaseClient
+      const { data: prescriptions } = await adminClient
         .from("prescriptions")
         .select(`
           medication_name,
@@ -224,7 +228,7 @@ serve(async (req) => {
 
     // Fetch recent exams
     if (include_exams) {
-      const { data: exams } = await supabaseClient
+      const { data: exams } = await adminClient
         .from("exam_results")
         .select(`
           exam_type,
