@@ -36,6 +36,7 @@ import { PatientGlobalSearch, usePatientGlobalSearch } from "@/components/patien
 import { DependentBanner } from "@/components/patient/DependentSelector";
 import { DependentsProvider, useDependentsOptional } from "@/hooks/useDependents";
 import { AiPatientChat } from "@/components/ai";
+import { usePatientShell } from "./PatientShellContext";
 
 interface NavItem {
   label: string;
@@ -68,7 +69,7 @@ const bottomItems: NavItem[] = [
   { label: "Configurações", href: "/paciente/configuracoes", icon: Settings },
 ];
 
-function SidebarContent({
+export function SidebarContent({
   collapsed,
   onToggle,
   onNavigate,
@@ -208,11 +209,97 @@ interface PatientLayoutProps {
 }
 
 export function PatientLayout({ title, subtitle, actions, children }: PatientLayoutProps) {
+  const shell = usePatientShell();
+
+  // ── Lightweight mode: inside PatientShellRoute (sidebar is persistent in shell) ──
+  if (shell.inShell) {
+    return (
+      <PatientLayoutLightweight
+        title={title}
+        subtitle={subtitle}
+        actions={actions}
+        shell={shell}
+      >
+        {children}
+      </PatientLayoutLightweight>
+    );
+  }
+
+  // ── Full layout mode (standalone, not inside shell) ──
+  return (
+    <PatientLayoutFull title={title} subtitle={subtitle} actions={actions}>
+      {children}
+    </PatientLayoutFull>
+  );
+}
+
+/** Lightweight: only page header + content (sidebar lives in PatientShellRoute) */
+function PatientLayoutLightweight({
+  title,
+  subtitle,
+  actions,
+  children,
+  shell,
+}: PatientLayoutProps & { shell: { setSearchOpen: (v: boolean) => void } }) {
+  const isMobile = useIsMobile();
+
+  return (
+    <>
+      {/* Page header */}
+      <div className={cn(
+        "flex items-center justify-between mb-6",
+        isMobile && "flex-col gap-3"
+      )}>
+        <div className={cn("space-y-0.5", isMobile && "pl-12")}>
+          <h1 className={cn(
+            "font-display font-bold tracking-tight text-foreground",
+            isMobile ? "text-xl" : "text-2xl"
+          )}>
+            {title}
+          </h1>
+          {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        <div className={cn(
+          "flex items-center gap-2 sm:gap-3 flex-shrink-0",
+          isMobile && "w-full justify-center flex-wrap"
+        )}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => shell.setSearchOpen(true)}
+            className="hidden sm:flex gap-2 text-muted-foreground"
+          >
+            <Search className="h-4 w-4" />
+            <span className="text-xs">Buscar</span>
+            <kbd className="ml-2 px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘K</kbd>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => shell.setSearchOpen(true)}
+            className="sm:hidden"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+          <PatientNotificationsBell />
+          <ThemeToggle />
+          {actions}
+        </div>
+      </div>
+
+      <ModuleErrorBoundary moduleName="Portal do Paciente">
+        {children}
+      </ModuleErrorBoundary>
+    </>
+  );
+}
+
+/** Full standalone layout with sidebar (used for backwards compat / routes outside shell) */
+function PatientLayoutFull({ title, subtitle, actions, children }: PatientLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const { isOpen: searchOpen, setIsOpen: setSearchOpen } = usePatientGlobalSearch();
-  const dependentsContext = useDependentsOptional();
 
   return (
     <DependentsProvider>

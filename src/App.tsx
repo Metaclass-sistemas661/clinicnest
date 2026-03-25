@@ -12,6 +12,7 @@ import { GoalMotivationProvider } from "@/contexts/GoalMotivationContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PatientProtectedRoute } from "@/components/auth/PatientProtectedRoute";
 import { ConsentGate } from "@/components/consent/ConsentGate";
+import { PatientShellRoute } from "@/components/layout/PatientShellRoute";
 import { TriageRealtimeListener } from "@/components/admin/TriageRealtimeListener";
 import { InternalDarkMode } from "@/components/InternalDarkMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -896,7 +897,7 @@ const App = () => (
                 <Route path="/paciente/login" element={<PatientLogin />} />
                 <Route path="/paciente/cadastro" element={<Navigate to="/paciente/login" replace />} />
 
-                {/* Portal do Paciente — rotas protegidas */}
+                {/* Portal do Paciente — rota de termos (auth sem shell) */}
                 <Route
                   path="/paciente/termos"
                   element={
@@ -905,206 +906,30 @@ const App = () => (
                     </PatientProtectedRoute>
                   }
                 />
-                <Route
-                  path="/paciente/dashboard"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientDashboard />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/agendar"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientAgendar />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/consultas"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientConsultas />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/teleconsulta"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientTeleconsulta />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/financeiro"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientFinanceiro />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/mensagens"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientMensagens />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/saude"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientSaude />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/proms"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientPROMs />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/cartao-saude"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientHealthCard />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/renovar-receita"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientRefillRequest />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/creditos"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientHealthCredits />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/planos"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientTreatmentPlans />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/exames"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientExames />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/receitas"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientReceitas />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/atestados"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientAtestados />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/laudos"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientLaudos />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/documentos"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientDocumentos />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/perfil"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientProfile />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/configuracoes"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientSettings />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/paciente/dependentes"
-                  element={
-                    <PatientProtectedRoute>
-                      <ConsentGate>
-                        <PatientDependentes />
-                      </ConsentGate>
-                    </PatientProtectedRoute>
-                  }
-                />
+
+                {/* Portal do Paciente — rotas protegidas (shell persistente) */}
+                <Route element={<PatientShellRoute />}>
+                  <Route path="/paciente/dashboard" element={<PatientDashboard />} />
+                  <Route path="/paciente/agendar" element={<PatientAgendar />} />
+                  <Route path="/paciente/consultas" element={<PatientConsultas />} />
+                  <Route path="/paciente/teleconsulta" element={<PatientTeleconsulta />} />
+                  <Route path="/paciente/financeiro" element={<PatientFinanceiro />} />
+                  <Route path="/paciente/mensagens" element={<PatientMensagens />} />
+                  <Route path="/paciente/saude" element={<PatientSaude />} />
+                  <Route path="/paciente/proms" element={<PatientPROMs />} />
+                  <Route path="/paciente/cartao-saude" element={<PatientHealthCard />} />
+                  <Route path="/paciente/renovar-receita" element={<PatientRefillRequest />} />
+                  <Route path="/paciente/creditos" element={<PatientHealthCredits />} />
+                  <Route path="/paciente/planos" element={<PatientTreatmentPlans />} />
+                  <Route path="/paciente/exames" element={<PatientExames />} />
+                  <Route path="/paciente/receitas" element={<PatientReceitas />} />
+                  <Route path="/paciente/atestados" element={<PatientAtestados />} />
+                  <Route path="/paciente/laudos" element={<PatientLaudos />} />
+                  <Route path="/paciente/documentos" element={<PatientDocumentos />} />
+                  <Route path="/paciente/perfil" element={<PatientProfile />} />
+                  <Route path="/paciente/configuracoes" element={<PatientSettings />} />
+                  <Route path="/paciente/dependentes" element={<PatientDependentes />} />
+                </Route>
 
                   {/* Catch all */}
                   <Route path="*" element={<NotFound />} />
