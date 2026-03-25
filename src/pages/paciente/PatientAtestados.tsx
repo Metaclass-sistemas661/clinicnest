@@ -25,7 +25,20 @@ interface Certificate {
   content: string;
   notes: string | null;
   professional_name: string;
+  professional_crm?: string | null;
+  professional_uf?: string | null;
+  professional_specialty?: string | null;
+  digital_signature?: string | null;
+  signed_at?: string | null;
   clinic_name: string;
+  clinic_address?: string | null;
+  clinic_phone?: string | null;
+  clinic_cnpj?: string | null;
+  clinic_email?: string | null;
+  logo_url?: string | null;
+  patient_name?: string | null;
+  patient_cpf?: string | null;
+  patient_birth_date?: string | null;
 }
 
 function typeLabel(t: string) {
@@ -155,7 +168,31 @@ export default function PatientAtestados() {
                   size="sm"
                   variant="outline"
                   className="gap-1.5"
-                  onClick={() => generateCertificatePdf(cert)}
+                  onClick={() => generateCertificatePdf({
+                    certificate_type: cert.certificate_type,
+                    issued_at: cert.issued_at,
+                    days_off: cert.days_off,
+                    start_date: cert.start_date,
+                    end_date: cert.end_date,
+                    cid_code: cert.cid_code,
+                    content: cert.content,
+                    notes: cert.notes,
+                    professional_name: cert.professional_name,
+                    professional_crm: cert.professional_crm,
+                    professional_uf: cert.professional_uf,
+                    professional_specialty: cert.professional_specialty,
+                    digital_signature: cert.digital_signature,
+                    signed_at: cert.signed_at,
+                    clinic_name: cert.clinic_name || "Clínica",
+                    clinic_address: cert.clinic_address,
+                    clinic_phone: cert.clinic_phone,
+                    clinic_cnpj: cert.clinic_cnpj,
+                    clinic_email: cert.clinic_email,
+                    logo_url: cert.logo_url,
+                    patient_name: cert.patient_name,
+                    patient_cpf: cert.patient_cpf,
+                    patient_birth_date: cert.patient_birth_date,
+                  })}
                 >
                   <Download className="h-3.5 w-3.5" />
                   Baixar PDF
