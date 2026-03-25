@@ -4,6 +4,7 @@ import { completeText } from "../_shared/vertex-ai-client.ts";
 import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
+import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 const SYSTEM_PROMPT = `Você é um assistente médico especializado em estruturar transcrições de consultas médicas no formato SOAP (Subjetivo, Objetivo, Avaliação, Plano).
 
@@ -66,6 +67,9 @@ serve(async (req) => {
       });
     }
 
+    // Admin client for data queries (bypasses RLS after manual auth checks)
+    const adminClient = createSupabaseAdmin();
+
     // Rate limiting: generation category (8 req/min)
     const rl = await checkAiRateLimit(user.id, "ai-generate-soap", "generation");
     if (!rl.allowed) {
@@ -76,7 +80,7 @@ serve(async (req) => {
     }
 
     // Check medical role
-    const { data: profile } = await supabaseClient
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("professional_type, tenant_id")
       .eq("user_id", user.id)
@@ -89,7 +93,7 @@ serve(async (req) => {
       });
     }
 
-    const { data: userRole } = await supabaseClient
+    const { data: userRole } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
