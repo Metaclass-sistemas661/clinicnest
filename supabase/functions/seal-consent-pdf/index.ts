@@ -14,6 +14,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createSupabaseAdmin } from "../_shared/supabase.ts";
 import { createLogger } from "../_shared/logging.ts";
@@ -92,14 +93,30 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Verificação básica: requer header Authorization (JWT verificado manualmente)
+    // ── Auth: validar JWT real via Supabase Auth API ──
     const authHeader = req.headers.get("authorization") ?? "";
-    if (!authHeader.startsWith("Bearer ") || authHeader.length < 30) {
+    if (!authHeader.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
+        JSON.stringify({ error: "Missing authorization token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } },
+    );
+    const { data: { user }, error: authErr } = await supabaseAuth.auth.getUser(token);
+    if (authErr || !user) {
+      log.warn("Invalid JWT", { error: authErr?.message });
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    console.log("[seal-consent-pdf] Authenticated user:", user.id);
 
     console.log("[seal-consent-pdf] Request received");
     const { consent_id } = await req.json() as { consent_id?: string };
@@ -129,6 +146,18 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: "Consentimento não encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ── Verificar que o usuário é dono do consent ou staff do tenant ──
+    const isOwner = consent.patient_user_id === user.id;
+    const userRole = user.app_metadata?.role ?? user.user_metadata?.account_type;
+    const isStaff = userRole !== "patient";
+    if (!isOwner && !isStaff) {
+      log.warn("Forbidden: user is not consent owner or staff", { userId: user.id, consentOwner: consent.patient_user_id });
+      return new Response(
+        JSON.stringify({ error: "Sem permissão para selar este consentimento" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
