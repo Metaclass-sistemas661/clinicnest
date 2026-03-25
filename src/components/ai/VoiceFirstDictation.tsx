@@ -105,20 +105,22 @@ export function VoiceFirstDictation({
         },
       });
       if (error) throw error;
-      return data as SoapResult;
+      // Edge function returns { soap: { ... } } — unwrap
+      const soapData = data?.soap ?? data;
+      return soapData as SoapResult;
     },
     onSuccess: (soap) => {
       setStep("done");
       onSoapReady({
-        chief_complaint: soap.subjective.split(".")[0] || soap.subjective,
-        anamnesis: soap.subjective,
-        physical_exam: soap.objective,
-        diagnosis: soap.assessment,
-        treatment_plan: soap.plan,
+        chief_complaint: soap.subjective?.split(".")[0] || soap.subjective || "",
+        anamnesis: soap.subjective || "",
+        physical_exam: soap.objective || "",
+        diagnosis: soap.assessment || "",
+        treatment_plan: soap.plan || "",
         cid_code: soap.cid_suggestions?.[0] || "",
       });
       toast.success(
-        `Prontuário SOAP preenchido automaticamente (confiança: ${Math.round(soap.confidence * 100)}%)`
+        `Prontuário SOAP preenchido automaticamente (confiança: ${Math.round((soap.confidence || 0) * 100)}%)`
       );
     },
     onError: (err: any) => {

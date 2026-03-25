@@ -7,6 +7,7 @@ import {
 import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
+import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 interface TranscribeRequest {
   action: "transcribe" | "start" | "status";
@@ -58,8 +59,11 @@ serve(async (req) => {
       });
     }
 
+    // Admin client for data queries (bypasses RLS after manual auth checks)
+    const adminClient = createSupabaseAdmin();
+
     // Check medical role
-    const { data: profile } = await supabaseClient
+    const { data: profile } = await adminClient
       .from("profiles")
       .select("professional_type, tenant_id")
       .eq("user_id", user.id)
@@ -72,7 +76,7 @@ serve(async (req) => {
       });
     }
 
-    const { data: userRole } = await supabaseClient
+    const { data: userRole } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
