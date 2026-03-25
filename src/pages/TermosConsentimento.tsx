@@ -474,8 +474,14 @@ export default function TermosConsentimento() {
             <DialogDescription>
               {editingTemplate
                 ? "Atualize o conteúdo do termo. Assinaturas já feitas mantêm o snapshot da versão anterior."
-                : "Crie um novo termo usando o editor visual ou escolha um modelo pronto da biblioteca."}
+                : "Crie um novo termo de consentimento ou contrato. Termos marcados como obrigatórios serão exibidos para o paciente assinar antes de acessar o portal."}
             </DialogDescription>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>Atenção:</strong> Cadastre aqui apenas termos de consentimento, contratos e documentos que necessitam de assinatura do paciente. Não utilize esta área para relatórios ou outros documentos internos da clínica.
+              </span>
+            </div>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">

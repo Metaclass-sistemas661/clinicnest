@@ -370,10 +370,40 @@ export default function PatientConsentSigning() {
               {/* Step 1: Read the document */}
               {step === "read" && (
                 <div className="space-y-6">
-                  <div
-                    className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
-                    dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
-                  />
+                  {currentTemplate.template_type === "pdf" ? (
+                    <div className="border rounded-lg p-6 bg-muted/30 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Este termo está em formato PDF. Leia com atenção antes de assinar.
+                      </p>
+                      {currentTemplate.pdf_storage_path && (
+                        <Button
+                          variant="outline"
+                          onClick={async () => {
+                            const { data } = await supabasePatient.storage
+                              .from("consent-pdfs")
+                              .createSignedUrl(currentTemplate.pdf_storage_path!, 300);
+                            if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                          }}
+                        >
+                          Abrir PDF para Leitura
+                        </Button>
+                      )}
+                    </div>
+                  ) : currentTemplate.body_html?.trim() ? (
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
+                      dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
+                    />
+                  ) : (
+                    <div className="border rounded-lg p-6 bg-muted/30 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground">
+                        O conteúdo deste termo não foi configurado pela clínica.
+                        Entre em contato com a clínica para mais informações.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex justify-center">
                     <Button
                       onClick={() => setStep("choose-method")}

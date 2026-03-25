@@ -377,11 +377,19 @@ export default function AssinarTermosPublico() {
                     </Button>
                   )}
                 </div>
-              ) : (
+              ) : currentTemplate.body_html?.trim() ? (
                 <div
                   className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
                   dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
                 />
+              ) : (
+                <div className="border rounded-lg p-6 bg-muted/30 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    O conteúdo deste termo não foi configurado pela clínica.
+                    Entre em contato com a clínica para mais informações.
+                  </p>
+                </div>
               )}
 
               <Separator className="my-6" />
