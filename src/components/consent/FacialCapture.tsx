@@ -388,6 +388,25 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     startCamera();
   }, [capturedUrl, startCamera]);
 
+  /* ── Dynamic oval sizing — animates to guide user ── */
+  const ovalScale = useMemo(() => {
+    const isVC = status === "verifying" || status === "captured";
+    if (isVC) return 1.0;
+    switch (instruction) {
+      case INSTRUCTIONS.noFace:
+      case INSTRUCTIONS.preparing:
+        return 1.1;
+      case INSTRUCTIONS.tooFar:
+        return 0.9;
+      case INSTRUCTIONS.tooClose:
+        return 1.18;
+      case INSTRUCTIONS.detected:
+      case INSTRUCTIONS.capturing:
+      default:
+        return 1.0;
+    }
+  }, [instruction, status]);
+
   /* ── Phase: Instructions ────────────────────────────── */
   if (phase === "instructions") {
     return (
@@ -445,25 +464,6 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
       </div>
     );
   }
-
-  /* ── Dynamic oval sizing — animates to guide user ── */
-  const ovalScale = useMemo(() => {
-    const isVC = status === "verifying" || status === "captured";
-    if (isVC) return 1.0;
-    switch (instruction) {
-      case INSTRUCTIONS.noFace:
-      case INSTRUCTIONS.preparing:
-        return 1.1;
-      case INSTRUCTIONS.tooFar:
-        return 0.9;
-      case INSTRUCTIONS.tooClose:
-        return 1.18;
-      case INSTRUCTIONS.detected:
-      case INSTRUCTIONS.capturing:
-      default:
-        return 1.0;
-    }
-  }, [instruction, status]);
 
   /* ── Phase: Capture ─────────────────────────────────── */
   const isVerifyingOrCaptured = status === "verifying" || status === "captured";
