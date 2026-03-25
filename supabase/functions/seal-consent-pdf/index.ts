@@ -140,11 +140,11 @@ serve(async (req: Request) => {
       );
     }
 
-    // ── 2. Buscar dados do paciente (client) ──
+    // ── 2. Buscar dados do paciente ──
     const { data: client } = await supabaseAdmin
-      .from("clients")
-      .select("full_name, cpf, birth_date, email, phone")
-      .eq("id", consent.client_id)
+      .from("patients")
+      .select("name, cpf, birth_date, email, phone")
+      .eq("id", consent.patient_id)
       .single();
 
     // ── 3. Buscar template original ──
@@ -161,7 +161,7 @@ serve(async (req: Request) => {
       .eq("id", consent.tenant_id)
       .single();
 
-    const patientName = client?.full_name ?? "Paciente";
+    const patientName = client?.name ?? "Paciente";
     const templateTitle = template?.title ?? "Termo de Consentimento";
     const clinicName = tenant?.name ?? "Clínica";
     const signedAt = formatDateBR(consent.signed_at);
