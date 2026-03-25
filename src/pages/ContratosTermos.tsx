@@ -41,9 +41,17 @@ import {
   ShieldCheck,
   CheckCircle2,
   Filter,
+  ChevronDown,
+  ChevronUp,
+  CalendarDays,
+  X,
+  History,
+  SlidersHorizontal,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const RECENT_LIMIT = 3;
 
 interface SignedConsent {
   id: string;
@@ -66,6 +74,10 @@ export default function ContratosTermos() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [templateFilter, setTemplateFilter] = useState("all");
+  const [patientFilter, setPatientFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [viewConsent, setViewConsent] = useState<SignedConsent | null>(null);
   const [viewPhotoUrl, setViewPhotoUrl] = useState<string | null>(null);
 
@@ -127,10 +139,47 @@ export default function ContratosTermos() {
     return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
   }, [consents]);
 
+  const patientOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    consents.forEach((c) => map.set(c.patient_id, c.client_name));
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [consents]);
+
+  const hasActiveFilters = useMemo(
+    () =>
+      debouncedSearch.trim() !== "" ||
+      templateFilter !== "all" ||
+      patientFilter !== "all" ||
+      dateFrom !== "" ||
+      dateTo !== "",
+    [debouncedSearch, templateFilter, patientFilter, dateFrom, dateTo]
+  );
+
+  const clearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    setTemplateFilter("all");
+    setPatientFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  }, []);
+
   const filtered = useMemo(() => {
     let list = consents;
     if (templateFilter !== "all") {
       list = list.filter((c) => c.template_id === templateFilter);
+    }
+    if (patientFilter !== "all") {
+      list = list.filter((c) => c.patient_id === patientFilter);
+    }
+    if (dateFrom) {
+      const from = startOfDay(new Date(dateFrom));
+      list = list.filter((c) => !isBefore(new Date(c.signed_at), from));
+    }
+    if (dateTo) {
+      const to = endOfDay(new Date(dateTo));
+      list = list.filter((c) => !isAfter(new Date(c.signed_at), to));
     }
     if (debouncedSearch.trim()) {
       const q = debouncedSearch.toLowerCase().trim();
@@ -141,7 +190,13 @@ export default function ContratosTermos() {
       );
     }
     return list;
-  }, [consents, templateFilter, debouncedSearch]);
+  }, [consents, templateFilter, patientFilter, dateFrom, dateTo, debouncedSearch]);
+
+  /** When no filters → show only recent; when filters active → show all filtered */
+  const displayList = useMemo(
+    () => (hasActiveFilters ? filtered : filtered.slice(0, RECENT_LIMIT)),
+    [filtered, hasActiveFilters]
+  );
 
   const handleExport = (consent: SignedConsent) => {
     const html = `
@@ -217,69 +272,234 @@ export default function ContratosTermos() {
           </CardContent>
         </Card>
 
-        {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por paciente ou termo..."
-              className="pl-10"
-            />
-          </div>
-          <Select value={templateFilter} onValueChange={setTemplateFilter}>
-            <SelectTrigger className="w-full sm:w-72">
-              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Filtrar por documento" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os documentos</SelectItem>
-              {templateOptions.map((t) => (
-                <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Contadores */}
+        {/* Stats row */}
         {!isLoading && consents.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="text-sm">
-              {filtered.length} assinatura{filtered.length !== 1 ? "s" : ""}
-              {templateFilter !== "all" || debouncedSearch ? " (filtrado)" : " no total"}
-            </Badge>
-            <Badge variant="outline" className="text-sm">
-              {new Set(consents.map((c) => c.patient_id)).size} paciente{new Set(consents.map((c) => c.patient_id)).size !== 1 ? "s" : ""}
-            </Badge>
-            <Badge variant="outline" className="text-sm">
-              {templateOptions.length} tipo{templateOptions.length !== 1 ? "s" : ""} de documento
-            </Badge>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Card>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                  <FileSignature className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{consents.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Total assinaturas</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 flex-shrink-0">
+                  <User className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{new Set(consents.map((c) => c.patient_id)).size}</p>
+                  <p className="text-[11px] text-muted-foreground">Pacientes</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 flex-shrink-0">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{templateOptions.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Tipos de termo</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10 flex-shrink-0">
+                  <Camera className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold">{consents.filter((c) => c.facial_photo_path).length}</p>
+                  <p className="text-[11px] text-muted-foreground">Com foto facial</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Lista */}
+        {/* ── Section: Últimas Assinaturas (default) ── */}
+        {!hasActiveFilters && !isLoading && consents.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">Últimas assinaturas</h2>
+                <Badge variant="secondary" className="text-[10px]">{Math.min(RECENT_LIMIT, consents.length)} recentes</Badge>
+              </div>
+              {consents.length > RECENT_LIMIT && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-primary hover:text-primary/80 gap-1.5"
+                  onClick={() => setFiltersOpen(true)}
+                >
+                  <History className="h-3.5 w-3.5" />
+                  Ver histórico completo ({consents.length})
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Advanced Filters Panel ── */}
+        <Card className="border-dashed">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filtros avançados</span>
+              {hasActiveFilters && (
+                <Badge variant="default" className="text-[10px] h-5">
+                  {[
+                    debouncedSearch.trim() ? 1 : 0,
+                    templateFilter !== "all" ? 1 : 0,
+                    patientFilter !== "all" ? 1 : 0,
+                    dateFrom ? 1 : 0,
+                    dateTo ? 1 : 0,
+                  ].reduce((a, b) => a + b, 0)}{" "}
+                  ativo{[debouncedSearch.trim() ? 1 : 0, templateFilter !== "all" ? 1 : 0, patientFilter !== "all" ? 1 : 0, dateFrom ? 1 : 0, dateTo ? 1 : 0].reduce((a, b) => a + b, 0) > 1 ? "s" : ""}
+                </Badge>
+              )}
+            </div>
+            {filtersOpen ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+
+          {filtersOpen && (
+            <CardContent className="pt-0 pb-4 px-5 space-y-4 border-t">
+              {/* Row 1: Search + Patient */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Busca</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Nome do paciente ou termo..."
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Paciente</label>
+                  <Select value={patientFilter} onValueChange={setPatientFilter}>
+                    <SelectTrigger>
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Todos os pacientes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os pacientes</SelectItem>
+                      {patientOptions.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2: Template + Date range */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tipo de documento</label>
+                  <Select value={templateFilter} onValueChange={setTemplateFilter}>
+                    <SelectTrigger>
+                      <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="Todos os tipos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os tipos</SelectItem>
+                      {templateOptions.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data início</label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data fim</label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear filters */}
+              {hasActiveFilters && (
+                <div className="flex items-center justify-between pt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {filtered.length} resultado{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
+                  </Badge>
+                  <Button variant="ghost" size="sm" className="text-xs gap-1.5 text-muted-foreground hover:text-foreground" onClick={clearAllFilters}>
+                    <X className="h-3.5 w-3.5" />
+                    Limpar filtros
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+
+        {/* ── Results ── */}
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : displayList.length === 0 ? (
           <EmptyState
             icon={FileSignature}
-            title={searchQuery || templateFilter !== "all" ? "Nenhum resultado encontrado" : "Nenhum documento assinado"}
+            title={hasActiveFilters ? "Nenhum resultado encontrado" : "Nenhum documento assinado"}
             description={
-              searchQuery || templateFilter !== "all"
+              hasActiveFilters
                 ? "Ajuste os filtros para encontrar os documentos."
                 : "Quando um paciente assinar um termo no portal, ele aparecerá aqui."
             }
           />
         ) : (
           <>
+            {/* Active filter indicator */}
+            {hasActiveFilters && (
+              <div className="flex items-center gap-2 mb-1">
+                <Filter className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  Exibindo {filtered.length} de {consents.length} assinaturas
+                </span>
+              </div>
+            )}
+
             {/* Mobile: Cards */}
             <div className="block md:hidden space-y-3">
-              {filtered.map((c) => (
+              {displayList.map((c) => (
                 <Card key={c.id}>
                   <CardContent className="py-3 px-4">
                     <div className="flex items-start justify-between gap-3">
@@ -329,7 +549,7 @@ export default function ContratosTermos() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filtered.map((c) => (
+                      {displayList.map((c) => (
                         <TableRow key={c.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -378,6 +598,21 @@ export default function ContratosTermos() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* "Ver mais" prompt when showing only recent */}
+            {!hasActiveFilters && consents.length > RECENT_LIMIT && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-xs"
+                  onClick={() => setFiltersOpen(true)}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Buscar no histórico completo ({consents.length} documentos)
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
