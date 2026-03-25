@@ -28,9 +28,11 @@ const BANUBA_CDN = `https://cdn.jsdelivr.net/npm/@banuba/webar@${BANUBA_SDK_VERS
 const BANUBA_TOKEN = (import.meta.env.VITE_BANUBA_CLIENT_TOKEN as string) || "";
 
 const FACE_DETECT_TIMEOUT_MS = 8_000;
-/** Time face must remain detected before auto-capture fires */
+/** Time face must remain detected before auto-capture fires (with Banuba) */
 const AUTO_CAPTURE_DELAY_MS = 2_500;
-/** Minimum time camera must be visible before auto-capture is allowed */
+/** Without Banuba, auto-capture after this delay from streaming start */
+const NO_BANUBA_AUTO_CAPTURE_MS = 4_000;
+/** Minimum time camera must be streaming before auto-capture */
 const MIN_STREAMING_MS = 1_500;
 /** Simulated verification time after capture */
 const VERIFY_DURATION_MS = 1_800;
@@ -52,13 +54,15 @@ function getBanubaSDK(): Promise<any | null> {
   return _sdkPromise;
 }
 
-/** Dynamic instruction messages based on face detection state */
+/** Dynamic instruction messages */
 const INSTRUCTIONS = {
   noFace: "Posicione seu rosto no oval",
   tooFar: "Aproxime um pouco o rosto",
+  tooClose: "Afaste um pouco o rosto",
   detected: "Ótimo! Mantenha assim…",
   capturing: "Capturando automaticamente…",
-  fallback: "Toque no botão para capturar",
+  preparing: "Centralize o rosto e aguarde…",
+  verifying: "Verificando qualidade da foto…",
 } as const;
 
 export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
@@ -83,7 +87,7 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
   const [faceDetected, setFaceDetected] = useState(false);
   const [banubaActive, setBanubaActive] = useState(false);
   const [fallbackActive, setFallbackActive] = useState(false);
-  const [instruction, setInstruction] = useState(INSTRUCTIONS.noFace);
+  const [instruction, setInstruction] = useState<string>(INSTRUCTIONS.noFace);
   const [autoCaptureCountdown, setAutoCaptureCountdown] = useState(false);
 
   /* ── Cleanup ─────────────────────────────────────────── */
@@ -281,11 +285,8 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
 
     setBanubaActive(banubaOk);
     if (!banubaOk) {
-      // No face detection → don't auto-capture, show manual button
-      setFallbackActive(true);
-      fallbackActiveRef.current = true;
-      setFaceDetected(true);
-      setInstruction(INSTRUCTIONS.fallback);
+      // No Banuba → auto-capture on timer after user has time to position
+      setInstruction(INSTRUCTIONS.preparing);
     } else {
       timeoutRef.current = setTimeout(() => {
         fallbackActiveRef.current = true;
@@ -305,41 +306,72 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
     }
   }, [faceDetected, fallbackActive]);
 
-  /* ── Auto-capture when face stays detected (only with Banuba) ── */
+  /* ── Auto-capture logic ── */
   useEffect(() => {
-    if (status !== "streaming") return;
-    // Only auto-capture when Banuba is active (real face detection)
-    if (!banubaActive || fallbackActive) return;
-    // Ensure camera has been streaming for a minimum duration
-    const elapsed = Date.now() - streamingStartRef.current;
-    if (elapsed < MIN_STREAMING_MS) {
-      const remaining = MIN_STREAMING_MS - elapsed;
-      const t = setTimeout(() => setInstruction((prev) => prev), remaining);
-      return () => clearTimeout(t);
+    if (status !== "streaming" || captureTriggeredRef.current) return;
+
+    // ─── WITH Banuba: auto-capture when face detected + held ───
+    if (banubaActive) {
+      const elapsed = Date.now() - streamingStartRef.current;
+      if (elapsed < MIN_STREAMING_MS) {
+        const remaining = MIN_STREAMING_MS - elapsed;
+        const t = setTimeout(() => setInstruction((prev) => prev), remaining);
+        return () => clearTimeout(t);
+      }
+
+      if (faceDetected && !fallbackActive) {
+        if (!autoCaptureRef.current) {
+          setInstruction(INSTRUCTIONS.detected);
+          setAutoCaptureCountdown(true);
+          autoCaptureRef.current = setTimeout(() => {
+            if (captureTriggeredRef.current) return;
+            captureTriggeredRef.current = true;
+            setInstruction(INSTRUCTIONS.capturing);
+            setTimeout(() => capture(), 400);
+          }, AUTO_CAPTURE_DELAY_MS);
+        }
+      } else if (fallbackActive && faceDetected) {
+        // Banuba timed out but face is "detected" (fallback) → auto-capture
+        if (!autoCaptureRef.current) {
+          setInstruction(INSTRUCTIONS.capturing);
+          setAutoCaptureCountdown(true);
+          autoCaptureRef.current = setTimeout(() => {
+            if (captureTriggeredRef.current) return;
+            captureTriggeredRef.current = true;
+            setTimeout(() => capture(), 400);
+          }, 1_500);
+        }
+      } else if (!faceDetected) {
+        if (autoCaptureRef.current) {
+          clearTimeout(autoCaptureRef.current);
+          autoCaptureRef.current = null;
+        }
+        setAutoCaptureCountdown(false);
+        if (frameCountRef.current > 30) {
+          setInstruction(INSTRUCTIONS.tooFar);
+        } else {
+          setInstruction(INSTRUCTIONS.noFace);
+        }
+      }
+      return;
     }
 
-    if (faceDetected && !captureTriggeredRef.current) {
-      if (!autoCaptureRef.current) {
+    // ─── WITHOUT Banuba: timed auto-capture ───
+    if (!autoCaptureRef.current) {
+      setInstruction(INSTRUCTIONS.preparing);
+      autoCaptureRef.current = setTimeout(() => {
+        if (captureTriggeredRef.current) return;
         setInstruction(INSTRUCTIONS.detected);
         setAutoCaptureCountdown(true);
-        autoCaptureRef.current = setTimeout(() => {
+
+        // Give 1.5s of "Ótimo! Mantenha assim" then capture
+        setTimeout(() => {
           if (captureTriggeredRef.current) return;
           captureTriggeredRef.current = true;
           setInstruction(INSTRUCTIONS.capturing);
           setTimeout(() => capture(), 400);
-        }, AUTO_CAPTURE_DELAY_MS);
-      }
-    } else if (!faceDetected) {
-      if (autoCaptureRef.current) {
-        clearTimeout(autoCaptureRef.current);
-        autoCaptureRef.current = null;
-      }
-      setAutoCaptureCountdown(false);
-      if (frameCountRef.current > 30) {
-        setInstruction(INSTRUCTIONS.tooFar);
-      } else {
-        setInstruction(INSTRUCTIONS.noFace);
-      }
+        }, 1_500);
+      }, NO_BANUBA_AUTO_CAPTURE_MS);
     }
   }, [faceDetected, status, banubaActive, fallbackActive, capture]);
 
@@ -503,10 +535,28 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
           </div>
         )}
 
-        {/* Top header bar */}
-        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-2 py-3 px-4">
-          <ScanFace className="h-4 w-4 text-white drop-shadow" />
-          <span className="text-sm font-semibold text-white drop-shadow">Reconhecimento Facial</span>
+        {/* Top bar — title + prominent instruction */}
+        <div className="absolute top-0 left-0 right-0 z-20 flex flex-col items-center pt-3 pb-2 px-4" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <ScanFace className="h-4 w-4 text-white/80" />
+            <span className="text-xs font-medium text-white/80 uppercase tracking-wider">Reconhecimento Facial</span>
+          </div>
+          {status === "streaming" && (
+            <div
+              className={`flex items-center gap-2 text-sm font-bold px-5 py-2 rounded-full transition-all duration-300 ${
+                autoCaptureCountdown
+                  ? "bg-teal-400/90 text-white"
+                  : "bg-white/20 backdrop-blur-md text-white"
+              }`}
+            >
+              {autoCaptureCountdown ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <ScanFace className="h-4 w-4" />
+              )}
+              {instruction}
+            </div>
+          )}
         </div>
 
         {/* LOADING overlay */}
@@ -541,42 +591,13 @@ export function FacialCapture({ onCapture, disabled }: FacialCaptureProps) {
           </div>
         )}
 
-        {/* Dynamic instruction banner — bottom of camera */}
-        {status === "streaming" && (
+        {/* Bottom progress indicator during auto-capture countdown */}
+        {status === "streaming" && autoCaptureCountdown && (
           <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20 pointer-events-none">
-            <div
-              className={`flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md transition-all duration-300 ${
-                autoCaptureCountdown
-                  ? "bg-teal-500/90 text-white"
-                  : faceDetected
-                    ? "bg-white/20 text-white"
-                    : "bg-white/20 text-white animate-pulse"
-              }`}
-            >
-              {autoCaptureCountdown ? (
-                <ShieldCheck className="h-3.5 w-3.5" />
-              ) : faceDetected ? (
-                <ShieldCheck className="h-3.5 w-3.5" />
-              ) : (
-                <ScanFace className="h-3.5 w-3.5" />
-              )}
-              {instruction}
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-teal-300" />
+              <span className="text-xs font-medium text-white/80">Captura automática em andamento…</span>
             </div>
-          </div>
-        )}
-
-        {/* Manual capture button — shown when no Banuba or fallback timeout */}
-        {status === "streaming" && fallbackActive && (
-          <div className="absolute bottom-14 left-0 right-0 flex flex-col items-center gap-2 z-20">
-            <button
-              type="button"
-              onClick={capture}
-              disabled={disabled}
-              className="flex items-center justify-center h-16 w-16 rounded-full bg-white shadow-lg shadow-black/20 active:scale-95 transition-all ring-4 ring-white/30"
-            >
-              <ScanFace className="h-7 w-7 text-teal-700" />
-            </button>
-            <p className="text-xs text-white/80 font-medium">Toque para capturar</p>
           </div>
         )}
 
