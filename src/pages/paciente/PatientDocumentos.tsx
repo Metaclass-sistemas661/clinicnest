@@ -26,6 +26,9 @@ import {
   ChevronRight,
   ArrowLeft,
   Eye,
+  Camera,
+  Pen,
+  FileDown,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -50,6 +53,10 @@ interface ConsentRow {
   signature_method: string | null;
   sealed_pdf_path: string | null;
   is_signed: boolean;
+  facial_photo_path: string | null;
+  manual_signature_path: string | null;
+  template_snapshot_html: string | null;
+  ip_address: string | null;
 }
 
 /* ── Component ── */
@@ -75,6 +82,11 @@ export default function PatientDocumentos() {
 
   // View dialog state
   const [viewTarget, setViewTarget] = useState<ConsentRow | null>(null);
+
+  // Image URLs cache
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  // Sealing state
+  const [sealingId, setSealingId] = useState<string | null>(null);
 
   const resolvePatient = useCallback(async () => {
     try {
@@ -118,25 +130,43 @@ export default function PatientDocumentos() {
       const rows = (data as ConsentRow[]) ?? [];
       setConsents(rows);
 
-      // Auto-trigger seal for signed consents without PDF (fire & forget)
+      // Load signed URLs for photos/signatures
+      const urls: Record<string, string> = {};
+      for (const c of rows) {
+        if (c.consent_id && c.is_signed) {
+          if (c.facial_photo_path) {
+            const { data: urlData } = await supabasePatient.storage
+              .from("consent-photos")
+              .createSignedUrl(c.facial_photo_path, 600);
+            if (urlData?.signedUrl) urls[`photo_${c.consent_id}`] = urlData.signedUrl;
+          }
+          if (c.manual_signature_path) {
+            const { data: urlData } = await supabasePatient.storage
+              .from("consent-signatures")
+              .createSignedUrl(c.manual_signature_path, 600);
+            if (urlData?.signedUrl) urls[`sig_${c.consent_id}`] = urlData.signedUrl;
+          }
+        }
+      }
+      setImageUrls(urls);
+
+      // Auto-trigger seal for signed consents without PDF (sequential, one at a time)
       for (const c of rows) {
         if (c.is_signed && c.consent_id && !c.sealed_pdf_path) {
-          supabasePatient.functions
-            .invoke("seal-consent-pdf", { body: { consent_id: c.consent_id } })
-            .then(({ error: sealErr }) => {
-              if (!sealErr) {
-                // Refresh to show updated PDF path
-                setConsents((prev) =>
-                  prev.map((p) =>
-                    p.consent_id === c.consent_id
-                      ? { ...p, sealed_pdf_path: "pending" }
-                      : p
-                  )
-                );
-              } else {
-                logger.warn("[PatientDocumentos] auto-seal failed:", c.consent_id, sealErr);
-              }
-            });
+          try {
+            const { data: sealData, error: sealErr } = await supabasePatient.functions
+              .invoke("seal-consent-pdf", { body: { consent_id: c.consent_id } });
+            if (sealErr) {
+              logger.warn("[PatientDocumentos] auto-seal failed:", c.consent_id, sealErr);
+            } else {
+              logger.info("[PatientDocumentos] auto-seal success:", c.consent_id, sealData);
+              // Re-fetch to pick up sealed_pdf_path
+              const { data: refreshed } = await (supabasePatient as any).rpc("get_patient_all_consents", { p_patient_id: pId });
+              if (refreshed) setConsents(refreshed as ConsentRow[]);
+            }
+          } catch (err) {
+            logger.warn("[PatientDocumentos] auto-seal error:", c.consent_id, err);
+          }
         }
       }
     } catch (err) {
@@ -296,6 +326,35 @@ export default function PatientDocumentos() {
     }
   };
 
+  const handleSealPdf = async (consent: ConsentRow) => {
+    if (!consent.consent_id) return;
+    setSealingId(consent.consent_id);
+    try {
+      const { data: sealData, error: sealErr } = await supabasePatient.functions
+        .invoke("seal-consent-pdf", { body: { consent_id: consent.consent_id } });
+
+      if (sealErr) {
+        logger.error("[PatientDocumentos] seal-consent-pdf error:", sealErr);
+        toast.error(`Falha ao gerar PDF: ${sealErr.message || "Erro desconhecido"}`);
+        return;
+      }
+
+      const result = sealData as any;
+      if (result?.error) {
+        toast.error(`Falha ao gerar PDF: ${result.error}`);
+        return;
+      }
+
+      toast.success("PDF gerado com sucesso!");
+      if (patientId) void fetchConsents(patientId);
+    } catch (err: any) {
+      logger.error("[PatientDocumentos] seal error:", err);
+      toast.error(`Erro ao gerar PDF: ${err?.message || "Erro desconhecido"}`);
+    } finally {
+      setSealingId(null);
+    }
+  };
+
   return (
     <PatientLayout
       title="Documentos"
@@ -396,6 +455,36 @@ export default function PatientDocumentos() {
                         </p>
                       )}
 
+                      {/* Inline photo/signature display */}
+                      {c.is_signed && c.consent_id && (
+                        <div className="flex items-start gap-4 flex-wrap">
+                          {c.signature_method === "facial" && imageUrls[`photo_${c.consent_id}`] && (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                                <Camera className="h-3 w-3" /> Foto facial
+                              </p>
+                              <img
+                                src={imageUrls[`photo_${c.consent_id}`]}
+                                alt="Foto facial"
+                                className="h-20 w-20 object-cover rounded-lg border-2 border-green-200 dark:border-green-800 shadow-sm"
+                              />
+                            </div>
+                          )}
+                          {c.signature_method === "manual" && imageUrls[`sig_${c.consent_id}`] && (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                                <Pen className="h-3 w-3" /> Assinatura
+                              </p>
+                              <img
+                                src={imageUrls[`sig_${c.consent_id}`]}
+                                alt="Assinatura manual"
+                                className="h-16 max-w-[200px] object-contain rounded-lg border bg-white p-1 shadow-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           size="sm"
@@ -407,7 +496,7 @@ export default function PatientDocumentos() {
                           Visualizar
                         </Button>
 
-                        {c.is_signed && c.sealed_pdf_path && (
+                        {c.is_signed && c.sealed_pdf_path && c.sealed_pdf_path !== "pending" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -416,6 +505,22 @@ export default function PatientDocumentos() {
                           >
                             <Download className="h-3.5 w-3.5" />
                             Baixar PDF
+                          </Button>
+                        )}
+
+                        {c.is_signed && !c.sealed_pdf_path && c.consent_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300"
+                            onClick={() => void handleSealPdf(c)}
+                            disabled={sealingId === c.consent_id}
+                          >
+                            {sealingId === c.consent_id ? (
+                              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando PDF...</>
+                            ) : (
+                              <><FileDown className="h-3.5 w-3.5" /> Gerar PDF</>
+                            )}
                           </Button>
                         )}
 
@@ -467,12 +572,92 @@ export default function PatientDocumentos() {
             </DialogDescription>
           </DialogHeader>
           {viewTarget && (
-            <div
-              className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-muted/30"
-              dangerouslySetInnerHTML={{
-                __html: replaceVariables(viewTarget.body_html, varsData),
-              }}
-            />
+            <div className="space-y-4">
+              {/* Signed evidence: photo or signature */}
+              {viewTarget.is_signed && viewTarget.consent_id && (
+                <div className="space-y-3">
+                  {viewTarget.signature_method === "facial" && imageUrls[`photo_${viewTarget.consent_id}`] && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Camera className="h-4 w-4" />
+                        Foto facial (momento da assinatura)
+                      </h4>
+                      <div className="flex justify-center">
+                        <img
+                          src={imageUrls[`photo_${viewTarget.consent_id}`]}
+                          alt="Foto facial do paciente"
+                          className="max-w-[200px] rounded-xl border-2 border-green-200 dark:border-green-800 shadow-md"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {viewTarget.signature_method === "manual" && imageUrls[`sig_${viewTarget.consent_id}`] && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Pen className="h-4 w-4" />
+                        Assinatura manual
+                      </h4>
+                      <div className="flex justify-center">
+                        <img
+                          src={imageUrls[`sig_${viewTarget.consent_id}`]}
+                          alt="Assinatura manual"
+                          className="max-w-[300px] h-auto rounded-lg border bg-white p-2 shadow-md"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {viewTarget.ip_address && (
+                    <p className="text-[11px] text-muted-foreground text-center">
+                      IP: {viewTarget.ip_address} | Método: {viewTarget.signature_method === "facial" ? "Reconhecimento facial" : "Assinatura manual"}
+                    </p>
+                  )}
+                  <Separator />
+                </div>
+              )}
+
+              {/* Term content */}
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-muted/30"
+                dangerouslySetInnerHTML={{
+                  __html: replaceVariables(
+                    viewTarget.template_snapshot_html || viewTarget.body_html,
+                    varsData
+                  ),
+                }}
+              />
+
+              {/* Actions in viewer */}
+              {viewTarget.is_signed && viewTarget.consent_id && (
+                <div className="flex justify-end gap-2">
+                  {viewTarget.sealed_pdf_path && viewTarget.sealed_pdf_path !== "pending" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => void handleDownloadSealedPdf(viewTarget)}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Baixar PDF
+                    </Button>
+                  )}
+                  {!viewTarget.sealed_pdf_path && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300"
+                      onClick={() => void handleSealPdf(viewTarget)}
+                      disabled={sealingId === viewTarget.consent_id}
+                    >
+                      {sealingId === viewTarget.consent_id ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando PDF...</>
+                      ) : (
+                        <><FileDown className="h-3.5 w-3.5" /> Gerar PDF</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>

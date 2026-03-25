@@ -92,7 +92,9 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log("[seal-consent-pdf] Request received");
     const { consent_id } = await req.json() as { consent_id?: string };
+    console.log("[seal-consent-pdf] consent_id:", consent_id);
 
     if (!consent_id) {
       return new Response(
@@ -102,6 +104,7 @@ serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createSupabaseAdmin();
+    console.log("[seal-consent-pdf] Admin client created");
 
     // ── 1. Buscar consent com dados relacionados ──
     const { data: consent, error: consentErr } = await supabaseAdmin
@@ -109,6 +112,8 @@ serve(async (req: Request) => {
       .select("*")
       .eq("id", consent_id)
       .single();
+
+    console.log("[seal-consent-pdf] Consent fetch:", consent ? "found" : "not found", consentErr?.message ?? "ok");
 
     if (consentErr || !consent) {
       log.error("Consent not found", { consent_id });
@@ -170,6 +175,7 @@ serve(async (req: Request) => {
       : "Reconhecimento Facial";
 
     // ── 5. Gerar PDF com pdf-lib ──
+    console.log("[seal-consent-pdf] Generating PDF for consent:", consent_id, "method:", consent.signature_method);
     const pdfDoc = await PDFDocument.create();
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -436,12 +442,14 @@ serve(async (req: Request) => {
     drawFooter(page, y);
 
     // ── 6. Serializar e calcular hash ──
+    console.log("[seal-consent-pdf] Serializing PDF");
     const pdfBytes = await pdfDoc.save();
     const pdfUint8 = new Uint8Array(pdfBytes);
     const pdfHash = await sha256Hex(pdfUint8);
 
     // ── 7. Upload para o bucket ──
     const storagePath = `${consent.tenant_id}/${consent.patient_user_id}/${consent_id}.pdf`;
+    console.log("[seal-consent-pdf] Uploading to:", storagePath, "size:", pdfUint8.length);
     const { error: uploadErr } = await supabaseAdmin.storage
       .from("consent-sealed-pdfs")
       .upload(storagePath, pdfUint8, {
