@@ -364,13 +364,20 @@ serve(async (req: Request) => {
     // ── Embed imagem de assinatura se manual ──
     if (consent.signature_method === "manual" && consent.manual_signature_path) {
       try {
-        const { data: sigData } = await supabaseAdmin.storage
+        console.log("[seal-consent-pdf] Downloading signature:", consent.manual_signature_path);
+        const { data: sigData, error: sigDlErr } = await supabaseAdmin.storage
           .from("consent-signatures")
           .download(consent.manual_signature_path);
+        if (sigDlErr) console.warn("[seal-consent-pdf] Signature download error:", sigDlErr.message);
 
         if (sigData) {
           const sigBytes = new Uint8Array(await sigData.arrayBuffer());
-          const sigImage = await pdfDoc.embedPng(sigBytes);
+          let sigImage;
+          try {
+            sigImage = await pdfDoc.embedPng(sigBytes);
+          } catch {
+            sigImage = await pdfDoc.embedJpg(sigBytes);
+          }
           const sigDims = sigImage.scale(0.4);
           const maxW = 200;
           const maxH = 80;
@@ -401,9 +408,11 @@ serve(async (req: Request) => {
     // ── Embed foto facial se disponível ──
     if (consent.facial_photo_path) {
       try {
-        const { data: photoData } = await supabaseAdmin.storage
+        console.log("[seal-consent-pdf] Downloading facial photo:", consent.facial_photo_path);
+        const { data: photoData, error: photoDlErr } = await supabaseAdmin.storage
           .from("consent-photos")
           .download(consent.facial_photo_path);
+        if (photoDlErr) console.warn("[seal-consent-pdf] Photo download error:", photoDlErr.message);
 
         if (photoData) {
           const photoBytes = new Uint8Array(await photoData.arrayBuffer());

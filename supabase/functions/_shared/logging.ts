@@ -73,12 +73,27 @@ function maskSensitiveData(obj: unknown): unknown {
 export function createLogger(functionName: string) {
   const isDev = Deno.env.get("LOG_SENSITIVE") === "true";
 
-  return (step: string, details?: unknown) => {
-    let detailsStr = "";
-    if (details !== undefined) {
-      const safe = isDev ? details : maskSensitiveData(details);
-      detailsStr = ` - ${JSON.stringify(safe)}`;
-    }
-    console.log(`[${functionName}] ${step}${detailsStr}`);
+  const fmt = (details?: unknown): string => {
+    if (details === undefined) return "";
+    const safe = isDev ? details : maskSensitiveData(details);
+    return ` - ${JSON.stringify(safe)}`;
   };
+
+  const log = (step: string, details?: unknown) => {
+    console.log(`[${functionName}] ${step}${fmt(details)}`);
+  };
+
+  log.info = (step: string, details?: unknown) => {
+    console.log(`[${functionName}] ${step}${fmt(details)}`);
+  };
+
+  log.warn = (step: string, details?: unknown) => {
+    console.warn(`[${functionName}] WARN: ${step}${fmt(details)}`);
+  };
+
+  log.error = (step: string, details?: unknown) => {
+    console.error(`[${functionName}] ERROR: ${step}${fmt(details)}`);
+  };
+
+  return log;
 }
