@@ -695,7 +695,7 @@ export default function TermosConsentimento() {
                         </div>
                       </div>
                     ) : (
-                      <label className="cursor-pointer block">
+                      <label className="cursor-pointer block" aria-label="Selecionar arquivo PDF">
                         <input
                           type="file"
                           accept="application/pdf"

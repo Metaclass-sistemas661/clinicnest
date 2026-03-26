@@ -489,7 +489,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
               <Label>Eventos para receber</Label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {WEBHOOK_EVENTS.map((ev) => (
-                  <label key={ev.id} className={cn(
+                  <label key={ev.id} aria-label={ev.label} className={cn(
                     "flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer transition-colors",
                     formEvents.includes(ev.id) ? "border-primary bg-primary/5" : "hover:bg-muted/40"
                   )}>

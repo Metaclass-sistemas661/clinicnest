@@ -249,8 +249,8 @@ export default function NovaCampanha() {
                       <div className="py-8 text-center text-sm text-muted-foreground">Nenhum paciente encontrado</div>
                     ) : (
                       filteredPatients.map((c) => (
-                        <label key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer">
-                          <Checkbox checked={selectedIds.has(c.id)} onCheckedChange={() => togglePatient(c.id)} />
+                        <label key={c.id} htmlFor={`nc-patient-${c.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer">
+                          <Checkbox id={`nc-patient-${c.id}`} checked={selectedIds.has(c.id)} onCheckedChange={() => togglePatient(c.id)} />
                           <div className="min-w-0">
                             <div className="text-sm font-medium truncate">{c.name || "—"}</div>
                             <div className="text-xs text-muted-foreground truncate">{c.email}</div>

@@ -185,7 +185,7 @@ export function PatientTable({
                       <TableCell>{patient.email ? <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-4 w-4" />{patient.email}</div> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="max-w-xs truncate text-muted-foreground">{patient.notes || "—"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1" role="toolbar" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" onClick={() => onOpenDrawer(patient)} title="Ver Termos e Contratos">
                             <ShieldCheck className="h-4 w-4 text-primary" />
                           </Button>

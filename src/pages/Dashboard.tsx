@@ -1814,6 +1814,7 @@ export default function Dashboard() {
                         ].map((card, i) => (
                           <Link key={card.label} to={card.link} className="block [&:hover]:no-underline">
                             <div
+                              role="group"
                               className={`finance-3d-card group relative overflow-hidden rounded-2xl bg-gradient-to-br ${card.gradient} p-5 text-white shadow-xl ${card.shadow} transition-all duration-500 hover:shadow-2xl`}
                               style={{
                                 transform: hoveredChart === card.label ? 'perspective(800px) rotateY(-5deg) rotateX(3deg) scale(1.03)' : 'perspective(800px) rotateY(0deg) rotateX(0deg) scale(1)',
@@ -1849,6 +1850,7 @@ export default function Dashboard() {
                       <div className="grid gap-5 grid-cols-1 lg:grid-cols-5">
                         {/* Main Bar Chart — spans 3 cols */}
                         <div
+                          role="group"
                           className="finance-3d-card lg:col-span-3 relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
                           style={{
                             transform: hoveredChart === 'bar' ? 'perspective(1000px) rotateX(2deg) translateY(-4px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
@@ -1903,6 +1905,7 @@ export default function Dashboard() {
 
                         {/* Donut Chart — 2 cols */}
                         <div
+                          role="group"
                           className="finance-3d-card lg:col-span-2 relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
                           style={{
                             transform: hoveredChart === 'pie' ? 'perspective(1000px) rotateY(4deg) translateY(-4px)' : 'perspective(1000px) rotateY(0deg) translateY(0)',
@@ -1962,6 +1965,7 @@ export default function Dashboard() {
                       {/* ── Cashflow Area Chart ── */}
                       {miniChartData.length > 0 && (
                         <div
+                          role="group"
                           className="finance-3d-card relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
                           style={{
                             transform: hoveredChart === 'area' ? 'perspective(1000px) rotateX(-2deg) translateY(-3px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
@@ -2018,6 +2022,7 @@ export default function Dashboard() {
                   {/* Patient Ranking — admin only (3D) */}
                   {isAdmin && clientRanking.length > 0 && (
                     <div
+                      role="group"
                       className="finance-3d-card relative overflow-hidden rounded-2xl border border-border/50 bg-card p-5 shadow-lg transition-all duration-500 hover:shadow-xl"
                       style={{
                         transform: hoveredChart === 'ranking' ? 'perspective(1000px) rotateX(2deg) translateY(-3px)' : 'perspective(1000px) rotateX(0deg) translateY(0)',
