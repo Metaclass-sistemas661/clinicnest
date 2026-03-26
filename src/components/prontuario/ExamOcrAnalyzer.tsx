@@ -156,8 +156,11 @@ export function ExamOcrAnalyzer({ patientId }: { patientId?: string }) {
         {/* Upload area */}
         {!result && !analyzing && (
           <div
+            role="button"
+            tabIndex={0}
             className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-teal-400 hover:bg-teal-50/50 transition-colors"
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={(e) => {
               e.preventDefault();

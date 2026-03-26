@@ -312,7 +312,10 @@ export function CertificateSelector({
                 {a1Certificates.map((cert) => (
                   <div
                     key={cert.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleA1Select(cert)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleA1Select(cert); } }}
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedCertificate?.id === cert.id
                         ? "border-primary bg-primary/5"
@@ -395,7 +398,10 @@ export function CertificateSelector({
                 {a3Certificates.map((cert) => (
                   <div
                     key={cert.thumbprint}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleA3Select(cert)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleA3Select(cert); } }}
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedCertificate?.thumbprint === cert.thumbprint
                         ? "border-primary bg-primary/5"

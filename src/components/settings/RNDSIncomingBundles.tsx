@@ -190,8 +190,11 @@ export function RNDSIncomingBundles() {
                 return (
                   <div
                     key={bundle.id}
+                    role="button"
+                    tabIndex={0}
                     className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => openBundle(bundle)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openBundle(bundle); } }}
                   >
                     <FileJson className="h-5 w-5 text-blue-500 shrink-0" />
                     <div className="flex-1 min-w-0">

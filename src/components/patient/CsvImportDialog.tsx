@@ -492,8 +492,11 @@ export function CsvImportDialog({
         {/* Step 1: Upload */}
         {step === "upload" && (
           <div
+            role="button"
+            tabIndex={0}
             className="border-2 border-dashed border-teal-200 rounded-xl p-10 text-center hover:border-teal-400 transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
           >
