@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ReauthDialog } from "@/components/patient/ReauthDialog";
 
 interface PatientData {
   id: string;
@@ -137,6 +138,7 @@ export default function PatientProfile() {
   const [editNeighborhood, setEditNeighborhood] = useState("");
   const [editCity, setEditCity] = useState("");
   const [editState, setEditState] = useState("");
+  const [showReauthForSave, setShowReauthForSave] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
@@ -358,7 +360,7 @@ export default function PatientProfile() {
                   <Button
                     size="sm"
                     className="gap-1 text-xs bg-teal-600 hover:bg-teal-700 text-white"
-                    onClick={handleSave}
+                    onClick={() => setShowReauthForSave(true)}
                     disabled={isSaving}
                   >
                     {isSaving ? (
@@ -384,6 +386,7 @@ export default function PatientProfile() {
                       value={formatPhone(editPhone)}
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="(11) 99999-9999"
+                      maxLength={15}
                       className="h-10"
                     />
                   </div>
@@ -394,6 +397,7 @@ export default function PatientProfile() {
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
                       placeholder="seu@email.com"
+                      maxLength={255}
                       className="h-10"
                     />
                   </div>
@@ -422,6 +426,7 @@ export default function PatientProfile() {
                       value={editStreet}
                       onChange={(e) => setEditStreet(e.target.value)}
                       placeholder="Nome da rua"
+                      maxLength={255}
                       className="h-10"
                     />
                   </div>
@@ -433,6 +438,7 @@ export default function PatientProfile() {
                       value={editStreetNumber}
                       onChange={(e) => setEditStreetNumber(e.target.value)}
                       placeholder="123"
+                      maxLength={10}
                       className="h-10"
                     />
                   </div>
@@ -442,6 +448,7 @@ export default function PatientProfile() {
                       value={editComplement}
                       onChange={(e) => setEditComplement(e.target.value)}
                       placeholder="Apto 12"
+                      maxLength={100}
                       className="h-10"
                     />
                   </div>
@@ -451,6 +458,7 @@ export default function PatientProfile() {
                       value={editNeighborhood}
                       onChange={(e) => setEditNeighborhood(e.target.value)}
                       placeholder="Bairro"
+                      maxLength={100}
                       className="h-10"
                     />
                   </div>
@@ -460,6 +468,7 @@ export default function PatientProfile() {
                       value={editCity}
                       onChange={(e) => setEditCity(e.target.value)}
                       placeholder="Cidade"
+                      maxLength={100}
                       className="h-10"
                     />
                   </div>
@@ -541,6 +550,14 @@ export default function PatientProfile() {
           </CardContent>
         </Card>
       </div>
+
+      <ReauthDialog
+        open={showReauthForSave}
+        onOpenChange={setShowReauthForSave}
+        title="Confirme para salvar"
+        description="Para alterar seus dados de contato, confirme sua senha."
+        onSuccess={handleSave}
+      />
     </PatientLayout>
   );
 }

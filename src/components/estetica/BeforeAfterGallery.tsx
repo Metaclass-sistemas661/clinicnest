@@ -100,9 +100,24 @@ function CompareSlider({
       ref={containerRef}
       className="relative overflow-hidden rounded-lg select-none cursor-col-resize"
       style={{ height }}
+      role="slider"
+      tabIndex={0}
+      aria-label="Comparação antes e depois"
+      aria-valuemin={0}
+      aria-valuemax={100}
       onMouseMove={handleMouseMove}
       onTouchMove={handleTouchMove}
       onMouseDown={(e) => handleMove(e.clientX)}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const step = rect.width * 0.05;
+          const current = rect.width * (sliderPos ?? 50) / 100;
+          handleMove(rect.left + current + (e.key === 'ArrowRight' ? step : -step));
+        }
+      }}
     >
       {/* After image (full) */}
       <img

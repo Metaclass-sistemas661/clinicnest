@@ -125,6 +125,8 @@ export function NotificationsBell() {
             notifications.map((n) => (
               <div
                 key={n.id}
+                role="button"
+                tabIndex={0}
                 className={`flex flex-col gap-1 px-4 py-3 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors ${
                   !n.read_at ? "bg-primary/5" : ""
                 }`}
@@ -132,6 +134,7 @@ export function NotificationsBell() {
                   markAsRead(n.id);
                   setOpen(false);
                 }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); markAsRead(n.id); setOpen(false); } }}
               >
                 <p className="font-medium text-sm">{n.title}</p>
                 {n.body && (

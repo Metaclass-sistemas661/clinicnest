@@ -155,10 +155,11 @@ export function FeedbackNPSDialog() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">
+            <label htmlFor="nps-feedback" className="text-sm font-medium">
               O que podemos melhorar? (opcional)
             </label>
             <Textarea
+              id="nps-feedback"
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Conte-nos sua experiência..."

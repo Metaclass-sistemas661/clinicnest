@@ -10,7 +10,7 @@
  * ConsentGate, and PatientLayout.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,8 @@ import { DependentsProvider, useDependentsOptional } from "@/hooks/useDependents
 import { AiPatientChat } from "@/components/ai";
 import { SidebarContent } from "./PatientLayout";
 import { logger } from "@/lib/logger";
+import { usePatientSessionTimeout } from "@/hooks/usePatientSessionTimeout";
+import { usePatientAuthSync } from "@/hooks/usePatientAuthSync";
 
 import { PatientShellContext } from "./PatientShellContext";
 export { usePatientShell } from "./PatientShellContext";
@@ -64,6 +66,12 @@ export function PatientShellRoute() {
   const [collapsed, setCollapsed] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const { isOpen: searchOpen, setIsOpen: setSearchOpen } = usePatientGlobalSearch();
+
+  // ── Session timeout (inactivity 15min + max age 24h) ──
+  usePatientSessionTimeout();
+
+  // ── Cross-tab logout sync ──
+  usePatientAuthSync();
 
   // ── Auth check (runs once) ──
   useEffect(() => {

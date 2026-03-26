@@ -168,9 +168,9 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         {!transcript && !transcribeMutation.isPending ? (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Especialidade</label>
+              <label htmlFor="ai-transcribe-specialty" className="text-sm font-medium">Especialidade</label>
               <Select value={specialty} onValueChange={(v) => setSpecialty(v as Specialty)}>
-                <SelectTrigger>
+                <SelectTrigger id="ai-transcribe-specialty">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

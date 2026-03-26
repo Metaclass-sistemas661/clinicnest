@@ -147,8 +147,11 @@ export function AiCidSuggest({ onSelect, specialty, className }: AiCidSuggestPro
               {suggestions.map((suggestion, idx) => (
                 <div
                   key={idx}
+                  role="button"
+                  tabIndex={0}
                   className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => handleSelect(suggestion)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(suggestion); } }}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">

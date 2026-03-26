@@ -23,13 +23,13 @@ import { toast } from "sonner";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
+import { PasswordStrengthIndicator, isPasswordValid } from "@/components/patient/PasswordStrengthIndicator";
 
 type Step = "identify" | "login" | "create_password" | "success";
 
 interface PatientInfo {
   patient_id: string;
-  client_name: string;
-  client_email: string | null;
+  masked_name: string;
   masked_email: string | null;
   clinic_name: string | null;
   status: "new" | "has_account";
@@ -41,6 +41,7 @@ export default function PatientLogin() {
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
 
   // Login fields
+  const [loginEmail, setLoginEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,8 +104,7 @@ export default function PatientLogin() {
 
       const info: PatientInfo = {
         patient_id: data.patient_id,
-        client_name: data.client_name,
-        client_email: data.client_email,
+        masked_name: data.masked_name || "Paciente",
         masked_email: data.masked_email,
         clinic_name: data.clinic_name,
         status: data.status,
@@ -114,7 +114,6 @@ export default function PatientLogin() {
       if (data.status === "has_account") {
         setStep("login");
       } else {
-        setEmail(info.client_email || "");
         setStep("create_password");
       }
     } catch (err) {
@@ -128,12 +127,12 @@ export default function PatientLogin() {
   // ── Step 2a: Login with existing account ──
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!patientInfo?.client_email || !password) return;
+    if (!loginEmail.trim() || !password) return;
     setIsLoading(true);
 
     try {
       const { data, error } = await supabasePatient.auth.signInWithPassword({
-        email: patientInfo.client_email,
+        email: loginEmail.trim(),
         password,
         options: captchaToken ? { captchaToken } : undefined,
       });
@@ -154,6 +153,7 @@ export default function PatientLogin() {
       }
 
       toast.success("Login realizado com sucesso!");
+      localStorage.setItem("patient-session-start", Date.now().toString());
       navigate("/paciente/dashboard", { replace: true });
     } catch {
       toast.error("Erro inesperado ao fazer login");
@@ -171,8 +171,12 @@ export default function PatientLogin() {
       toast.error("As senhas não coincidem.");
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error("A senha deve ter pelo menos 6 caracteres.");
+    if (newPassword.length < 8) {
+      toast.error("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+    if (!isPasswordValid(newPassword)) {
+      toast.error("A senha deve conter pelo menos 1 letra maiúscula e 1 número.");
       return;
     }
     if (!email.trim()) {
@@ -188,7 +192,7 @@ export default function PatientLogin() {
           patient_id: patientInfo.patient_id,
           email: email.trim(),
           password: newPassword,
-          full_name: patientInfo.client_name,
+          full_name: patientInfo.masked_name,
         },
       });
 
@@ -236,6 +240,7 @@ export default function PatientLogin() {
         return;
       }
       toast.success("Bem-vindo ao portal!");
+      localStorage.setItem("patient-session-start", Date.now().toString());
       navigate("/paciente/dashboard", { replace: true });
     } catch {
       goToStart();
@@ -248,6 +253,7 @@ export default function PatientLogin() {
     setStep("identify");
     setIdentifier("");
     setPatientInfo(null);
+    setLoginEmail("");
     setPassword("");
     setNewPassword("");
     setConfirmPassword("");
@@ -266,7 +272,7 @@ export default function PatientLogin() {
           <div>
             <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">Conta criada!</h2>
             <p className="text-muted-foreground text-sm">
-              Olá, <strong>{patientInfo?.client_name}</strong>! Sua conta foi ativada com sucesso.
+              Olá, <strong>{patientInfo?.masked_name}</strong>! Sua conta foi ativada com sucesso.
             </p>
           </div>
           <Button
@@ -351,7 +357,7 @@ export default function PatientLogin() {
                 <UserCheck className="h-5 w-5 text-teal-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{patientInfo?.client_name}</h3>
+                <h3 className="font-semibold text-gray-900">{patientInfo?.masked_name}</h3>
                 {patientInfo?.clinic_name && (
                   <p className="text-xs text-muted-foreground">{patientInfo.clinic_name}</p>
                 )}
@@ -359,14 +365,31 @@ export default function PatientLogin() {
             </div>
             <h2 className="font-display text-2xl font-bold text-gray-900 mb-1">Bem-vindo de volta!</h2>
             <p className="text-muted-foreground text-sm">
-              Informe sua senha para acessar o portal.
+              Informe seu e-mail e senha para acessar o portal.
               {patientInfo?.masked_email && (
-                <span className="block mt-1 text-xs">E-mail: {patientInfo.masked_email}</span>
+                <span className="block mt-1 text-xs">Dica: {patientInfo.masked_email}</span>
               )}
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="patient-login-email" className="text-sm font-medium text-gray-700">
+                E-mail
+              </Label>
+              <Input
+                id="patient-login-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                autoComplete="email"
+                autoFocus
+                required
+                className="h-12 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
+              />
+            </div>
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="patient-password" className="text-sm font-medium text-gray-700">
@@ -413,7 +436,7 @@ export default function PatientLogin() {
             <Button
               type="submit"
               className="h-12 w-full rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 hover:scale-[1.01] transition-all duration-300 text-base"
-              disabled={isLoading || !password}
+              disabled={isLoading || !loginEmail.trim() || !password}
             >
               {isLoading ? (
                 <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Entrando...</>
@@ -445,7 +468,7 @@ export default function PatientLogin() {
                 <KeyRound className="h-5 w-5 text-teal-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{patientInfo?.client_name}</h3>
+                <h3 className="font-semibold text-gray-900">{patientInfo?.masked_name}</h3>
                 {patientInfo?.clinic_name && (
                   <p className="text-xs text-muted-foreground">{patientInfo.clinic_name}</p>
                 )}
@@ -472,11 +495,9 @@ export default function PatientLogin() {
                 required
                 className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
-              {patientInfo?.client_email && (
-                <p className="text-xs text-muted-foreground">
-                  E-mail pré-preenchido com o cadastro da clínica. Você pode alterar se preferir.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Informe o e-mail que deseja usar para acessar o portal.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -487,13 +508,13 @@ export default function PatientLogin() {
                 <Input
                   id="patient-new-password"
                   type={showNewPassword ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
                   autoFocus
                   required
-                  minLength={6}
+                  minLength={8}
                   className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white pr-12 focus:border-teal-500 focus:ring-teal-500 transition-colors"
                 />
                 <button
@@ -505,6 +526,7 @@ export default function PatientLogin() {
                   {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              <PasswordStrengthIndicator password={newPassword} />
             </div>
 
             <div className="space-y-2">
@@ -519,7 +541,7 @@ export default function PatientLogin() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={8}
                 className="h-11 rounded-xl border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:bg-white focus:border-teal-500 focus:ring-teal-500 transition-colors"
               />
             </div>

@@ -13,6 +13,7 @@ type Body = {
   appointment_id: string;
   role?: Role;
   public_token?: string; // UUID token for unauthenticated patient access
+  device_fingerprint?: string; // Client-side device fingerprint for rate limiting
 };
 
 function toTrimmedString(value: unknown, maxLength: number): string {
@@ -123,6 +124,7 @@ serve(async (req) => {
   const appointmentId = toTrimmedString(body.appointment_id, 80);
   const role: Role = body.role === "patient" ? "patient" : "staff";
   const publicToken = toTrimmedString(body.public_token, 80);
+  const deviceFingerprint = toTrimmedString(body.device_fingerprint, 64);
   const isPublicAccess = !!publicToken && role === "patient";
 
   if (!appointmentId && !isPublicAccess) {
@@ -132,9 +134,10 @@ serve(async (req) => {
     });
   }
 
-  // --- Rate limit by IP for public, by user for authenticated ---
+  // --- Rate limit: scoped by user/token + appointment + device fingerprint ---
+  const fpSuffix = deviceFingerprint ? `:fp:${deviceFingerprint}` : "";
   const rateLimitKey = isPublicAccess
-    ? `twilio-pub:${publicToken}`
+    ? `twilio-pub:${publicToken}:apt:${appointmentId || "tok"}${fpSuffix}`
     : `twilio-auth:unknown`;
 
   let userId = "anonymous";
@@ -147,8 +150,8 @@ serve(async (req) => {
   }
 
   const rl = await checkRateLimit(
-    isPublicAccess ? rateLimitKey : `twilio-auth:${userId}`,
-    20,
+    isPublicAccess ? rateLimitKey : `twilio-auth:${userId}:apt:${appointmentId}${fpSuffix}`,
+    10,
     60,
   );
   if (!rl.allowed) {

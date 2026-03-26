@@ -217,9 +217,15 @@ export default function PatientConsentSigning() {
       const filledHtml = replaceVariables(currentTemplate.body_html, varsData);
       const consentId = (data as any)?.consent_id;
       if (consentId) {
+        // Compute client-side SHA-256 for transparency (server also computes independently)
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(filledHtml));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const clientDocHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+
         await supabasePatient
           .from("patient_consents")
-          .update({ template_snapshot_html: filledHtml })
+          .update({ template_snapshot_html: filledHtml, document_hash: clientDocHash })
           .eq("id", consentId);
 
         // 4) Trigger seal-consent-pdf Edge Function (fire & forget)

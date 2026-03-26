@@ -54,9 +54,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return new Response(
-        JSON.stringify({ error: "Password must be at least 6 characters" }),
+        JSON.stringify({ error: "A senha deve ter pelo menos 8 caracteres" }),
+        { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return new Response(
+        JSON.stringify({ error: "A senha deve conter pelo menos 1 letra maiúscula e 1 número" }),
         { status: 400, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
@@ -84,16 +91,18 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!patientRow) {
+      console.warn("[security] activate-patient-account: patient not found for id:", client_id);
       return new Response(
-        JSON.stringify({ error: "Paciente não encontrado" }),
-        { status: 404, headers: { ...cors, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Não foi possível processar sua solicitação. Verifique seus dados ou entre em contato com a clínica." }),
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 
     if (patientRow.user_id) {
+      console.warn("[security] activate-patient-account: patient already has account:", client_id);
       return new Response(
-        JSON.stringify({ error: "Este paciente já possui uma conta. Faça login com sua senha." }),
-        { status: 409, headers: { ...cors, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Não foi possível processar sua solicitação. Verifique seus dados ou entre em contato com a clínica." }),
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } }
       );
     }
 

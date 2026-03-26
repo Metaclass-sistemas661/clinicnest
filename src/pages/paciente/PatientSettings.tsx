@@ -25,6 +25,9 @@ import {
 import { supabasePatient } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePatientPushNotifications } from "@/hooks/usePatientPushNotifications";
+import { PatientMfaSettings } from "@/components/patient/PatientMfaSettings";
+import { PatientLgpdSettings } from "@/components/patient/PatientLgpdSettings";
+import { PatientActivityHistory } from "@/components/patient/PatientActivityHistory";
 
 interface NotificationPreferences {
   email_certificates: boolean;
@@ -299,6 +302,9 @@ export default function PatientSettings() {
           </div>
         )}
 
+        {/* MFA / 2FA */}
+        <PatientMfaSettings />
+
         {/* Push Notifications */}
         {push.isSupported && (
           <Card>
@@ -388,6 +394,12 @@ export default function PatientSettings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* LGPD — Export + Deletion */}
+        <PatientLgpdSettings />
+
+        {/* Activity History */}
+        <PatientActivityHistory />
       </div>
     </PatientLayout>
   );

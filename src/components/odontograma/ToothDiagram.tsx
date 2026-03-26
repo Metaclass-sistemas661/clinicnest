@@ -188,7 +188,10 @@ function ToothDiagramInner({
               isDirty && "ring-2 ring-amber-400 animate-pulse",
               diffHighlight && "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-950/30"
             )}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
             onClick={() => !disabled && handleClick()}
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !disabled) { e.preventDefault(); handleClick(); } }}
           >
       {/* Tooth number (top for upper, bottom for lower) */}
       {upper && (

@@ -513,8 +513,11 @@ export function ConsentRichTextEditor({
       {/* Editor Content */}
       <div
         className="p-4 cursor-text"
+        role="textbox"
+        tabIndex={0}
         style={{ minHeight }}
         onClick={() => editor.chain().focus().run()}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { editor.chain().focus().run(); } }}
       >
         <EditorContent editor={editor} />
       </div>
