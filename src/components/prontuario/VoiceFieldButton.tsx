@@ -1,10 +1,11 @@
-import { useRef, useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface VoiceFieldButtonProps {
   /** Chamado com o texto transcrito — o caller decide append ou replace */
@@ -32,10 +33,6 @@ interface VoiceFieldButtonProps {
  * />
  */
 export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldButtonProps) {
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-
   const transcribeMutation = useMutation({
     mutationFn: async (audioBlob: Blob) => {
       const arrayBuffer = await audioBlob.arrayBuffer();
@@ -67,48 +64,16 @@ export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldB
     },
   });
 
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true },
-          channelCount: { ideal: 1 },
-          sampleRate: { ideal: 16000 },
-        },
-      });
-      const preferredMime = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/ogg;codecs=opus",
-        "audio/ogg",
-        "audio/mp4",
-      ].find((m) => MediaRecorder.isTypeSupported(m)) || "";
-      const mr = new MediaRecorder(stream, preferredMime ? { mimeType: preferredMime } : {});
-      const actualMime = mr.mimeType || preferredMime || "audio/webm";
-      mediaRecorderRef.current = mr;
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        const baseType = actualMime.split(";")[0] || "audio/webm";
-        const blob = new Blob(chunksRef.current, { type: baseType });
-        stream.getTracks().forEach((t) => t.stop());
-        setIsRecording(false);
-        transcribeMutation.mutate(blob);
-      };
-      mr.start();
-      setIsRecording(true);
-    } catch {
-      toast.error("Não foi possível acessar o microfone.");
-    }
-  }, [transcribeMutation]);
+  const handleResult = useCallback(
+    ({ blob }: { blob: Blob }) => {
+      transcribeMutation.mutate(blob);
+    },
+    [transcribeMutation],
+  );
 
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
-  }, [isRecording]);
+  const { isRecording, startRecording, stopRecording } = useAudioRecorder({
+    onResult: handleResult,
+  });
 
   if (transcribeMutation.isPending) {
     return (

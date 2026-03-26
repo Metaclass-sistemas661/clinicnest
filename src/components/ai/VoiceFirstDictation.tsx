@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useAudioRecorder, isLikelyHallucination } from "@/hooks/useAudioRecorder";
 
 interface SoapResult {
   subjective: string;
@@ -80,23 +81,6 @@ function cleanSoapField(value: string | undefined | null): string {
   return v;
 }
 
-// Detecta alucinação do STT: ocorre com áudio de baixa qualidade (ex: Bluetooth HFP 8kHz).
-// Sintoma típico: frases idênticas repetidas 3+ vezes na mesma transcrição.
-function isLikelyHallucination(transcript: string): boolean {
-  const sentences = transcript
-    .split(/[.!?]+/)
-    .map((s) => s.trim().toLowerCase())
-    .filter((s) => s.length > 10);
-  if (sentences.length < 3) return false;
-  const counts = new Map<string, number>();
-  for (const s of sentences) {
-    const n = (counts.get(s) ?? 0) + 1;
-    counts.set(s, n);
-    if (n >= 3) return true;
-  }
-  return false;
-}
-
 export function VoiceFirstDictation({
   onSoapReady,
   onVitalsExtracted,
@@ -108,8 +92,6 @@ export function VoiceFirstDictation({
   const [step, setStep] = useState<DictationStep>("idle");
   const [transcript, setTranscript] = useState("");
   const [elapsedSec, setElapsedSec] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Step 1: Transcribe audio
@@ -133,12 +115,14 @@ export function VoiceFirstDictation({
     },
     onSuccess: (data) => {
       if (data.transcript && data.transcript.trim().length >= 10) {
-        const transcript: string = data.transcript;
-        setTranscript(transcript);
+        const text: string = data.transcript;
+        setTranscript(text);
 
-        if (isLikelyHallucination(transcript)) {
+        if (isLikelyHallucination(text)) {
           toast.warning("Qualidade de áudio baixa detectada", {
-            description: "O microfone Bluetooth pode estar em modo de baixa qualidade. Use o microfone integrado do notebook ou fone com fio para melhores resultados.",
+            description:
+              "O microfone Bluetooth pode estar em modo de baixa qualidade. " +
+              "Use o microfone integrado do notebook ou fone com fio para melhores resultados.",
             duration: 8000,
           });
           setStep("idle");
@@ -146,7 +130,7 @@ export function VoiceFirstDictation({
         }
 
         setStep("generating");
-        soapMutation.mutate(transcript);
+        soapMutation.mutate(text);
       } else if (data.transcript && data.transcript.trim().length > 0) {
         setTranscript(data.transcript);
         toast.error("Transcrição muito curta para gerar SOAP automaticamente. Fale por mais tempo ou preencha manualmente.");
@@ -173,7 +157,6 @@ export function VoiceFirstDictation({
         },
       });
       if (error) throw error;
-      // Edge function returns { soap: { ... } } — unwrap
       const soapData = data?.soap ?? data;
       console.log("[VoiceSOAP] Raw data:", JSON.stringify(data));
       console.log("[VoiceSOAP] Unwrapped:", JSON.stringify(soapData));
@@ -200,7 +183,6 @@ export function VoiceFirstDictation({
       console.log("[VoiceSOAP] Mapped fields:", JSON.stringify(mapped));
       onSoapReady(mapped);
 
-      // Extract vital signs if present
       if (soap.vital_signs && onVitalsExtracted) {
         const vs = soap.vital_signs;
         const hasAny = Object.values(vs).some((v) => v != null);
@@ -222,67 +204,37 @@ export function VoiceFirstDictation({
     },
   });
 
-  const startRecording = useCallback(async () => {
-    try {
-      // Constraints otimizadas para STT: mono, 16kHz, com cancelamento de ruído.
-      // Ajuda dispositivos Bluetooth a capturar em qualidade adequada para transcrição.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true },
-          channelCount: { ideal: 1 },
-          sampleRate: { ideal: 16000 },
-        },
-      });
+  // ── Shared audio recorder hook ─────────────────────────────────────────────
+  const handleResult = useCallback(
+    ({ blob }: { blob: Blob }) => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setStep("transcribing");
+      transcribeMutation.mutate(blob);
+    },
+    [transcribeMutation],
+  );
 
-      // Escolhe o melhor formato suportado — opus/webm é preferido pelo Chirp
-      const preferredMime = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/ogg;codecs=opus",
-        "audio/ogg",
-        "audio/mp4",
-      ].find((m) => MediaRecorder.isTypeSupported(m)) || "";
+  const handleError = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setStep("idle");
+  }, []);
 
-      const mediaRecorder = new MediaRecorder(stream, preferredMime ? { mimeType: preferredMime } : {});
-      // mimeType real que o browser está usando (pode ter parâmetros de codec)
-      const actualMime = mediaRecorder.mimeType || preferredMime || "audio/webm";
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      setElapsedSec(0);
-      setTranscript("");
+  const { startRecording, stopRecording } = useAudioRecorder({
+    onResult: handleResult,
+    onError: handleError,
+  });
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+  const handleStart = useCallback(async () => {
+    setElapsedSec(0);
+    setTranscript("");
+    setStep("recording");
+    timerRef.current = setInterval(() => setElapsedSec((s) => s + 1), 1000);
+    await startRecording();
+  }, [startRecording]);
 
-      mediaRecorder.onstop = () => {
-        // Usa o mimeType real; remove parâmetros de codec para o backend (ex: "audio/webm;codecs=opus" → "audio/webm")
-        const baseType = actualMime.split(";")[0] || "audio/webm";
-        const audioBlob = new Blob(chunksRef.current, { type: baseType });
-        stream.getTracks().forEach((t) => t.stop());
-        if (timerRef.current) clearInterval(timerRef.current);
-        setStep("transcribing");
-        transcribeMutation.mutate(audioBlob);
-      };
-
-      mediaRecorder.start();
-      setStep("recording");
-
-      timerRef.current = setInterval(() => {
-        setElapsedSec((s) => s + 1);
-      }, 1000);
-    } catch {
-      toast.error("Não foi possível acessar o microfone.");
-    }
-  }, [specialty]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && step === "recording") {
-      mediaRecorderRef.current.stop();
-    }
-  }, [step]);
+  const handleStop = useCallback(() => {
+    stopRecording();
+  }, [stopRecording]);
 
   const reset = useCallback(() => {
     setStep("idle");
@@ -310,7 +262,7 @@ export function VoiceFirstDictation({
           {step === "idle" && (
             <Button
               type="button"
-              onClick={startRecording}
+              onClick={handleStart}
               disabled={disabled}
               className="gap-2 bg-teal-600 hover:bg-teal-700"
             >
@@ -322,7 +274,7 @@ export function VoiceFirstDictation({
           {step === "recording" && (
             <Button
               type="button"
-              onClick={stopRecording}
+              onClick={handleStop}
               variant="destructive"
               className="gap-2 animate-pulse"
             >
