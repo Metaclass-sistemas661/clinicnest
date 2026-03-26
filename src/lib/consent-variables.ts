@@ -44,11 +44,20 @@ export function getAvailableVariables() {
   return VARIABLE_DEFINITIONS;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 export function replaceVariables(html: string, data: ConsentVariablesData): string {
   let result = html;
   for (const def of VARIABLE_DEFINITIONS) {
     const value = data[def.key as keyof ConsentVariablesData];
-    const display = value || `[${def.label}]`;
+    const display = value ? escapeHtml(value) : `[${def.label}]`;
     result = result.replace(new RegExp(`\\{\\{${def.key}\\}\\}`, "g"), display);
   }
   return result;

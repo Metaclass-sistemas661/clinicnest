@@ -39,6 +39,27 @@ import {
   LOINC_ALERGIA,
 } from './loinc-laboratorio-4';
 
+import {
+  LOINC_TOXICOLOGIA,
+  LOINC_NEONATAL,
+  LOINC_PATOLOGIA,
+  LOINC_ENDOCRINOLOGIA,
+} from './loinc-laboratorio-5';
+
+import {
+  LOINC_IMUNOLOGIA,
+  LOINC_MICROB_MOLECULAR,
+  LOINC_RADIOLOGIA,
+  LOINC_DOCUMENTOS,
+} from './loinc-laboratorio-6';
+
+import {
+  LOINC_FARMACOGENOMICA,
+  LOINC_ODONTOLOGIA,
+  LOINC_DERMATOLOGIA,
+  LOINC_METABOLOMICA,
+} from './loinc-laboratorio-7';
+
 export type { LoincEntry };
 
 // Consolidação de todos os códigos LOINC
@@ -70,6 +91,21 @@ export const LOINC_DATA: LoincEntry[] = [
   ...LOINC_FERTILIDADE,
   ...LOINC_DROGAS,
   ...LOINC_ALERGIA,
+  // Parte 5 - Toxicologia, Neonatal, Patologia, Endocrinologia
+  ...LOINC_TOXICOLOGIA,
+  ...LOINC_NEONATAL,
+  ...LOINC_PATOLOGIA,
+  ...LOINC_ENDOCRINOLOGIA,
+  // Parte 6 - Imunologia, Microbiologia Molecular, Radiologia, Documentos
+  ...LOINC_IMUNOLOGIA,
+  ...LOINC_MICROB_MOLECULAR,
+  ...LOINC_RADIOLOGIA,
+  ...LOINC_DOCUMENTOS,
+  // Parte 7 - Farmacogenômica, Odontologia, Dermatologia, Metabolômica
+  ...LOINC_FARMACOGENOMICA,
+  ...LOINC_ODONTOLOGIA,
+  ...LOINC_DERMATOLOGIA,
+  ...LOINC_METABOLOMICA,
 ];
 
 // Mapa para busca rápida por código
@@ -141,6 +177,21 @@ export const LOINC_STATS = {
     fertilidade: LOINC_FERTILIDADE.length,
     drogas: LOINC_DROGAS.length,
     alergia: LOINC_ALERGIA.length,
+    // Parte 5
+    toxicologia: LOINC_TOXICOLOGIA.length,
+    neonatal: LOINC_NEONATAL.length,
+    patologia: LOINC_PATOLOGIA.length,
+    endocrinologia: LOINC_ENDOCRINOLOGIA.length,
+    // Parte 6
+    imunologia: LOINC_IMUNOLOGIA.length,
+    microbiologia_molecular: LOINC_MICROB_MOLECULAR.length,
+    radiologia: LOINC_RADIOLOGIA.length,
+    documentos: LOINC_DOCUMENTOS.length,
+    // Parte 7
+    farmacogenomica: LOINC_FARMACOGENOMICA.length,
+    odontologia: LOINC_ODONTOLOGIA.length,
+    dermatologia: LOINC_DERMATOLOGIA.length,
+    metabolomica: LOINC_METABOLOMICA.length,
   }
 };
 

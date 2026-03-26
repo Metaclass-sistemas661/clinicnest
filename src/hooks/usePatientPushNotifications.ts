@@ -43,7 +43,12 @@ export function usePatientPushNotifications() {
             ? {
                 label: "Ver",
                 onClick: () => {
-                  window.location.href = payload.data.clickAction;
+                  try {
+                    const url = new URL(payload.data.clickAction, window.location.origin);
+                    if (url.origin === window.location.origin) {
+                      window.location.href = url.href;
+                    }
+                  } catch { /* ignore invalid URLs */ }
                 },
               }
             : undefined,

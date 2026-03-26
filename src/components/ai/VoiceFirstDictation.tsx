@@ -184,10 +184,10 @@ export function VoiceFirstDictation({
 
   return (
     <div className={cn("rounded-xl border-2 border-dashed p-4", className, {
-      "border-red-400 bg-red-50/50": step === "recording",
-      "border-yellow-400 bg-yellow-50/50": isProcessing,
-      "border-green-400 bg-green-50/50": step === "done",
-      "border-gray-200 hover:border-teal-300": step === "idle",
+      "border-red-400 bg-red-50 dark:bg-red-950/40": step === "recording",
+      "border-yellow-400 bg-yellow-50 dark:bg-yellow-950/40": isProcessing,
+      "border-green-400 bg-green-50 dark:bg-green-950/40": step === "done",
+      "border-gray-200 dark:border-gray-700 hover:border-teal-300": step === "idle",
     })}>
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -216,21 +216,21 @@ export function VoiceFirstDictation({
           )}
 
           {step === "transcribing" && (
-            <div className="flex items-center gap-2 text-yellow-700">
+            <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm font-medium">Transcrevendo áudio...</span>
             </div>
           )}
 
           {step === "generating" && (
-            <div className="flex items-center gap-2 text-yellow-700">
+            <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
               <Wand2 className="h-4 w-4 animate-pulse" />
               <span className="text-sm font-medium">Gerando SOAP automático...</span>
             </div>
           )}
 
           {step === "done" && (
-            <div className="flex items-center gap-2 text-green-700">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
               <CheckCircle className="h-4 w-4" />
               <span className="text-sm font-medium">Prontuário preenchido por voz!</span>
             </div>
@@ -254,17 +254,17 @@ export function VoiceFirstDictation({
       </div>
 
       {step === "idle" && (
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
           Grave a consulta e o prontuário SOAP será preenchido automaticamente. Zero digitação.
         </p>
       )}
 
       {transcript && (
         <details className="mt-3">
-          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+          <summary className="text-xs text-gray-600 dark:text-gray-300 cursor-pointer hover:text-foreground font-medium">
             Ver transcrição original
           </summary>
-          <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto">
+          <p className="text-xs text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap max-h-24 overflow-y-auto bg-white/60 dark:bg-gray-800/60 rounded p-2">
             {transcript}
           </p>
         </details>

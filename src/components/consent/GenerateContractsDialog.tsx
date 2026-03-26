@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import {
   Dialog,
   DialogContent,
@@ -285,7 +286,7 @@ export function GenerateContractsDialog({ open, onOpenChange, patient, onGenerat
             <div className="py-4">
               <div
                 className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-card"
-                dangerouslySetInnerHTML={{ __html: previewDoc.html }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewDoc.html) }}
               />
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="outline" onClick={() => handlePrint(previewDoc)}>

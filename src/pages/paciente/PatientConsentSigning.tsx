@@ -14,6 +14,7 @@ import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/utils/getClientIp";
 import { replaceVariables, buildVariablesFromClientAndTenant, type ConsentVariablesData } from "@/lib/consent-variables";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { ConsentTemplate } from "@/types/database";
 import {
   ShieldCheck,
@@ -406,7 +407,7 @@ export default function PatientConsentSigning() {
                   ) : currentTemplate.body_html?.trim() ? (
                     <div
                       className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
-                      dangerouslySetInnerHTML={{ __html: replaceVariables(currentTemplate.body_html, varsData) }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(replaceVariables(currentTemplate.body_html, varsData)) }}
                     />
                   ) : (
                     <div className="border rounded-lg p-6 bg-muted/30 text-center">

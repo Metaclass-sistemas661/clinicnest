@@ -212,7 +212,8 @@ serve(async (req) => {
     }
     
     // If no connection found by secret, try to find by sending application
-    if (!tenantId && message.sendingApplication) {
+    // Only allow fallback if a valid secret was provided (prevents unauthenticated access)
+    if (!tenantId && secret && message.sendingApplication) {
       const { data: connection } = await supabaseClient
         .from("hl7_connections")
         .select("id, tenant_id")

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -714,7 +715,7 @@ export default function ContratosTermos() {
                 </h4>
                 <div
                   className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-card max-h-[40vh] overflow-y-auto"
-                  dangerouslySetInnerHTML={{ __html: viewConsent.template_snapshot_html || "<p>Conteúdo não disponível</p>" }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(viewConsent.template_snapshot_html || "<p>Conteúdo não disponível</p>") }}
                 />
               </div>
 

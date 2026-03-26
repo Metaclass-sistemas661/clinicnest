@@ -181,6 +181,29 @@ serve(async (req) => {
       );
     }
 
+    // Validate webhook authenticity per provider
+    const webhookSecrets: Record<string, string> = {
+      asaas: Deno.env.get("ASAAS_WEBHOOK_TOKEN") ?? "",
+      pagseguro: Deno.env.get("PAGSEGURO_WEBHOOK_TOKEN") ?? "",
+      stone: Deno.env.get("STONE_WEBHOOK_TOKEN") ?? "",
+    };
+    const expectedToken = webhookSecrets[provider];
+    if (expectedToken) {
+      const providedToken =
+        req.headers.get("x-asaas-access-token") ||
+        req.headers.get("x-pagseguro-token") ||
+        req.headers.get("x-stone-token") ||
+        (body as Record<string, unknown>)?.webhook_token ||
+        "";
+      if (providedToken !== expectedToken) {
+        console.warn(`[payment-webhook] Invalid webhook token for provider: ${provider}`);
+        return new Response(
+          JSON.stringify({ error: "Invalid webhook token" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Parse webhook based on provider
     let result: WebhookResult | null = null;
     switch (provider) {

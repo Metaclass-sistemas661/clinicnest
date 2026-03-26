@@ -4,6 +4,7 @@ import { completeText } from "../_shared/vertex-ai-client.ts";
 import { checkAiRateLimit } from "../_shared/rateLimit.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { checkAiAccess, logAiUsage } from "../_shared/planGating.ts";
+import { createSupabaseAdmin } from "../_shared/supabase.ts";
 
 const SYSTEM_PROMPT = `Você é um assistente clínico especializado em encaminhamentos médicos.
 
@@ -67,22 +68,42 @@ serve(async (req: Request) => {
       });
     }
 
-    const { data: profile } = await supabase
+    // Admin client for data queries (bypasses RLS after manual auth checks)
+    const adminClient = createSupabaseAdmin();
+
+    const { data: profile } = await adminClient
       .from("profiles")
-      .select("tenant_id, role, full_name")
-      .eq("id", user.id)
+      .select("tenant_id, professional_type, full_name")
+      .eq("user_id", user.id)
       .single();
 
-    if (!profile || !["admin", "professional"].includes(profile.role)) {
+    if (!profile) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const accessError = await checkAiAccess(profile.tenant_id, "aiCopilot");
-    if (accessError) {
-      return new Response(JSON.stringify({ error: accessError }), {
+    const { data: userRole } = await adminClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("tenant_id", profile.tenant_id)
+      .single();
+
+    const clinicalRoles = ["medico", "dentista", "enfermeiro", "nutricionista", "psicologo", "fisioterapeuta", "fonoaudiologo", "esteticista", "admin"];
+    const isAdmin = userRole?.role === "admin";
+    const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
+    if (!isAdmin && !hasClinicalRole) {
+      return new Response(JSON.stringify({ error: "Sem permissão" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+    if (!aiAccess.allowed) {
+      return new Response(JSON.stringify({ error: aiAccess.reason }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -123,7 +144,7 @@ Gere o(s) encaminhamento(s) apropriado(s) para este caso.`;
       };
     }
 
-    await logAiUsage(profile.tenant_id, "ai-smart-referral");
+    logAiUsage(profile.tenant_id, user.id, "copilot").catch(() => {});
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
