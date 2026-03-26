@@ -215,7 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const applyRef = React.useRef(0);
 
-  const applySession = async (session: Session | null) => {
+  const applySession = async (session: Session | null, event?: string) => {
     const seq = ++applyRef.current; // gera número de sequência
 
     // Ignorar sessões de paciente — o portal do paciente usa seu próprio client isolado.
@@ -230,7 +230,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session?.user) {
       // Garante que isLoading = true enquanto os dados do perfil/role/tenant são carregados.
       // Sem isso, ProtectedRoute avalia permissões antes de userRole estar disponível → 403 falso.
-      setIsLoading(true);
+      // EXCEÇÃO: TOKEN_REFRESHED — o usuário já está autenticado e o perfil já foi carregado.
+      // Mostrar o spinner nesse caso desmonta a página atual e apaga qualquer estado local
+      // (ex: formulário de prontuário aberto), péssima UX.
+      if (event !== 'TOKEN_REFRESHED') {
+        setIsLoading(true);
+      }
 
       const data = await fetchUserData(session.user.id);
       // Se outra chamada mais recente já disparou, descartar este resultado
@@ -261,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (event, session) => {
         if (cancelled) return;
         logger.info('[AuthContext] onAuthStateChange event:', event);
-        applySession(session);
+        applySession(session, event);
       }
     );
 
