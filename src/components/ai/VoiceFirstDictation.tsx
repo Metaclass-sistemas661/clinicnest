@@ -55,6 +55,31 @@ interface VoiceFirstDictationProps {
 
 type DictationStep = "idle" | "recording" | "transcribing" | "generating" | "done";
 
+// Normaliza campo SOAP: descarta strings placeholder que o AI escreve quando
+// algo não foi mencionado (ex: "Não mencionado na consulta", "Não informado", etc.)
+function cleanSoapField(value: string | undefined | null): string {
+  if (!value) return "";
+  const v = value.trim();
+  const placeholders = [
+    "não mencionado na consulta",
+    "não mencionado",
+    "não foi mencionado",
+    "nenhuma informação mencionada",
+    "nenhuma informação",
+    "sem informação disponível",
+    "sem informação",
+    "não informado",
+    "não disponível",
+    "informação não fornecida",
+    "not mentioned",
+    "not provided",
+    "n/a",
+  ];
+  const lower = v.toLowerCase();
+  if (placeholders.some((p) => lower === p || lower.startsWith(p + "."))) return "";
+  return v;
+}
+
 export function VoiceFirstDictation({
   onSoapReady,
   onVitalsExtracted,
@@ -81,8 +106,8 @@ export function VoiceFirstDictation({
         body: {
           action: "transcribe",
           audio_base64: base64,
-          file_name: `voice-dictation-${Date.now()}.webm`,
-          content_type: "audio/webm",
+          file_name: `voice-dictation-${Date.now()}.${audioBlob.type.split("/")[1]?.split(";")[0] || "webm"}`,
+          content_type: audioBlob.type,
           specialty,
         },
       });
@@ -137,12 +162,12 @@ export function VoiceFirstDictation({
       setStep("done");
 
       const mapped = {
-        chief_complaint: soap.subjective?.split(".")[0] || soap.subjective || "",
-        anamnesis: soap.subjective || "",
-        physical_exam: soap.objective || "",
-        diagnosis: soap.assessment || "",
-        treatment_plan: soap.plan || "",
-        cid_code: soap.cid_suggestions?.[0] || "",
+        chief_complaint: cleanSoapField(soap.subjective?.split(".")[0] || soap.subjective),
+        anamnesis: cleanSoapField(soap.subjective),
+        physical_exam: cleanSoapField(soap.objective),
+        diagnosis: cleanSoapField(soap.assessment),
+        treatment_plan: cleanSoapField(soap.plan),
+        cid_code: cleanSoapField(soap.cid_suggestions?.[0]),
       };
       console.log("[VoiceSOAP] Mapped fields:", JSON.stringify(mapped));
       onSoapReady(mapped);
@@ -172,7 +197,19 @@ export function VoiceFirstDictation({
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+      // Escolhe o melhor formato suportado — opus/webm é preferido pelo Chirp
+      const preferredMime = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+        "audio/mp4",
+      ].find((m) => MediaRecorder.isTypeSupported(m)) || "";
+
+      const mediaRecorder = new MediaRecorder(stream, preferredMime ? { mimeType: preferredMime } : {});
+      // mimeType real que o browser está usando (pode ter parâmetros de codec)
+      const actualMime = mediaRecorder.mimeType || preferredMime || "audio/webm";
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
       setElapsedSec(0);
@@ -183,7 +220,9 @@ export function VoiceFirstDictation({
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+        // Usa o mimeType real; remove parâmetros de codec para o backend (ex: "audio/webm;codecs=opus" → "audio/webm")
+        const baseType = actualMime.split(";")[0] || "audio/webm";
+        const audioBlob = new Blob(chunksRef.current, { type: baseType });
         stream.getTracks().forEach((t) => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
         setStep("transcribing");
