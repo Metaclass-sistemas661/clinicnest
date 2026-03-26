@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -162,6 +163,7 @@ export default function Laudos() {
   // State
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterStatus, setFilterStatus] = useState<"" | ExamResult["status"]>("");
   const [filterType, setFilterType] = useState<string>("");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -325,7 +327,7 @@ export default function Laudos() {
   // ─── Filtering ──────────────────────────────────────────────
   const filtered = useMemo(() => {
     return examResults.filter((l) => {
-      const q = searchQuery.toLowerCase();
+      const q = debouncedSearch.toLowerCase();
       const matchSearch = !q ||
         l.patient_name.toLowerCase().includes(q) ||
         l.exam_name.toLowerCase().includes(q) ||
@@ -335,7 +337,7 @@ export default function Laudos() {
       const matchType = !filterType || l.exam_type === filterType;
       return matchSearch && matchStatus && matchType;
     });
-  }, [examResults, searchQuery, filterStatus, filterType]);
+  }, [examResults, debouncedSearch, filterStatus, filterType]);
 
   // ─── Counts ─────────────────────────────────────────────────
   const counts = useMemo(() => ({

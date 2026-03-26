@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { RefillRequestsPanel } from "@/components/prontuario/RefillRequestsPanel";
 import { safePrintHtml } from "@/lib/safe-print";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -110,6 +111,7 @@ export default function Receituarios() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -539,8 +541,8 @@ export default function Receituarios() {
 
   const filtered = prescriptions.filter(
     (p) =>
-      p.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.medications.toLowerCase().includes(searchQuery.toLowerCase())
+      p.client_name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.medications.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const isExpired = (p: Prescription) => {

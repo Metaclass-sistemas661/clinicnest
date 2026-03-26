@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,7 @@ export default function Prontuarios() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [pendingTriages, setPendingTriages] = useState<PendingTriage[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [selectedPatientId, setSelectedPatientId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
@@ -576,9 +578,9 @@ export default function Prontuarios() {
   };
 
   const filteredRecords = records.filter((r) =>
-    r.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.cid_code.toLowerCase().includes(searchQuery.toLowerCase())
+    r.client_name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    r.diagnosis.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    r.cid_code.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
   const patientRecords = selectedPatientId !== "all"
     ? filteredRecords.filter((r) => r.patient_id === selectedPatientId) : filteredRecords;

@@ -1,5 +1,6 @@
 import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { safePrintHtml } from "@/lib/safe-print";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -182,6 +183,7 @@ export default function Atestados() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterType, setFilterType] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -637,9 +639,9 @@ export default function Atestados() {
 
   const filtered = certificates.filter((c) => {
     const matchSearch =
-      c.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.cid_code ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+      c.client_name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      c.content.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (c.cid_code ?? "").toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchType = filterType === "all" || c.certificate_type === filterType;
     return matchSearch && matchType;
   });

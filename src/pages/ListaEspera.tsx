@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -74,6 +75,7 @@ export default function ListaEspera() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterStatus, setFilterStatus] = useState("aguardando");
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -194,7 +196,7 @@ export default function ListaEspera() {
   };
 
   const filtered = entries.filter((e) => {
-    const matchSearch = e.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = e.client_name.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchStatus = filterStatus === "all" || e.status === filterStatus;
     return matchSearch && matchStatus;
   });

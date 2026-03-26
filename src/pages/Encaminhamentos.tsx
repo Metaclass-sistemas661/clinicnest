@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -77,6 +78,7 @@ export default function Encaminhamentos() {
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterStatus, setFilterStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -204,9 +206,9 @@ export default function Encaminhamentos() {
 
   const filtered = referrals.filter((r) => {
     const matchSearch =
-      r.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.from_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+      r.client_name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      r.reason.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (r.from_name || "").toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchStatus = filterStatus === "all" || r.status === filterStatus;
     return matchSearch && matchStatus;
   });
