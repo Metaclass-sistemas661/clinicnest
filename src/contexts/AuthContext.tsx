@@ -228,14 +228,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
 
     if (session?.user) {
+      // TOKEN_REFRESHED: apenas o JWT foi renovado — perfil/roles/permissões não mudam.
+      // Atualizar session + user já é suficiente para que as próximas queries usem o novo token.
+      // Retorno antecipado evita: (a) setIsLoading(true) → spinner → desmonta a página,
+      // e (b) setProfile(null) caso fetchUserData falhe → mesma consequência.
+      if (event === 'TOKEN_REFRESHED') {
+        return;
+      }
+
       // Garante que isLoading = true enquanto os dados do perfil/role/tenant são carregados.
       // Sem isso, ProtectedRoute avalia permissões antes de userRole estar disponível → 403 falso.
-      // EXCEÇÃO: TOKEN_REFRESHED — o usuário já está autenticado e o perfil já foi carregado.
-      // Mostrar o spinner nesse caso desmonta a página atual e apaga qualquer estado local
-      // (ex: formulário de prontuário aberto), péssima UX.
-      if (event !== 'TOKEN_REFRESHED') {
-        setIsLoading(true);
-      }
+      setIsLoading(true);
 
       const data = await fetchUserData(session.user.id);
       // Se outra chamada mais recente já disparou, descartar este resultado
