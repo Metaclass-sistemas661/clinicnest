@@ -69,7 +69,15 @@ export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldB
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
+        },
+      });
       const preferredMime = [
         "audio/webm;codecs=opus",
         "audio/webm",

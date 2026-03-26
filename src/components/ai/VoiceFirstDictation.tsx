@@ -80,6 +80,23 @@ function cleanSoapField(value: string | undefined | null): string {
   return v;
 }
 
+// Detecta alucinação do STT: ocorre com áudio de baixa qualidade (ex: Bluetooth HFP 8kHz).
+// Sintoma típico: frases idênticas repetidas 3+ vezes na mesma transcrição.
+function isLikelyHallucination(transcript: string): boolean {
+  const sentences = transcript
+    .split(/[.!?]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 10);
+  if (sentences.length < 3) return false;
+  const counts = new Map<string, number>();
+  for (const s of sentences) {
+    const n = (counts.get(s) ?? 0) + 1;
+    counts.set(s, n);
+    if (n >= 3) return true;
+  }
+  return false;
+}
+
 export function VoiceFirstDictation({
   onSoapReady,
   onVitalsExtracted,
@@ -116,9 +133,20 @@ export function VoiceFirstDictation({
     },
     onSuccess: (data) => {
       if (data.transcript && data.transcript.trim().length >= 10) {
-        setTranscript(data.transcript);
+        const transcript: string = data.transcript;
+        setTranscript(transcript);
+
+        if (isLikelyHallucination(transcript)) {
+          toast.warning("Qualidade de áudio baixa detectada", {
+            description: "O microfone Bluetooth pode estar em modo de baixa qualidade. Use o microfone integrado do notebook ou fone com fio para melhores resultados.",
+            duration: 8000,
+          });
+          setStep("idle");
+          return;
+        }
+
         setStep("generating");
-        soapMutation.mutate(data.transcript);
+        soapMutation.mutate(transcript);
       } else if (data.transcript && data.transcript.trim().length > 0) {
         setTranscript(data.transcript);
         toast.error("Transcrição muito curta para gerar SOAP automaticamente. Fale por mais tempo ou preencha manualmente.");
@@ -196,7 +224,17 @@ export function VoiceFirstDictation({
 
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Constraints otimizadas para STT: mono, 16kHz, com cancelamento de ruído.
+      // Ajuda dispositivos Bluetooth a capturar em qualidade adequada para transcrição.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: { ideal: true },
+          noiseSuppression: { ideal: true },
+          autoGainControl: { ideal: true },
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
+        },
+      });
 
       // Escolhe o melhor formato suportado — opus/webm é preferido pelo Chirp
       const preferredMime = [
