@@ -122,18 +122,30 @@ export function VoiceFirstDictation({
       if (error) throw error;
       // Edge function returns { soap: { ... } } — unwrap
       const soapData = data?.soap ?? data;
+      console.log("[VoiceSOAP] Raw data:", JSON.stringify(data));
+      console.log("[VoiceSOAP] Unwrapped:", JSON.stringify(soapData));
       return soapData as SoapResult;
     },
     onSuccess: (soap) => {
+      if (!soap || (!soap.subjective && !soap.objective && !soap.assessment && !soap.plan)) {
+        console.warn("[VoiceSOAP] SOAP data is empty or null:", soap);
+        toast.error("SOAP gerado sem conteúdo. Tente falar por mais tempo ou mais claramente.");
+        setStep("idle");
+        return;
+      }
+
       setStep("done");
-      onSoapReady({
+
+      const mapped = {
         chief_complaint: soap.subjective?.split(".")[0] || soap.subjective || "",
         anamnesis: soap.subjective || "",
         physical_exam: soap.objective || "",
         diagnosis: soap.assessment || "",
         treatment_plan: soap.plan || "",
         cid_code: soap.cid_suggestions?.[0] || "",
-      });
+      };
+      console.log("[VoiceSOAP] Mapped fields:", JSON.stringify(mapped));
+      onSoapReady(mapped);
 
       // Extract vital signs if present
       if (soap.vital_signs && onVitalsExtracted) {

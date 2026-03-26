@@ -200,22 +200,32 @@ serve(async (req) => {
       );
     }
 
+    // Normalize field names — AI may return Portuguese keys (subjetivo, objetivo, etc.)
+    const subjective = soap.subjective || soap.subjetivo || soap.queixa || "";
+    const objective = soap.objective || soap.objetivo || soap.exame_fisico || "";
+    const assessment = soap.assessment || soap.avaliacao || soap.avaliação || soap.diagnostico || soap.diagnóstico || "";
+    const plan = soap.plan || soap.plano || soap.conduta || "";
+    const cidSuggestions = soap.cid_suggestions || soap.sugestoes_cid || soap.sugestões_cid || soap.cid || [];
+    const confidence = soap.confidence || soap.confianca || soap.confiança || 0;
+    const vitalSigns = soap.vital_signs || soap.sinais_vitais || null;
+
     console.log(
       `[ai-generate-soap] Generated SOAP for user: ${user.id}, ` +
-      `confidence: ${soap.confidence || "N/A"}, specialty: ${specialty || "general"}`
+      `confidence: ${confidence || "N/A"}, specialty: ${specialty || "general"}, ` +
+      `keys: ${Object.keys(soap).join(",")}`
     );
     logAiUsage(profile.tenant_id, user.id, "transcribe").catch(() => {});
 
     return new Response(
       JSON.stringify({
         soap: {
-          subjective: soap.subjective || "",
-          objective: soap.objective || "",
-          assessment: soap.assessment || "",
-          plan: soap.plan || "",
-          cid_suggestions: soap.cid_suggestions || [],
-          confidence: soap.confidence || 0,
-          vital_signs: soap.vital_signs || null,
+          subjective,
+          objective,
+          assessment,
+          plan,
+          cid_suggestions: Array.isArray(cidSuggestions) ? cidSuggestions : [cidSuggestions],
+          confidence,
+          vital_signs: vitalSigns,
         },
       }),
       {
