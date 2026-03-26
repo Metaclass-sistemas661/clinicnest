@@ -35,7 +35,11 @@ async function deriveKey(password: string): Promise<CryptoKey> {
 }
 
 function getEncryptionSeed(tenantId?: string): string {
-  return import.meta.env.VITE_ENCRYPTION_KEY || tenantId || "clinicnest-default";
+  const key = import.meta.env.VITE_ENCRYPTION_KEY || tenantId;
+  if (!key) {
+    throw new Error("Encryption key not configured: set VITE_ENCRYPTION_KEY or provide tenantId");
+  }
+  return key;
 }
 
 /**

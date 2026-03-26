@@ -22,6 +22,19 @@ interface SoapResult {
   plan: string;
   cid_suggestions: string[];
   confidence: number;
+  vital_signs?: VitalSignsFromVoice | null;
+}
+
+export interface VitalSignsFromVoice {
+  blood_pressure_systolic?: number | null;
+  blood_pressure_diastolic?: number | null;
+  heart_rate?: number | null;
+  respiratory_rate?: number | null;
+  temperature?: number | null;
+  oxygen_saturation?: number | null;
+  weight_kg?: number | null;
+  height_cm?: number | null;
+  pain_scale?: number | null;
 }
 
 interface VoiceFirstDictationProps {
@@ -33,6 +46,7 @@ interface VoiceFirstDictationProps {
     treatment_plan: string;
     cid_code: string;
   }) => void;
+  onVitalsExtracted?: (vitals: VitalSignsFromVoice) => void;
   specialty?: string;
   patientContext?: string;
   disabled?: boolean;
@@ -43,6 +57,7 @@ type DictationStep = "idle" | "recording" | "transcribing" | "generating" | "don
 
 export function VoiceFirstDictation({
   onSoapReady,
+  onVitalsExtracted,
   specialty = "PRIMARYCARE",
   patientContext,
   disabled,
@@ -119,6 +134,18 @@ export function VoiceFirstDictation({
         treatment_plan: soap.plan || "",
         cid_code: soap.cid_suggestions?.[0] || "",
       });
+
+      // Extract vital signs if present
+      if (soap.vital_signs && onVitalsExtracted) {
+        const vs = soap.vital_signs;
+        const hasAny = Object.values(vs).some((v) => v != null);
+        if (hasAny) {
+          onVitalsExtracted(vs);
+          const count = Object.values(vs).filter((v) => v != null).length;
+          toast.success(`${count} sinal(is) vital(is) extraído(s) da voz`);
+        }
+      }
+
       toast.success(
         `Prontuário SOAP preenchido automaticamente (confiança: ${Math.round((soap.confidence || 0) * 100)}%)`
       );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { safePrintHtml } from "@/lib/safe-print";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -236,12 +237,7 @@ export function MeuFinanceiroSalarios() {
       </html>
     `;
 
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    safePrintHtml(html);
   };
 
   return (

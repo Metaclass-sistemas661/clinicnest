@@ -23,8 +23,35 @@ FORMATO DE RESPOSTA (JSON estrito):
   "assessment": "Diagnóstico ou hipótese diagnóstica, raciocínio clínico...",
   "plan": "Plano terapêutico: medicações, exames solicitados, retorno, orientações...",
   "cid_suggestions": ["código CID-10 sugerido se mencionado"],
-  "confidence": 0.85
+  "confidence": 0.85,
+  "vital_signs": {
+    "blood_pressure_systolic": null,
+    "blood_pressure_diastolic": null,
+    "heart_rate": null,
+    "respiratory_rate": null,
+    "temperature": null,
+    "oxygen_saturation": null,
+    "weight_kg": null,
+    "height_cm": null,
+    "pain_scale": null
+  }
 }
+
+REGRAS PARA SINAIS VITAIS (vital_signs):
+- Extraia APENAS valores numéricos mencionados explicitamente na transcrição
+- Mantenha null para vitais NÃO mencionados — nunca invente valores
+- Exemplos de reconhecimento:
+  - "pressão 120 por 80" → systolic: 120, diastolic: 80
+  - "PA 13/8" → systolic: 130, diastolic: 80
+  - "frequência cardíaca 78" ou "FC 78" → heart_rate: 78
+  - "saturação 98" ou "sat 98" ou "SpO2 98" → oxygen_saturation: 98
+  - "temperatura 37.5" ou "temp 37 e meio" → temperature: 37.5
+  - "frequência respiratória 18" ou "FR 18" → respiratory_rate: 18
+  - "peso 72 quilos" → weight_kg: 72
+  - "altura 1.70" ou "170 centímetros" → height_cm: 170
+  - "dor nota 7" ou "EVA 7" → pain_scale: 7
+- PA abreviada: "13/8" significa 130/80, "12/7" significa 120/70
+- Todos os valores devem ser números, não strings
 
 O campo "confidence" (0-1) indica sua confiança na estruturação:
 - 0.9+ : transcrição clara e completa
@@ -188,6 +215,7 @@ serve(async (req) => {
           plan: soap.plan || "",
           cid_suggestions: soap.cid_suggestions || [],
           confidence: soap.confidence || 0,
+          vital_signs: soap.vital_signs || null,
         },
       }),
       {

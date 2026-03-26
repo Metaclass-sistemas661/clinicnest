@@ -40,6 +40,7 @@ import { SignatureMethodSelector, type SignatureMethod } from "@/components/sign
 import { SignatureCanvas } from "@/components/signature/SignatureCanvas";
 import { FacialCapture } from "@/components/consent/FacialCapture";
 import { replaceVariables, buildVariablesFromClientAndTenant, type ConsentVariablesData } from "@/lib/consent-variables";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 /* ── Types ── */
 interface ConsentRow {
@@ -621,10 +622,10 @@ export default function PatientDocumentos() {
               <div
                 className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-muted/30"
                 dangerouslySetInnerHTML={{
-                  __html: replaceVariables(
+                  __html: sanitizeHtml(replaceVariables(
                     viewTarget.template_snapshot_html || viewTarget.body_html,
                     varsData
-                  ),
+                  )),
                 }}
               />
 
@@ -686,7 +687,7 @@ export default function PatientDocumentos() {
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none max-h-[40vh] overflow-y-auto border rounded-lg p-6 bg-muted/30"
                     dangerouslySetInnerHTML={{
-                      __html: replaceVariables(signTarget.body_html, varsData),
+                      __html: sanitizeHtml(replaceVariables(signTarget.body_html, varsData)),
                     }}
                   />
                   <div className="flex justify-center">

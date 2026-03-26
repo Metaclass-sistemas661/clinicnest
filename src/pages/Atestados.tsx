@@ -1,5 +1,6 @@
 import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
+import { safePrintHtml } from "@/lib/safe-print";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -600,12 +601,7 @@ export default function Atestados() {
 </body>
 </html>`;
 
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => w.print(), 300);
-    }
+    safePrintHtml(html);
   };
 
   const handleDownloadPdf = (c: Certificate) => {

@@ -1,5 +1,6 @@
 import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
+import { safePrintHtml } from "@/lib/safe-print";
 import { PatientLayout } from "@/components/layout/PatientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -233,12 +234,8 @@ export default function PatientFinanceiro() {
       if (data?.html_base64) {
         // Decodificar HTML e abrir em nova janela para impressão
         const html = decodeURIComponent(escape(atob(data.html_base64)));
-        const printWindow = window.open("", "_blank");
-        if (printWindow) {
-          printWindow.document.write(html);
-          printWindow.document.close();
-          toast.success("Extrato aberto. Use Ctrl+P para salvar como PDF.");
-        }
+        safePrintHtml(html);
+        toast.success("Extrato aberto. Use Ctrl+P para salvar como PDF.");
       } else if (data?.pdf_url) {
         window.open(data.pdf_url, "_blank");
       } else {

@@ -56,6 +56,7 @@ import {
 import { ConsentRichTextEditor } from "@/components/consent/ConsentRichTextEditor";
 import { CONSENT_TEMPLATES_LIBRARY, TEMPLATE_CATEGORIES, type TemplateCategory } from "@/lib/consent-templates-library";
 import { replaceVariables } from "@/lib/consent-variables";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -849,7 +850,7 @@ export default function TermosConsentimento() {
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-card"
                     dangerouslySetInnerHTML={{
-                      __html: replaceVariables(previewTemplate.body_html, {
+                      __html: sanitizeHtml(replaceVariables(previewTemplate.body_html, {
                         nome_paciente: "Maria da Silva Santos",
                         cpf: "123.456.789-00",
                         data_nascimento: "15/03/1990",
@@ -864,7 +865,7 @@ export default function TermosConsentimento() {
                         data_hoje: new Date().toLocaleDateString("pt-BR"),
                         cidade: "São Paulo",
                         estado: "SP",
-                      }),
+                      })),
                     }}
                   />
                 </>

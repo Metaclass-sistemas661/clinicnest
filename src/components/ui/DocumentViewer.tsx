@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +69,7 @@ export function DocumentViewer({
     if (resolvedType === "html") {
       const w = window.open("", "_blank");
       if (w) {
-        w.document.write(src);
+        w.document.write(sanitizeHtml(src));
         w.document.close();
         w.focus();
         w.print();

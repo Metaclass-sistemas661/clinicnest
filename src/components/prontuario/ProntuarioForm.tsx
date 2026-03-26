@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { AiDrugInteractionAlert } from "@/components/ai";
-import { VoiceFirstDictation } from "@/components/ai/VoiceFirstDictation";
+import { VoiceFirstDictation, type VitalSignsFromVoice } from "@/components/ai/VoiceFirstDictation";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
@@ -788,6 +788,20 @@ export function ProntuarioForm({
                 treatment_plan: soap.treatment_plan || b.treatment_plan,
               }));
               if (soap.cid_code) set("cid_code", soap.cid_code);
+            }}
+            onVitalsExtracted={(vs: VitalSignsFromVoice) => {
+              setVitals((v) => ({
+                ...v,
+                ...(vs.blood_pressure_systolic != null && { blood_pressure_systolic: vs.blood_pressure_systolic }),
+                ...(vs.blood_pressure_diastolic != null && { blood_pressure_diastolic: vs.blood_pressure_diastolic }),
+                ...(vs.heart_rate != null && { heart_rate: vs.heart_rate }),
+                ...(vs.respiratory_rate != null && { respiratory_rate: vs.respiratory_rate }),
+                ...(vs.temperature != null && { temperature: vs.temperature }),
+                ...(vs.oxygen_saturation != null && { oxygen_saturation: vs.oxygen_saturation }),
+                ...(vs.weight_kg != null && { weight_kg: vs.weight_kg }),
+                ...(vs.height_cm != null && { height_cm: vs.height_cm }),
+                ...(vs.pain_scale != null && { pain_scale: vs.pain_scale }),
+              }));
             }}
             disabled={!canEdit}
             className="mb-2"

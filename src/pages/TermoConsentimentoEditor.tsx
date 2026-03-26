@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -186,7 +187,7 @@ export default function TermoConsentimentoEditor() {
           <CardContent>
             <div
               className="prose prose-sm dark:prose-invert max-w-none border rounded-lg p-6 bg-card"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
             />
           </CardContent>
         </Card>

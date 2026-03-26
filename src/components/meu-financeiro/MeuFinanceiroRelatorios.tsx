@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safePrintHtml } from "@/lib/safe-print";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -310,12 +311,7 @@ export function MeuFinanceiroRelatorios() {
       </html>
     `;
 
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    safePrintHtml(html);
   };
 
   const generateCsv = (commissions: any[], salaries: any[], start: Date, end: Date) => {
@@ -549,12 +545,7 @@ export function MeuFinanceiroRelatorios() {
       </html>
     `;
 
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
-    }
+    safePrintHtml(html);
   };
 
   return (

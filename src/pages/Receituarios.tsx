@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { RefillRequestsPanel } from "@/components/prontuario/RefillRequestsPanel";
+import { safePrintHtml } from "@/lib/safe-print";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -426,12 +427,7 @@ export default function Receituarios() {
 </body>
 </html>`;
 
-    const w = window.open("", "_blank");
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => w.print(), 300);
-    }
+    safePrintHtml(html);
   };
 
   const handleOpenSignDialog = (p: Prescription) => {

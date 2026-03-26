@@ -140,7 +140,7 @@ serve(async (req) => {
 
       // Log transcription in DB for analytics
       const jobName = `vertex-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      await supabaseClient.from("transcription_jobs").insert({
+      await adminClient.from("transcription_jobs").insert({
         job_name: jobName,
         user_id: user.id,
         tenant_id: profile.tenant_id,
