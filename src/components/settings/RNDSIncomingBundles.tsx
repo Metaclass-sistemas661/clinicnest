@@ -89,7 +89,7 @@ export function RNDSIncomingBundles() {
         .limit(50);
 
       if (error) throw error;
-      setBundles((data as IncomingBundle[]) || []);
+      setBundles((data as unknown as IncomingBundle[]) || []);
     } catch (err) {
       toast.error("Erro ao carregar bundles", { description: normalizeError(err) });
     } finally {
@@ -121,8 +121,8 @@ export function RNDSIncomingBundles() {
           reviewed_by: profile.id,
           reviewed_at: new Date().toISOString(),
           review_notes: reviewNotes || null,
-        })
-        .eq("id", selectedBundle.id);
+        } as never)
+        .eq("id" as never, selectedBundle.id);
 
       if (error) throw error;
 

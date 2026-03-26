@@ -89,13 +89,14 @@ export default function ListaEspera() {
     setIsLoading(true);
     try {
       const [cRes, sRes, pRes, wRes] = await Promise.all([
-        supabase.from("patients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name"),
-        supabase.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
-        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
+        supabase.from("patients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        supabase.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(200),
+        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
         supabase.from("waitlist")
           .select("*, patient:patients(name, phone), procedure:procedures(name), profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(200),
       ]);
       setPatients((cRes.data as Patient[]) || []);
       setProcedures((sRes.data as ProcedureOption[]) || []);

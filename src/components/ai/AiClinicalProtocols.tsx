@@ -170,7 +170,7 @@ export function AiClinicalProtocols({
 
   return (
     <Card className="border-teal-200 bg-teal-50/30">
-      <CardHeader className="pb-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <CardHeader className="pb-2 cursor-pointer" role="button" tabIndex={0} onClick={() => setExpanded(!expanded)} onKeyDown={(e) => e.key === 'Enter' && setExpanded(!expanded)}>
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-teal-600" />

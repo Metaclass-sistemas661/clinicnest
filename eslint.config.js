@@ -34,12 +34,12 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-empty-object-type": "warn",
       "@typescript-eslint/no-require-imports": "warn",
-      // Acessibilidade — regras críticas como warn para não bloquear build existente
-      "jsx-a11y/alt-text": "warn",
-      "jsx-a11y/anchor-is-valid": "warn",
-      "jsx-a11y/click-events-have-key-events": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
-      "jsx-a11y/label-has-associated-control": "warn",
+      // Acessibilidade — regras elevadas para error (WCAG compliance)
+      "jsx-a11y/alt-text": "error",
+      "jsx-a11y/anchor-is-valid": "error",
+      "jsx-a11y/click-events-have-key-events": "error",
+      "jsx-a11y/no-static-element-interactions": "error",
+      "jsx-a11y/label-has-associated-control": "error",
       "jsx-a11y/no-autofocus": "warn",
     },
   },

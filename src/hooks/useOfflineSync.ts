@@ -86,7 +86,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
 
   // Sync pending changes to server
   const syncToServer = useCallback(async () => {
-    if (!isOnline) return;
+    if (!isOnline || !tenantId) return;
 
     const queue = await offlineCache.getSyncQueue();
     if (queue.length === 0) return;
@@ -95,14 +95,30 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
     let successCount = 0;
     let errorCount = 0;
 
+    // Tabelas permitidas para sincronização offline
+    const ALLOWED_TABLES = new Set([
+      "appointments", "clients", "medical_records", "prescriptions",
+      "procedures", "queue_entries", "checkin_entries",
+    ]);
+
     for (const item of queue) {
       try {
+        // Validar tabela na whitelist
+        if (!ALLOWED_TABLES.has(item.table)) {
+          logger.warn(`[offline-sync] Tabela não permitida: ${item.table}`);
+          errorCount++;
+          continue;
+        }
+
+        // Garantir tenant_id em todas as operações
+        const dataWithTenant = { ...item.data, tenant_id: tenantId };
+
         if (item.action === "create") {
-          await supabase.from(item.table as any).insert(item.data);
+          await supabase.from(item.table as any).insert(dataWithTenant);
         } else if (item.action === "update") {
-          await supabase.from(item.table as any).update(item.data).eq("id", item.data.id);
+          await supabase.from(item.table as any).update(dataWithTenant).eq("id", item.data.id).eq("tenant_id", tenantId);
         } else if (item.action === "delete") {
-          await supabase.from(item.table as any).delete().eq("id", item.data.id);
+          await supabase.from(item.table as any).delete().eq("id", item.data.id).eq("tenant_id", tenantId);
         }
 
         await offlineCache.removeSyncItem(item.id);

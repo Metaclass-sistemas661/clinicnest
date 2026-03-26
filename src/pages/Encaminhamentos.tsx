@@ -119,13 +119,14 @@ export default function Encaminhamentos() {
     setIsLoading(true);
     try {
       const [cRes, pRes, sRes, rRes] = await Promise.all([
-        supabase.from("patients").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
-        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name"),
-        supabase.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name"),
+        supabase.from("patients").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
+        supabase.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(100),
         supabase.from("referrals")
           .select("*, patient:patients(name), from:profiles!referrals_from_professional_fkey(full_name), to:profiles!referrals_to_professional_fkey(full_name), specialties(name)")
           .eq("tenant_id", profile.tenant_id)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(200),
       ]);
       setPatients((cRes.data as Patient[]) || []);
       setProfessionals((pRes.data as Professional[]) || []);

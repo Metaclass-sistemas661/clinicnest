@@ -298,7 +298,7 @@ export function BeforeAfterGallery({
                 {/* Before */}
                 <div className="relative">
                   {pair.before ? (
-                    <div className="relative group cursor-pointer" onClick={() => setLightboxUrl(pair.before!.url)}>
+                    <div className="relative group cursor-pointer" role="button" tabIndex={0} onClick={() => setLightboxUrl(pair.before!.url)} onKeyDown={(e) => e.key === 'Enter' && setLightboxUrl(pair.before!.url)}>
                       <img src={pair.before.url} alt="Antes" className="w-full h-40 object-cover rounded" />
                       <Badge className="absolute top-1 left-1 bg-blue-600 text-white text-[10px]">Antes</Badge>
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
@@ -321,7 +321,7 @@ export function BeforeAfterGallery({
                 {/* After */}
                 <div className="relative">
                   {pair.after ? (
-                    <div className="relative group cursor-pointer" onClick={() => setLightboxUrl(pair.after!.url)}>
+                    <div className="relative group cursor-pointer" role="button" tabIndex={0} onClick={() => setLightboxUrl(pair.after!.url)} onKeyDown={(e) => e.key === 'Enter' && setLightboxUrl(pair.after!.url)}>
                       <img src={pair.after.url} alt="Depois" className="w-full h-40 object-cover rounded" />
                       <Badge className="absolute top-1 left-1 bg-green-600 text-white text-[10px]">Depois</Badge>
                       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">

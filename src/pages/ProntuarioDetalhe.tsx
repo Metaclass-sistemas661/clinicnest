@@ -166,19 +166,23 @@ export default function ProntuarioDetalhe() {
         supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
-          .order("issued_at", { ascending: false }),
+          .order("issued_at", { ascending: false })
+          .limit(50),
         supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
-          .order("issued_at", { ascending: false }),
+          .order("issued_at", { ascending: false })
+          .limit(50),
         supabase.from("exam_results").select("id, created_at, exam_name, status")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(50),
         supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(50),
       ]);
 
       (rxRes.data || []).forEach((d: any) => docs.push({

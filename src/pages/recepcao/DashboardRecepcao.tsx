@@ -365,7 +365,7 @@ export default function DashboardRecepcao() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-blue-300 transition-colors" onClick={() => setSearchParams({ tab: "fila" })}>
+          <Card className="cursor-pointer hover:border-blue-300 transition-colors" role="button" tabIndex={0} onClick={() => setSearchParams({ tab: "fila" })} onKeyDown={(e) => e.key === 'Enter' && setSearchParams({ tab: "fila" })}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/40">
@@ -393,7 +393,7 @@ export default function DashboardRecepcao() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-cyan-300 transition-colors" onClick={() => setSearchParams({ tab: "retornos" })}>
+          <Card className="cursor-pointer hover:border-cyan-300 transition-colors" role="button" tabIndex={0} onClick={() => setSearchParams({ tab: "retornos" })} onKeyDown={(e) => e.key === 'Enter' && setSearchParams({ tab: "retornos" })}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 dark:bg-cyan-900/40">

@@ -11,15 +11,19 @@ const allowedOrigins = allowedOriginsEnv
 
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
+  const PRODUCTION_ORIGIN = "https://clinicnest.metaclass.com.br";
   const allowOrigin = (() => {
     if (allowedOrigins.length > 0) {
       return allowedOrigins.includes(origin) ? origin : "";
     }
 
-    if (!origin) return "*";
+    // Sem CORS_ALLOWED_ORIGINS configurado: aceitar localhost (dev) e produção conhecida
+    if (!origin) return PRODUCTION_ORIGIN;
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return origin;
+    if (origin === PRODUCTION_ORIGIN) return origin;
 
-    return "*";
+    // Rejeitar origens desconhecidas em vez de wildcard
+    return "";
   })();
   return {
     ...(allowOrigin ? { "Access-Control-Allow-Origin": allowOrigin } : {}),

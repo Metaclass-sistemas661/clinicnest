@@ -51,8 +51,8 @@ export default function NovaCompra() {
       setIsLoading(true);
       try {
         const [supRes, prodRes] = await Promise.all([
-          supabase.from("suppliers").select("id,name").eq("tenant_id", profile.tenant_id).order("name"),
-          supabase.from("products").select("id,name,cost,quantity").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
+          supabase.from("suppliers").select("id,name").eq("tenant_id", profile.tenant_id).order("name").limit(200),
+          supabase.from("products").select("id,name,cost,quantity").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name").limit(500),
         ]);
         setSuppliers((supRes.data ?? []) as Supplier[]);
         setProducts((prodRes.data ?? []) as Product[]);

@@ -315,7 +315,7 @@ export default function Evolucoes() {
         supabase.from("patients").select("id, name")
           .eq("tenant_id", tenantId).order("name").limit(500),
         supabase.from("profiles").select("id, full_name")
-          .eq("tenant_id", tenantId).order("full_name"),
+          .eq("tenant_id", tenantId).order("full_name").limit(200),
       ]);
       if (evoRes.error) throw evoRes.error;
       setEvolutions((evoRes.data ?? []) as ClinicalEvolution[]);

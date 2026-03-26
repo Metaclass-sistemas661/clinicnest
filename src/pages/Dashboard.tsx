@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,14 +45,16 @@ import {
   DashboardTodayAppointments,
   DashboardNextAppointmentCard,
   DashboardLowStockCard,
-  DashboardMedico,
-  DashboardSecretaria,
-  DashboardEnfermeiro,
-  DashboardFaturista,
-  DashboardClinico,
-  DashboardDentista,
 } from "@/components/dashboard";
-import { DashboardEstetica } from "@/components/dashboard/DashboardEstetica";
+
+// Lazy load dashboard variants per professional type
+const DashboardMedico = lazy(() => import("@/components/dashboard/DashboardMedico").then(m => ({ default: m.DashboardMedico })));
+const DashboardSecretaria = lazy(() => import("@/components/dashboard/DashboardSecretaria").then(m => ({ default: m.DashboardSecretaria })));
+const DashboardEnfermeiro = lazy(() => import("@/components/dashboard/DashboardEnfermeiro").then(m => ({ default: m.DashboardEnfermeiro })));
+const DashboardFaturista = lazy(() => import("@/components/dashboard/DashboardFaturista").then(m => ({ default: m.DashboardFaturista })));
+const DashboardClinico = lazy(() => import("@/components/dashboard/DashboardClinico").then(m => ({ default: m.DashboardClinico })));
+const DashboardDentista = lazy(() => import("@/components/dashboard/DashboardDentista").then(m => ({ default: m.DashboardDentista })));
+const DashboardEstetica = lazy(() => import("@/components/dashboard/DashboardEstetica").then(m => ({ default: m.DashboardEstetica })));
 import { usePermissions } from "@/hooks/usePermissions";
 import type { ProfessionalType } from "@/types/database";
 import { PROFESSIONAL_TYPE_LABELS } from "@/types/database";
@@ -876,7 +878,7 @@ export default function Dashboard() {
       {(() => {
         if (!isAdmin) {
           const RoleDashboard = getDashboardForType(professionalType);
-          if (RoleDashboard) return <RoleDashboard />;
+          if (RoleDashboard) return <Suspense fallback={<div className="flex items-center justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-teal-500 border-t-transparent rounded-full" /></div>}><RoleDashboard /></Suspense>;
         }
         return null;
       })()}

@@ -174,7 +174,7 @@ serve(async (req) => {
     const provider = detectProvider(req, body);
 
     if (!provider) {
-      console.log("Unknown webhook provider:", JSON.stringify(body).substring(0, 500));
+      console.warn("Unknown webhook provider");
       return new Response(
         JSON.stringify({ error: "Unknown provider" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -219,14 +219,14 @@ serve(async (req) => {
     }
 
     if (!result) {
-      console.log("Could not parse webhook:", provider, JSON.stringify(body).substring(0, 500));
+      console.warn("Could not parse webhook:", provider);
       return new Response(
         JSON.stringify({ error: "Could not parse webhook" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Webhook received:", result);
+    console.log("Webhook received:", result.charge_id, result.status);
 
     // Update split_payment_logs if exists
     const { data: splitLog } = await supabaseAdmin

@@ -46,7 +46,6 @@ getFirebaseConfig().then((config) => {
 
     // Handler para mensagens em background
     messaging.onBackgroundMessage((payload) => {
-      console.log('[SW] Mensagem em background:', payload);
 
       const notificationTitle = payload.notification?.title || payload.data?.title || 'ClinicNest';
       const notificationOptions = {
@@ -89,7 +88,6 @@ function getNotificationActions(type) {
 
 // Handler para clique na notificação
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notificação clicada:', event);
   event.notification.close();
 
   const data = event.notification.data || {};
@@ -123,13 +121,13 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Handler para fechar notificação
-self.addEventListener('notificationclose', (event) => {
-  console.log('[SW] Notificação fechada:', event.notification.tag);
+self.addEventListener('notificationclose', () => {
+  // tracking de notificações fechadas pode ser adicionado aqui
 });
 
 // Cache para modo offline (PWA)
-// Incrementar a versão a cada deploy para forçar atualização
-const CACHE_VERSION = Date.now();
+// Incrementar esta versão a cada deploy para forçar atualização
+const CACHE_VERSION = '2.0.0';
 const CACHE_NAME = `clinicnest-v${CACHE_VERSION}`;
 const OFFLINE_URLS = [
   '/offline.html',
@@ -137,7 +135,6 @@ const OFFLINE_URLS = [
 
 // Instalar service worker
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(OFFLINE_URLS);
@@ -148,7 +145,6 @@ self.addEventListener('install', (event) => {
 
 // Ativar service worker
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(

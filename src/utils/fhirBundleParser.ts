@@ -206,7 +206,7 @@ function extractObservation(resource: FhirResource): ExtractedObservation {
     display,
     value,
     unit,
-    effectiveDate: (resource.effectiveDateTime || resource.effectivePeriod?.start) as string | undefined,
+    effectiveDate: (resource.effectiveDateTime || (resource.effectivePeriod as Record<string, unknown> | undefined)?.start) as string | undefined,
     category,
   };
 }
@@ -243,7 +243,7 @@ function extractProcedure(resource: FhirResource): ExtractedProcedure {
   return {
     code,
     display,
-    performedDate: (resource.performedDateTime || resource.performedPeriod?.start) as string | undefined,
+    performedDate: (resource.performedDateTime || (resource.performedPeriod as Record<string, unknown> | undefined)?.start) as string | undefined,
     status: resource.status as string | undefined,
   };
 }

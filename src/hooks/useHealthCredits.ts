@@ -81,7 +81,7 @@ export function useHealthCreditRules() {
       const { data, error } = await supabase
         .from("health_credits_rules" as never)
         .select("*")
-        .eq("tenant_id", tenantId!)
+        .eq("tenant_id" as never, tenantId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as HealthCreditRule[];
@@ -98,7 +98,7 @@ export function useHealthCreditRules() {
         const { error } = await supabase
           .from("health_credits_rules" as never)
           .update(payload as never)
-          .eq("id", rule.id);
+          .eq("id" as never, rule.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -119,7 +119,7 @@ export function useHealthCreditRules() {
       const { error } = await supabase
         .from("health_credits_rules" as never)
         .delete()
-        .eq("id", id);
+        .eq("id" as never, id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -134,7 +134,7 @@ export function useHealthCreditRules() {
       const { error } = await supabase
         .from("health_credits_rules" as never)
         .update({ is_active } as never)
-        .eq("id", id);
+        .eq("id" as never, id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -226,7 +226,7 @@ export function useRedemptionConfig() {
       const { data, error } = await supabase
         .from("health_credits_redemption_config" as never)
         .select("*")
-        .eq("tenant_id", tenantId!)
+        .eq("tenant_id" as never, tenantId!)
         .maybeSingle();
       if (error) throw error;
       return (data as unknown as RedemptionConfig) ?? null;

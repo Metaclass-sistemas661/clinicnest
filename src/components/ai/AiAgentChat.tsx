@@ -106,9 +106,9 @@ export function AiAgentChat() {
     return (
       <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-primary-foreground shadow-lg cursor-pointer hover:bg-primary/90 transition-all">
         <NestAvatar size={20} />
-        <span className="text-sm font-medium" onClick={() => setIsMinimized(false)}>
+        <button className="text-sm font-medium bg-transparent border-none text-inherit" onClick={() => setIsMinimized(false)}>
           Nest
-        </span>
+        </button>
         <button onClick={() => { setIsOpen(false); setIsMinimized(false); }} className="ml-1 hover:opacity-70">
           <X className="h-3 w-3" />
         </button>

@@ -239,15 +239,18 @@ export default function Equipe() {
           .from("profiles")
           .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,professional_type,council_type,council_number,council_state,is_readonly,readonly_reason,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
-          .order("full_name"),
+          .order("full_name")
+          .limit(200),
         supabase
           .from("user_roles")
           .select("id,user_id,tenant_id,role,created_at")
-          .eq("tenant_id", profile.tenant_id),
+          .eq("tenant_id", profile.tenant_id)
+          .limit(500),
         supabase
           .from("professional_commissions")
           .select("id, user_id, type, value, payment_type, salary_amount, salary_payment_day, default_payment_method")
-          .eq("tenant_id", profile.tenant_id),
+          .eq("tenant_id", profile.tenant_id)
+          .limit(200),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
