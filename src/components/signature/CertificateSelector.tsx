@@ -474,7 +474,10 @@ export function CertificateSelector({
                 {cloudCertificates.map((cert) => (
                   <div
                     key={cert.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleCloudSelect(cert)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCloudSelect(cert); } }}
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedCertificate?.id === cert.id
                         ? "border-primary bg-primary/5"

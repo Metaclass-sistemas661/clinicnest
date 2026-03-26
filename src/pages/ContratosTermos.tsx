@@ -382,10 +382,11 @@ export default function ContratosTermos() {
               {/* Row 1: Search + Patient */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Busca</label>
+                  <label htmlFor="contratos-search" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Busca</label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
+                      id="contratos-search"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Nome do paciente ou termo..."
@@ -394,9 +395,9 @@ export default function ContratosTermos() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Paciente</label>
+                  <label htmlFor="contratos-patient" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Paciente</label>
                   <Select value={patientFilter} onValueChange={setPatientFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger id="contratos-patient">
                       <User className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Todos os pacientes" />
                     </SelectTrigger>
@@ -413,9 +414,9 @@ export default function ContratosTermos() {
               {/* Row 2: Template + Date range */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tipo de documento</label>
+                  <label htmlFor="contratos-template" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Tipo de documento</label>
                   <Select value={templateFilter} onValueChange={setTemplateFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger id="contratos-template">
                       <FileText className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Todos os tipos" />
                     </SelectTrigger>
@@ -428,10 +429,11 @@ export default function ContratosTermos() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data início</label>
+                  <label htmlFor="contratos-date-from" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data início</label>
                   <div className="relative">
                     <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <Input
+                      id="contratos-date-from"
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
@@ -440,10 +442,11 @@ export default function ContratosTermos() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data fim</label>
+                  <label htmlFor="contratos-date-to" className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Data fim</label>
                   <div className="relative">
                     <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                     <Input
+                      id="contratos-date-to"
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}

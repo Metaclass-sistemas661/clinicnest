@@ -189,7 +189,7 @@ export function SignaturePasswordDialog({
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? "" : "hidden"}`}>
-      <div className="fixed inset-0 bg-black/50" onClick={() => handleOpenChange(false)} />
+      <div className="fixed inset-0 bg-black/50" role="button" tabIndex={0} aria-label="Fechar" onClick={() => handleOpenChange(false)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleOpenChange(false); } }} />
       <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-background rounded-lg shadow-lg p-6">
         <h3 className="text-lg font-semibold mb-2">Assinar com Certificado Digital</h3>
         <p className="text-sm text-muted-foreground mb-4">
@@ -198,9 +198,10 @@ export function SignaturePasswordDialog({
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Senha do Certificado</label>
+            <label htmlFor="cert-password" className="text-sm font-medium">Senha do Certificado</label>
             <div className="relative">
               <input
+                id="cert-password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

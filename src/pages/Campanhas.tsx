@@ -569,9 +569,11 @@ export default function Campanhas() {
                         filteredPatients.map((c) => (
                           <label
                             key={c.id}
+                            htmlFor={`patient-cb-${c.id}`}
                             className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 cursor-pointer"
                           >
                             <Checkbox
+                              id={`patient-cb-${c.id}`}
                               checked={selectedIds.has(c.id)}
                               onCheckedChange={() => togglePatient(c.id)}
                             />
