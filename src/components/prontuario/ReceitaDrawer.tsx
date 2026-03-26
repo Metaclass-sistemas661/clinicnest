@@ -28,6 +28,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import type { DocumentContext } from "./QuickDocumentActions";
+import { SngpcPrescriptionAlert } from "./SngpcPrescriptionAlert";
 
 interface ReceitaItem {
   id: string;
@@ -311,6 +312,13 @@ export function ReceitaDrawer({
               rows={3}
             />
           </div>
+
+          {/* SNGPC — Alerta de medicamentos controlados */}
+          <SngpcPrescriptionAlert
+            prescriptionText={itens.map((i) => i.medicamento).filter(Boolean).join("\n")}
+            prescriptionType={tipo}
+            hasCRM={!!profile?.council_number}
+          />
         </div>
 
         <SheetFooter className="mt-6 flex gap-2">

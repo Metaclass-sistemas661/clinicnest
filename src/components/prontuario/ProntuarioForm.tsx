@@ -20,7 +20,10 @@ import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { AiDrugInteractionAlert } from "@/components/ai";
+import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
 import { VoiceFirstDictation, type VitalSignsFromVoice } from "@/components/ai/VoiceFirstDictation";
+import { VitalsAbnormalityAlert } from "@/components/prontuario/VitalsAbnormalityAlert";
+import { SngpcPrescriptionAlert } from "@/components/prontuario/SngpcPrescriptionAlert";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
@@ -881,6 +884,8 @@ export function ProntuarioForm({
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <VitalsAbnormalityAlert vitals={vitals} className="pt-1" />
+
               <div className="space-y-1">
                 <Label className="text-xs text-destructive font-medium">Alergias</Label>
                 <Input value={vitals.allergies} onChange={(e) => setVitals((v) => ({ ...v, allergies: e.target.value }))}
@@ -943,6 +948,19 @@ export function ProntuarioForm({
               <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
             </div>
 
+            {/* Protocolo clínico CDS baseado no CID */}
+            {canEdit && base.cid_code && (
+              <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
+                <AiClinicalProtocols
+                  cidCode={base.cid_code}
+                  cidDescription={base.diagnosis}
+                  allergies={vitals.allergies}
+                  currentMedications={vitals.current_medications}
+                  compact
+                />
+              </FeatureGate>
+            )}
+
             {/* Encaminhamento Inteligente */}
             {canEdit && (base.diagnosis || base.chief_complaint) && (
               <FeatureGate feature="aiCopilot" showUpgradePrompt={false}>
@@ -995,6 +1013,11 @@ export function ProntuarioForm({
                   prescriptions={base.prescriptions}
                   currentMedications={vitals.current_medications}
                   allergies={vitals.allergies}
+                />
+                <SngpcPrescriptionAlert
+                  prescriptionText={base.prescriptions}
+                  prescriptionType="simples"
+                  hasCRM={!!professionalCrm}
                 />
               </div>
             </AccordionContent>

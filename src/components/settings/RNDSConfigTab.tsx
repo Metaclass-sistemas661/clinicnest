@@ -45,6 +45,7 @@ import { normalizeError } from "@/utils/errorMessages";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { validateCNES, validateUF } from '@/lib/rnds-client';
+import { RNDSIncomingBundles } from './RNDSIncomingBundles';
 
 interface RNDSConfig {
   rnds_enabled: boolean;
@@ -529,6 +530,9 @@ export function RNDSConfigTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dados Recebidos — RNDS Bidirecional */}
+      {formData.rnds_enabled && <RNDSIncomingBundles />}
 
       {/* Informações */}
       <Card>
