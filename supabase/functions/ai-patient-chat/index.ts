@@ -229,10 +229,6 @@ serve(async (req) => {
           tokens_used: totalInputTokens + totalOutputTokens,
         });
 
-        console.log(
-          `[ai-patient-chat] Patient: ${clientId}, Rounds: ${rounds}, Tokens: ${totalInputTokens}+${totalOutputTokens}`,
-        );
-
         return new Response(
           JSON.stringify({
             conversation_id: conversationId,

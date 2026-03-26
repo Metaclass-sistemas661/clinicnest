@@ -236,10 +236,6 @@ serve(async (req) => {
             .eq("id", conversationId);
         }
 
-        console.log(
-          `[ai-agent-chat] User: ${user.id}, Rounds: ${rounds}, Tokens: ${totalInputTokens}+${totalOutputTokens}, Tools: ${toolsUsed.map((t) => t.name).join(",")}`,
-        );
-
         logAiUsage(tenantId, user.id, "agent_chat", totalInputTokens, totalOutputTokens).catch(() => {});
 
         return new Response(
@@ -262,15 +258,38 @@ serve(async (req) => {
         // Add assistant message with tool calls to history
         messages.push({ role: "assistant", content: response.content });
 
+        // Whitelist of allowed tool names
+        const ALLOWED_TOOLS = new Set(PROFESSIONAL_TOOLS.map(t => t.name));
+
         // Execute each tool call
         const toolResultBlocks: ContentBlock[] = [];
 
         for (const block of response.content) {
           if (block.type === "tool_use") {
             const toolBlock = block as ContentBlockToolUse;
-            toolsUsed.push({ name: toolBlock.name, input: toolBlock.input });
 
-            console.log(`[ai-agent-chat] Tool call: ${toolBlock.name}(${JSON.stringify(toolBlock.input)})`);
+            // Validate tool name against whitelist
+            if (!ALLOWED_TOOLS.has(toolBlock.name)) {
+              console.warn(`[ai-agent-chat] Blocked unknown tool: ${toolBlock.name}`);
+              toolResultBlocks.push({
+                type: "tool_result",
+                tool_use_id: toolBlock.id,
+                content: JSON.stringify({ error: `Ferramenta '${toolBlock.name}' não permitida` }),
+              });
+              continue;
+            }
+
+            // Validate input is a plain object
+            if (typeof toolBlock.input !== "object" || toolBlock.input === null || Array.isArray(toolBlock.input)) {
+              toolResultBlocks.push({
+                type: "tool_result",
+                tool_use_id: toolBlock.id,
+                content: JSON.stringify({ error: "Input inválido para a ferramenta" }),
+              });
+              continue;
+            }
+
+            toolsUsed.push({ name: toolBlock.name, input: toolBlock.input });
 
             const toolResult = await executeTool(
               toolBlock.name,

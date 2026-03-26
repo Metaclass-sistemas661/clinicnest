@@ -292,8 +292,6 @@ serve(async (req) => {
 
       logAiUsage(_profile.tenant_id, user.id, "triage", result.usage.input_tokens, result.usage.output_tokens).catch(() => {});
     }
-    console.log(`[ai-triage] User: ${user.id}, Tokens: ${result.usage.input_tokens}+${result.usage.output_tokens}, Latency: ${latencyMs}ms`);
-
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -4,7 +4,7 @@
  * Coleta dados clínicos pré-avaliação: bruxismo, tabagismo, medicamentos,
  * alergias, última visita, higiene, gestação, etc.
  */
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,10 +207,11 @@ export function DentalAnamnesis({ patientId, tenantId, existingData, onSaved }: 
 }
 
 function SwitchField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  const id = useId();
   return (
     <div className="flex items-center gap-2">
-      <Switch checked={checked} onCheckedChange={onChange} />
-      <Label className="text-xs cursor-pointer" onClick={() => onChange(!checked)}>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+      <Label htmlFor={id} className="text-xs cursor-pointer">
         {label}
       </Label>
     </div>

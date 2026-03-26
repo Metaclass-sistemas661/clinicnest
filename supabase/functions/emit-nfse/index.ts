@@ -155,8 +155,6 @@ serve(async (req) => {
       console.error("[emit-nfse] Save error:", saveError);
     }
 
-    console.log(`[emit-nfse] NFS-e emitted: ${invoice.id} for tenant ${tenant_id}`);
-
     return new Response(
       JSON.stringify({
         success: true,

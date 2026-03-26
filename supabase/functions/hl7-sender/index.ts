@@ -338,8 +338,6 @@ serve(async (req) => {
       })
       .eq("id", connection.id);
 
-    console.log(`[hl7-sender] Sent ORM^O01 for patient ${patient_id}, order ${orderId}, success: ${sendResult.success}`);
-
     return new Response(
       JSON.stringify({
         success: sendResult.success,

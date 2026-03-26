@@ -189,7 +189,6 @@ serve(async (req) => {
 
     // Log usage
     logAiUsage(profile.tenant_id, user.id, "cid_suggest").catch(() => {});
-    console.log(`[ai-cid-suggest] User: ${user.id}, Description length: ${description.length}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

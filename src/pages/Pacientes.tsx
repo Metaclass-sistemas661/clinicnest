@@ -94,6 +94,7 @@ export default function Pacientes() {
   // Staff: own patient IDs
   useEffect(() => {
     if (!profile?.tenant_id || !profile?.id || isAdmin) return;
+    let cancelled = false;
     (async () => {
       try {
         const { data } = await supabase
@@ -102,11 +103,12 @@ export default function Pacientes() {
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .not("patient_id", "is", null);
-        setMyPatientIds(new Set((data || []).map((r: { patient_id: string }) => r.patient_id)));
+        if (!cancelled) setMyPatientIds(new Set((data || []).map((r: { patient_id: string }) => r.patient_id)));
       } catch (err) {
-        logger.error("Error fetching my patients:", err);
+        if (!cancelled) logger.error("Error fetching my patients:", err);
       }
     })();
+    return () => { cancelled = true; };
   }, [profile?.tenant_id, profile?.id, isAdmin]);
 
   // ── Derived / computed ───────────────────────────────────────

@@ -91,6 +91,7 @@ export default function ProntuarioDetalhe() {
 
   useEffect(() => {
     if (id && profile?.tenant_id) fetchRecord();
+    // fetchRecord sets loading states internally; no cleanup needed for single-fetch
   }, [id, profile?.tenant_id]);
 
   const fetchRecord = async () => {

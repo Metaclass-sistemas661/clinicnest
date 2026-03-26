@@ -330,6 +330,7 @@ export default function Dashboard() {
   // Enterprise calendar: fetch monthly appointment counts per day
   useEffect(() => {
     if (!profile?.tenant_id) return;
+    let cancelled = false;
     const fetchMonthCounts = async () => {
       setCalendarLoading(true);
       try {
@@ -341,6 +342,7 @@ export default function Dashboard() {
           .eq("tenant_id", profile.tenant_id)
           .gte("scheduled_at", mStart.toISOString())
           .lte("scheduled_at", mEnd.toISOString());
+        if (cancelled) return;
         if (error) throw error;
         const counts: Record<string, { total: number; confirmed: number; pending: number; completed: number }> = {};
         (data || []).forEach((apt: { scheduled_at: string; status: string }) => {
@@ -353,12 +355,13 @@ export default function Dashboard() {
         });
         setMonthlyAppointmentCounts(counts);
       } catch (err) {
-        logger.error("Failed to fetch monthly appointment counts", err);
+        if (!cancelled) logger.error("Failed to fetch monthly appointment counts", err);
       } finally {
-        setCalendarLoading(false);
+        if (!cancelled) setCalendarLoading(false);
       }
     };
     fetchMonthCounts();
+    return () => { cancelled = true; };
   }, [profile?.tenant_id, calendarMonth]);
 
   const fetchCommissionTotals = async (

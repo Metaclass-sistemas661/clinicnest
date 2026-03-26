@@ -34,7 +34,6 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const payload: NFEioWebhookPayload = await req.json();
-    console.log("[nfse-webhook] Received:", JSON.stringify(payload));
 
     const { event, data } = payload;
 
@@ -83,8 +82,6 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log(`[nfse-webhook] Invoice ${data.id} updated to status: ${nfeioStatus}`);
 
     return new Response(
       JSON.stringify({ success: true, status: nfeioStatus }),

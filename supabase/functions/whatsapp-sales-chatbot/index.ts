@@ -302,8 +302,8 @@ interface IncomingWebhook {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function log(msg: string, data?: Record<string, unknown>) {
-  console.log(`[SALES-CHATBOT] ${msg}`, data ? JSON.stringify(data) : "");
+function log(_msg: string, _data?: Record<string, unknown>) {
+  // Logging removed for production — use structured logging if needed
 }
 
 function normalizePhone(raw: string): string {

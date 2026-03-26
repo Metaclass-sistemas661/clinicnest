@@ -1,9 +1,9 @@
 -- Performance indexes for high-frequency queries
 -- Composite indexes on tables that are frequently queried with tenant_id + other filters
 
--- medical_records: tenant_id + client_id + record_date (prontuário listing)
-CREATE INDEX IF NOT EXISTS idx_medical_records_tenant_client_date
-  ON medical_records (tenant_id, client_id, record_date DESC);
+-- medical_records: tenant_id + patient_id + record_date (prontuário listing)
+CREATE INDEX IF NOT EXISTS idx_medical_records_tenant_patient_date
+  ON medical_records (tenant_id, patient_id, record_date DESC);
 
 -- prescriptions: tenant_id + patient_id + issued_at (receitas listing)
 CREATE INDEX IF NOT EXISTS idx_prescriptions_tenant_patient_date
@@ -25,9 +25,9 @@ CREATE INDEX IF NOT EXISTS idx_appointments_tenant_scheduled
 CREATE INDEX IF NOT EXISTS idx_appointments_tenant_prof_scheduled
   ON appointments (tenant_id, professional_id, scheduled_at);
 
--- appointments: tenant_id + client_id + scheduled_at (patient appointment history)
-CREATE INDEX IF NOT EXISTS idx_appointments_tenant_client_scheduled
-  ON appointments (tenant_id, client_id, scheduled_at DESC);
+-- appointments: tenant_id + patient_id + scheduled_at (patient appointment history)
+CREATE INDEX IF NOT EXISTS idx_appointments_tenant_patient_scheduled
+  ON appointments (tenant_id, patient_id, scheduled_at DESC);
 
 -- financial_transactions: tenant_id + date (relatórios financeiros)
 CREATE INDEX IF NOT EXISTS idx_financial_transactions_tenant_date

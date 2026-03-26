@@ -209,11 +209,6 @@ serve(async (req) => {
     const confidence = soap.confidence || soap.confianca || soap.confiança || 0;
     const vitalSigns = soap.vital_signs || soap.sinais_vitais || null;
 
-    console.log(
-      `[ai-generate-soap] Generated SOAP for user: ${user.id}, ` +
-      `confidence: ${confidence || "N/A"}, specialty: ${specialty || "general"}, ` +
-      `keys: ${Object.keys(soap).join(",")}`
-    );
     logAiUsage(profile.tenant_id, user.id, "transcribe").catch(() => {});
 
     return new Response(

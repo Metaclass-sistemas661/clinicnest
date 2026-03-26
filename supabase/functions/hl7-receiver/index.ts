@@ -276,8 +276,6 @@ serve(async (req) => {
         .update({ last_connected_at: new Date().toISOString(), last_error: null })
         .eq("id", connectionId);
       
-      console.log(`[hl7-receiver] Processed ORU message, log_id: ${logId}`);
-      
       const ack = generateACK(message, 'AA');
       return new Response(ack, {
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
@@ -295,8 +293,6 @@ serve(async (req) => {
         parsed_data: parsedData,
         status: 'received',
       });
-      
-      console.log(`[hl7-receiver] Received ADT message: ${message.messageType}`);
       
       const ack = generateACK(message, 'AA');
       return new Response(ack, {

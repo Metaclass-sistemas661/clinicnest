@@ -247,7 +247,6 @@ serve(async (req) => {
           emailsFailed.push(summary.email);
         }
       } else {
-        console.log(`[DEV] Would send email to ${summary.email}`);
         emailsSent.push(summary.email);
       }
 

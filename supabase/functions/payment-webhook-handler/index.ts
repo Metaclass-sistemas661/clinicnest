@@ -226,8 +226,6 @@ serve(async (req) => {
       );
     }
 
-    console.log("Webhook received:", result.charge_id, result.status);
-
     // Update split_payment_logs if exists
     const { data: splitLog } = await supabaseAdmin
       .from("split_payment_logs")

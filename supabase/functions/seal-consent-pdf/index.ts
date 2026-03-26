@@ -528,7 +528,7 @@ serve(async (req: Request) => {
 
     // ── 7. Upload para o bucket ──
     const storagePath = `${consent.tenant_id}/${consent.patient_user_id}/${consent_id}.pdf`;
-    console.log(`[seal-consent-pdf] Sealing consent ${consent_id}, size: ${pdfUint8.length}`);
+    console.log(`[seal-consent-pdf] Sealing consent, size: ${pdfUint8.length}`);
     const { error: uploadErr } = await supabaseAdmin.storage
       .from("consent-sealed-pdfs")
       .upload(storagePath, pdfUint8, {

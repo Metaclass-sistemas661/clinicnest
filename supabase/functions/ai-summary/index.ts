@@ -144,7 +144,6 @@ serve(async (req) => {
     }
 
     // Fetch patient data
-    console.log(`[ai-summary] Looking up patient: ${resolvedClientId}, tenant: ${profile.tenant_id}`);
     const { data: client, error: clientError } = await adminClient
       .from("patients")
       .select(`
@@ -253,7 +252,6 @@ serve(async (req) => {
     });
 
     logAiUsage(profile.tenant_id, user.id, "summary").catch(() => {});
-    console.log(`[ai-summary] User: ${user.id}, Patient: ${resolvedClientId}`);
 
     return new Response(
       JSON.stringify({

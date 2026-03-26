@@ -209,7 +209,6 @@ serve(async (req) => {
     }
 
     logAiUsage(profile.tenant_id, user.id, "sentiment").catch(() => {});
-    console.log(`[ai-sentiment] User: ${user.id}, Sentiment: ${response.sentiment}, Score: ${response.score}`);
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

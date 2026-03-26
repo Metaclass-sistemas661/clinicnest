@@ -144,7 +144,10 @@ function IntegrationCard({
 }) {
   return (
     <Card
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className="cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group"
     >
       <CardContent className="pt-5 pb-4">

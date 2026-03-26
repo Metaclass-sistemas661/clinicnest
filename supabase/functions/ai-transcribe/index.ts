@@ -150,10 +150,6 @@ serve(async (req) => {
         completed_at: new Date().toISOString(),
       }).then(() => {}, () => {}); // fire-and-forget, don't block response
 
-      console.log(
-        `[ai-transcribe] Vertex AI transcription complete for user: ${user.id}, ` +
-        `${result.durationSeconds.toFixed(1)}s audio, ${result.transcript.length} chars`
-      );
       logAiUsage(profile.tenant_id, user.id, "transcribe").catch(() => {});
 
       return new Response(
