@@ -24,6 +24,7 @@ import { AiClinicalProtocols } from "@/components/ai/AiClinicalProtocols";
 import { VoiceFirstDictation, type VitalSignsFromVoice } from "@/components/ai/VoiceFirstDictation";
 import { VitalsAbnormalityAlert } from "@/components/prontuario/VitalsAbnormalityAlert";
 import { SngpcPrescriptionAlert } from "@/components/prontuario/SngpcPrescriptionAlert";
+import { VoiceFieldButton } from "@/components/prontuario/VoiceFieldButton";
 import { PatientPromsViewer } from "@/components/prontuario/PatientPromsViewer";
 import { AiSmartReferral } from "@/components/ai/AiSmartReferral";
 import { ExamOcrAnalyzer } from "@/components/prontuario/ExamOcrAnalyzer";
@@ -918,23 +919,35 @@ export function ProntuarioForm({
             {patientId && <PatientPromsViewer patientId={patientId} />}
 
             <div className="space-y-1.5">
-              <Label>Queixa Principal *</Label>
+              <div className="flex items-center justify-between gap-1">
+                <Label>Queixa Principal *</Label>
+                {canEdit && <VoiceFieldButton onTranscript={(t) => set("chief_complaint", t)} title="Ditar queixa principal" />}
+              </div>
               <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
             </div>
             <div className="space-y-1.5">
-              <Label>Anamnese</Label>
+              <div className="flex items-center justify-between gap-1">
+                <Label>Anamnese</Label>
+                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis.trim() + "\n" + t : t }))} title="Ditar anamnese (acrescenta ao campo)" />}
+              </div>
               <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
             </div>
             {/* Exame Físico — oculto para psicólogo */}
             {!isPsychologist && (
               <div className="space-y-1.5">
-                <Label>Exame Físico</Label>
+                <div className="flex items-center justify-between gap-1">
+                  <Label>Exame Físico</Label>
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, physical_exam: b.physical_exam ? b.physical_exam.trim() + "\n" + t : t }))} title="Ditar exame físico (acrescenta ao campo)" />}
+                </div>
                 <Textarea value={base.physical_exam} onChange={(e) => set("physical_exam", e.target.value)} placeholder="PA, FC, achados..." rows={3} />
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label>Diagnóstico</Label>
+                <div className="flex items-center justify-between gap-1">
+                  <Label>Diagnóstico</Label>
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => set("diagnosis", t)} title="Ditar diagnóstico" />}
+                </div>
                 <Input value={base.diagnosis} onChange={(e) => set("diagnosis", e.target.value)} placeholder="Diagnóstico clínico" />
               </div>
               <div className="space-y-1.5">
@@ -944,7 +957,10 @@ export function ProntuarioForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Plano Terapêutico / Conduta</Label>
+              <div className="flex items-center justify-between gap-1">
+                <Label>Plano Terapêutico / Conduta</Label>
+                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, treatment_plan: b.treatment_plan ? b.treatment_plan.trim() + "\n" + t : t }))} title="Ditar conduta (acrescenta ao campo)" />}
+              </div>
               <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
             </div>
 
@@ -984,7 +1000,10 @@ export function ProntuarioForm({
             />
 
             <div className="space-y-1.5">
-              <Label>Observações</Label>
+              <div className="flex items-center justify-between gap-1">
+                <Label>Observações</Label>
+                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, notes: b.notes ? b.notes.trim() + "\n" + t : t }))} title="Ditar observações (acrescenta ao campo)" />}
+              </div>
               <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
             </div>
 
@@ -1008,6 +1027,10 @@ export function ProntuarioForm({
             </AccordionTrigger>
             <AccordionContent className="space-y-3 pb-4">
               <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <Label>Prescrição</Label>
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, prescriptions: b.prescriptions ? b.prescriptions.trim() + "\n" + t : t }))} title="Ditar prescrição (acrescenta ao campo)" />}
+                </div>
                 <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />
                 <AiDrugInteractionAlert
                   prescriptions={base.prescriptions}
