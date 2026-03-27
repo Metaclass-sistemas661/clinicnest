@@ -44,6 +44,9 @@ verify_jwt = false
 [functions.ai-summary]
 verify_jwt = false
 
+[functions.ai-cancel-prediction]
+verify_jwt = false
+
 [functions.landing-chat]
 verify_jwt = false
 
