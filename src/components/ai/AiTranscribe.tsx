@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
+import { useAudioRecorder, isLikelyHallucination, type AudioRecordingResult } from "@/hooks/useAudioRecorder";
 
 type Specialty = "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
 
@@ -35,10 +36,7 @@ interface AiTranscribeProps {
 export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps) {
   const [transcript, setTranscript] = useState<string>("");
   const [specialty, setSpecialty] = useState<Specialty>("PRIMARYCARE");
-  const [isRecording, setIsRecording] = useState(false);
   const [copied, setCopied] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
 
   const transcribeMutation = useMutation({
     mutationFn: async (audioBlob: Blob) => {
@@ -47,12 +45,13 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
       );
 
+      const ext = audioBlob.type.split("/")[1]?.split(";")[0] || "webm";
       const { data, error } = await supabase.functions.invoke("ai-transcribe", {
         body: {
           action: "transcribe",
           audio_base64: base64,
-          file_name: `recording-${Date.now()}.webm`,
-          content_type: "audio/webm",
+          file_name: `recording-${Date.now()}.${ext}`,
+          content_type: audioBlob.type || "audio/webm",
           specialty,
         },
       });
@@ -61,6 +60,16 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
     },
     onSuccess: (data) => {
       if (data.transcript) {
+        // Detecção dupla: flag do backend + verificação local
+        if (data.is_hallucination || isLikelyHallucination(data.transcript)) {
+          toast.warning("Possível erro de transcrição detectado", {
+            description:
+              "O áudio pode estar com ruído ou muito baixo. " +
+              "Tente falar mais alto, mais perto do microfone, ou use fone com fio.",
+            duration: 8000,
+          });
+          return;
+        }
         setTranscript(data.transcript);
         onTranscriptReady?.(data.transcript);
         toast.success("Transcrição concluída!");
@@ -83,38 +92,22 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
     transcribeMutation.mutate(file);
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
+  // ── Gravação via hook robusto (waterfall constraints + AudioContext processing) ──
+  const handleRecordingResult = useCallback(
+    ({ blob, durationMs }: AudioRecordingResult) => {
+      if (durationMs < 2000) {
+        toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
+        return;
+      }
+      transcribeMutation.mutate(blob);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-        transcribeMutation.mutate(audioBlob);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      toast.error("Não foi possível acessar o microfone.");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
+  const { isRecording, startRecording, stopRecording } = useAudioRecorder({
+    onResult: handleRecordingResult,
+  });
 
   const handleCopy = () => {
     navigator.clipboard.writeText(transcript);
@@ -265,8 +258,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         )}
 
         <p className="text-xs text-muted-foreground">
-          Transcrição médica especializada usando Amazon Transcribe Medical.
-          Vocabulário otimizado para termos médicos em português.
+          Transcrição médica com IA — vocabulário otimizado para termos médicos em português.
         </p>
       </CardContent>
     </Card>

@@ -147,9 +147,54 @@ export interface TranscriptionResult {
   confidence: number;
   languageCode: string;
   durationSeconds: number;
+  /** True se a transcrição parece ser alucinação do modelo (repetições, confiança baixa) */
+  isHallucination: boolean;
 }
 
 // ── Audio encoding detection ────────────────────────────────────
+
+/**
+ * Detecta se a transcrição é provavelmente uma alucinação do modelo STT.
+ * Ocorre com áudio Bluetooth HFP de baixa qualidade, ruído intenso, ou silêncio.
+ *
+ * Padrões:
+ *  1. Frase idêntica repetida 3+ vezes
+ *  2. Uma frase representa >60% de todas as sentenças (mín. 4 sentenças)
+ *  3. Token curto (≤6 chars) repetido 5+ vezes seguidas ("31 31 31 31 31")
+ *  4. Confiança muito baixa (< 30%) com transcrição curta
+ */
+function detectHallucination(transcript: string, avgConfidence: number): boolean {
+  if (!transcript || transcript.trim().length < 20) return false;
+
+  const text = transcript.trim();
+
+  // Padrão 3: repetição de token curto
+  const shortTokenRepeat = /\b(\w{1,6})\b(?:\s+\1){4,}/i;
+  if (shortTokenRepeat.test(text)) return true;
+
+  // Divide em sentenças
+  const sentences = text
+    .split(/[.!?"]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 10);
+
+  if (sentences.length >= 2) {
+    const counts = new Map<string, number>();
+    for (const s of sentences) {
+      const n = (counts.get(s) ?? 0) + 1;
+      counts.set(s, n);
+      if (n >= 3) return true; // Padrão 1
+    }
+    for (const count of counts.values()) {
+      if (count / sentences.length > 0.6 && sentences.length >= 4) return true; // Padrão 2
+    }
+  }
+
+  // Padrão 4: confiança muito baixa + transcrição curta
+  if (avgConfidence > 0 && avgConfidence < 0.30 && text.length < 50) return true;
+
+  return false;
+}
 
 function detectEncoding(contentType: string): string {
   const map: Record<string, string> = {
@@ -219,7 +264,7 @@ export async function transcribeAudio(
         phraseSets: [
           {
             inlinePhraseSet: {
-              phrases: phraseHints.map((p) => ({ value: p, boost: 15 })),
+              phrases: phraseHints.map((p) => ({ value: p, boost: 5 })),
             },
           },
         ],
@@ -277,9 +322,13 @@ export async function transcribeAudio(
       throw new Error("Nenhuma fala detectada no áudio. Verifique a qualidade da gravação.");
     }
 
+    // Detecção de alucinação server-side
+    const isHallucination = detectHallucination(transcript, resultCount > 0 ? totalConfidence / resultCount : 0);
+
     console.log(
       `[vertex-transcribe] Transcribed ${durationSeconds.toFixed(1)}s audio, ` +
-        `${transcript.length} chars, confidence: ${resultCount > 0 ? (totalConfidence / resultCount * 100).toFixed(1) : "N/A"}%`,
+        `${transcript.length} chars, confidence: ${resultCount > 0 ? (totalConfidence / resultCount * 100).toFixed(1) : "N/A"}%` +
+        `${isHallucination ? " [HALLUCINATION DETECTED]" : ""}`,
     );
 
     return {
@@ -287,6 +336,7 @@ export async function transcribeAudio(
       confidence: resultCount > 0 ? totalConfidence / resultCount : 0,
       languageCode: "pt-BR",
       durationSeconds,
+      isHallucination,
     };
   } finally {
     clearTimeout(timer);

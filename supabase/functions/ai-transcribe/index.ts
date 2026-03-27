@@ -158,6 +158,7 @@ serve(async (req) => {
           transcript: result.transcript,
           confidence: result.confidence,
           duration_seconds: result.durationSeconds,
+          is_hallucination: result.isHallucination,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

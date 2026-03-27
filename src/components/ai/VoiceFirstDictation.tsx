@@ -118,11 +118,13 @@ export function VoiceFirstDictation({
         const text: string = data.transcript;
         setTranscript(text);
 
-        if (isLikelyHallucination(text)) {
-          toast.warning("Qualidade de áudio baixa detectada", {
+        // Detecção dupla: flag do backend + verificação local
+        if (data.is_hallucination || isLikelyHallucination(text)) {
+          toast.warning("Possível erro de transcrição detectado", {
             description:
-              "O microfone Bluetooth pode estar em modo de baixa qualidade. " +
-              "Use o microfone integrado do notebook ou fone com fio para melhores resultados.",
+              "O áudio pode estar com ruído ou muito baixo. " +
+              "Tente falar mais alto, mais perto do microfone, ou use fone com fio. " +
+              "A transcrição foi descartada.",
             duration: 8000,
           });
           setStep("idle");
