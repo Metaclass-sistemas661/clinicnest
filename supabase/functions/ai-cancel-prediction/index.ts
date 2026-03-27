@@ -133,19 +133,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    const { data: appt } = await adminClient
+    const { data: appt, error: apptError } = await adminClient
       .from("appointments")
       .select(`
         id, scheduled_at, duration_minutes, status, patient_id,
         patients(name, phone, email),
-        profiles(full_name)
+        profiles!appointments_professional_id_fkey(full_name)
       `)
       .eq("id", appointment_id)
       .eq("tenant_id", profile.tenant_id)
       .single();
 
     if (!appt) {
-      return new Response(JSON.stringify({ error: "Appointment not found" }), {
+      return new Response(JSON.stringify({ error: "Appointment not found", detail: apptError?.message }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

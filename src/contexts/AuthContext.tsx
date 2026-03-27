@@ -214,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * (ex: INITIAL_SESSION + TOKEN_REFRESHED disparados em sequência).
    */
   const applyRef = React.useRef(0);
+  const profileRef = React.useRef(profile);
 
   const applySession = async (session: Session | null, event?: string) => {
     const seq = ++applyRef.current; // gera número de sequência
@@ -236,9 +237,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Garante que isLoading = true enquanto os dados do perfil/role/tenant são carregados.
-      // Sem isso, ProtectedRoute avalia permissões antes de userRole estar disponível → 403 falso.
-      setIsLoading(true);
+      // Se já temos profile carregado (sessão ativa), NÃO entrar em loading.
+      // Isso evita que o ProtectedRoute desmonte a página atual (ex: formulário de prontuário aberto)
+      // quando o Supabase emite SIGNED_IN ao voltar de outra aba (tab visibility recovery).
+      // O refresh dos dados acontece silenciosamente em background.
+      const alreadyHydrated = !!profileRef.current;
+
+      if (!alreadyHydrated) {
+        // Primeiro carregamento (login inicial): precisa bloquear a UI enquanto carrega.
+        setIsLoading(true);
+      }
 
       const data = await fetchUserData(session.user.id);
       // Se outra chamada mais recente já disparou, descartar este resultado
@@ -247,11 +255,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setProfile(data.profile);
+      profileRef.current = data.profile;
       setUserRole(data.userRole);
       setTenant(data.tenant);
       setPermissions(data.permissions);
     } else {
       setProfile(null);
+      profileRef.current = null;
       setUserRole(null);
       setTenant(null);
       setPermissions({});
