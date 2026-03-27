@@ -211,8 +211,9 @@ export default function Agenda() {
           .order("name"),
         supabase
           .from("profiles")
-          .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,created_at,updated_at")
+          .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,professional_type,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
+          .not("professional_type", "in", '("secretaria","faturista")')
           .order("full_name"),
         supabase
           .from("products")
