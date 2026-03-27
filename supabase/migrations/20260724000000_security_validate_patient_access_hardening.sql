@@ -39,7 +39,7 @@ CREATE OR REPLACE FUNCTION public.validate_patient_access(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_patient RECORD;
@@ -59,7 +59,7 @@ BEGIN
   END IF;
 
   -- Hash do identificador para audit log (nunca armazena o valor real)
-  v_id_hash := encode(digest(v_identifier, 'sha256'), 'hex');
+  v_id_hash := encode(digest(v_identifier, 'sha256'::text), 'hex');
 
   -- Rate limiting: máximo 5 tentativas por identificador nos últimos 2 minutos
   SELECT count(*) INTO v_recent_attempts

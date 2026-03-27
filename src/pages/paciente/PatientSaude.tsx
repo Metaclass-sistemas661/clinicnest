@@ -21,6 +21,7 @@ import {
   Droplet,
   Thermometer,
   Scale,
+  ArrowUpRight,
 } from "lucide-react";
 import { supabasePatient } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -119,10 +120,12 @@ interface Vaccination {
 }
 
 const eventTypeConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-  appointment: { icon: Calendar, color: "text-blue-600 bg-blue-100", label: "Consulta" },
-  prescription: { icon: Pill, color: "text-orange-600 bg-orange-100", label: "Receita" },
-  exam: { icon: FileText, color: "text-emerald-600 bg-emerald-100", label: "Exame" },
-  certificate: { icon: ClipboardList, color: "text-violet-600 bg-violet-100", label: "Atestado" },
+  appointment:    { icon: Calendar,      color: "text-blue-600 bg-blue-100",    label: "Consulta" },
+  prescription:   { icon: Pill,          color: "text-orange-600 bg-orange-100", label: "Receita" },
+  exam:           { icon: FileText,      color: "text-emerald-600 bg-emerald-100", label: "Exame" },
+  certificate:    { icon: ClipboardList, color: "text-violet-600 bg-violet-100", label: "Atestado" },
+  medical_report: { icon: Stethoscope,   color: "text-indigo-600 bg-indigo-100", label: "Laudo" },
+  referral:       { icon: ArrowUpRight,  color: "text-teal-600 bg-teal-100",    label: "Encaminhamento" },
 };
 
 export default function PatientSaude() {
