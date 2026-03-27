@@ -136,7 +136,7 @@ serve(async (req) => {
     const { data: appt } = await adminClient
       .from("appointments")
       .select(`
-        id, date, start_time, end_time, status, patient_id,
+        id, scheduled_at, duration_minutes, status, patient_id,
         patients(name, phone, email),
         profiles(full_name)
       `)
@@ -157,11 +157,11 @@ serve(async (req) => {
 
     const { data: history } = await adminClient
       .from("appointments")
-      .select("id, date, start_time, status")
+      .select("id, scheduled_at, status")
       .eq("tenant_id", profile.tenant_id)
       .eq("patient_id", appt.patient_id)
-      .gte("date", sixMonthsAgo.toISOString().split("T")[0])
-      .order("date", { ascending: false })
+      .gte("scheduled_at", sixMonthsAgo.toISOString())
+      .order("scheduled_at", { ascending: false })
       .limit(20);
 
     const total = history?.length ?? 0;
@@ -170,7 +170,7 @@ serve(async (req) => {
     const completed = history?.filter((h) => h.status === "completed").length ?? 0;
 
     // Build analysis prompt
-    const apptDate = new Date(`${appt.date}T${appt.start_time}`);
+    const apptDate = new Date(appt.scheduled_at);
     const daysUntil = Math.max(0, Math.ceil((apptDate.getTime() - Date.now()) / 86400000));
     const dayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -182,8 +182,8 @@ serve(async (req) => {
     const prompt = `Analise o risco de cancelamento/no-show:
 
 AGENDAMENTO:
-- Data: ${appt.date} (${dayNames[apptDate.getDay()]})
-- Horário: ${appt.start_time}
+- Data: ${apptDate.toISOString().split("T")[0]} (${dayNames[apptDate.getDay()]})
+- Horário: ${apptDate.toTimeString().slice(0, 5)}
 - Dias até a consulta: ${daysUntil}
 - Profissional: ${prof?.full_name ?? "—"}
 - Paciente: ${patient?.name ?? "—"} (telefone: ${patient?.phone ? "cadastrado" : "sem telefone"})
