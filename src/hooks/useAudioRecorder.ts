@@ -247,6 +247,14 @@ export function isLikelyHallucination(transcript: string): boolean {
   const shortTokenRepeat = /\b(\w{1,6})\b(?:\s+\1){4,}/i;
   if (shortTokenRepeat.test(text)) return true;
 
+  // Padrão 5: texto predominantemente numérico (>60% dos tokens são números)
+  // Alucinação típica do Chirp com BT HFP: "19 20 21 22 ... 99 100"
+  const tokens = text.split(/\s+/);
+  if (tokens.length >= 5) {
+    const numericTokens = tokens.filter((t) => /^\d{1,6}$/.test(t)).length;
+    if (numericTokens / tokens.length > 0.6) return true;
+  }
+
   // Divide em sentenças limpas
   const sentences = text
     .split(/[.!?]+/)

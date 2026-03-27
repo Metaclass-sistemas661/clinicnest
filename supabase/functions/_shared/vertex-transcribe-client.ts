@@ -172,6 +172,14 @@ function detectHallucination(transcript: string, avgConfidence: number): boolean
   const shortTokenRepeat = /\b(\w{1,6})\b(?:\s+\1){4,}/i;
   if (shortTokenRepeat.test(text)) return true;
 
+  // Padrão 5: texto predominantemente numérico (>60% dos tokens são números)
+  // Alucinação típica: "19 20 21 22 23 ... 99 100" ou "3 1 3 5 0 6 3 9 3 0"
+  const tokens = text.split(/\s+/);
+  if (tokens.length >= 5) {
+    const numericTokens = tokens.filter((t) => /^\d{1,6}$/.test(t)).length;
+    if (numericTokens / tokens.length > 0.6) return true;
+  }
+
   // Divide em sentenças
   const sentences = text
     .split(/[.!?"]+/)
