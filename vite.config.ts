@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => ({
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? "2.6.0"),
   },
   build: {
+    target: "es2020",
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
@@ -31,6 +32,15 @@ export default defineConfig(({ mode }) => ({
             "@radix-ui/react-select",
             "@radix-ui/react-tooltip",
             "@radix-ui/react-accordion",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-radio-group",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-slider",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-toggle",
+            "@radix-ui/react-toggle-group",
+            "@radix-ui/react-collapsible",
+            "@radix-ui/react-alert-dialog",
           ],
           "vendor-charts": ["recharts"],
           "vendor-editor": [
@@ -53,6 +63,9 @@ export default defineConfig(({ mode }) => ({
           "vendor-firebase": ["firebase/app", "firebase/messaging"],
           "vendor-date": ["date-fns", "date-fns-tz"],
           "vendor-form": ["react-hook-form", "@hookform/resolvers", "zod"],
+          "vendor-twilio": ["twilio-video"],
+          "vendor-crypto": ["node-forge"],
+          "vendor-sentry": ["@sentry/react"],
         },
       },
     },

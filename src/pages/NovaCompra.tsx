@@ -265,10 +265,10 @@ export default function NovaCompra() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
-                    <Label className="cursor-pointer">Pago com caixa da empresa</Label>
+                    <Label className="cursor-pointer" htmlFor="company-cash-switch">Pago com caixa da empresa</Label>
                     <p className="text-xs text-muted-foreground">Registra uma despesa automática no Financeiro.</p>
                   </div>
-                  <Switch checked={purchasedWithCompanyCash} onCheckedChange={setPurchasedWithCompanyCash} />
+                  <Switch id="company-cash-switch" checked={purchasedWithCompanyCash} onCheckedChange={setPurchasedWithCompanyCash} />
                 </div>
                 <div className="space-y-2">
                   <Label>Observações</Label>
