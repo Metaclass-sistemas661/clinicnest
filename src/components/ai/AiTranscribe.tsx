@@ -92,11 +92,19 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
     transcribeMutation.mutate(file);
   };
 
-  // ── Gravação via hook robusto (waterfall constraints + AudioContext processing) ──
+  // ── Gravação via hook robusto (waterfall constraints + energy monitoring) ──
   const handleRecordingResult = useCallback(
-    ({ blob, durationMs }: AudioRecordingResult) => {
+    ({ blob, durationMs, avgEnergy }: AudioRecordingResult) => {
       if (durationMs < 2000) {
         toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
+        return;
+      }
+      if (avgEnergy < 0.005 && avgEnergy > 0) {
+        toast.error("Microfone não captou áudio", {
+          description:
+            "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
+          duration: 10000,
+        });
         return;
       }
       transcribeMutation.mutate(blob);

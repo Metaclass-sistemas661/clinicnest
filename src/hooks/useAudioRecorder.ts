@@ -12,6 +12,8 @@ export interface AudioRecordingResult {
   sampleRate: number;
   /** Duração da gravação em milissegundos */
   durationMs: number;
+  /** Nível médio de energia do áudio (0-1). < 0.005 = silêncio/ruído */
+  avgEnergy: number;
 }
 
 // ─── Hook ──────────────────────────────────────────────────────────────────
@@ -35,9 +37,9 @@ interface UseAudioRecorderReturn {
  * Detecta automaticamente a qualidade real do dispositivo após captura.
  *
  * Estratégia de constraints (waterfall):
- *   1ª tentativa — ideal: 16kHz mono + processamento de áudio
- *   2ª tentativa — sem sampleRate (deixa o OS decidir)
- *   3ª tentativa — audio: true (mínimo absoluto, compatível com qualquer dispositivo)
+ *   1ª — SEM processamento Chrome (melhor para BT e mics externos no Windows)
+ *   2ª — COM processamento Chrome (para mics integrados)
+ *   3ª — audio: true (mínimo absoluto)
  */
 export function useAudioRecorder({
   onResult,
@@ -46,8 +48,9 @@ export function useAudioRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const audioCleanupRef = useRef<(() => void) | null>(null);
   const recordingStartRef = useRef<number>(0);
+  const analyserCleanupRef = useRef<(() => void) | null>(null);
+  const energySamplesRef = useRef<number[]>([]);
 
   // ── detecta qualidade real após stream adquirido ──────────────────────────
   function detectQuality(stream: MediaStream): AudioQuality {
@@ -56,7 +59,6 @@ export function useAudioRecorder({
     const settings = track.getSettings() as MediaTrackSettings & { sampleRate?: number };
     const sr = settings.sampleRate ?? 0;
     if (sr === 0) return "unknown";
-    // Bluetooth HFP Classic: 8kHz | HFP 1.6+: 16kHz | USB/built-in: 44.1kHz/48kHz
     return sr < 16000 ? "low" : "good";
   }
 
@@ -73,25 +75,29 @@ export function useAudioRecorder({
   }
 
   // ── tenta getUserMedia com waterfall de constraints ───────────────────────
+  // ORDEM CORRIGIDA: sem processamento primeiro (evita conflito BT HFP Windows)
   async function acquireStream(): Promise<MediaStream> {
     const attempts: MediaStreamConstraints[] = [
+      // 1ª: SEM processamento do Chrome — ideal para BT e mics externos
+      // Chrome's echoCancellation/noiseSuppression pode silenciar BT HFP no Windows
+      {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: { ideal: 1 },
+        },
+      },
+      // 2ª: COM processamento — para mics integrados de baixa qualidade
       {
         audio: {
           echoCancellation: { ideal: true },
           noiseSuppression: { ideal: true },
           autoGainControl: { ideal: true },
           channelCount: { ideal: 1 },
-          sampleRate: { ideal: 16000 },
         },
       },
-      {
-        audio: {
-          echoCancellation: { ideal: true },
-          noiseSuppression: { ideal: true },
-          autoGainControl: { ideal: true },
-          channelCount: { ideal: 1 },
-        },
-      },
+      // 3ª: mínimo absoluto
       { audio: true },
     ];
 
@@ -106,53 +112,33 @@ export function useAudioRecorder({
     throw lastErr;
   }
 
-  // ── Pipeline AudioContext: compressor + gain + high-pass ──────────────────
-  // Normaliza volume, remove ruído de baixa frequência e melhora áudio Bluetooth.
-  // Em microfones bons, o efeito é mínimo. Em BT HFP (8kHz), o AudioContext faz
-  // upsampling para ~48kHz e a cadeia de processamento limpa o sinal.
-  function createAudioPipeline(
-    stream: MediaStream,
-  ): { processedStream: MediaStream; cleanup: () => void } {
+  // ── Monitor de energia via AnalyserNode (LEITURA PASSIVA, sem alterar stream) ──
+  function attachEnergyMonitor(stream: MediaStream): () => void {
     try {
       const ctx = new AudioContext();
       const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.3;
+      source.connect(analyser);
+      // NÃO conecta a destination — apenas monitora, sem feedback
 
-      // High-pass: remove DC offset + rumble < 80Hz
-      const highPass = ctx.createBiquadFilter();
-      highPass.type = "highpass";
-      highPass.frequency.setValueAtTime(80, ctx.currentTime);
+      const buf = new Float32Array(analyser.fftSize);
+      const intervalId = setInterval(() => {
+        analyser.getFloatTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        const rms = Math.sqrt(sum / buf.length);
+        energySamplesRef.current.push(rms);
+      }, 200);
 
-      // Compressor: normaliza volume (boost quiet, limit loud)
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-35, ctx.currentTime);
-      compressor.knee.setValueAtTime(20, ctx.currentTime);
-      compressor.ratio.setValueAtTime(6, ctx.currentTime);
-      compressor.attack.setValueAtTime(0.005, ctx.currentTime);
-      compressor.release.setValueAtTime(0.15, ctx.currentTime);
-
-      // Gain: boost leve para compensar microfones fracos
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(1.4, ctx.currentTime);
-
-      const dest = ctx.createMediaStreamDestination();
-      source.connect(highPass);
-      highPass.connect(compressor);
-      compressor.connect(gain);
-      gain.connect(dest);
-
-      return {
-        processedStream: dest.stream,
-        cleanup: () => {
-          source.disconnect();
-          highPass.disconnect();
-          compressor.disconnect();
-          gain.disconnect();
-          ctx.close().catch(() => {});
-        },
+      return () => {
+        clearInterval(intervalId);
+        source.disconnect();
+        ctx.close().catch(() => {});
       };
     } catch {
-      // Fallback: usa stream original se AudioContext não disponível
-      return { processedStream: stream, cleanup: () => {} };
+      return () => {};
     }
   }
 
@@ -161,28 +147,34 @@ export function useAudioRecorder({
       const stream = await acquireStream();
       const quality = detectQuality(stream);
 
-      // Detecta sample rate real do dispositivo
       const track = stream.getAudioTracks()[0];
       const rawSampleRate =
         (track?.getSettings() as MediaTrackSettings & { sampleRate?: number })
           ?.sampleRate ?? 0;
 
-      // Avisa se qualidade é baixa (Bluetooth HFP clássico)
+      // Log do dispositivo para debug
+      console.log(
+        `[AudioRecorder] Device: "${track?.label}", sampleRate: ${rawSampleRate}, quality: ${quality}`
+      );
+
       if (quality === "low") {
-        toast.warning("Microfone Bluetooth em baixa qualidade", {
+        toast.warning("Microfone em baixa qualidade detectado", {
           description:
-            "O áudio será processado automaticamente para melhorar a qualidade. " +
             "Se a transcrição ficar imprecisa, use o microfone integrado ou fone com fio.",
-          duration: 7000,
+          duration: 5000,
         });
       }
 
-      // Pipeline de áudio: compressor + gain + high-pass (melhora BT e normaliza)
-      const { processedStream, cleanup } = createAudioPipeline(stream);
-      audioCleanupRef.current = cleanup;
+      // Monitor de energia (passivo — NÃO altera o stream)
+      energySamplesRef.current = [];
+      const cleanupMonitor = attachEnergyMonitor(stream);
+      analyserCleanupRef.current = cleanupMonitor;
 
+      // Grava diretamente do stream original — SEM AudioContext pipeline
+      // O pipeline anterior (compressor+gain+highpass) causava silêncio em
+      // certas combinações Windows + Chrome + Bluetooth HFP.
       const mimeType = pickMimeType();
-      const mr = new MediaRecorder(processedStream, {
+      const mr = new MediaRecorder(stream, {
         ...(mimeType ? { mimeType } : {}),
         audioBitsPerSecond: 128_000,
       });
@@ -201,10 +193,26 @@ export function useAudioRecorder({
         const baseType = actualMime.split(";")[0] || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: baseType });
         stream.getTracks().forEach((t) => t.stop());
-        audioCleanupRef.current?.();
-        audioCleanupRef.current = null;
+
+        // Limpa monitor de energia
+        analyserCleanupRef.current?.();
+        analyserCleanupRef.current = null;
+
+        // Calcula energia média
+        const samples = energySamplesRef.current;
+        const avgEnergy =
+          samples.length > 0
+            ? samples.reduce((a, b) => a + b, 0) / samples.length
+            : 0;
+
+        console.log(
+          `[AudioRecorder] Recording done: ${durationMs}ms, ` +
+            `${blob.size} bytes, avgEnergy: ${avgEnergy.toFixed(5)}, ` +
+            `samples: ${samples.length}`
+        );
+
         setIsRecording(false);
-        onResult({ blob, quality, sampleRate: rawSampleRate, durationMs });
+        onResult({ blob, quality, sampleRate: rawSampleRate, durationMs, avgEnergy });
       };
 
       mr.start();

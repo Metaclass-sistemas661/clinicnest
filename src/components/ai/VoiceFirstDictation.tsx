@@ -208,8 +208,30 @@ export function VoiceFirstDictation({
 
   // ── Shared audio recorder hook ─────────────────────────────────────────────
   const handleResult = useCallback(
-    ({ blob }: { blob: Blob }) => {
+    ({ blob, avgEnergy, durationMs }: { blob: Blob; avgEnergy: number; durationMs: number }) => {
       if (timerRef.current) clearInterval(timerRef.current);
+
+      // Gravação muito curta
+      if (durationMs < 2000) {
+        toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
+        setStep("idle");
+        return;
+      }
+
+      // Áudio sem conteúdo (silêncio ou ruído puro)
+      // avgEnergy < 0.005 indica que o mic não captou fala real
+      if (avgEnergy < 0.005 && avgEnergy > 0) {
+        console.warn(`[VoiceSOAP] Audio energy too low: ${avgEnergy.toFixed(6)}`);
+        toast.error("Microfone não captou áudio", {
+          description:
+            "Verifique nas configurações de som do Windows se o microfone correto está selecionado. " +
+            "Tente usar o microfone integrado do notebook ou um fone com fio.",
+          duration: 10000,
+        });
+        setStep("idle");
+        return;
+      }
+
       setStep("transcribing");
       transcribeMutation.mutate(blob);
     },
