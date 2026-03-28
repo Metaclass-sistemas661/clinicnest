@@ -1,15 +1,17 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Loader2, Plus, Replace, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 
 interface VoiceFieldButtonProps {
-  /** Chamado com o texto transcrito — o caller decide append ou replace */
+  /** Chamado com o texto final (já decidido se append ou replace) */
   onTranscript: (text: string) => void;
+  /** Valor atual do campo — se não-vazio, oferece escolha append/replace */
+  currentValue?: string;
   className?: string;
   /** Tooltip do botão no estado idle */
   title?: string;
@@ -18,21 +20,13 @@ interface VoiceFieldButtonProps {
 /**
  * Botão de microfone inline para transcrever voz em um campo específico.
  *
- * Grava, transcreve via ai-transcribe e devolve o texto cru via onTranscript.
- * A lógica de append/replace fica a cargo do componente pai.
- *
- * @example
- * // Replace
- * <VoiceFieldButton onTranscript={(t) => set("chief_complaint", t)} />
- *
- * // Append ao conteúdo existente
- * <VoiceFieldButton
- *   onTranscript={(t) =>
- *     setBase(b => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis.trim() + "\n" + t : t }))
- *   }
- * />
+ * Se o campo já tem conteúdo, exibe um mini-painel inline para o usuário
+ * escolher entre "Adicionar ao texto" ou "Substituir tudo".
+ * Se o campo está vazio, preenche diretamente.
  */
-export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldButtonProps) {
+export function VoiceFieldButton({ onTranscript, currentValue, className, title }: VoiceFieldButtonProps) {
+  const [pendingText, setPendingText] = useState<string | null>(null);
+
   const transcribeMutation = useMutation({
     mutationFn: async (audioBlob: Blob) => {
       const arrayBuffer = await audioBlob.arrayBuffer();
@@ -57,7 +51,14 @@ export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldB
         toast.error("Nenhuma fala detectada. Tente novamente.");
         return;
       }
-      onTranscript(transcript);
+      // Se campo está vazio, preenche direto
+      if (!currentValue?.trim()) {
+        onTranscript(transcript);
+        toast.success("Campo preenchido via voz");
+      } else {
+        // Campo já tem texto — mostrar opções
+        setPendingText(transcript);
+      }
     },
     onError: () => {
       toast.error("Falha na transcrição. Tente novamente.");
@@ -74,6 +75,57 @@ export function VoiceFieldButton({ onTranscript, className, title }: VoiceFieldB
   const { isRecording, startRecording, stopRecording } = useAudioRecorder({
     onResult: handleResult,
   });
+
+  const handleAppend = useCallback(() => {
+    if (!pendingText) return;
+    const existing = (currentValue ?? "").trim();
+    onTranscript(existing + "\n" + pendingText);
+    setPendingText(null);
+    toast.success("Texto adicionado ao campo");
+  }, [pendingText, currentValue, onTranscript]);
+
+  const handleReplace = useCallback(() => {
+    if (!pendingText) return;
+    onTranscript(pendingText);
+    setPendingText(null);
+    toast.success("Campo substituído via voz");
+  }, [pendingText, onTranscript]);
+
+  const handleCancel = useCallback(() => {
+    setPendingText(null);
+  }, []);
+
+  // Painel de escolha append/replace
+  if (pendingText) {
+    return (
+      <div className="flex items-center gap-1">
+        <Button
+          type="button" size="sm" variant="outline"
+          onClick={handleAppend}
+          className="h-6 px-2 text-[10px] gap-1 text-teal-700 border-teal-300 hover:bg-teal-50"
+          title="Adicionar ao texto existente"
+        >
+          <Plus className="h-3 w-3" /> Adicionar
+        </Button>
+        <Button
+          type="button" size="sm" variant="outline"
+          onClick={handleReplace}
+          className="h-6 px-2 text-[10px] gap-1 text-amber-700 border-amber-300 hover:bg-amber-50"
+          title="Substituir todo o texto"
+        >
+          <Replace className="h-3 w-3" /> Substituir
+        </Button>
+        <Button
+          type="button" size="icon" variant="ghost"
+          onClick={handleCancel}
+          className="h-5 w-5 text-muted-foreground hover:text-red-500"
+          title="Descartar transcrição"
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
 
   if (transcribeMutation.isPending) {
     return (

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useAudioRecorder, isLikelyHallucination } from "@/hooks/useAudioRecorder";
+import { useAudioRecorder, isLikelyHallucination, normalizeAudioBlob } from "@/hooks/useAudioRecorder";
 
 interface SoapResult {
   subjective: string;
@@ -221,7 +221,7 @@ export function VoiceFirstDictation({
 
   // ── Shared audio recorder hook ─────────────────────────────────────────────
   const handleResult = useCallback(
-    ({ blob, avgEnergy, durationMs }: { blob: Blob; avgEnergy: number; durationMs: number }) => {
+    async ({ blob, avgEnergy, durationMs }: { blob: Blob; avgEnergy: number; durationMs: number }) => {
       if (timerRef.current) clearInterval(timerRef.current);
 
       // Gravação muito curta
@@ -245,8 +245,13 @@ export function VoiceFirstDictation({
         return;
       }
 
+      // Normaliza áudio fraco (BT HFP no Windows) antes de enviar ao STT
       setStep("transcribing");
-      transcribeMutation.mutate(blob);
+      const { blob: finalBlob, wasNormalized } = await normalizeAudioBlob(blob, avgEnergy);
+      if (wasNormalized) {
+        console.log("[VoiceSOAP] Audio normalized for better STT quality");
+      }
+      transcribeMutation.mutate(finalBlob);
     },
     [transcribeMutation],
   );

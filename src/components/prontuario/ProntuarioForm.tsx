@@ -921,14 +921,14 @@ export function ProntuarioForm({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-1">
                 <Label>Queixa Principal *</Label>
-                {canEdit && <VoiceFieldButton onTranscript={(t) => set("chief_complaint", t)} title="Ditar queixa principal" />}
+                {canEdit && <VoiceFieldButton onTranscript={(t) => set("chief_complaint", t)} currentValue={base.chief_complaint} title="Ditar queixa principal" />}
               </div>
               <Input value={base.chief_complaint} onChange={(e) => set("chief_complaint", e.target.value)} placeholder="Motivo da consulta..." />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-1">
                 <Label>Anamnese</Label>
-                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, anamnesis: b.anamnesis ? b.anamnesis.trim() + "\n" + t : t }))} title="Ditar anamnese (acrescenta ao campo)" />}
+                {canEdit && <VoiceFieldButton onTranscript={(t) => set("anamnesis", t)} currentValue={base.anamnesis} title="Ditar anamnese" />}
               </div>
               <Textarea value={base.anamnesis} onChange={(e) => set("anamnesis", e.target.value)} placeholder="HDA, antecedentes..." rows={3} />
             </div>
@@ -937,7 +937,7 @@ export function ProntuarioForm({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <Label>Exame Físico</Label>
-                  {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, physical_exam: b.physical_exam ? b.physical_exam.trim() + "\n" + t : t }))} title="Ditar exame físico (acrescenta ao campo)" />}
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => set("physical_exam", t)} currentValue={base.physical_exam} title="Ditar exame físico" />}
                 </div>
                 <Textarea value={base.physical_exam} onChange={(e) => set("physical_exam", e.target.value)} placeholder="PA, FC, achados..." rows={3} />
               </div>
@@ -946,7 +946,7 @@ export function ProntuarioForm({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <Label>Diagnóstico</Label>
-                  {canEdit && <VoiceFieldButton onTranscript={(t) => set("diagnosis", t)} title="Ditar diagnóstico" />}
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => set("diagnosis", t)} currentValue={base.diagnosis} title="Ditar diagnóstico" />}
                 </div>
                 <Input value={base.diagnosis} onChange={(e) => set("diagnosis", e.target.value)} placeholder="Diagnóstico clínico" />
               </div>
@@ -959,7 +959,7 @@ export function ProntuarioForm({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-1">
                 <Label>Plano Terapêutico / Conduta</Label>
-                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, treatment_plan: b.treatment_plan ? b.treatment_plan.trim() + "\n" + t : t }))} title="Ditar conduta (acrescenta ao campo)" />}
+                {canEdit && <VoiceFieldButton onTranscript={(t) => set("treatment_plan", t)} currentValue={base.treatment_plan} title="Ditar conduta" />}
               </div>
               <Textarea value={base.treatment_plan} onChange={(e) => set("treatment_plan", e.target.value)} placeholder="Orientações, encaminhamentos..." rows={3} />
             </div>
@@ -1002,7 +1002,7 @@ export function ProntuarioForm({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-1">
                 <Label>Observações</Label>
-                {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, notes: b.notes ? b.notes.trim() + "\n" + t : t }))} title="Ditar observações (acrescenta ao campo)" />}
+                {canEdit && <VoiceFieldButton onTranscript={(t) => set("notes", t)} currentValue={base.notes} title="Ditar observações" />}
               </div>
               <Textarea value={base.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Notas internas..." rows={2} />
             </div>
@@ -1029,7 +1029,7 @@ export function ProntuarioForm({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-1">
                   <Label>Prescrição</Label>
-                  {canEdit && <VoiceFieldButton onTranscript={(t) => setBase(b => ({ ...b, prescriptions: b.prescriptions ? b.prescriptions.trim() + "\n" + t : t }))} title="Ditar prescrição (acrescenta ao campo)" />}
+                  {canEdit && <VoiceFieldButton onTranscript={(t) => set("prescriptions", t)} currentValue={base.prescriptions} title="Ditar prescrição" />}
                 </div>
                 <Textarea value={base.prescriptions} onChange={(e) => set("prescriptions", e.target.value)} placeholder="Medicamentos, posologia..." rows={3} />
                 <AiDrugInteractionAlert

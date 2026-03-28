@@ -37,9 +37,10 @@ interface UseAudioRecorderReturn {
  * Detecta automaticamente a qualidade real do dispositivo após captura.
  *
  * Estratégia de constraints (waterfall):
- *   1ª — SEM processamento Chrome (melhor para BT e mics externos no Windows)
- *   2ª — COM processamento Chrome (para mics integrados)
- *   3ª — audio: true (mínimo absoluto)
+ *   1ª — AGC ligado, echo/noise desligados (amplifica BT HFP sem silenciar)
+ *   2ª — COM todo processamento Chrome (para mics integrados)
+ *   3ª — SEM processamento (fallback raw)
+ *   4ª — audio: true (mínimo absoluto)
  */
 export function useAudioRecorder({
   onResult,
@@ -75,20 +76,22 @@ export function useAudioRecorder({
   }
 
   // ── tenta getUserMedia com waterfall de constraints ───────────────────────
-  // ORDEM CORRIGIDA: sem processamento primeiro (evita conflito BT HFP Windows)
+  // AGC primeiro — amplifica sinal fraco do BT HFP sem risco de silêncio
+  // de echoCancellation/noiseSuppression no Windows
   async function acquireStream(): Promise<MediaStream> {
     const attempts: MediaStreamConstraints[] = [
-      // 1ª: SEM processamento do Chrome — ideal para BT e mics externos
-      // Chrome's echoCancellation/noiseSuppression pode silenciar BT HFP no Windows
+      // 1ª: AGC ligado, sem echo/noise — ideal para BT HFP no Windows
+      // autoGainControl amplifica sinais fracos do Bluetooth sem o risco
+      // de silenciamento que echoCancellation causa em certos drivers
       {
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
-          autoGainControl: false,
+          autoGainControl: true,
           channelCount: { ideal: 1 },
         },
       },
-      // 2ª: COM processamento — para mics integrados de baixa qualidade
+      // 2ª: COM todo processamento — para mics integrados
       {
         audio: {
           echoCancellation: { ideal: true },
@@ -97,7 +100,16 @@ export function useAudioRecorder({
           channelCount: { ideal: 1 },
         },
       },
-      // 3ª: mínimo absoluto
+      // 3ª: SEM nenhum processamento — fallback raw
+      {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          channelCount: { ideal: 1 },
+        },
+      },
+      // 4ª: mínimo absoluto
       { audio: true },
     ];
 
@@ -113,10 +125,12 @@ export function useAudioRecorder({
   }
 
   // ── Monitor de energia via AnalyserNode (LEITURA PASSIVA, sem alterar stream) ──
+  // Usa CLONE do stream para não interferir com o MediaRecorder
   function attachEnergyMonitor(stream: MediaStream): () => void {
     try {
+      const monitorStream = stream.clone();
       const ctx = new AudioContext();
-      const source = ctx.createMediaStreamSource(stream);
+      const source = ctx.createMediaStreamSource(monitorStream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.3;
@@ -135,6 +149,7 @@ export function useAudioRecorder({
       return () => {
         clearInterval(intervalId);
         source.disconnect();
+        monitorStream.getTracks().forEach((t) => t.stop());
         ctx.close().catch(() => {});
       };
     } catch {
@@ -285,4 +300,92 @@ export function isLikelyHallucination(transcript: string): boolean {
   }
 
   return false;
+}
+
+// ─── Normalização de áudio para BT/mics fracos ────────────────────────────
+/**
+ * Normaliza o volume de um blob de áudio se estiver muito baixo.
+ * Decodifica, amplifica para pico ~0.7, e re-encoda como WAV (PCM 16-bit).
+ * Ideal para BT HFP que produz sinais fracos no Windows desktop.
+ *
+ * Se a normalização falhar (codec não suportado, etc.), retorna o blob original.
+ */
+export async function normalizeAudioBlob(
+  blob: Blob,
+  avgEnergy: number,
+): Promise<{ blob: Blob; contentType: string; wasNormalized: boolean }> {
+  // Se a energia média é boa, não normaliza
+  if (avgEnergy > 0.02) return { blob, contentType: blob.type, wasNormalized: false };
+
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioCtx = new AudioContext();
+    let audioBuffer: AudioBuffer;
+    try {
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    } finally {
+      await audioCtx.close().catch(() => {});
+    }
+
+    // Encontra o pico de amplitude
+    const channelData = audioBuffer.getChannelData(0);
+    let peak = 0;
+    for (let i = 0; i < channelData.length; i++) {
+      const abs = Math.abs(channelData[i]);
+      if (abs > peak) peak = abs;
+    }
+
+    // Se o pico já é bom ou o áudio é silêncio total, não normaliza
+    if (peak > 0.1 || peak === 0) return { blob, contentType: blob.type, wasNormalized: false };
+
+    // Calcula ganho para normalizar ao pico de 0.7 (com headroom)
+    const gain = 0.7 / peak;
+
+    console.log(
+      `[AudioRecorder] Normalizing: peak=${peak.toFixed(5)}, gain=${gain.toFixed(1)}x, ` +
+        `samples=${channelData.length}, sampleRate=${audioBuffer.sampleRate}`,
+    );
+
+    // Encoda como WAV mono 16-bit PCM
+    const sampleRate = audioBuffer.sampleRate;
+    const length = audioBuffer.length;
+    const wavSize = 44 + length * 2;
+    const buffer = new ArrayBuffer(wavSize);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeStr(0, "RIFF");
+    view.setUint32(4, 36 + length * 2, true);
+    writeStr(8, "WAVE");
+    writeStr(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);  // PCM
+    view.setUint16(22, 1, true);  // mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true); // 16-bit
+    writeStr(36, "data");
+    view.setUint32(40, length * 2, true);
+
+    // Aplica ganho e escreve samples
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      let sample = channelData[i] * gain;
+      sample = Math.max(-1, Math.min(1, sample));
+      view.setInt16(offset, sample * 0x7fff, true);
+      offset += 2;
+    }
+
+    return {
+      blob: new Blob([buffer], { type: "audio/wav" }),
+      contentType: "audio/wav",
+      wasNormalized: true,
+    };
+  } catch (err) {
+    console.warn("[AudioRecorder] Normalization failed, using original:", err);
+    return { blob, contentType: blob.type, wasNormalized: false };
+  }
 }

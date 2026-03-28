@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
-import { useAudioRecorder, isLikelyHallucination, type AudioRecordingResult } from "@/hooks/useAudioRecorder";
+import { useAudioRecorder, isLikelyHallucination, normalizeAudioBlob, type AudioRecordingResult } from "@/hooks/useAudioRecorder";
 
 type Specialty = "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
 
@@ -105,7 +105,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
 
   // ── Gravação via hook robusto (waterfall constraints + energy monitoring) ──
   const handleRecordingResult = useCallback(
-    ({ blob, durationMs, avgEnergy }: AudioRecordingResult) => {
+    async ({ blob, durationMs, avgEnergy }: AudioRecordingResult) => {
       if (durationMs < 2000) {
         toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
         return;
@@ -118,7 +118,12 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         });
         return;
       }
-      transcribeMutation.mutate(blob);
+      // Normaliza áudio fraco (BT HFP no Windows) antes de enviar ao STT
+      const { blob: finalBlob, wasNormalized } = await normalizeAudioBlob(blob, avgEnergy);
+      if (wasNormalized) {
+        console.log("[AiTranscribe] Audio normalized for better STT quality");
+      }
+      transcribeMutation.mutate(finalBlob);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
