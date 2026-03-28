@@ -245,11 +245,20 @@ export function VoiceFirstDictation({
         return;
       }
 
-      // Normaliza áudio fraco (BT HFP no Windows) antes de enviar ao STT
+      // Processa áudio: noise gate + normalização + WAV antes de enviar ao STT
       setStep("transcribing");
-      const { blob: finalBlob, wasNormalized } = await normalizeAudioBlob(blob, avgEnergy);
-      if (wasNormalized) {
-        console.log("[VoiceSOAP] Audio normalized for better STT quality");
+      const { blob: finalBlob, hasSpeechContent } = await normalizeAudioBlob(blob, avgEnergy);
+      if (!hasSpeechContent) {
+        console.warn("[VoiceSOAP] No speech content detected after audio processing");
+        toast.error("Nenhuma fala detectada no áudio", {
+          description:
+            "O microfone captou apenas ruído ou estática. " +
+            "Se estiver usando Bluetooth, tente desconectar e reconectar o fone, " +
+            "ou use o microfone integrado do notebook / fone com fio.",
+          duration: 10000,
+        });
+        setStep("idle");
+        return;
       }
       transcribeMutation.mutate(finalBlob);
     },

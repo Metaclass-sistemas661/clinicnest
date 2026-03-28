@@ -118,10 +118,18 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         });
         return;
       }
-      // Normaliza áudio fraco (BT HFP no Windows) antes de enviar ao STT
-      const { blob: finalBlob, wasNormalized } = await normalizeAudioBlob(blob, avgEnergy);
-      if (wasNormalized) {
-        console.log("[AiTranscribe] Audio normalized for better STT quality");
+      // Processa áudio: noise gate + normalização + WAV antes de enviar ao STT
+      const { blob: finalBlob, hasSpeechContent } = await normalizeAudioBlob(blob, avgEnergy);
+      if (!hasSpeechContent) {
+        console.warn("[AiTranscribe] No speech content detected after audio processing");
+        toast.error("Nenhuma fala detectada no áudio", {
+          description:
+            "O microfone captou apenas ruído ou estática. " +
+            "Se estiver usando Bluetooth, tente desconectar e reconectar o fone, " +
+            "ou use o microfone integrado do notebook / fone com fio.",
+          duration: 10000,
+        });
+        return;
       }
       transcribeMutation.mutate(finalBlob);
     },

@@ -168,9 +168,19 @@ export function useAudioRecorder({
           ?.sampleRate ?? 0;
 
       // Log do dispositivo para debug
+      const trackLabel = track?.label ?? "";
       console.log(
-        `[AudioRecorder] Device: "${track?.label}", sampleRate: ${rawSampleRate}, quality: ${quality}`
+        `[AudioRecorder] Device: "${trackLabel}", sampleRate: ${rawSampleRate}, quality: ${quality}`
       );
+
+      // Estabilização de perfil Bluetooth: no Windows, quando getUserMedia ativa
+      // o mic de um fone BT, o sistema muda de A2DP (só áudio) para HFP (mic+áudio).
+      // Essa mudança leva 200-800ms e durante esse período o stream contém lixo.
+      const isBluetooth = /bluetooth|bt[\s-]|airpods|buds|wireless|jbl|sony|bose|jabra|beats|sennheiser|galaxy|wh-|wf-|qc|tune|free/i.test(trackLabel);
+      if (isBluetooth) {
+        console.log("[AudioRecorder] Bluetooth device detected, waiting for HFP stabilization...");
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
 
       if (quality === "low") {
         toast.warning("Microfone em baixa qualidade detectado", {
@@ -302,21 +312,20 @@ export function isLikelyHallucination(transcript: string): boolean {
   return false;
 }
 
-// ─── Normalização de áudio para BT/mics fracos ────────────────────────────
+// ─── Processamento de áudio para STT ──────────────────────────────────────
 /**
- * Normaliza o volume de um blob de áudio se estiver muito baixo.
- * Decodifica, amplifica para pico ~0.7, e re-encoda como WAV (PCM 16-bit).
- * Ideal para BT HFP que produz sinais fracos no Windows desktop.
+ * Processa o blob de áudio antes de enviar ao STT:
+ *  1. SEMPRE decodifica e re-encoda como WAV (PCM 16-bit) — elimina artefatos de codec
+ *  2. Aplica noise gate adaptativo — remove ruído constante de BT HFP
+ *  3. Normaliza o volume — amplifica sinais fracos para pico ideal
+ *  4. Detecta se existe fala real (vs ruído constante)
  *
- * Se a normalização falhar (codec não suportado, etc.), retorna o blob original.
+ * Retorna hasSpeechContent=false se o áudio parece ser apenas ruído.
  */
 export async function normalizeAudioBlob(
   blob: Blob,
-  avgEnergy: number,
-): Promise<{ blob: Blob; contentType: string; wasNormalized: boolean }> {
-  // Se a energia média é boa, não normaliza
-  if (avgEnergy > 0.02) return { blob, contentType: blob.type, wasNormalized: false };
-
+  _avgEnergy: number,
+): Promise<{ blob: Blob; contentType: string; wasNormalized: boolean; hasSpeechContent: boolean }> {
   try {
     const arrayBuffer = await blob.arrayBuffer();
     const audioCtx = new AudioContext();
@@ -327,28 +336,67 @@ export async function normalizeAudioBlob(
       await audioCtx.close().catch(() => {});
     }
 
-    // Encontra o pico de amplitude
     const channelData = audioBuffer.getChannelData(0);
-    let peak = 0;
-    for (let i = 0; i < channelData.length; i++) {
-      const abs = Math.abs(channelData[i]);
-      if (abs > peak) peak = abs;
-    }
-
-    // Se o pico já é bom ou o áudio é silêncio total, não normaliza
-    if (peak > 0.1 || peak === 0) return { blob, contentType: blob.type, wasNormalized: false };
-
-    // Calcula ganho para normalizar ao pico de 0.7 (com headroom)
-    const gain = 0.7 / peak;
-
-    console.log(
-      `[AudioRecorder] Normalizing: peak=${peak.toFixed(5)}, gain=${gain.toFixed(1)}x, ` +
-        `samples=${channelData.length}, sampleRate=${audioBuffer.sampleRate}`,
-    );
-
-    // Encoda como WAV mono 16-bit PCM
     const sampleRate = audioBuffer.sampleRate;
     const length = audioBuffer.length;
+
+    // ── Análise por frames (25ms) para noise gate ──
+    const frameSize = Math.max(Math.floor(sampleRate * 0.025), 1);
+    const frameCount = Math.ceil(length / frameSize);
+    const frameRms: number[] = [];
+
+    for (let i = 0; i < length; i += frameSize) {
+      const end = Math.min(i + frameSize, length);
+      let sum = 0;
+      for (let j = i; j < end; j++) sum += channelData[j] * channelData[j];
+      frameRms.push(Math.sqrt(sum / (end - i)));
+    }
+
+    // ── Noise floor adaptativo (percentil 30) ──
+    const sortedRms = [...frameRms].sort((a, b) => a - b);
+    const noiseFloor = sortedRms[Math.floor(sortedRms.length * 0.3)] || 0;
+    const gateThreshold = Math.max(noiseFloor * 3, 0.003);
+
+    // ── Detecção de fala via variância de energia ──
+    // Fala tem alta variância (silábas + pausas). Ruído constante tem variância baixa.
+    const avgRms = frameRms.reduce((a, b) => a + b, 0) / frameRms.length;
+    const variance = frameRms.reduce((sum, r) => sum + (r - avgRms) ** 2, 0) / frameRms.length;
+    const stdDev = Math.sqrt(variance);
+    const coeffOfVariation = avgRms > 0 ? stdDev / avgRms : 0;
+
+    // ── Aplica noise gate ──
+    const processed = new Float32Array(length);
+    let speechFrames = 0;
+
+    for (let frameIdx = 0; frameIdx < frameCount; frameIdx++) {
+      const start = frameIdx * frameSize;
+      const end = Math.min(start + frameSize, length);
+      if (frameRms[frameIdx] > gateThreshold) {
+        for (let j = start; j < end; j++) processed[j] = channelData[j];
+        speechFrames++;
+      }
+    }
+
+    // Fala real: CV > 0.3 E pelo menos 15% dos frames acima do gate
+    const speechRatio = speechFrames / frameCount;
+    const hasSpeechContent = coeffOfVariation > 0.3 && speechRatio > 0.15;
+
+    // ── Normaliza pico para 0.7 ──
+    let peak = 0;
+    for (let i = 0; i < length; i++) {
+      const abs = Math.abs(processed[i]);
+      if (abs > peak) peak = abs;
+    }
+    const gain = peak > 0.001 ? 0.7 / peak : 1;
+
+    console.log(
+      `[AudioRecorder] Audio processing: frames=${frameCount}, speechFrames=${speechFrames}, ` +
+        `speechRatio=${(speechRatio * 100).toFixed(1)}%, CV=${coeffOfVariation.toFixed(3)}, ` +
+        `noiseFloor=${noiseFloor.toFixed(5)}, peak=${peak.toFixed(5)}, gain=${gain.toFixed(1)}x, ` +
+        `hasSpeechContent=${hasSpeechContent}`,
+    );
+
+    // ── Encoda como WAV mono 16-bit PCM ──
     const wavSize = 44 + length * 2;
     const buffer = new ArrayBuffer(wavSize);
     const view = new DataView(buffer);
@@ -370,10 +418,9 @@ export async function normalizeAudioBlob(
     writeStr(36, "data");
     view.setUint32(40, length * 2, true);
 
-    // Aplica ganho e escreve samples
     let offset = 44;
     for (let i = 0; i < length; i++) {
-      let sample = channelData[i] * gain;
+      let sample = processed[i] * gain;
       sample = Math.max(-1, Math.min(1, sample));
       view.setInt16(offset, sample * 0x7fff, true);
       offset += 2;
@@ -383,9 +430,10 @@ export async function normalizeAudioBlob(
       blob: new Blob([buffer], { type: "audio/wav" }),
       contentType: "audio/wav",
       wasNormalized: true,
+      hasSpeechContent,
     };
   } catch (err) {
-    console.warn("[AudioRecorder] Normalization failed, using original:", err);
-    return { blob, contentType: blob.type, wasNormalized: false };
+    console.warn("[AudioRecorder] Audio processing failed, using original:", err);
+    return { blob, contentType: blob.type, wasNormalized: false, hasSpeechContent: true };
   }
 }
