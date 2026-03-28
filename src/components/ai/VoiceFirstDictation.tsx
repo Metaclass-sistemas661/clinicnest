@@ -19,6 +19,7 @@ import {
   isLikelyHallucination,
   normalizeAudioBlob,
 } from "@/hooks/useAudioRecorder";
+import { useMicrophoneList } from "@/hooks/useMicrophoneList";
 
 interface SoapResult {
   subjective: string;
@@ -97,6 +98,7 @@ export function VoiceFirstDictation({
   const [transcript, setTranscript] = useState("");
   const [elapsedSec, setElapsedSec] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mic = useMicrophoneList();
 
   // Step 1: Transcribe audio
   const transcribeMutation = useMutation({
@@ -308,6 +310,7 @@ export function VoiceFirstDictation({
   const { startRecording, stopRecording } = useAudioRecorder({
     onResult: handleResult,
     onError: handleError,
+    deviceId: mic.selectedId || undefined,
   });
 
   useEffect(() => {
@@ -425,9 +428,25 @@ export function VoiceFirstDictation({
       </div>
 
       {step === "idle" && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          Grave a consulta e o prontuário SOAP será preenchido automaticamente. Zero digitação.
-        </p>
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Grave a consulta e o prontuário SOAP será preenchido automaticamente. Zero digitação.
+          </p>
+          {mic.devices.length > 1 && (
+            <select
+              value={mic.selectedId || "default"}
+              onChange={(e) => mic.select(e.target.value === "default" ? "" : e.target.value)}
+              className="w-full text-xs rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-gray-600 dark:text-gray-300"
+            >
+              <option value="default">Microfone: padrão do sistema</option>
+              {mic.devices.map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       )}
 
       {transcript && (

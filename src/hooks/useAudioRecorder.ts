@@ -30,6 +30,8 @@ interface UseAudioRecorderOptions {
   onResult: (result: AudioRecordingResult) => void;
   /** Chamado se o microfone não pôde ser acessado */
   onError?: (reason: string) => void;
+  /** ID do dispositivo de entrada preferido (de enumerateDevices) */
+  deviceId?: string;
 }
 
 interface UseAudioRecorderReturn {
@@ -53,6 +55,7 @@ interface UseAudioRecorderReturn {
 export function useAudioRecorder({
   onResult,
   onError,
+  deviceId,
 }: UseAudioRecorderOptions): UseAudioRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -87,12 +90,15 @@ export function useAudioRecorder({
   // AGC primeiro — amplifica sinal fraco do BT HFP sem risco de silêncio
   // de echoCancellation/noiseSuppression no Windows
   async function acquireStream(): Promise<MediaStream> {
+    // Se o usuário escolheu um dispositivo, injeta deviceId em todos os attempts
+    const dev = deviceId ? { deviceId: { exact: deviceId } } : {};
     const attempts: MediaStreamConstraints[] = [
       // 1ª: default do navegador (comportamento mais próximo do WhatsApp Web)
-      { audio: true },
+      { audio: deviceId ? { ...dev } : true },
       // 2ª: COM todo processamento — bom baseline para desktop
       {
         audio: {
+          ...dev,
           echoCancellation: { ideal: true },
           noiseSuppression: { ideal: true },
           autoGainControl: { ideal: true },
@@ -104,6 +110,7 @@ export function useAudioRecorder({
       // autoGainControl amplifica sinais fracos do Bluetooth.
       {
         audio: {
+          ...dev,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: true,
@@ -114,6 +121,7 @@ export function useAudioRecorder({
       // 4ª: SEM nenhum processamento — fallback raw
       {
         audio: {
+          ...dev,
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,

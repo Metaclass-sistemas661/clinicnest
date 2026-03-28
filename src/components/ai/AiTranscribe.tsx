@@ -30,6 +30,7 @@ import {
   normalizeAudioBlob,
   type AudioRecordingResult,
 } from "@/hooks/useAudioRecorder";
+import { useMicrophoneList } from "@/hooks/useMicrophoneList";
 
 type Specialty = "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
 
@@ -42,6 +43,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
   const [transcript, setTranscript] = useState<string>("");
   const [specialty, setSpecialty] = useState<Specialty>("PRIMARYCARE");
   const [copied, setCopied] = useState(false);
+  const mic = useMicrophoneList();
 
   const transcribeMutation = useMutation({
     mutationFn: async ({
@@ -163,6 +165,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
 
   const { isRecording, startRecording, stopRecording } = useAudioRecorder({
     onResult: handleRecordingResult,
+    deviceId: mic.selectedId || undefined,
   });
 
   const handleCopy = () => {
@@ -232,6 +235,25 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
                 </SelectContent>
               </Select>
             </div>
+
+            {mic.devices.length > 1 && (
+              <div className="space-y-2">
+                <label htmlFor="ai-transcribe-mic" className="text-sm font-medium">Microfone</label>
+                <Select value={mic.selectedId || "default"} onValueChange={(v) => mic.select(v === "default" ? "" : v)}>
+                  <SelectTrigger id="ai-transcribe-mic">
+                    <SelectValue placeholder="Padrão do sistema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Padrão do sistema</SelectItem>
+                    {mic.devices.map((d) => (
+                      <SelectItem key={d.deviceId} value={d.deviceId}>
+                        {d.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <Button
