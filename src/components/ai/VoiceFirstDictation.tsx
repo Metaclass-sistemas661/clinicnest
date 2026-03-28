@@ -247,7 +247,7 @@ export function VoiceFirstDictation({
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
       setStep("transcribing");
-2      const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
+      const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
       transcribeMutation.mutate(finalBlob);
     },
     [transcribeMutation],
