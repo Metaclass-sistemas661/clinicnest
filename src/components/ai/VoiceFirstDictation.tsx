@@ -245,21 +245,9 @@ export function VoiceFirstDictation({
         return;
       }
 
-      // Processa áudio: noise gate + normalização + WAV antes de enviar ao STT
+      // Converte para WAV PCM + normaliza volume antes de enviar ao STT
       setStep("transcribing");
-      const { blob: finalBlob, hasSpeechContent } = await normalizeAudioBlob(blob, avgEnergy);
-      if (!hasSpeechContent) {
-        console.warn("[VoiceSOAP] No speech content detected after audio processing");
-        toast.error("Nenhuma fala detectada no áudio", {
-          description:
-            "O microfone captou apenas ruído ou estática. " +
-            "Se estiver usando Bluetooth, tente desconectar e reconectar o fone, " +
-            "ou use o microfone integrado do notebook / fone com fio.",
-          duration: 10000,
-        });
-        setStep("idle");
-        return;
-      }
+2      const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
       transcribeMutation.mutate(finalBlob);
     },
     [transcribeMutation],
