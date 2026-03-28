@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const STORAGE_KEY = "clinicnest:preferred-mic";
 
@@ -16,12 +16,17 @@ export function useMicrophoneList() {
       return "";
     }
   });
+  const hasPermissionRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      // Precisa de permissão prévia para ver labels
-      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      tempStream.getTracks().forEach((t) => t.stop());
+      // Só pede permissão na primeira vez — evita re-adquirir stream
+      // que pode trocar deviceIds no Chrome/Windows
+      if (!hasPermissionRef.current) {
+        const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        tempStream.getTracks().forEach((t) => t.stop());
+        hasPermissionRef.current = true;
+      }
 
       const all = await navigator.mediaDevices.enumerateDevices();
       const mics = all
@@ -31,21 +36,13 @@ export function useMicrophoneList() {
           label: d.label || `Microfone ${d.deviceId.slice(0, 6)}`,
         }));
       setDevices(mics);
-
-      // Se o dispositivo salvo não está mais disponível, limpa
-      if (selectedId && !mics.some((m) => m.deviceId === selectedId)) {
-        setSelectedId("");
-        try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
-      }
     } catch {
-      // Sem permissão — lista vazia
       setDevices([]);
     }
-  }, [selectedId]);
+  }, []);
 
   useEffect(() => {
     refresh();
-    // Atualiza quando dispositivos mudam (plug/desplug)
     navigator.mediaDevices?.addEventListener?.("devicechange", refresh);
     return () => {
       navigator.mediaDevices?.removeEventListener?.("devicechange", refresh);
