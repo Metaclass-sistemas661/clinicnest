@@ -96,7 +96,21 @@ export function VoiceFirstDictation({
 
   // Step 1: Transcribe audio
   const transcribeMutation = useMutation({
-    mutationFn: async (audioBlob: Blob) => {
+    mutationFn: async ({
+      audioBlob,
+      audioMeta,
+    }: {
+      audioBlob: Blob;
+      audioMeta?: {
+        avg_energy?: number;
+        duration_ms?: number;
+        sample_rate?: number;
+        is_bluetooth?: boolean;
+        track_label?: string;
+        blob_size?: number;
+        mime_type?: string;
+      };
+    }) => {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64 = btoa(
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -108,6 +122,7 @@ export function VoiceFirstDictation({
           file_name: `voice-dictation-${Date.now()}.${audioBlob.type.split("/")[1]?.split(";")[0] || "webm"}`,
           content_type: audioBlob.type,
           specialty,
+          audio_meta: audioMeta,
         },
       });
       if (error) throw error;
@@ -221,7 +236,25 @@ export function VoiceFirstDictation({
 
   // ── Shared audio recorder hook ─────────────────────────────────────────────
   const handleResult = useCallback(
-    async ({ blob, avgEnergy, durationMs }: { blob: Blob; avgEnergy: number; durationMs: number }) => {
+    async ({
+      blob,
+      avgEnergy,
+      durationMs,
+      sampleRate,
+      isBluetooth,
+      trackLabel,
+      blobSize,
+      mimeType,
+    }: {
+      blob: Blob;
+      avgEnergy: number;
+      durationMs: number;
+      sampleRate: number;
+      isBluetooth: boolean;
+      trackLabel: string;
+      blobSize: number;
+      mimeType: string;
+    }) => {
       if (timerRef.current) clearInterval(timerRef.current);
 
       // Gravação muito curta
@@ -233,7 +266,7 @@ export function VoiceFirstDictation({
 
       // Áudio sem conteúdo (silêncio ou ruído puro)
       // avgEnergy < 0.005 indica que o mic não captou fala real
-      if (avgEnergy < 0.005 && avgEnergy > 0) {
+      if (avgEnergy <= 0.005) {
         console.warn(`[VoiceSOAP] Audio energy too low: ${avgEnergy.toFixed(6)}`);
         toast.error("Microfone não captou áudio", {
           description:
@@ -245,10 +278,46 @@ export function VoiceFirstDictation({
         return;
       }
 
+      // Blob anormalmente pequeno para a duração costuma indicar captura quebrada
+      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+      if (durationMs >= 3000 && bytesPerSecond < 1000) {
+        console.warn(
+          `[VoiceSOAP] Suspiciously small audio payload: ${blobSize} bytes in ${durationMs}ms (${bytesPerSecond.toFixed(1)} B/s)`
+        );
+        toast.error("Áudio inválido capturado", {
+          description:
+            "A gravação ficou muito pequena para a duração informada. " +
+            "No Windows com fone Bluetooth, confirme se o dispositivo de entrada está em 'Headset/Hands-Free'.",
+          duration: 10000,
+        });
+        setStep("idle");
+        return;
+      }
+
+      if (isBluetooth && sampleRate > 0 && sampleRate < 12000 && avgEnergy < 0.01) {
+        toast.warning("Bluetooth com captação limitada detectado", {
+          description:
+            "O Windows pode estar usando um perfil de voz de baixa qualidade. " +
+            "Troque o microfone de entrada para 'Headset/Hands-Free' ou use o microfone integrado.",
+          duration: 10000,
+        });
+      }
+
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
       setStep("transcribing");
       const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
-      transcribeMutation.mutate(finalBlob);
+      transcribeMutation.mutate({
+        audioBlob: finalBlob,
+        audioMeta: {
+          avg_energy: avgEnergy,
+          duration_ms: durationMs,
+          sample_rate: sampleRate,
+          is_bluetooth: isBluetooth,
+          track_label: trackLabel,
+          blob_size: blobSize,
+          mime_type: mimeType,
+        },
+      });
     },
     [transcribeMutation],
   );

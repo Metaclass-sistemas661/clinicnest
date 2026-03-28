@@ -10,8 +10,16 @@ export interface AudioRecordingResult {
   quality: AudioQuality;
   /** Sample rate real capturado pelo dispositivo (0 se desconhecido) */
   sampleRate: number;
+  /** Label do dispositivo de entrada retornado pelo navegador */
+  trackLabel: string;
+  /** Indica se o dispositivo parece ser Bluetooth */
+  isBluetooth: boolean;
   /** Duração da gravação em milissegundos */
   durationMs: number;
+  /** Tamanho do blob final em bytes */
+  blobSize: number;
+  /** MIME final gravado pelo MediaRecorder */
+  mimeType: string;
   /** Nível médio de energia do áudio (0-1). < 0.005 = silêncio/ruído */
   avgEnergy: number;
 }
@@ -237,7 +245,17 @@ export function useAudioRecorder({
         );
 
         setIsRecording(false);
-        onResult({ blob, quality, sampleRate: rawSampleRate, durationMs, avgEnergy });
+        onResult({
+          blob,
+          quality,
+          sampleRate: rawSampleRate,
+          trackLabel,
+          isBluetooth,
+          durationMs,
+          blobSize: blob.size,
+          mimeType: baseType,
+          avgEnergy,
+        });
       };
 
       mr.start();

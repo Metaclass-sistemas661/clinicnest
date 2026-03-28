@@ -39,7 +39,21 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
   const [copied, setCopied] = useState(false);
 
   const transcribeMutation = useMutation({
-    mutationFn: async (audioBlob: Blob) => {
+    mutationFn: async ({
+      audioBlob,
+      audioMeta,
+    }: {
+      audioBlob: Blob;
+      audioMeta?: {
+        avg_energy?: number;
+        duration_ms?: number;
+        sample_rate?: number;
+        is_bluetooth?: boolean;
+        track_label?: string;
+        blob_size?: number;
+        mime_type?: string;
+      };
+    }) => {
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64 = btoa(
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -53,6 +67,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
           file_name: `recording-${Date.now()}.${ext}`,
           content_type: audioBlob.type || "audio/webm",
           specialty,
+          audio_meta: audioMeta,
         },
       });
       if (error) throw error;
@@ -100,17 +115,17 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
       return;
     }
 
-    transcribeMutation.mutate(file);
+    transcribeMutation.mutate({ audioBlob: file });
   };
 
   // ── Gravação via hook robusto (waterfall constraints + energy monitoring) ──
   const handleRecordingResult = useCallback(
-    async ({ blob, durationMs, avgEnergy }: AudioRecordingResult) => {
+    async ({ blob, durationMs, avgEnergy, sampleRate, isBluetooth, trackLabel, blobSize, mimeType }: AudioRecordingResult) => {
       if (durationMs < 2000) {
         toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
         return;
       }
-      if (avgEnergy < 0.005 && avgEnergy > 0) {
+      if (avgEnergy <= 0.005) {
         toast.error("Microfone não captou áudio", {
           description:
             "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
@@ -118,9 +133,41 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         });
         return;
       }
+
+      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+      if (durationMs >= 3000 && bytesPerSecond < 1000) {
+        toast.error("Áudio inválido capturado", {
+          description:
+            "A gravação ficou muito pequena para a duração informada. " +
+            "No Windows com fone Bluetooth, confirme se a entrada está em 'Headset/Hands-Free'.",
+          duration: 10000,
+        });
+        return;
+      }
+
+      if (isBluetooth && sampleRate > 0 && sampleRate < 12000 && avgEnergy < 0.01) {
+        toast.warning("Bluetooth com captação limitada detectado", {
+          description:
+            "O Windows pode estar usando perfil de voz de baixa qualidade. " +
+            "Troque para o microfone 'Headset/Hands-Free' ou use o microfone integrado.",
+          duration: 10000,
+        });
+      }
+
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
       const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
-      transcribeMutation.mutate(finalBlob);
+      transcribeMutation.mutate({
+        audioBlob: finalBlob,
+        audioMeta: {
+          avg_energy: avgEnergy,
+          duration_ms: durationMs,
+          sample_rate: sampleRate,
+          is_bluetooth: isBluetooth,
+          track_label: trackLabel,
+          blob_size: blobSize,
+          mime_type: mimeType,
+        },
+      });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],

@@ -16,6 +16,15 @@ interface TranscribeRequest {
   file_name?: string;
   content_type?: string;
   specialty?: MedicalSpecialty;
+  audio_meta?: {
+    avg_energy?: number;
+    duration_ms?: number;
+    sample_rate?: number;
+    is_bluetooth?: boolean;
+    track_label?: string;
+    blob_size?: number;
+    mime_type?: string;
+  };
   // Legacy "status" action (kept for backward compat, returns immediately)
   job_name?: string;
 }
@@ -107,7 +116,7 @@ serve(async (req) => {
 
     // ── Primary path: synchronous transcription via Vertex AI ──
     if (action === "transcribe" || action === "start") {
-      const { audio_base64, file_name, content_type, specialty } = body;
+      const { audio_base64, file_name, content_type, specialty, audio_meta } = body;
 
       if (!audio_base64 || !content_type) {
         return new Response(
@@ -128,6 +137,15 @@ serve(async (req) => {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
+        );
+      }
+
+      if (audio_meta) {
+        console.log(
+          `[ai-transcribe] audio_meta: sr=${audio_meta.sample_rate ?? 0}, ` +
+            `energy=${audio_meta.avg_energy ?? 0}, duration_ms=${audio_meta.duration_ms ?? 0}, ` +
+            `is_bt=${audio_meta.is_bluetooth ? "yes" : "no"}, blob=${audio_meta.blob_size ?? 0}, ` +
+            `mime=${audio_meta.mime_type ?? content_type}, track=\"${audio_meta.track_label ?? ""}\"`
         );
       }
 
