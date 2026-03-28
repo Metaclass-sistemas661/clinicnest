@@ -203,9 +203,16 @@ export function useAudioRecorder({
       }
 
       // Monitor de energia (passivo — NÃO altera o stream)
+      // Para Bluetooth, NÃO clonamos o stream — stream.clone() em drivers BT
+      // do Windows pode causar interferência resultando em silêncio no MediaRecorder.
       energySamplesRef.current = [];
-      const cleanupMonitor = attachEnergyMonitor(stream);
-      analyserCleanupRef.current = cleanupMonitor;
+      if (!isBluetooth) {
+        const cleanupMonitor = attachEnergyMonitor(stream);
+        analyserCleanupRef.current = cleanupMonitor;
+      } else {
+        console.log("[AudioRecorder] Skipping energy monitor for Bluetooth (avoids clone interference)");
+        analyserCleanupRef.current = null;
+      }
 
       // Grava diretamente do stream original — SEM AudioContext pipeline
       // O pipeline anterior (compressor+gain+highpass) causava silêncio em

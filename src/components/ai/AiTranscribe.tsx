@@ -132,53 +132,54 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         return;
       }
       let effectiveEnergy = avgEnergy;
-      if (effectiveEnergy <= 0.005) {
-        const blobEnergy = await estimateAudioEnergyFromBlob(blob);
-        if (blobEnergy != null) {
-          effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
-          console.log(
-            `[AiTranscribe] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
+      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+
+      if (isBluetooth) {
+        // Para Bluetooth no Windows: pular gate de energia e sempre enviar.
+        // stream.clone() + AnalyserNode e decodeAudioData são instáveis em BT HFP.
+        console.log(
+          `[AiTranscribe] Bluetooth bypass: skipping energy gate. ` +
+          `avgEnergy=${avgEnergy.toFixed(6)} blobSize=${blobSize} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
+        );
+      } else {
+        if (effectiveEnergy <= 0.005) {
+          const blobEnergy = await estimateAudioEnergyFromBlob(blob);
+          if (blobEnergy != null) {
+            effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
+            console.log(
+              `[AiTranscribe] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
+            );
+          }
+        }
+
+        const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
+
+        if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
+          toast.error("Microfone não captou áudio", {
+            id: "voice-no-audio",
+            description:
+              "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
+            duration: 10000,
+          });
+          return;
+        }
+
+        if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
+          console.warn(
+            `[AiTranscribe] Low energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
           );
         }
-      }
 
-      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
-      const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
-
-      if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
-        toast.error("Microfone não captou áudio", {
-          id: "voice-no-audio",
-          description:
-            "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
-          duration: 10000,
-        });
-        return;
-      }
-
-      if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
-        console.warn(
-          `[AiTranscribe] Low analyser energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
-        );
-      }
-
-      if (durationMs >= 3000 && bytesPerSecond < 1000) {
-        toast.error("Áudio inválido capturado", {
-          id: "voice-invalid-audio",
-          description:
-            "A gravação ficou muito pequena para a duração informada. " +
-            "No Windows com fone Bluetooth, confirme se a entrada está em 'Headset/Hands-Free'.",
-          duration: 10000,
-        });
-        return;
-      }
-
-      if (isBluetooth && sampleRate > 0 && sampleRate < 12000 && effectiveEnergy < 0.01) {
-        toast.warning("Bluetooth com captação limitada detectado", {
-          description:
-            "O Windows pode estar usando perfil de voz de baixa qualidade. " +
-            "Troque para o microfone 'Headset/Hands-Free' ou use o microfone integrado.",
-          duration: 10000,
-        });
+        if (durationMs >= 3000 && bytesPerSecond < 1000) {
+          toast.error("Áudio inválido capturado", {
+            id: "voice-invalid-audio",
+            description:
+              "A gravação ficou muito pequena para a duração informada. " +
+              "Verifique o dispositivo de entrada nas configurações de som.",
+            duration: 10000,
+          });
+          return;
+        }
       }
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
