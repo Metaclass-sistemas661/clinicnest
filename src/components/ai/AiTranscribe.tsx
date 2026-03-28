@@ -142,8 +142,12 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         }
       }
 
-      if (effectiveEnergy <= 0.005) {
+      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+      const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
+
+      if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
         toast.error("Microfone não captou áudio", {
+          id: "voice-no-audio",
           description:
             "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
           duration: 10000,
@@ -151,9 +155,15 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         return;
       }
 
-      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+      if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
+        console.warn(
+          `[AiTranscribe] Low analyser energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
+        );
+      }
+
       if (durationMs >= 3000 && bytesPerSecond < 1000) {
         toast.error("Áudio inválido capturado", {
+          id: "voice-invalid-audio",
           description:
             "A gravação ficou muito pequena para a duração informada. " +
             "No Windows com fone Bluetooth, confirme se a entrada está em 'Headset/Hands-Free'.",

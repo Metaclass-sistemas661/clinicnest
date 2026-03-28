@@ -88,42 +88,46 @@ export function useAudioRecorder({
   // de echoCancellation/noiseSuppression no Windows
   async function acquireStream(): Promise<MediaStream> {
     const attempts: MediaStreamConstraints[] = [
-      // 1ª: AGC ligado, sem echo/noise — ideal para BT HFP no Windows
-      // autoGainControl amplifica sinais fracos do Bluetooth sem o risco
-      // de silenciamento que echoCancellation causa em certos drivers
-      {
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: true,
-          channelCount: { ideal: 1 },
-        },
-      },
-      // 2ª: COM todo processamento — para mics integrados
+      // 1ª: default do navegador (comportamento mais próximo do WhatsApp Web)
+      { audio: true },
+      // 2ª: COM todo processamento — bom baseline para desktop
       {
         audio: {
           echoCancellation: { ideal: true },
           noiseSuppression: { ideal: true },
           autoGainControl: { ideal: true },
           channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
         },
       },
-      // 3ª: SEM nenhum processamento — fallback raw
+      // 3ª: AGC ligado, sem echo/noise — fallback para alguns BT HFP
+      // autoGainControl amplifica sinais fracos do Bluetooth.
+      {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: true,
+          channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
+        },
+      },
+      // 4ª: SEM nenhum processamento — fallback raw
       {
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
           channelCount: { ideal: 1 },
+          sampleRate: { ideal: 16000 },
         },
       },
-      // 4ª: mínimo absoluto
-      { audio: true },
     ];
 
     let lastErr: unknown;
-    for (const constraints of attempts) {
+    for (let i = 0; i < attempts.length; i++) {
+      const constraints = attempts[i];
       try {
+        console.log(`[AudioRecorder] getUserMedia attempt ${i + 1}/${attempts.length}`);
         return await navigator.mediaDevices.getUserMedia(constraints);
       } catch (err) {
         lastErr = err;
@@ -258,7 +262,8 @@ export function useAudioRecorder({
         });
       };
 
-      mr.start();
+      // Entrega chunks periódicos reduz chance de blob vazio em alguns drivers BT.
+      mr.start(1000);
       setIsRecording(true);
     } catch (err) {
       const msg =

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -282,9 +282,13 @@ export function VoiceFirstDictation({
         }
       }
 
-      if (effectiveEnergy <= 0.005) {
+      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
+      const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
+
+      if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
         console.warn(`[VoiceSOAP] Audio energy too low: ${effectiveEnergy.toFixed(6)}`);
         toast.error("Microfone não captou áudio", {
+          id: "voice-no-audio",
           description:
             "Verifique nas configurações de som do Windows se o microfone correto está selecionado. " +
             "Tente usar o microfone integrado do notebook ou um fone com fio.",
@@ -294,13 +298,19 @@ export function VoiceFirstDictation({
         return;
       }
 
+      if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
+        console.warn(
+          `[VoiceSOAP] Low analyser energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
+        );
+      }
+
       // Blob anormalmente pequeno para a duração costuma indicar captura quebrada
-      const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
       if (durationMs >= 3000 && bytesPerSecond < 1000) {
         console.warn(
           `[VoiceSOAP] Suspiciously small audio payload: ${blobSize} bytes in ${durationMs}ms (${bytesPerSecond.toFixed(1)} B/s)`
         );
         toast.error("Áudio inválido capturado", {
+          id: "voice-invalid-audio",
           description:
             "A gravação ficou muito pequena para a duração informada. " +
             "No Windows com fone Bluetooth, confirme se o dispositivo de entrada está em 'Headset/Hands-Free'.",
@@ -348,7 +358,20 @@ export function VoiceFirstDictation({
     onError: handleError,
   });
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleStart = useCallback(async () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setElapsedSec(0);
     setTranscript("");
     setStep("recording");
@@ -357,6 +380,10 @@ export function VoiceFirstDictation({
   }, [startRecording]);
 
   const handleStop = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     stopRecording();
   }, [stopRecording]);
 
