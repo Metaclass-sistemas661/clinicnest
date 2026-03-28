@@ -18,7 +18,6 @@ import {
   useAudioRecorder,
   isLikelyHallucination,
   normalizeAudioBlob,
-  estimateAudioEnergyFromBlob,
 } from "@/hooks/useAudioRecorder";
 
 interface SoapResult {
@@ -270,66 +269,16 @@ export function VoiceFirstDictation({
       }
 
       // ── Validação de energia ────────────────────────────────────────────
-      // Para Bluetooth no Windows: pular gate de energia e sempre enviar ao
-      // backend. stream.clone() + AnalyserNode entrega sil\u00eancio em muitos
-      // drivers BT (A2DP→HFP switch), e decodeAudioData pode falhar em blobs
-      // WebM/Opus. O backend já trata áudio vazio (retorna "") e alucinações.
-      let effectiveEnergy = avgEnergy;
+      // Energia: apenas log, NUNCA bloqueia — backend trata áudio vazio
+      const effectiveEnergy = avgEnergy;
       const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
-
-      if (isBluetooth) {
-        console.log(
-          `[VoiceSOAP] Bluetooth bypass: skipping energy gate. ` +
-          `avgEnergy=${avgEnergy.toFixed(6)} blobSize=${blobSize} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
-        );
-      } else {
-        // Para dispositivos com fio / integrado, manter validação
-        if (effectiveEnergy <= 0.005) {
-          const blobEnergy = await estimateAudioEnergyFromBlob(blob);
-          if (blobEnergy != null) {
-            effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
-            console.log(
-              `[VoiceSOAP] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
-            );
-          }
-        }
-
-        const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
-
-        if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
-          console.warn(`[VoiceSOAP] Audio energy too low: ${effectiveEnergy.toFixed(6)}`);
-          toast.error("Microfone não captou áudio", {
-            id: "voice-no-audio",
-            description:
-              "Verifique nas configurações de som do Windows se o microfone correto está selecionado. " +
-              "Tente usar o microfone integrado do notebook ou um fone com fio.",
-            duration: 10000,
-          });
-          setStep("idle");
-          return;
-        }
-
-        if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
-          console.warn(
-            `[VoiceSOAP] Low energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
-          );
-        }
-
-        // Blob anormalmente pequeno para a duração costuma indicar captura quebrada
-        if (durationMs >= 3000 && bytesPerSecond < 1000) {
-          console.warn(
-            `[VoiceSOAP] Suspiciously small audio payload: ${blobSize} bytes in ${durationMs}ms (${bytesPerSecond.toFixed(1)} B/s)`
-          );
-          toast.error("Áudio inválido capturado", {
-            id: "voice-invalid-audio",
-            description:
-              "A gravação ficou muito pequena para a duração informada. " +
-              "Verifique o dispositivo de entrada nas configurações de som.",
-            duration: 10000,
-          });
-          setStep("idle");
-          return;
-        }
+      console.log(
+        `[VoiceSOAP] Audio stats: energy=${effectiveEnergy.toFixed(6)} ` +
+        `blobSize=${blobSize} bytesPerSecond=${bytesPerSecond.toFixed(1)} ` +
+        `bt=${isBluetooth} track="${trackLabel}"`
+      );
+      if (effectiveEnergy <= 0.005) {
+        console.warn(`[VoiceSOAP] Low energy detected (${effectiveEnergy.toFixed(6)}) — sending to backend anyway`);
       }
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT

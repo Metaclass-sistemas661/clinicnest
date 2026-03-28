@@ -28,7 +28,6 @@ import {
   useAudioRecorder,
   isLikelyHallucination,
   normalizeAudioBlob,
-  estimateAudioEnergyFromBlob,
   type AudioRecordingResult,
 } from "@/hooks/useAudioRecorder";
 
@@ -131,55 +130,16 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
         return;
       }
-      let effectiveEnergy = avgEnergy;
+      // Energia: apenas log, NUNCA bloqueia — backend trata áudio vazio
+      const effectiveEnergy = avgEnergy;
       const bytesPerSecond = durationMs > 0 ? blobSize / (durationMs / 1000) : 0;
-
-      if (isBluetooth) {
-        // Para Bluetooth no Windows: pular gate de energia e sempre enviar.
-        // stream.clone() + AnalyserNode e decodeAudioData são instáveis em BT HFP.
-        console.log(
-          `[AiTranscribe] Bluetooth bypass: skipping energy gate. ` +
-          `avgEnergy=${avgEnergy.toFixed(6)} blobSize=${blobSize} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
-        );
-      } else {
-        if (effectiveEnergy <= 0.005) {
-          const blobEnergy = await estimateAudioEnergyFromBlob(blob);
-          if (blobEnergy != null) {
-            effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
-            console.log(
-              `[AiTranscribe] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
-            );
-          }
-        }
-
-        const hasHealthyPayload = durationMs >= 3000 && bytesPerSecond >= 3000;
-
-        if (effectiveEnergy <= 0.005 && !hasHealthyPayload) {
-          toast.error("Microfone não captou áudio", {
-            id: "voice-no-audio",
-            description:
-              "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
-            duration: 10000,
-          });
-          return;
-        }
-
-        if (effectiveEnergy <= 0.005 && hasHealthyPayload) {
-          console.warn(
-            `[AiTranscribe] Low energy ignored due healthy payload: energy=${effectiveEnergy.toFixed(6)} bytesPerSecond=${bytesPerSecond.toFixed(1)}`
-          );
-        }
-
-        if (durationMs >= 3000 && bytesPerSecond < 1000) {
-          toast.error("Áudio inválido capturado", {
-            id: "voice-invalid-audio",
-            description:
-              "A gravação ficou muito pequena para a duração informada. " +
-              "Verifique o dispositivo de entrada nas configurações de som.",
-            duration: 10000,
-          });
-          return;
-        }
+      console.log(
+        `[AiTranscribe] Audio stats: energy=${effectiveEnergy.toFixed(6)} ` +
+        `blobSize=${blobSize} bytesPerSecond=${bytesPerSecond.toFixed(1)} ` +
+        `bt=${isBluetooth} track="${trackLabel}"`
+      );
+      if (effectiveEnergy <= 0.005) {
+        console.warn(`[AiTranscribe] Low energy detected (${effectiveEnergy.toFixed(6)}) — sending to backend anyway`);
       }
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT

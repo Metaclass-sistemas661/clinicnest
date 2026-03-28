@@ -188,7 +188,7 @@ export function useAudioRecorder({
       // Estabilização de perfil Bluetooth: no Windows, quando getUserMedia ativa
       // o mic de um fone BT, o sistema muda de A2DP (só áudio) para HFP (mic+áudio).
       // Essa mudança leva 200-800ms e durante esse período o stream contém lixo.
-      const isBluetooth = /bluetooth|bt[\s-]|airpods|buds|wireless|jbl|sony|bose|jabra|beats|sennheiser|galaxy|wh-|wf-|qc|tune|free/i.test(trackLabel);
+      const isBluetooth = /bluetooth|bt[\s-]|airpods|buds|wireless|jbl|sony|bose|jabra|beats|sennheiser|galaxy|wh-|wf-|qc|tune|free|philips|tat\d|tws|earbuds/i.test(trackLabel);
       if (isBluetooth) {
         console.log("[AudioRecorder] Bluetooth device detected, waiting for HFP stabilization...");
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -202,17 +202,12 @@ export function useAudioRecorder({
         });
       }
 
-      // Monitor de energia (passivo — NÃO altera o stream)
-      // Para Bluetooth, NÃO clonamos o stream — stream.clone() em drivers BT
-      // do Windows pode causar interferência resultando em silêncio no MediaRecorder.
+      // Monitor de energia desativado — stream.clone() + AnalyserNode causa
+      // interferência em muitos drivers (BT HFP, USB, alguns integrados no
+      // Windows). Energia agora é apenas informativa e nunca bloqueia envio.
       energySamplesRef.current = [];
-      if (!isBluetooth) {
-        const cleanupMonitor = attachEnergyMonitor(stream);
-        analyserCleanupRef.current = cleanupMonitor;
-      } else {
-        console.log("[AudioRecorder] Skipping energy monitor for Bluetooth (avoids clone interference)");
-        analyserCleanupRef.current = null;
-      }
+      analyserCleanupRef.current = null;
+      console.log("[AudioRecorder] Energy monitor disabled (clone interference prevention)");
 
       // Grava diretamente do stream original — SEM AudioContext pipeline
       // O pipeline anterior (compressor+gain+highpass) causava silêncio em
