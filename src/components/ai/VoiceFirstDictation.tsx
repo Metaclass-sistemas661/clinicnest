@@ -14,7 +14,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useAudioRecorder, isLikelyHallucination, normalizeAudioBlob } from "@/hooks/useAudioRecorder";
+import {
+  useAudioRecorder,
+  isLikelyHallucination,
+  normalizeAudioBlob,
+  estimateAudioEnergyFromBlob,
+} from "@/hooks/useAudioRecorder";
 
 interface SoapResult {
   subjective: string;
@@ -265,9 +270,20 @@ export function VoiceFirstDictation({
       }
 
       // Áudio sem conteúdo (silêncio ou ruído puro)
-      // avgEnergy < 0.005 indica que o mic não captou fala real
-      if (avgEnergy <= 0.005) {
-        console.warn(`[VoiceSOAP] Audio energy too low: ${avgEnergy.toFixed(6)}`);
+      // Usa fallback pelo blob para evitar falso negativo com BT no Windows.
+      let effectiveEnergy = avgEnergy;
+      if (effectiveEnergy <= 0.005) {
+        const blobEnergy = await estimateAudioEnergyFromBlob(blob);
+        if (blobEnergy != null) {
+          effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
+          console.log(
+            `[VoiceSOAP] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
+          );
+        }
+      }
+
+      if (effectiveEnergy <= 0.005) {
+        console.warn(`[VoiceSOAP] Audio energy too low: ${effectiveEnergy.toFixed(6)}`);
         toast.error("Microfone não captou áudio", {
           description:
             "Verifique nas configurações de som do Windows se o microfone correto está selecionado. " +
@@ -305,11 +321,11 @@ export function VoiceFirstDictation({
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
       setStep("transcribing");
-      const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
+      const { blob: finalBlob } = await normalizeAudioBlob(blob, effectiveEnergy);
       transcribeMutation.mutate({
         audioBlob: finalBlob,
         audioMeta: {
-          avg_energy: avgEnergy,
+          avg_energy: effectiveEnergy,
           duration_ms: durationMs,
           sample_rate: sampleRate,
           is_bluetooth: isBluetooth,

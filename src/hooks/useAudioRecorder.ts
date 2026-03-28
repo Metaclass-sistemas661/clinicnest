@@ -330,6 +330,41 @@ export function isLikelyHallucination(transcript: string): boolean {
   return false;
 }
 
+/**
+ * Mede energia RMS diretamente do blob gravado.
+ * Fallback para casos em que o AnalyserNode reporta 0 no Windows+Bluetooth.
+ */
+export async function estimateAudioEnergyFromBlob(blob: Blob): Promise<number | null> {
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioCtx = new AudioContext();
+    let audioBuffer: AudioBuffer;
+    try {
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    } finally {
+      await audioCtx.close().catch(() => {});
+    }
+
+    if (audioBuffer.numberOfChannels < 1 || audioBuffer.length === 0) return 0;
+
+    const channel = audioBuffer.getChannelData(0);
+    // Usa amostragem parcial para manter rápido em blobs maiores
+    const step = Math.max(1, Math.floor(channel.length / 120_000));
+    let sum = 0;
+    let count = 0;
+    for (let i = 0; i < channel.length; i += step) {
+      const s = channel[i];
+      sum += s * s;
+      count++;
+    }
+    if (count === 0) return 0;
+    return Math.sqrt(sum / count);
+  } catch (err) {
+    console.warn("[AudioRecorder] Failed to estimate blob energy:", err);
+    return null;
+  }
+}
+
 // ─── Processamento de áudio para STT ──────────────────────────────────────
 /**
  * Converte blob de áudio para WAV PCM 16-bit mono com normalização de volume.

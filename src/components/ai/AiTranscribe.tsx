@@ -24,7 +24,13 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FeatureGate } from "@/components/subscription/FeatureGate";
-import { useAudioRecorder, isLikelyHallucination, normalizeAudioBlob, type AudioRecordingResult } from "@/hooks/useAudioRecorder";
+import {
+  useAudioRecorder,
+  isLikelyHallucination,
+  normalizeAudioBlob,
+  estimateAudioEnergyFromBlob,
+  type AudioRecordingResult,
+} from "@/hooks/useAudioRecorder";
 
 type Specialty = "PRIMARYCARE" | "CARDIOLOGY" | "NEUROLOGY" | "ONCOLOGY" | "RADIOLOGY" | "UROLOGY";
 
@@ -125,7 +131,18 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         toast.warning("Gravação muito curta. Fale por pelo menos 2 segundos.");
         return;
       }
-      if (avgEnergy <= 0.005) {
+      let effectiveEnergy = avgEnergy;
+      if (effectiveEnergy <= 0.005) {
+        const blobEnergy = await estimateAudioEnergyFromBlob(blob);
+        if (blobEnergy != null) {
+          effectiveEnergy = Math.max(effectiveEnergy, blobEnergy);
+          console.log(
+            `[AiTranscribe] Energy fallback: analyser=${avgEnergy.toFixed(6)} blob=${blobEnergy.toFixed(6)} effective=${effectiveEnergy.toFixed(6)}`
+          );
+        }
+      }
+
+      if (effectiveEnergy <= 0.005) {
         toast.error("Microfone não captou áudio", {
           description:
             "Verifique nas configurações de som do Windows se o microfone correto está selecionado.",
@@ -145,7 +162,7 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
         return;
       }
 
-      if (isBluetooth && sampleRate > 0 && sampleRate < 12000 && avgEnergy < 0.01) {
+      if (isBluetooth && sampleRate > 0 && sampleRate < 12000 && effectiveEnergy < 0.01) {
         toast.warning("Bluetooth com captação limitada detectado", {
           description:
             "O Windows pode estar usando perfil de voz de baixa qualidade. " +
@@ -155,11 +172,11 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
       }
 
       // Converte para WAV PCM + normaliza volume antes de enviar ao STT
-      const { blob: finalBlob } = await normalizeAudioBlob(blob, avgEnergy);
+      const { blob: finalBlob } = await normalizeAudioBlob(blob, effectiveEnergy);
       transcribeMutation.mutate({
         audioBlob: finalBlob,
         audioMeta: {
-          avg_energy: avgEnergy,
+          avg_energy: effectiveEnergy,
           duration_ms: durationMs,
           sample_rate: sampleRate,
           is_bluetooth: isBluetooth,
