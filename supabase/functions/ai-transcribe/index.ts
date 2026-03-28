@@ -145,7 +145,7 @@ serve(async (req) => {
           `[ai-transcribe] audio_meta: sr=${audio_meta.sample_rate ?? 0}, ` +
             `energy=${audio_meta.avg_energy ?? 0}, duration_ms=${audio_meta.duration_ms ?? 0}, ` +
             `is_bt=${audio_meta.is_bluetooth ? "yes" : "no"}, blob=${audio_meta.blob_size ?? 0}, ` +
-            `mime=${audio_meta.mime_type ?? content_type}, track=\"${audio_meta.track_label ?? ""}\"`
+            `mime=${audio_meta.mime_type ?? content_type}, track="${audio_meta.track_label ?? ""}"`
         );
       }
 
