@@ -161,10 +161,11 @@ export interface TranscriptionResult {
  *  1. Frase idêntica repetida 3+ vezes
  *  2. Uma frase representa >60% de todas as sentenças (mín. 4 sentenças)
  *  3. Token curto (≤6 chars) repetido 5+ vezes seguidas ("31 31 31 31 31")
- *  4. Confiança muito baixa (< 30%) com transcrição curta
+ *  4. Confiança baixa (< 50%) com transcrição curta
+ *  5. Texto predominantemente numérico (>60% dos tokens)
  */
 function detectHallucination(transcript: string, avgConfidence: number): boolean {
-  if (!transcript || transcript.trim().length < 20) return false;
+  if (!transcript || transcript.trim().length < 5) return false;
 
   const text = transcript.trim();
 
@@ -175,7 +176,7 @@ function detectHallucination(transcript: string, avgConfidence: number): boolean
   // Padrão 5: texto predominantemente numérico (>60% dos tokens são números)
   // Alucinação típica: "19 20 21 22 23 ... 99 100" ou "3 1 3 5 0 6 3 9 3 0"
   const tokens = text.split(/\s+/);
-  if (tokens.length >= 5) {
+  if (tokens.length >= 2) {
     const numericTokens = tokens.filter((t) => /^\d{1,6}$/.test(t)).length;
     if (numericTokens / tokens.length > 0.6) return true;
   }
@@ -198,8 +199,8 @@ function detectHallucination(transcript: string, avgConfidence: number): boolean
     }
   }
 
-  // Padrão 4: confiança muito baixa + transcrição curta
-  if (avgConfidence > 0 && avgConfidence < 0.30 && text.length < 50) return true;
+  // Padrão 4: confiança baixa (< 50%) com transcrição curta — improvável ser fala real
+  if (avgConfidence > 0 && avgConfidence < 0.50 && text.length < 100) return true;
 
   return false;
 }

@@ -70,6 +70,17 @@ export function AiTranscribe({ onTranscriptReady, className }: AiTranscribeProps
           });
           return;
         }
+        // Confiança baixa com texto curto — improvável ser fala real
+        if (data.confidence && data.confidence < 0.50 && data.transcript.trim().length < 100) {
+          toast.warning("Transcrição com confiança muito baixa", {
+            description:
+              "O microfone pode não estar captando bem. " +
+              "Tente falar mais perto do microfone, em ambiente silencioso, " +
+              "ou use fone com fio.",
+            duration: 8000,
+          });
+          return;
+        }
         setTranscript(data.transcript);
         onTranscriptReady?.(data.transcript);
         toast.success("Transcrição concluída!");

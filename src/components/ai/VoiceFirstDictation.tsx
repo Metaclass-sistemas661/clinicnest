@@ -131,6 +131,19 @@ export function VoiceFirstDictation({
           return;
         }
 
+        // Confiança baixa com texto curto — improvável ser fala real
+        if (data.confidence && data.confidence < 0.50 && text.trim().length < 100) {
+          toast.warning("Transcrição com confiança muito baixa", {
+            description:
+              "O microfone pode não estar captando bem. " +
+              "Tente falar mais perto do microfone, em ambiente silencioso, " +
+              "ou use fone com fio.",
+            duration: 8000,
+          });
+          setStep("idle");
+          return;
+        }
+
         setStep("generating");
         soapMutation.mutate(text);
       } else if (data.transcript && data.transcript.trim().length > 0) {

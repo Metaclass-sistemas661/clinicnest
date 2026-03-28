@@ -247,7 +247,7 @@ export function useAudioRecorder({
  *   3. Repetição de palavras/números curtos (ex: "11 11 11 11 11")
  */
 export function isLikelyHallucination(transcript: string): boolean {
-  if (!transcript || transcript.trim().length < 20) return false;
+  if (!transcript || transcript.trim().length < 5) return false;
 
   const text = transcript.trim();
 
@@ -258,7 +258,7 @@ export function isLikelyHallucination(transcript: string): boolean {
   // Padrão 5: texto predominantemente numérico (>60% dos tokens são números)
   // Alucinação típica do Chirp com BT HFP: "19 20 21 22 ... 99 100"
   const tokens = text.split(/\s+/);
-  if (tokens.length >= 5) {
+  if (tokens.length >= 2) {
     const numericTokens = tokens.filter((t) => /^\d{1,6}$/.test(t)).length;
     if (numericTokens / tokens.length > 0.6) return true;
   }
