@@ -35,7 +35,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-teal-950 via-teal-900 to-cyan-950 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-teal-950 via-teal-900 to-cyan-950 backdrop-blur-xl border-b-0 sm:border-b sm:border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-[72px] sm:h-[88px] items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
@@ -469,10 +469,10 @@ export function Footer() {
 
 export function LandingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
       <PromoBanner />
-      <div className="pt-[124px] sm:pt-[140px]">
+      <div className="pt-[108px] sm:pt-[132px]">
         {children}
       </div>
       <Footer />
