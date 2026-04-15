@@ -17,9 +17,6 @@ export async function waitlistAutoBook(req: Request, res: Response) {
       if (req.method !== "POST") {
         return res.status(405).json({ error: "Método não permitido" });
       }
-      if (!(process.env.CLOUD_RUN_URL || 'https://clinicnest-api-294286835536.southamerica-east1.run.app') || !process.env.INTERNAL_API_KEY || '') {
-        return res.status(500).json({ error: "Configuração incompleta" });
-      }
       let body: { action: Action; waitlist_id: string; token?: string };
       try {
         body = req.body;

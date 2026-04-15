@@ -238,7 +238,8 @@ describe('Path Traversal Prevention', () => {
   ];
 
   for (const path of traversalPayloads) {
-    it(`blocks path "${path.replace(/[\x00-\x1f]/g, '\\x' + '??')}"`, async () => {
+    const sanitized = path.replace(new RegExp('[\\u0000-\\u001f]', 'g'), '?');
+    it(`blocks path "${sanitized}"`, async () => {
       const app = createAuthApp(user);
       const res = await request(app)
         .post('/api/storage/avatars')

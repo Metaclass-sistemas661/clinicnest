@@ -326,9 +326,6 @@ async function sendEmailViaResend(input: {
 export async function submitContactMessage(req: Request, res: Response) {
   try {
     const db = createDbClient();
-    if (!(process.env.CLOUD_RUN_URL || 'https://clinicnest-api-294286835536.southamerica-east1.run.app') || !process.env.INTERNAL_API_KEY || '') {
-      return res.status(500).json({ success: false, error: "Configuracao do servidor incompleta" });
-    }
         let body: SubmitContactBody;
         try {
           body = req.body;

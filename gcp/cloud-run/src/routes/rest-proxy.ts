@@ -406,7 +406,8 @@ export async function storageProxy(req: Request, res: Response) {
 
   // Path traversal protection
   const normalizedPath = rawPath.replace(/\\/g, '/');
-  if (normalizedPath.includes('..') || normalizedPath.startsWith('/') || /[\x00-\x1f]/.test(normalizedPath)) {
+  const controlCharRegex = new RegExp('[\\u0000-\\u001f]');
+  if (normalizedPath.includes('..') || normalizedPath.startsWith('/') || controlCharRegex.test(normalizedPath)) {
     return res.status(400).json({ error: 'Invalid file path' });
   }
 
