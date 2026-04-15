@@ -251,10 +251,6 @@ async function submitToRNDS(
 
 export async function rndsSubmit(req: Request, res: Response) {
   try {
-    const {} = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      };
       try {
         const { data: submissions, error: fetchError } = await db.rpc('get_pending_rnds_submissions', { p_limit: BATCH_SIZE });
 

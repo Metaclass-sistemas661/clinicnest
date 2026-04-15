@@ -1085,10 +1085,6 @@ export async function automationWorker(req: Request, res: Response) {
       const resendKey = process.env.RESEND_API_KEY ?? "";
       const publicUrl = (process.env.PUBLIC_APP_URL ?? "").replace(/\/$/, "");
 
-      if (!(process.env.CLOUD_RUN_URL || 'https://clinicnest-api-294286835536.southamerica-east1.run.app') || !process.env.INTERNAL_API_KEY || '') {
-        return res.status(500).json({ error: "Servidor não configurado" });
-      }
-
       if (!workerKey) {
         return res.status(500).json({ error: "AUTOMATION_WORKER_KEY não configurada" });
       }

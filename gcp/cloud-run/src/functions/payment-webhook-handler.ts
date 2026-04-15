@@ -10,10 +10,7 @@ import { createDbClient } from '../shared/db-builder';
  * Webhook handler unificado para todos os gateways de pagamento
  */
 
-const {} = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-asaas-access-token, x-pagseguro-signature, x-stone-signature",
-};
+
 
 type PaymentStatus = "pending" | "confirmed" | "received" | "overdue" | "refunded" | "cancelled" | "failed";
 

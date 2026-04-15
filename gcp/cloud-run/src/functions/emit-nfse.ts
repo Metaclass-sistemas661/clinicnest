@@ -3,10 +3,6 @@
 
 import { Request, Response } from 'express';
 import { createDbClient } from '../shared/db-builder';
-const {} = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const NFEIO_API_URL = "https://api.nfe.io/v1";
 

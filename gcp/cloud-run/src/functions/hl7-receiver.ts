@@ -4,10 +4,6 @@
 import { Request, Response } from 'express';
 import { adminQuery, userQuery } from '../shared/db';
 import { createDbClient } from '../shared/db-builder';
-const {} = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hl7-secret",
-};
 
 // HL7 Delimiters
 const HL7_DELIMITERS = {

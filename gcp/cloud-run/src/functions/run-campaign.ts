@@ -99,9 +99,7 @@ export async function runCampaign(req: Request, res: Response) {
     if (req.method !== "POST") {
       return res.status(405).json({ error: "Método não permitido" });
     }
-    if (!(process.env.CLOUD_RUN_URL || 'https://clinicnest-api-294286835536.southamerica-east1.run.app') || !process.env.INTERNAL_API_KEY || '') {
-      return res.status(500).json({ error: "Configuração do servidor incompleta" });
-    }
+
 
     const user = (req as any).user;
     if (!user?.id) {
