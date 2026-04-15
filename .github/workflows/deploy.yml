@@ -1,0 +1,377 @@
+name: CI/CD – Build, Test & Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: sistema-de-gestao-16e15
+  REGION: southamerica-east1
+  SERVICE: clinicnest-api
+  IMAGE_REGISTRY: southamerica-east1-docker.pkg.dev/sistema-de-gestao-16e15/clinicnest/clinicnest-api
+
+jobs:
+  # ────────────────────────────────────────────────────────────────
+  # Job 1 — Lint & Type-check (frontend + backend)
+  # ────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck frontend
+        run: npx tsc --noEmit
+
+      - name: Install backend dependencies
+        working-directory: gcp/cloud-run
+        run: npm ci
+
+      - name: Typecheck backend
+        working-directory: gcp/cloud-run
+        run: npx tsc --noEmit
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 2 — Unit Tests (depends on lint)
+  # ────────────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm run test -- --passWithNoTests
+
+      - name: Install backend dependencies
+        working-directory: gcp/cloud-run
+        run: npm ci
+
+      - name: Run backend tests
+        working-directory: gcp/cloud-run
+        run: npm test
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 3 — Build Backend Image (parallel with tests, depends on lint)
+  # ────────────────────────────────────────────────────────────────
+  build-backend:
+    name: Build Backend Image
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gcp/cloud-run/package-lock.json
+
+      - name: Build TypeScript
+        working-directory: gcp/cloud-run
+        run: |
+          npm ci
+          npm run build
+          test -f dist/server.js || { echo "❌ dist/server.js not found"; exit 1; }
+          echo "✅ Build output: $(find dist -name '*.js' | wc -l) JS files"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Build & push via Cloud Build
+        id: build
+        working-directory: gcp/cloud-run
+        run: |
+          IMAGE_TAG="${{ env.IMAGE_REGISTRY }}:${{ github.sha }}"
+          LATEST_TAG="${{ env.IMAGE_REGISTRY }}:latest"
+
+          gcloud builds submit \
+            --tag "$IMAGE_TAG" \
+            --project ${{ env.PROJECT_ID }} \
+            --timeout=600 \
+            --quiet
+
+          gcloud artifacts docker tags add "$IMAGE_TAG" "$LATEST_TAG" --quiet 2>/dev/null || true
+
+          echo "image=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "✅ Image pushed: $IMAGE_TAG"
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 4 — Build Frontend (depends on tests)
+  # ────────────────────────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required secrets
+        run: |
+          MISSING=""
+          [ -z "$VITE_API_BASE_URL" ] && MISSING="$MISSING VITE_API_BASE_URL"
+          [ -z "$VITE_FIREBASE_API_KEY" ] && MISSING="$MISSING VITE_FIREBASE_API_KEY"
+          [ -z "$VITE_FIREBASE_PROJECT_ID" ] && MISSING="$MISSING VITE_FIREBASE_PROJECT_ID"
+          [ -z "$VITE_FIREBASE_APP_ID" ] && MISSING="$MISSING VITE_FIREBASE_APP_ID"
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing required secrets:$MISSING"
+            exit 1
+          fi
+          echo "✅ All required secrets present"
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: sistema-de-gestao-16e15.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: sistema-de-gestao-16e15.firebasestorage.app
+          VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_PRODUCTION_URL: ${{ secrets.VITE_PRODUCTION_URL }}
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html || { echo "❌ dist/index.html not found"; exit 1; }
+          FILE_COUNT=$(find dist -type f | wc -l)
+          TOTAL_SIZE=$(du -sh dist | cut -f1)
+          echo "✅ Build verified: $FILE_COUNT files, $TOTAL_SIZE total"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 3
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 5 — Deploy API to Cloud Run (depends on tests + backend image)
+  # ────────────────────────────────────────────────────────────────
+  deploy-api:
+    name: Deploy API (Cloud Run)
+    needs: [test, build-backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image "${{ needs.build-backend.outputs.image }}" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --memory 1Gi \
+            --cpu 2 \
+            --min-instances 1 \
+            --max-instances 10 \
+            --timeout 300 \
+            --port 8080 \
+            --allow-unauthenticated \
+            --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:clinicnest-db \
+            --service-account clinicnest-api@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-env-vars "GCP_PROJECT_ID=${{ env.PROJECT_ID }},NODE_ENV=production,FRONTEND_URL=https://clinicnest.metaclass.com.br" \
+            --set-secrets "\
+              CLOUDSQL_CONNECTION_STRING=CLOUDSQL_CONNECTION_STRING:latest,\
+              CLOUDSQL_DB_PASSWORD=CLOUDSQL_DB_PASSWORD:latest,\
+              CRON_SECRET=CRON_SECRET:latest,\
+              RESEND_API_KEY=RESEND_API_KEY:latest,\
+              RESEND_FROM=RESEND_FROM:latest,\
+              ASAAS_API_KEY=ASAAS_API_KEY:latest,\
+              ASAAS_API_BASE_URL=ASAAS_API_BASE_URL:latest,\
+              ASAAS_BASE_URL=ASAAS_BASE_URL:latest,\
+              ASAAS_SANDBOX=ASAAS_SANDBOX:latest,\
+              ASAAS_WEBHOOK_TOKEN=ASAAS_WEBHOOK_TOKEN:latest,\
+              OPENAI_API_KEY=OPENAI_API_KEY:latest,\
+              ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,\
+              AUTOMATION_WORKER_KEY=AUTOMATION_WORKER_KEY:latest,\
+              EMAIL_FROM=EMAIL_FROM:latest,\
+              SITE_URL=SITE_URL:latest,\
+              PUBLIC_SITE_URL=PUBLIC_SITE_URL:latest,\
+              PUBLIC_APP_URL=PUBLIC_APP_URL:latest,\
+              GCP_SERVICE_ACCOUNT_KEY=GCP_SERVICE_ACCOUNT_KEY:latest,\
+              GCP_REGION=GCP_REGION:latest,\
+              GEMINI_MODEL=GEMINI_MODEL:latest,\
+              FIREBASE_API_KEY=FIREBASE_API_KEY:latest,\
+              FIREBASE_SERVICE_ACCOUNT_KEY=FIREBASE_SERVICE_ACCOUNT_KEY:latest,\
+              CLINIC_EMAIL_DOMAIN=CLINIC_EMAIL_DOMAIN:latest,\
+              SALES_CHATBOT_SECRET=SALES_CHATBOT_SECRET:latest,\
+              CONTACT_ADMIN_EMAIL=CONTACT_ADMIN_EMAIL:latest,\
+              CONTACT_EMAIL_FROM=CONTACT_EMAIL_FROM:latest,\
+              SUPPORT_EMAIL_FROM=SUPPORT_EMAIL_FROM:latest,\
+              SUPPORT_EMAIL_TO=SUPPORT_EMAIL_TO:latest,\
+              CORS_ALLOWED_ORIGINS=CORS_ALLOWED_ORIGINS:latest" \
+            --quiet
+
+      - name: Verify API health
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region ${{ env.REGION }} \
+            --format "value(status.url)")
+
+          REVISION=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region ${{ env.REGION }} \
+            --format "value(status.latestReadyRevisionName)")
+
+          echo "🔗 $SERVICE_URL | 📦 $REVISION"
+
+          for i in $(seq 1 5); do
+            HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
+              "$SERVICE_URL/health" --max-time 10 2>/dev/null || echo "000")
+            echo "Attempt $i/5: HTTP $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ API is healthy"
+              exit 0
+            fi
+
+            [ "$i" -lt 5 ] && sleep 10
+          done
+
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 6 — Preview Deploy (gate: backend + frontend ready)
+  # ────────────────────────────────────────────────────────────────
+  preview:
+    name: Preview Deploy
+    needs: [build-frontend, deploy-api]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Deployment gate
+        run: |
+          echo "✅ Backend API deployed and healthy"
+          echo "✅ Frontend build artifact ready"
+          echo "🚀 Proceeding to production deploy..."
+
+  # ────────────────────────────────────────────────────────────────
+  # Job 7 — Deploy Frontend to Firebase Hosting
+  # ────────────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend (Firebase Hosting)
+    needs: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://clinicnest.metaclass.com.br
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          target: clinicnest
+
+      - name: Verify site is live
+        run: |
+          SITE_URL="https://clinicnest.metaclass.com.br"
+          for i in $(seq 1 5); do
+            HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$SITE_URL" --max-time 10 2>/dev/null || echo "000")
+            echo "Attempt $i/5: HTTP $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Site is live at $SITE_URL"
+              exit 0
+            fi
+
+            [ "$i" -lt 5 ] && sleep 10
+          done
+
+          echo "⚠️ Site returned HTTP $HTTP_STATUS (may still be propagating)"
