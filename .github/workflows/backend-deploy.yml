@@ -64,6 +64,7 @@ jobs:
             gcp/cloud-run/package.json
             gcp/cloud-run/package-lock.json
             gcp/cloud-run/Dockerfile
+          include-hidden-files: false
           retention-days: 3
 
   # ──────────────────────────────────────────────────────────────
@@ -80,7 +81,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: cloud-run-dist
-          path: deploy/
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -96,7 +96,7 @@ jobs:
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       - name: Build and push Docker image
-        working-directory: deploy/gcp/cloud-run
+        working-directory: gcp/cloud-run
         run: |
           IMAGE="${{ env.REGISTRY }}:${{ github.sha }}"
           docker build -t "$IMAGE" -t "${{ env.REGISTRY }}:latest" .
