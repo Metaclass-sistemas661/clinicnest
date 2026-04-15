@@ -136,11 +136,43 @@ jobs:
           IMAGE_TAG="${{ env.IMAGE_REGISTRY }}:${{ github.sha }}"
           LATEST_TAG="${{ env.IMAGE_REGISTRY }}:latest"
 
-          gcloud builds submit \
+          # Submit async (SA cannot stream logs)
+          BUILD_OP=$(gcloud builds submit \
             --tag "$IMAGE_TAG" \
             --project ${{ env.PROJECT_ID }} \
             --timeout=600 \
-            --quiet
+            --async \
+            --format="value(id)" \
+            --quiet)
+
+          echo "⏳ Cloud Build started: $BUILD_OP"
+
+          # Poll until complete (max 10 min)
+          for i in $(seq 1 60); do
+            STATUS=$(gcloud builds describe "$BUILD_OP" \
+              --project ${{ env.PROJECT_ID }} \
+              --format="value(status)" 2>/dev/null || echo "UNKNOWN")
+
+            echo "  [$i/60] Status: $STATUS"
+
+            case "$STATUS" in
+              SUCCESS)
+                echo "✅ Cloud Build succeeded"
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                echo "❌ Cloud Build failed with status: $STATUS"
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          if [ "$STATUS" != "SUCCESS" ]; then
+            echo "❌ Cloud Build timed out (status: $STATUS)"
+            exit 1
+          fi
 
           gcloud artifacts docker tags add "$IMAGE_TAG" "$LATEST_TAG" --quiet 2>/dev/null || true
 
