@@ -25,12 +25,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
 import { Send, Plus, Loader2, Eye, Mail, Users, UserCheck } from "lucide-react";
-import type { CampaignRow, CampaignDeliveryRow, CampaignStatus } from "@/types/supabase-extensions";
+import type { CampaignRow, CampaignDeliveryRow, CampaignStatus } from "@/types/database-extensions";
 import EmailBuilder from "@/components/campanhas/EmailBuilder";
 
 const statusConfig: Record<CampaignStatus, { label: string; variant: "default" | "secondary" | "outline" }> = {
@@ -80,8 +80,7 @@ export default function Campanhas() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const db: any = supabase;
-      const { data, error } = await db
+      const { data, error } = await api
         .from("campaigns")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -106,7 +105,7 @@ export default function Campanhas() {
     if (!profile?.tenant_id) return;
     setIsSaving(true);
     try {
-      const db: any = supabase;
+      const db: any = api;
       const { error } = await db.from("campaigns").insert({
         tenant_id: profile.tenant_id,
         name: payload.name,
@@ -134,7 +133,7 @@ export default function Campanhas() {
     if (!profile?.tenant_id) return;
     setIsLoadingPatients(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("id, name, email")
         .eq("tenant_id", profile.tenant_id)
@@ -196,7 +195,7 @@ export default function Campanhas() {
 
   // ── Auth header helper ──────────────────────────────────────────────────────
   const getAuthHeaders = async () => {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await api.auth.getSession();
     if (error) throw error;
     const token = data.session?.access_token;
     if (!token) throw new Error("Sessão ausente. Faça login novamente.");
@@ -210,7 +209,7 @@ export default function Campanhas() {
     setIsSending(true);
     try {
       const headers = await getAuthHeaders();
-      const { data, error } = await supabase.functions.invoke("run-campaign", {
+      const { data, error } = await api.functions.invoke("run-campaign", {
         headers,
         body: { campaignId: sendCampaign.id, testEmail: testEmail.trim() },
       });
@@ -246,7 +245,7 @@ export default function Campanhas() {
         if (afterClientId) body.afterClientId = afterClientId;
       }
 
-      const { data, error } = await supabase.functions.invoke("run-campaign", { headers, body });
+      const { data, error } = await api.functions.invoke("run-campaign", { headers, body });
       if (error) { toast.error("Erro ao enviar campanha", { description: normalizeError(error, "Verifique os dados e tente novamente.") }); return; }
       if (!data?.success) { toast.error("Erro ao enviar campanha", { description: normalizeError(data?.error, "O servidor não conseguiu processar o envio.") }); return; }
 
@@ -275,7 +274,7 @@ export default function Campanhas() {
     setIsDeliveriesOpen(true);
     setIsLoadingDeliveries(true);
     try {
-      const db: any = supabase;
+      const db: any = api;
       const { data, error } = await db
         .from("campaign_deliveries")
         .select("*")

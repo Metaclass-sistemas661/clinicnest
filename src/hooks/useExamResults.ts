@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -77,7 +77,7 @@ export function useExamResults(options?: {
   const query = useQuery({
     queryKey,
     queryFn: async (): Promise<ExamResult[]> => {
-      let q = (supabase as any)
+      let q = (api as any)
         .from("exam_results")
         .select(`
           *,
@@ -131,7 +131,7 @@ export function useExamResults(options?: {
     const ext = file.name.split(".").pop()?.toLowerCase() || "pdf";
     const path = `${tenantId}/${examId}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await api.storage
       .from("exam-files")
       .upload(path, file, { upsert: true });
 
@@ -144,7 +144,7 @@ export function useExamResults(options?: {
       throw uploadError;
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = api.storage
       .from("exam-files")
       .getPublicUrl(path);
 
@@ -176,7 +176,7 @@ export function useExamResults(options?: {
         notes: rest.notes || null,
       };
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (api as any)
         .from("exam_results")
         .insert(insertData)
         .select("id")
@@ -188,7 +188,7 @@ export function useExamResults(options?: {
       if (file && data?.id) {
         try {
           const { url, name } = await uploadFile(file, (data as any).id);
-          await (supabase as any)
+          await (api as any)
             .from("exam_results")
             .update({ file_url: url, file_name: name })
             .eq("id", (data as any).id);
@@ -253,7 +253,7 @@ export function useExamResults(options?: {
 
       if (Object.keys(updateData).length === 0) return;
 
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("exam_results")
         .update(updateData)
         .eq("id", id)
@@ -274,7 +274,7 @@ export function useExamResults(options?: {
   // ─── Deletar exame ──────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("exam_results")
         .delete()
         .eq("id", id)

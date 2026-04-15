@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 import { Save, RotateCcw, Shield, Check, X } from "lucide-react";
@@ -89,7 +89,7 @@ export default function GerenciarPermissoes({ embedded = false }: { embedded?: b
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("role_templates")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -128,7 +128,7 @@ export default function GerenciarPermissoes({ embedded = false }: { embedded?: b
     setIsSaving(true);
     try {
       const perms = editedTemplates[type];
-      const { error } = await (supabase as any).rpc("update_role_template_permissions", {
+      const { error } = await (api as any).rpc("update_role_template_permissions", {
         p_professional_type: type,
         p_permissions: perms,
       });

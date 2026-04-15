@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Trophy, Loader2, Save } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -43,7 +43,7 @@ export function GamificationSettings({ isAdmin = false }: GamificationSettingsPr
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({ gamification_enabled: tenantGamificationEnabled })
         .eq("id", tenant.id);
@@ -65,7 +65,7 @@ export function GamificationSettings({ isAdmin = false }: GamificationSettingsPr
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("profiles")
         .update({ show_gamification_popups: userGamificationEnabled })
         .eq("id", profile.id);

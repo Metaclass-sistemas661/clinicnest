@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { toast } from 'sonner';
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
@@ -68,7 +68,7 @@ export function useEnabledModules() {
     [enabledModules],
   );
 
-  // Persist to Supabase
+  // Persist to database
   const persist = useCallback(
     async (modules: string[] | null, newClinicType?: string) => {
       if (!tenant?.id || !isAdmin) return;
@@ -78,7 +78,7 @@ export function useEnabledModules() {
         if (newClinicType !== undefined) {
           update.clinic_type = newClinicType;
         }
-        const { error } = await supabase
+        const { error } = await api
           .from('tenants')
           .update(update as any)
           .eq('id', tenant.id);
@@ -125,7 +125,7 @@ export function useEnabledModules() {
       setClinicType(type);
       setIsSaving(true);
       try {
-        const { error } = await supabase
+        const { error } = await api
           .from('tenants')
           .update({ clinic_type: type } as any)
           .eq('id', tenant.id);

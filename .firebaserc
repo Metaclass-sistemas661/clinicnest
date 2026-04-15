@@ -6,9 +6,10 @@
     "sistema-de-gestao-16e15": {
       "hosting": {
         "clinicnest": [
-          "sistema-de-gestao-16e15"
+          "clinicnest-app"
         ]
       }
     }
-  }
+  },
+  "etags": {}
 }

@@ -1,0 +1,14 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+src/
+*.ts
+!dist/**
+tsconfig.json
+tsconfig*.json
+vitest.config.*
+eslint.config.*
+.env
+.env.*
+README.md

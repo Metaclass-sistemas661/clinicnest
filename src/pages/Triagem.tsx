@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import {
   Activity,
   Plus,
@@ -141,7 +141,7 @@ export default function Triagem() {
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("id, name, phone")
         .eq("tenant_id", profile.tenant_id)
@@ -157,7 +157,7 @@ export default function Triagem() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("triage_records")
         .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
@@ -199,7 +199,7 @@ export default function Triagem() {
     if (!profile?.tenant_id) return;
     try {
       const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("appointments")
         .select("id, patient_id, scheduled_at, patient:patients(name), procedure:procedures(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -227,7 +227,7 @@ export default function Triagem() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("triage_records").insert({
+      const { error } = await api.from("triage_records").insert({
         tenant_id: profile!.tenant_id,
         patient_id: formData.patient_id,
         appointment_id: formData.appointment_id && formData.appointment_id !== "none" ? formData.appointment_id : null,
@@ -274,7 +274,7 @@ export default function Triagem() {
   const handleStartAtendimento = async (t: Triagem) => {
     try {
       // Marcar triagem como em_atendimento
-      await supabase
+      await api
         .from("triage_records")
         .update({ status: "em_atendimento" })
         .eq("id", t.id);
@@ -295,7 +295,7 @@ export default function Triagem() {
 
   const handleMarkConcluida = async (triageId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("triage_records")
         .update({ status: "concluida" })
         .eq("id", triageId);

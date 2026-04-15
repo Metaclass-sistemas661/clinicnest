@@ -32,7 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { UserCog, Plus, Loader2, Mail, Shield, ShieldCheck, DollarSign, ArrowDown, AlertTriangle, Check, X, KeyRound, Copy, Lock, LockOpen, Settings2, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -235,18 +235,18 @@ export default function Equipe() {
     try {
       // Fetch profiles, roles, and commissions
       const [profilesRes, rolesRes, commissionsRes] = await Promise.all([
-        supabase
+        api
           .from("profiles")
           .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,professional_type,council_type,council_number,council_state,is_readonly,readonly_reason,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name")
           .limit(200),
-        supabase
+        api
           .from("user_roles")
           .select("id,user_id,tenant_id,role,created_at")
           .eq("tenant_id", profile.tenant_id)
           .limit(500),
-        supabase
+        api
           .from("professional_commissions")
           .select("id, user_id, type, value, payment_type, salary_amount, salary_payment_day, default_payment_method")
           .eq("tenant_id", profile.tenant_id)
@@ -313,7 +313,7 @@ export default function Equipe() {
         role: formData.role,
       });
 
-      const { data, error } = await supabase.functions.invoke("invite-team-member", {
+      const { data, error } = await api.functions.invoke("invite-team-member", {
         body: {
           email: formData.email.trim(),
           password: formData.password,
@@ -324,10 +324,6 @@ export default function Equipe() {
           council_type: formData.council_type || undefined,
           council_number: formData.council_number || undefined,
           council_state: formData.council_state || undefined,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
       });
 
@@ -394,7 +390,7 @@ export default function Equipe() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("user_roles")
         .update({ role: newRole })
         .eq("user_id", userId)
@@ -530,7 +526,7 @@ export default function Equipe() {
 
       if (selectedMember.commission) {
         // Update existing commission
-        const { error } = await supabase
+        const { error } = await api
           .from("professional_commissions")
           .update(commissionPayload)
           .eq("id", selectedMember.commission.id);
@@ -539,7 +535,7 @@ export default function Equipe() {
         toast.success(commissionData.payment_type === "salary" ? "Salário atualizado com sucesso!" : "Comissão atualizada com sucesso!");
       } else {
         // Create new commission
-        const { error } = await supabase
+        const { error } = await api
           .from("professional_commissions")
           .insert(commissionPayload);
 
@@ -569,7 +565,7 @@ export default function Equipe() {
   const handleOpenPermOverride = async (member: TeamMember) => {
     setOverrideMember(member);
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("permission_overrides")
         .select("resource,can_view,can_create,can_edit,can_delete")
         .eq("user_id", member.user_id)
@@ -603,7 +599,7 @@ export default function Equipe() {
       for (const r of PERMISSION_PREVIEW_RESOURCES) {
         const perm = overrideData[r.key];
         if (!perm) continue;
-        const { error } = await supabase
+        const { error } = await api
           .from("permission_overrides")
           .upsert({
             tenant_id: profile.tenant_id,
@@ -630,7 +626,7 @@ export default function Equipe() {
     if (!cloneSource || !cloneTarget || !profile?.tenant_id) return;
     setIsSaving(true);
     try {
-      const { data, error } = await (supabase as any).rpc("clone_permission_overrides", {
+      const { data, error } = await (api as any).rpc("clone_permission_overrides", {
         p_source_user_id: cloneSource.user_id,
         p_target_user_id: cloneTarget,
       });
@@ -652,7 +648,7 @@ export default function Equipe() {
     setIsSaving(true);
     const newReadonly = !readonlyMember.is_readonly;
     try {
-      const { error } = await (supabase as any).rpc("set_user_readonly", {
+      const { error } = await (api as any).rpc("set_user_readonly", {
         p_target_user_id: readonlyMember.user_id,
         p_readonly: newReadonly,
         p_reason: newReadonly ? readonlyReason || null : null,
@@ -675,14 +671,10 @@ export default function Equipe() {
     if (!removeMember || !session?.access_token) return;
     setIsRemoving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("remove-team-member", {
+      const { data, error } = await api.functions.invoke("remove-team-member", {
         body: {
           target_user_id: removeMember.user_id,
           mode: removeMode,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
       });
       if (error) {
@@ -722,14 +714,10 @@ export default function Equipe() {
     }
     setIsResettingPw(true);
     try {
-      const { data, error } = await supabase.functions.invoke("reset-team-member-password", {
+      const { data, error } = await api.functions.invoke("reset-team-member-password", {
         body: {
           target_user_id: resetPwMember.user_id,
           new_password: newPassword,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
       });
       if (error) {
@@ -761,7 +749,7 @@ export default function Equipe() {
     if (!profile?.tenant_id) return;
     try {
       const council = COUNCIL_BY_TYPE[newType] || null;
-      const { error } = await supabase
+      const { error } = await api
         .from("profiles")
         .update({
           professional_type: newType,

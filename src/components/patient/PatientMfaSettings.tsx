@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShieldCheck, Loader2, Smartphone, X, CheckCircle2, AlertTriangle } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import {
@@ -30,7 +30,7 @@ export function PatientMfaSettings() {
 
   const checkMfaStatus = useCallback(async () => {
     try {
-      const { data, error } = await supabasePatient.auth.mfa.listFactors();
+      const { data, error } = await apiPatient.auth.mfa.listFactors();
       if (error) {
         logger.error("[MFA] listFactors error:", error);
         setStatus("disabled");
@@ -59,7 +59,7 @@ export function PatientMfaSettings() {
   const handleEnroll = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabasePatient.auth.mfa.enroll({
+      const { data, error } = await apiPatient.auth.mfa.enroll({
         factorType: "totp",
         friendlyName: "ClinicNest Portal",
       });
@@ -90,13 +90,13 @@ export function PatientMfaSettings() {
 
     setIsLoading(true);
     try {
-      const challenge = await supabasePatient.auth.mfa.challenge({ factorId });
+      const challenge = await apiPatient.auth.mfa.challenge({ factorId });
       if (challenge.error) {
         toast.error("Erro ao criar desafio MFA", { description: challenge.error.message });
         return;
       }
 
-      const verify = await supabasePatient.auth.mfa.verify({
+      const verify = await apiPatient.auth.mfa.verify({
         factorId,
         challengeId: challenge.data.id,
         code: verifyCode,
@@ -129,13 +129,13 @@ export function PatientMfaSettings() {
     setIsLoading(true);
     try {
       // Verify the code first
-      const challenge = await supabasePatient.auth.mfa.challenge({ factorId });
+      const challenge = await apiPatient.auth.mfa.challenge({ factorId });
       if (challenge.error) {
         toast.error("Erro ao verificar", { description: challenge.error.message });
         return;
       }
 
-      const verify = await supabasePatient.auth.mfa.verify({
+      const verify = await apiPatient.auth.mfa.verify({
         factorId,
         challengeId: challenge.data.id,
         code: disableCode,
@@ -147,7 +147,7 @@ export function PatientMfaSettings() {
       }
 
       // Now unenroll
-      const { error } = await supabasePatient.auth.mfa.unenroll({ factorId });
+      const { error } = await apiPatient.auth.mfa.unenroll({ factorId });
       if (error) {
         toast.error("Erro ao desativar 2FA", { description: error.message });
         return;
@@ -170,7 +170,7 @@ export function PatientMfaSettings() {
     // Unenroll the unverified factor
     if (factorId) {
       try {
-        await supabasePatient.auth.mfa.unenroll({ factorId });
+        await apiPatient.auth.mfa.unenroll({ factorId });
       } catch {
         // ignore
       }

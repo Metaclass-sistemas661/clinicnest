@@ -16,7 +16,7 @@ import {
   UserCheck,
   ArrowRight,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -94,7 +94,7 @@ export default function ClinicaAutonoma() {
     queryKey: ["autonomous-config", profile?.tenant_id],
     queryFn: async () => {
       if (!profile?.tenant_id) return DEFAULT_CONFIG;
-      const { data } = await supabase
+      const { data } = await api
         .from("tenants")
         .select("autonomous_config")
         .eq("id", profile.tenant_id)
@@ -106,7 +106,7 @@ export default function ClinicaAutonoma() {
 
   const updateMutation = useMutation({
     mutationFn: async (newConfig: AutonomousConfig) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({ autonomous_config: newConfig } as never)
         .eq("id", profile!.tenant_id);

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -56,7 +56,7 @@ export function MeuFinanceiroMobile() {
       const monthEnd = endOfMonth(now);
 
       // Comissões pendentes
-      const { data: pendingCommissions } = await supabase
+      const { data: pendingCommissions } = await api
         .from("commission_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -70,7 +70,7 @@ export function MeuFinanceiroMobile() {
       setPendingTotal(pending);
 
       // Recebido este mês
-      const { data: paidCommissions } = await supabase
+      const { data: paidCommissions } = await api
         .from("commission_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -79,7 +79,7 @@ export function MeuFinanceiroMobile() {
         .gte("payment_date", monthStart.toISOString())
         .lte("payment_date", monthEnd.toISOString());
 
-      const { data: paidSalaries } = await supabase
+      const { data: paidSalaries } = await api
         .from("salary_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -99,7 +99,7 @@ export function MeuFinanceiroMobile() {
       setPaidThisMonth(paidComm + paidSal);
 
       // Últimos pagamentos
-      const { data: recentComm } = await supabase
+      const { data: recentComm } = await api
         .from("commission_payments")
         .select(`
           id,
@@ -117,7 +117,7 @@ export function MeuFinanceiroMobile() {
         .order("created_at", { ascending: false })
         .limit(5);
 
-      const { data: recentSal } = await supabase
+      const { data: recentSal } = await api
         .from("salary_payments")
         .select("id, amount, status, payment_date, payment_month, payment_year")
         .eq("tenant_id", profile.tenant_id)

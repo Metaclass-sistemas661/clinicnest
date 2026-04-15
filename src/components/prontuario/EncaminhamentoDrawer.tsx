@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowRightLeft, Printer, Save, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -141,7 +141,7 @@ export function EncaminhamentoDrawer({
     setIsSaving(true);
     try {
       if (tenantId && profile?.id) {
-        const { error } = await supabase.from("referrals").insert({
+        const { error } = await api.from("referrals").insert({
           tenant_id: tenantId,
           patient_id: context.patientId,
           from_professional: profile.id,

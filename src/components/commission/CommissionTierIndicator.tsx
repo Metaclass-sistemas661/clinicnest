@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { logger } from "@/lib/logger";
 import { TrendingUp, Award, Target, ChevronUp, Loader2, Info } from "lucide-react";
@@ -50,7 +50,7 @@ export function CommissionTierIndicator({ className, compact = false }: TierIndi
       const monthEnd = endOfMonth(now).toISOString();
 
       // Buscar faturamento do mês
-      const { data: appointments, error: aptError } = await supabase
+      const { data: appointments, error: aptError } = await api
         .from("appointments")
         .select("price")
         .eq("tenant_id", profile.tenant_id)
@@ -65,7 +65,7 @@ export function CommissionTierIndicator({ className, compact = false }: TierIndi
       setMonthlyRevenue(revenue);
 
       // Buscar regra escalonada do profissional
-      const { data: rules, error: rulesError } = await supabase
+      const { data: rules, error: rulesError } = await api
         .from("commission_rules")
         .select("id, tier_config, rule_type")
         .eq("tenant_id", profile.tenant_id)

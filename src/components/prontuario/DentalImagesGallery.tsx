@@ -25,7 +25,7 @@ import {
   Camera, Image as ImageIcon, Upload, Trash2, Loader2, 
   ZoomIn, ZoomOut, RotateCw, Download, X, Eye, FileX2
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 
@@ -112,7 +112,7 @@ export function DentalImagesGallery({
     if (!tenantId || !patientId) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc('get_client_dental_images', {
+      const { data, error } = await api.rpc('get_client_dental_images', {
         p_tenant_id: tenantId,
         p_client_id: patientId,
       });
@@ -152,7 +152,7 @@ export function DentalImagesGallery({
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${tenantId}/${patientId}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from('dental-images')
         .upload(filePath, uploadForm.file);
 
@@ -162,7 +162,7 @@ export function DentalImagesGallery({
         ? uploadForm.tooth_numbers.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n))
         : null;
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await api
         .from('dental_images')
         .insert({
           tenant_id: tenantId,
@@ -209,7 +209,7 @@ export function DentalImagesGallery({
     setRotation(0);
     
     try {
-      const { data } = await supabase.storage
+      const { data } = await api.storage
         .from('dental-images')
         .createSignedUrl(image.file_path, 3600);
       
@@ -227,8 +227,8 @@ export function DentalImagesGallery({
     if (!confirm("Deseja realmente excluir esta imagem?")) return;
 
     try {
-      await supabase.storage.from('dental-images').remove([image.file_path]);
-      await supabase.from('dental_images').delete().eq('id', image.id);
+      await api.storage.from('dental-images').remove([image.file_path]);
+      await api.from('dental_images').delete().eq('id', image.id);
       toast.success("Imagem excluída");
       await fetchImages();
     } catch (err: any) {
@@ -509,7 +509,7 @@ function ImageCard({ image, onView, onDelete, readOnly }: {
   useEffect(() => {
     const loadThumb = async () => {
       try {
-        const { data } = await supabase.storage
+        const { data } = await api.storage
           .from('dental-images')
           .createSignedUrl(image.file_path, 3600);
         if (data?.signedUrl) setThumbUrl(data.signedUrl);

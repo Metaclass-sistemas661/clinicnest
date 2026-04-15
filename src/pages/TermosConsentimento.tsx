@@ -29,9 +29,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { upsertConsentTemplate } from "@/lib/supabase-typed-rpc";
+import { upsertConsentTemplate } from "@/lib/typed-rpc";
 import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import type { ConsentTemplate } from "@/types/database";
@@ -96,7 +96,7 @@ export default function TermosConsentimento() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("consent_templates")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -242,7 +242,7 @@ export default function TermosConsentimento() {
         const fileExt = formData.pdf_file.name.split(".").pop();
         const fileName = `${profile.tenant_id}/${Date.now()}_${formData.slug}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await api.storage
           .from("consent-pdfs")
           .upload(fileName, formData.pdf_file);
 
@@ -256,7 +256,7 @@ export default function TermosConsentimento() {
 
         // Delete old PDF if replacing
         if (editingTemplate?.pdf_storage_path && editingTemplate.pdf_storage_path !== pdfStoragePath) {
-          await supabase.storage.from("consent-pdfs").remove([editingTemplate.pdf_storage_path]);
+          await api.storage.from("consent-pdfs").remove([editingTemplate.pdf_storage_path]);
         }
       }
 
@@ -326,7 +326,7 @@ export default function TermosConsentimento() {
     if (!profile?.tenant_id || templates.length === 0) return;
     const fetchCounts = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("patient_consents")
           .select("template_id")
           .eq("tenant_id", profile.tenant_id);
@@ -673,7 +673,7 @@ export default function TermosConsentimento() {
                               variant="outline"
                               size="sm"
                               onClick={async () => {
-                                const { data } = await supabase.storage
+                                const { data } = await api.storage
                                   .from("consent-pdfs")
                                   .createSignedUrl(formData.pdf_storage_path!, 60);
                                 if (data?.signedUrl) window.open(data.signedUrl, "_blank");
@@ -826,7 +826,7 @@ export default function TermosConsentimento() {
                         <Button
                           variant="outline"
                           onClick={async () => {
-                            const { data } = await supabase.storage
+                            const { data } = await api.storage
                               .from("consent-pdfs")
                               .createSignedUrl(previewTemplate.pdf_storage_path!, 60);
                             if (data?.signedUrl) window.open(data.signedUrl, "_blank");

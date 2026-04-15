@@ -15,7 +15,7 @@ import {
   Building2,
   History,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -60,7 +60,7 @@ export default function PatientTeleconsulta() {
     setIsLoading(true);
     try {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_telemedicine_appointments", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_telemedicine_appointments", {
         p_date: today,
       });
 
@@ -80,7 +80,7 @@ export default function PatientTeleconsulta() {
     try {
       // Buscar consultas passadas com telemedicina via get_patient_appointments
       const now = new Date().toISOString();
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_appointments", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_appointments", {
         p_from: null,
         p_to: now,
         p_status: null,
@@ -104,7 +104,7 @@ export default function PatientTeleconsulta() {
   const joinCall = async (appt: TelemedicineAppt) => {
     setJoiningId(appt.id);
     try {
-      const { data, error } = await supabasePatient.functions.invoke("twilio-video-token", {
+      const { data, error } = await apiPatient.functions.invoke("twilio-video-token", {
         body: { appointment_id: appt.id, role: "patient" },
       });
 

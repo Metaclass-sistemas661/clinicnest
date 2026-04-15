@@ -32,9 +32,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db: any = supabase;
+const db: any = api;
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -226,7 +226,7 @@ export function FinanceiroBillsReceivableTab() {
     if (!pixBill || !pixCustomerName.trim()) { toast.error("Informe o nome do paciente para gerar a cobrança PIX"); return; }
     setIsPixLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("asaas-pix", {
+      const { data, error: fnError } = await api.functions.invoke("asaas-pix", {
         body: { action: "create_charge", customer_name: pixCustomerName.trim(), customer_cpf_cnpj: pixCustomerCpf.trim() || undefined, value: pixBill.amount, due_date: pixBill.due_date, description: pixBill.description },
       });
       if (fnError || !data?.success) throw new Error(data?.error ?? fnError?.message ?? "Erro ao gerar cobrança");

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, DollarSign, CreditCard, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import type { Appointment } from "@/types/database";
@@ -76,7 +76,7 @@ export function RegisterPaymentDialog({
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.rpc("register_appointment_payment", {
+      const { data, error } = await api.rpc("register_appointment_payment", {
         p_appointment_id: appointment.id,
         p_amount: parsedAmount,
         p_payment_method: paymentMethod,

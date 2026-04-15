@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -153,7 +153,7 @@ export default function Automacoes() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("automations")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -173,7 +173,7 @@ export default function Automacoes() {
     const next = !row.is_active;
     setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, is_active: next } : r)));
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("automations")
         .update({ is_active: next })
         .eq("id", row.id)
@@ -219,7 +219,7 @@ export default function Automacoes() {
         is_active: true,
       };
 
-      const { error } = await supabase.from("automations").insert(payload as any);
+      const { error } = await api.from("automations").insert(payload as any);
       if (error) throw error;
 
       toast.success("Automação criada!");

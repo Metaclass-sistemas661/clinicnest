@@ -14,7 +14,7 @@ import {
   Heart,
   ShieldCheck,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -58,7 +58,7 @@ export default function TeleconsultaPublica() {
 
   const validateToken = async () => {
     try {
-      const { data, error: rpcError } = await (supabase as any).rpc(
+      const { data, error: rpcError } = await (api as any).rpc(
         "get_appointment_by_telemedicine_token",
         { p_token: token }
       );
@@ -83,7 +83,7 @@ export default function TeleconsultaPublica() {
     if (!appointment || !token) return;
     setIsJoining(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("twilio-video-token", {
+      const { data, error: fnError } = await api.functions.invoke("twilio-video-token", {
         body: {
           appointment_id: appointment.id,
           role: "patient",

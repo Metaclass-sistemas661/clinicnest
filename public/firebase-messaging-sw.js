@@ -4,14 +4,14 @@
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
 
-// Configuração será injetada pelo build ou lida do IndexedDB
+// Configuração hardcoded (Service Worker não tem acesso a import.meta.env)
 const firebaseConfig = {
-  apiKey: self.FIREBASE_API_KEY || '',
-  authDomain: self.FIREBASE_AUTH_DOMAIN || '',
-  projectId: self.FIREBASE_PROJECT_ID || '',
-  storageBucket: self.FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: self.FIREBASE_APP_ID || '',
+  apiKey: 'AIzaSyDJTFvPVfdqn2Rn8EJ5Z4iZdpB68S2w284',
+  authDomain: 'sistema-de-gestao-16e15.firebaseapp.com',
+  projectId: 'sistema-de-gestao-16e15',
+  storageBucket: 'sistema-de-gestao-16e15.firebasestorage.app',
+  messagingSenderId: '294286835536',
+  appId: '1:294286835536:web:43d8d44cae7b8330f8b655',
 };
 
 // Tentar ler config do IndexedDB (salvo pelo app)

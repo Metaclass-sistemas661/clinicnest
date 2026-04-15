@@ -15,8 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import { api } from "@/integrations/gcp/client";
+import type { Json } from "@/integrations/gcp/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -218,7 +218,7 @@ export default function Auditoria() {
 
     try {
       const nextPage = reset ? 0 : pageRef.current;
-      let q = supabase
+      let q = api
         .from("audit_logs")
         .select("id,tenant_id,actor_user_id,action,entity_type,entity_id,metadata,created_at")
         .eq("tenant_id", profile!.tenant_id)
@@ -265,7 +265,7 @@ export default function Auditoria() {
   // Fetch team members for filter dropdown
   useEffect(() => {
     if (!canUse) return;
-    supabase
+    api
       .from("profiles")
       .select("user_id, full_name")
       .eq("tenant_id", profile!.tenant_id)
@@ -278,7 +278,7 @@ export default function Auditoria() {
     if (!canUse) return;
     setClinicalLoading(true);
     try {
-      const { data, error } = await (supabase as any).rpc("get_clinical_access_report", {
+      const { data, error } = await (api as any).rpc("get_clinical_access_report", {
         p_start_date: `${startDate}T00:00:00.000Z`,
         p_end_date: `${endDate}T23:59:59.999Z`,
         p_professional_id: clinicalProfFilter !== "all" ? clinicalProfFilter : null,
@@ -381,7 +381,7 @@ export default function Auditoria() {
     metadata?: Record<string, unknown>
   ) => {
     if (!tenant?.id) return;
-    const { error } = await supabase.rpc("log_admin_action", {
+    const { error } = await api.rpc("log_admin_action", {
       p_tenant_id: tenant.id,
       p_action: action,
       p_entity_type: entityType,
@@ -399,7 +399,7 @@ export default function Auditoria() {
 
     try {
       const [requestsRes, retentionRes] = await Promise.all([
-        supabase
+        api
           .from("lgpd_data_requests")
           .select(
             "id, requester_user_id, requester_email, request_type, request_details, status, assigned_admin_user_id, resolution_notes, requested_at, due_at, sla_days, resolved_at"
@@ -407,7 +407,7 @@ export default function Auditoria() {
           .eq("tenant_id", tenant.id)
           .order("requested_at", { ascending: false })
           .limit(50),
-        supabase
+        api
           .from("lgpd_retention_policies")
           .select(
             "tenant_id, client_data_retention_days, financial_data_retention_days, audit_log_retention_days, auto_cleanup_enabled, last_reviewed_at"
@@ -466,7 +466,7 @@ export default function Auditoria() {
         created_by: user.id,
       };
 
-      const { error } = await supabase
+      const { error } = await api
         .from("lgpd_retention_policies")
         .upsert(payload, { onConflict: "tenant_id" });
 
@@ -499,7 +499,7 @@ export default function Auditoria() {
     try {
       const willBeResolved = draft.status === "completed" || draft.status === "rejected";
 
-      const { error } = await supabase
+      const { error } = await api
         .from("lgpd_data_requests")
         .update({
           status: draft.status,
@@ -535,7 +535,7 @@ export default function Auditoria() {
     const loadingKey = `${request.id}:${format}`;
     setExportingRequestKey(loadingKey);
     try {
-      const { data, error } = await supabase.rpc("export_lgpd_data_subject", {
+      const { data, error } = await api.rpc("export_lgpd_data_subject", {
         p_tenant_id: tenant.id,
         p_target_user_id: request.requester_user_id,
         p_format: format,
@@ -587,7 +587,7 @@ export default function Auditoria() {
 
     setPreviewingRequestId(request.id);
     try {
-      const { data, error } = await supabase.rpc("preview_lgpd_anonymization", {
+      const { data, error } = await api.rpc("preview_lgpd_anonymization", {
         p_tenant_id: tenant.id,
         p_target_user_id: request.requester_user_id,
       });
@@ -621,7 +621,7 @@ export default function Auditoria() {
 
     setExecutingAnonymizationRequestId(request.id);
     try {
-      const { error } = await supabase.rpc("execute_lgpd_anonymization", {
+      const { error } = await api.rpc("execute_lgpd_anonymization", {
         p_tenant_id: tenant.id,
         p_target_user_id: request.requester_user_id,
         p_confirmation_token: confirmation,

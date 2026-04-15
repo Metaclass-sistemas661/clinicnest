@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import {
   CheckCircle2,
@@ -79,7 +79,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data } = await (api as any)
           .from("tenants")
           .select("nfeio_api_key, nfeio_company_id, nfeio_active, nfeio_auto_emit, nfeio_default_service_code, nfeio_certificate_expires")
           .eq("id", tenantId)
@@ -109,7 +109,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
 
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("tenants")
         .update({
           nfeio_api_key: apiKey.trim(),
@@ -203,7 +203,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
       const certInfo = await client.verificarCertificado(companyId);
       
       if (certInfo.hasCertificate) {
-        await (supabase as any)
+        await (api as any)
           .from("tenants")
           .update({ nfeio_certificate_expires: certInfo.expiresOn })
           .eq("id", tenantId);
@@ -224,7 +224,7 @@ export function NFSeConfig({ tenantId }: NFSeConfigProps) {
   const handleDisconnect = async () => {
     setIsSaving(true);
     try {
-      await (supabase as any)
+      await (api as any)
         .from("tenants")
         .update({
           nfeio_api_key: null,

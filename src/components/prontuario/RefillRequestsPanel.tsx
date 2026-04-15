@@ -14,7 +14,7 @@ import {
   Loader2,
   User,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -42,7 +42,7 @@ export function RefillRequestsPanel() {
     queryKey: ["refill-requests", profile?.tenant_id],
     queryFn: async () => {
       if (!profile?.tenant_id) return [];
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("prescription_refill_requests" as never)
         .select("id, patient_id, medication_name, reason, status, reviewer_notes, reviewed_at, created_at, patients:patient_id(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -59,8 +59,8 @@ export function RefillRequestsPanel() {
 
   const reviewMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase
+      const { data: { user } } = await api.auth.getUser();
+      const { error } = await api
         .from("prescription_refill_requests" as never)
         .update({
           status,

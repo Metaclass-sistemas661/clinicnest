@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { MessageSquareHeart, Loader2 } from "lucide-react";
@@ -39,7 +39,7 @@ export function FeedbackNPSDialog() {
         }
 
         // Contar atendimentos concluídos pelo profissional
-        const { count } = await supabase
+        const { count } = await api
           .from("appointments")
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)
@@ -68,7 +68,7 @@ export function FeedbackNPSDialog() {
     setIsSubmitting(true);
     try {
       // Salvar feedback (pode ser em uma tabela ou serviço externo)
-      const { error } = await supabase.from("nps_responses").insert({
+      const { error } = await api.from("nps_responses").insert({
         tenant_id: profile?.tenant_id,
         user_id: profile?.id,
         score,

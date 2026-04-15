@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Play, CheckCircle2, Clock, PlayCircle, X, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,8 +60,8 @@ export function VideoTutorials() {
     setLoading(true);
     try {
       const [tutorialsRes, progressRes] = await Promise.all([
-        supabase.from("video_tutorials").select("*").eq("is_active", true).order("sort_order"),
-        user?.id ? supabase.from("user_video_progress").select("video_id, watched_seconds, completed").eq("user_id", user.id) : Promise.resolve({ data: [] }),
+        api.from("video_tutorials").select("*").eq("is_active", true).order("sort_order"),
+        user?.id ? api.from("user_video_progress").select("video_id, watched_seconds, completed").eq("user_id", user.id) : Promise.resolve({ data: [] }),
       ]);
 
       if (tutorialsRes.data) setTutorials(tutorialsRes.data);
@@ -81,7 +81,7 @@ export function VideoTutorials() {
     if (!user?.id) return;
     
     try {
-      await supabase.from("user_video_progress").upsert({
+      await api.from("user_video_progress").upsert({
         user_id: user.id,
         video_id: videoId,
         completed: true,
@@ -275,7 +275,7 @@ export function VideoTutorialButton({ featureKey, className }: { featureKey: str
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    supabase
+    api
       .from("video_tutorials")
       .select("*")
       .eq("feature_key", featureKey)

@@ -11,7 +11,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -69,7 +69,7 @@ export default function PatientLaudos() {
   const fetchReports = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_medical_reports");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_medical_reports");
       if (error) throw error;
       setReports((data ?? []) as MedicalReport[]);
     } catch (err) {

@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { normalizeError } from "@/utils/errorMessages";
@@ -136,7 +136,7 @@ export default function AdminOverrides() {
     setIsLoading(true);
     try {
       // Buscar tenants
-      const { data: tenantsData, error: tenantsError } = await supabase
+      const { data: tenantsData, error: tenantsError } = await api
         .from("tenants")
         .select("id, name")
         .order("name");
@@ -145,7 +145,7 @@ export default function AdminOverrides() {
       setTenants(tenantsData || []);
 
       // Buscar overrides
-      const { data: overridesData, error: overridesError } = await (supabase as any).rpc(
+      const { data: overridesData, error: overridesError } = await (api as any).rpc(
         "get_all_overrides",
         {
           p_tenant_id: filterTenant === "all" ? null : filterTenant,
@@ -171,7 +171,7 @@ export default function AdminOverrides() {
 
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any).rpc("create_feature_override", {
+      const { error } = await (api as any).rpc("create_feature_override", {
         p_tenant_id: featureForm.tenant_id,
         p_feature_key: featureForm.feature_key,
         p_is_enabled: featureForm.is_enabled,
@@ -207,7 +207,7 @@ export default function AdminOverrides() {
 
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any).rpc("create_limit_override", {
+      const { error } = await (api as any).rpc("create_limit_override", {
         p_tenant_id: limitForm.tenant_id,
         p_limit_key: limitForm.limit_key,
         p_custom_value: customValue,
@@ -239,7 +239,7 @@ export default function AdminOverrides() {
         ? { p_tenant_id: deleteTarget.tenantId, p_feature_key: deleteTarget.key }
         : { p_tenant_id: deleteTarget.tenantId, p_limit_key: deleteTarget.key };
 
-      const { error } = await (supabase as any).rpc(rpcName, params);
+      const { error } = await (api as any).rpc(rpcName, params);
 
       if (error) throw error;
 

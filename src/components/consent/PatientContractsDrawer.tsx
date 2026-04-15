@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -77,12 +77,12 @@ export function PatientContractsDrawer({
     setIsLoading(true);
     try {
       const [consentsRes, templatesRes] = await Promise.all([
-        (supabase as any)
+        (api as any)
           .from("patient_consents")
           .select("*")
           .eq("patient_id", patientId)
           .order("signed_at", { ascending: false }),
-        (supabase as any)
+        (api as any)
           .from("consent_templates")
           .select("*")
           .eq("tenant_id", tenantId)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +20,7 @@ export default function ConfirmarAgendamento() {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke("public-booking", {
+        const { data, error } = await api.functions.invoke("public-booking", {
           body: { action: "confirm", token },
         });
 

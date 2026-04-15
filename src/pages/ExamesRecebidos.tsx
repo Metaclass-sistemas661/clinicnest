@@ -42,7 +42,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
@@ -105,7 +105,7 @@ export default function ExamesRecebidos() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      let query = supabase
+      let query = api
         .from("patient_uploaded_exams")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -131,7 +131,7 @@ export default function ExamesRecebidos() {
   const handleStatusChange = async (exam: UploadedExam, newStatus: "aprovado" | "rejeitado") => {
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("patient_uploaded_exams")
         .update({
           status: newStatus,
@@ -159,7 +159,7 @@ export default function ExamesRecebidos() {
 
   const handleDownload = async (exam: UploadedExam) => {
     try {
-      const { data, error } = await supabase.storage
+      const { data, error } = await api.storage
         .from("patient-exams")
         .createSignedUrl(exam.file_path, 300);
 

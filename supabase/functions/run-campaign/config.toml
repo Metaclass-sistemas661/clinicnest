@@ -1,3 +1,0 @@
-# Disable Supabase gateway JWT verification.
-# This function validates auth manually via getAuthenticatedUserWithTenant.
-verify_jwt = false

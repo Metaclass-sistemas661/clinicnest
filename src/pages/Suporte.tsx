@@ -25,7 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { parsePlanKey, useSubscription } from "@/hooks/useSubscription";
 import { LifeBuoy, Plus, Loader2, Mail, MessageCircle, Send } from "lucide-react";
@@ -131,7 +131,7 @@ export default function Suporte() {
     if (!tenantId) return;
     setIsLoadingTickets(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("support_tickets")
         .select("id,tenant_id,created_by,subject,category,priority,status,channel,last_message_at,created_at,updated_at")
         .eq("tenant_id", tenantId)
@@ -154,7 +154,7 @@ export default function Suporte() {
     if (!tenantId) return;
     setIsLoadingMessages(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("support_messages")
         .select("id,ticket_id,tenant_id,sender,message,metadata,created_by,created_at")
         .eq("tenant_id", tenantId)
@@ -179,7 +179,7 @@ export default function Suporte() {
     const run = async () => {
       if (!tenantId) return;
       try {
-        const { data, error } = await supabase.rpc("tenant_has_feature", {
+        const { data, error } = await api.rpc("tenant_has_feature", {
           p_tenant_id: tenantId,
           p_feature: "whatsapp_support",
         });
@@ -222,7 +222,7 @@ export default function Suporte() {
 
       const channel: "email" | "whatsapp" = allowWhatsapp ? "whatsapp" : "email";
 
-      const { data: ticketInserted, error: ticketError } = await supabase
+      const { data: ticketInserted, error: ticketError } = await api
         .from("support_tickets")
         .insert({
           tenant_id: tenantId,
@@ -241,7 +241,7 @@ export default function Suporte() {
       const ticketId = String((ticketInserted as any)?.id || "");
       if (!ticketId) throw new Error("Ticket inválido");
 
-      const { error: msgError } = await supabase.from("support_messages").insert({
+      const { error: msgError } = await api.from("support_messages").insert({
         ticket_id: ticketId,
         tenant_id: tenantId,
         sender: "user",
@@ -260,7 +260,7 @@ export default function Suporte() {
 
       if (!allowWhatsapp) {
         try {
-          const { data, error } = await supabase.functions.invoke("send-support-ticket-email", {
+          const { data, error } = await api.functions.invoke("send-support-ticket-email", {
             body: { ticketId },
           });
           if (error) throw error;
@@ -304,7 +304,7 @@ export default function Suporte() {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
 
-      const { error } = await supabase.from("support_messages").insert({
+      const { error } = await api.from("support_messages").insert({
         ticket_id: selectedTicketId,
         tenant_id: tenantId,
         sender: "user",
@@ -319,7 +319,7 @@ export default function Suporte() {
       await fetchTickets();
       if (!allowWhatsapp) {
         try {
-          await supabase.functions.invoke("send-support-ticket-email", {
+          await api.functions.invoke("send-support-ticket-email", {
             body: { ticketId: selectedTicketId },
           });
         } catch {

@@ -23,7 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
@@ -94,7 +94,7 @@ export default function RelatorioCaptacao({ embedded = false }: { embedded?: boo
     if (!profile?.tenant_id) return;
 
     try {
-      const { data: profs, error } = await supabase
+      const { data: profs, error } = await api
         .from("profiles")
         .select("id, user_id, full_name, professional_type")
         .eq("tenant_id", profile.tenant_id)
@@ -112,7 +112,7 @@ export default function RelatorioCaptacao({ embedded = false }: { embedded?: boo
 
     setIsLoading(true);
     try {
-      const { data: result, error } = await supabase.rpc("get_referral_report", {
+      const { data: result, error } = await api.rpc("get_referral_report", {
         p_tenant_id: profile.tenant_id,
         p_from_date: fromDate || null,
         p_to_date: toDate || null,

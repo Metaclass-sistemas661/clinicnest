@@ -36,7 +36,7 @@ import {
   Loader2, Save, FileDown, History, ChevronLeft, ChevronRight,
   AlertTriangle, Droplets, Activity,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -151,7 +151,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
   const loadHistory = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("get_client_periograms", {
+      const { data, error } = await (api.rpc as any)("get_client_periograms", {
         p_tenant_id: tenantId,
         p_client_id: patientId,
       });
@@ -191,7 +191,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
   };
 
   const loadMeasurements = async (periogramId: string) => {
-    const { data, error } = await (supabase.rpc as any)("get_periogram_measurements", {
+    const { data, error } = await (api.rpc as any)("get_periogram_measurements", {
       p_periogram_id: periogramId,
     });
 
@@ -364,7 +364,7 @@ export function Periograma({ tenantId, patientId, professionalId, appointmentId,
         }
       }
 
-      const { error } = await (supabase.rpc as any)("save_periogram_with_measurements", {
+      const { error } = await (api.rpc as any)("save_periogram_with_measurements", {
         p_tenant_id: tenantId,
         p_client_id: patientId,
         p_professional_id: professionalId,

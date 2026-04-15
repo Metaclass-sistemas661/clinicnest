@@ -16,7 +16,7 @@ import {
   User,
   Phone,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import QRCode from "qrcode";
 import { cn } from "@/lib/utils";
 
@@ -59,10 +59,10 @@ export default function PatientHealthCard() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabasePatient
+      const { data: profile } = await apiPatient
         .from("patient_profiles" as never)
         .select("client_id, tenant_id")
         .eq("user_id", user.id)
@@ -74,12 +74,12 @@ export default function PatientHealthCard() {
 
       // Fetch patient + tenant in parallel
       const [patientRes, tenantRes] = await Promise.all([
-        supabasePatient
+        apiPatient
           .from("patients" as never)
           .select("name, cpf, date_of_birth, blood_type, allergies, phone, insurance_plan_id, insurance_card_number")
           .eq("id", pp.client_id)
           .single(),
-        supabasePatient
+        apiPatient
           .from("tenants" as never)
           .select("name")
           .eq("id", pp.tenant_id)
@@ -97,7 +97,7 @@ export default function PatientHealthCard() {
       // Fetch insurance plan name if exists
       let insuranceName: string | null = null;
       if (p.insurance_plan_id) {
-        const { data: plan } = await supabasePatient
+        const { data: plan } = await apiPatient
           .from("insurance_plans" as never)
           .select("name")
           .eq("id", p.insurance_plan_id)
@@ -106,7 +106,7 @@ export default function PatientHealthCard() {
       }
 
       // Fetch recent prescriptions for current medications
-      const { data: recentRx } = await supabasePatient
+      const { data: recentRx } = await apiPatient
         .from("prescriptions" as never)
         .select("medications")
         .eq("patient_id", pp.client_id)

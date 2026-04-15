@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ClipboardList, Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 export interface AnamnesisData {
@@ -77,7 +77,7 @@ export function DentalAnamnesis({ patientId, tenantId, existingData, onSaved }: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase.from("dental_anamnesis" as any).upsert(
+      const { error } = await api.from("dental_anamnesis" as any).upsert(
         {
           patient_id: patientId,
           tenant_id: tenantId,

@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 
@@ -19,7 +19,7 @@ export function useClinicalAudit() {
       if (logged.current.has(key)) return;
       logged.current.add(key);
 
-      (supabase as any)
+      (api as any)
         .rpc("log_clinical_access", {
           p_resource: resource,
           p_resource_id: resourceId ?? null,
@@ -37,7 +37,7 @@ export function useClinicalAudit() {
     (resource: string, action: string = "view") => {
       if (!user || !profile?.tenant_id) return;
 
-      (supabase as any)
+      (api as any)
         .rpc("log_access_denied", {
           p_resource: resource,
           p_action: action,

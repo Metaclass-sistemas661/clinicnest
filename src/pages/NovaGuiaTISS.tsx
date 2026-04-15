@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Calculator, Download } from "lucide-react";
@@ -53,9 +53,9 @@ export default function NovaGuiaTISS() {
     setIsLoading(true);
     try {
       const [plansRes, patientsRes, proceduresRes] = await Promise.all([
-        supabase.from("insurance_plans").select("id, name, ans_code, tiss_version").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
-        supabase.from("patients").select("id, name, cpf, insurance_card_number").eq("tenant_id", profile.tenant_id).order("name").limit(500),
-        supabase.from("procedures").select("id, name, tuss_code, insurance_price").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
+        api.from("insurance_plans").select("id, name, ans_code, tiss_version").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
+        api.from("patients").select("id, name, cpf, insurance_card_number").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        api.from("procedures").select("id, name, tuss_code, insurance_price").eq("tenant_id", profile.tenant_id).eq("is_active", true).order("name"),
       ]);
       setPlans((plansRes.data ?? []) as InsurancePlan[]);
       setPatients((patientsRes.data ?? []) as PatientOption[]);
@@ -81,7 +81,7 @@ export default function NovaGuiaTISS() {
 
     setIsSaving(true);
     try {
-      const tenant = (await supabase.from("tenants").select("*").eq("id", profile.tenant_id).single()).data;
+      const tenant = (await api.from("tenants").select("*").eq("id", profile.tenant_id).single()).data;
       if (!tenant) throw new Error("Tenant não encontrado");
 
       const lotNum = generateLotNumber(1);
@@ -157,7 +157,7 @@ export default function NovaGuiaTISS() {
         });
       }
 
-      const { error } = await supabase.from("tiss_guides").insert({
+      const { error } = await api.from("tiss_guides").insert({
         tenant_id: profile.tenant_id,
         insurance_plan_id: planId,
         lot_number: lotNum,

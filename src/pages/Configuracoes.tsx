@@ -8,8 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
+import { api } from "@/integrations/gcp/client";
+import type { Json } from "@/integrations/gcp/types";
 import {
   Settings,
   Loader2,
@@ -101,7 +101,7 @@ export default function Configuracoes() {
     metadata?: Record<string, unknown>
   ) => {
     if (!tenant?.id) return;
-    const { error } = await supabase.rpc("log_admin_action", {
+    const { error } = await api.rpc("log_admin_action", {
       p_tenant_id: tenant.id,
       p_action: action,
       p_entity_type: entityType,
@@ -120,7 +120,7 @@ export default function Configuracoes() {
     setIsSaving(true);
 
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({
           name: formData.name,
@@ -155,7 +155,7 @@ export default function Configuracoes() {
 
     setIsSavingGamification(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({ gamification_enabled: tenantGamificationEnabled })
         .eq("id", tenant.id);
@@ -177,7 +177,7 @@ export default function Configuracoes() {
 
     setIsSavingBooking(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({ patient_booking_enabled: patientBookingEnabled } as any)
         .eq("id", tenant.id);

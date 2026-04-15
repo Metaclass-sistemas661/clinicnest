@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Loader2, Monitor, Smartphone, Palette, ImageIcon, Type, MousePointerClick, AlignLeft, Mail, Tag, Upload, Calendar, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
@@ -397,11 +397,11 @@ export default function EmailBuilder({ defaultClinicName, onSave, onCancel, isSa
       const ext = file.name.split(".").pop() ?? "jpg";
       const tenantId = tenant?.id ?? "shared";
       const path = `${tenantId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from("campaign-banners")
         .upload(path, file, { upsert: false, contentType: file.type });
       if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from("campaign-banners").getPublicUrl(path);
+      const { data } = api.storage.from("campaign-banners").getPublicUrl(path);
       set("bannerUrl", data.publicUrl);
     } catch {
       toast.error("Erro ao enviar imagem. Tente novamente.");

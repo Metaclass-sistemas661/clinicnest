@@ -16,7 +16,7 @@ import {
   Trophy,
   Target,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ export function AiBenchmarking() {
     setIsLoading(true);
     setError(null);
     try {
-      const { data: result, error: fnError } = await supabase.functions.invoke(
+      const { data: result, error: fnError } = await api.functions.invoke(
         "ai-benchmarking",
         { body: {} }
       );

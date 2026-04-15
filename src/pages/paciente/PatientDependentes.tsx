@@ -35,7 +35,7 @@ import {
   Loader2,
   Heart,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,7 @@ export default function PatientDependentes() {
   const loadDependents = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_dependents");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_dependents");
       if (error) throw error;
       setDependents((data as DependentDetails[]) || []);
     } catch (err) {
@@ -95,7 +95,7 @@ export default function PatientDependentes() {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("add_patient_dependent", {
+      const { data, error } = await (apiPatient as any).rpc("add_patient_dependent", {
         p_name: formName.trim(),
         p_email: formEmail.trim() || null,
         p_phone: formPhone.trim() || null,
@@ -127,7 +127,7 @@ export default function PatientDependentes() {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("remove_patient_dependent", {
+      const { data, error } = await (apiPatient as any).rpc("remove_patient_dependent", {
         p_dependent_id: showRemoveDialog,
       });
 

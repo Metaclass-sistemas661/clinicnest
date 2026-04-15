@@ -8,7 +8,7 @@ import {
   ClipboardList, Plus, ArrowRight, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -51,7 +51,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
 
     try {
       const [aptsRes, completedRes, completedAptsRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -59,7 +59,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("appointments")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)
@@ -67,7 +67,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
           .eq("status", "completed")
           .gte("scheduled_at", monthStart)
           .lte("scheduled_at", monthEnd),
-        supabase
+        api
           .from("appointments")
           .select("id, scheduled_at, patient:patients(name), procedure:procedures(name)")
           .eq("tenant_id", profile.tenant_id)
@@ -85,7 +85,7 @@ export const DashboardClinico = memo(function DashboardClinico() {
       const completedApts = (completedAptsRes.data || []) as any[];
       if (completedApts.length > 0) {
         const completedIds = completedApts.map((a: any) => a.id);
-        const { data: evolData } = await supabase
+        const { data: evolData } = await api
           .from("clinical_evolutions")
           .select("appointment_id")
           .eq("tenant_id", profile.tenant_id)

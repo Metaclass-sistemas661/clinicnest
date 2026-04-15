@@ -9,17 +9,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { getClientTimelineV1 } from "@/lib/supabase-typed-rpc";
+import { getClientTimelineV1 } from "@/lib/typed-rpc";
 import { toastRpcError } from "@/lib/rpc-error";
 import { EVOLUTION_TYPE_LABELS, EVOLUTION_TYPE_COLORS } from "@/lib/soap-templates";
 import { PatientConsentsViewer } from "@/components/consent/PatientConsentsViewer";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
 import { fetchPatientSpendingAllTime, type PatientSpendingRow } from "@/lib/patientSpending";
-import type { ClientTimelineEventRow } from "@/types/supabase-extensions";
+import type { ClientTimelineEventRow } from "@/types/database-extensions";
 import type { Client, ClinicalEvolution } from "@/types/database";
 import {
   ChevronRight,
@@ -96,7 +96,7 @@ export default function PacienteDetalhe() {
     if (!profile?.tenant_id || !id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -121,11 +121,11 @@ export default function PacienteDetalhe() {
       const [spendingData, { data: timelineData, error: timelineError }, packagesRes, mktPrefRes] = await Promise.all([
         fetchPatientSpendingAllTime(profile.tenant_id),
         getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
-        supabase.from("patient_packages")
+        api.from("patient_packages")
           .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("purchased_at", { ascending: false }),
-        supabase.from("client_marketing_preferences")
+        api.from("client_marketing_preferences")
           .select("marketing_opt_out")
           .eq("tenant_id", profile.tenant_id).eq("client_id", patientId)
           .maybeSingle(),
@@ -155,19 +155,19 @@ export default function PacienteDetalhe() {
       // Clinical history
       const clinDocs: typeof clinicalHistory = [];
       const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
-        supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
+        api.from("prescriptions").select("id, issued_at, medications, prescription_type")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("issued_at", { ascending: false }).limit(20),
-        supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
+        api.from("medical_certificates").select("id, issued_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("issued_at", { ascending: false }).limit(20),
-        supabase.from("exam_results").select("id, created_at, exam_name, status")
+        api.from("exam_results").select("id, created_at, exam_name, status")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
-        supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
+        api.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
-        supabase.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code")
+        api.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("record_date", { ascending: false }).limit(20),
       ]);
@@ -197,7 +197,7 @@ export default function PacienteDetalhe() {
       clinDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setClinicalHistory(clinDocs);
 
-      const { data: evoData } = await (supabase as any).from("clinical_evolutions")
+      const { data: evoData } = await (api as any).from("clinical_evolutions")
         .select("*, patient:patients(name), profiles(full_name)")
         .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
         .order("evolution_date", { ascending: false }).limit(50);
@@ -213,7 +213,7 @@ export default function PacienteDetalhe() {
     if (!profile?.tenant_id || !id) return;
     setIsUpdatingMarketing(true);
     try {
-      const { error } = await supabase.from("client_marketing_preferences")
+      const { error } = await api.from("client_marketing_preferences")
         .upsert({
           tenant_id: profile.tenant_id,
           client_id: id,

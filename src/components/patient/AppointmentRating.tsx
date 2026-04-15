@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Star, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isValid, parseISO } from "date-fns";
@@ -44,7 +44,7 @@ function RatingDialog({ appointment, onClose, onSubmit }: RatingDialogProps) {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc(
+      const { data, error } = await (apiPatient as any).rpc(
         "submit_appointment_rating",
         {
           p_appointment_id: appointment.appointment_id,
@@ -160,7 +160,7 @@ export function useAppointmentRating() {
   useEffect(() => {
     const loadPendingRatings = async () => {
       try {
-        const { data, error } = await (supabasePatient as any).rpc(
+        const { data, error } = await (apiPatient as any).rpc(
           "get_patient_pending_ratings"
         );
         if (error) throw error;
@@ -184,7 +184,7 @@ export function useAppointmentRating() {
   const handleSubmit = () => {
     handleClose();
     // Check for achievements after rating
-    void (supabasePatient as any).rpc("check_patient_achievements");
+    void (apiPatient as any).rpc("check_patient_achievements");
   };
 
   const RatingPrompt = currentRating ? (

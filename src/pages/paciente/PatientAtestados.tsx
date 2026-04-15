@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, RefreshCw, Building2, Stethoscope, Calendar, Clock, Download } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -68,7 +68,7 @@ export default function PatientAtestados() {
   const fetchCertificates = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_certificates");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_certificates");
       if (error) throw error;
       setCertificates((data ?? []) as Certificate[]);
     } catch (err) {

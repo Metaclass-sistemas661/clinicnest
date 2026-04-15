@@ -17,7 +17,7 @@ import {
   Copy,
   CheckCheck,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
@@ -90,13 +90,13 @@ export function ExamOcrAnalyzer({ patientId }: { patientId?: string }) {
       }
       const base64 = btoa(binary);
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) {
         toast.error("Sessão expirada.");
         return;
       }
 
-      const resp = await supabase.functions.invoke("ai-ocr-exam", {
+      const resp = await api.functions.invoke("ai-ocr-exam", {
         body: { image_base64: base64, mime_type: file.type },
       });
 

@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import type { Json } from "@/integrations/supabase/types";
+import type { Json } from "@/integrations/gcp/types";
 
 // ── Types ────────────────────────────────────────────────────────────
 export interface HealthCreditRule {
@@ -78,7 +78,7 @@ export function useHealthCreditRules() {
     queryKey: ["health-credit-rules", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("health_credits_rules" as never)
         .select("*")
         .eq("tenant_id" as never, tenantId!)
@@ -95,13 +95,13 @@ export function useHealthCreditRules() {
         config: (rule.config ?? {}) as unknown as Json,
       };
       if (rule.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from("health_credits_rules" as never)
           .update(payload as never)
           .eq("id" as never, rule.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("health_credits_rules" as never)
           .insert(payload as never);
         if (error) throw error;
@@ -116,7 +116,7 @@ export function useHealthCreditRules() {
 
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("health_credits_rules" as never)
         .delete()
         .eq("id" as never, id);
@@ -131,7 +131,7 @@ export function useHealthCreditRules() {
 
   const toggleRule = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("health_credits_rules" as never)
         .update({ is_active } as never)
         .eq("id" as never, id);
@@ -154,7 +154,7 @@ export function useHealthCreditsLeaderboard() {
     queryKey: ["health-credits-leaderboard", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_health_credits_leaderboard", {
+      const { data, error } = await api.rpc("get_health_credits_leaderboard", {
         p_tenant_id: tenantId!,
         p_limit: 50,
       });
@@ -173,7 +173,7 @@ export function usePatientCreditsHistory(patientId: string | null) {
     queryKey: ["health-credits-history", tenantId, patientId],
     enabled: !!tenantId && !!patientId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_patient_credits_history", {
+      const { data, error } = await api.rpc("get_patient_credits_history", {
         p_tenant_id: tenantId!,
         p_patient_id: patientId!,
         p_limit: 50,
@@ -195,7 +195,7 @@ export function useAdjustCredits() {
       amount: number;
       reason: string;
     }) => {
-      const { data, error } = await supabase.rpc("adjust_health_credits", {
+      const { data, error } = await api.rpc("adjust_health_credits", {
         p_tenant_id: params.tenant_id,
         p_patient_id: params.patient_id,
         p_amount: params.amount,
@@ -223,7 +223,7 @@ export function useRedemptionConfig() {
     queryKey: ["health-credits-redemption-config", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("health_credits_redemption_config" as never)
         .select("*")
         .eq("tenant_id" as never, tenantId!)
@@ -236,7 +236,7 @@ export function useRedemptionConfig() {
   const save = useMutation({
     mutationFn: async (cfg: Partial<RedemptionConfig>) => {
       const payload = { ...cfg, tenant_id: tenantId!, updated_at: new Date().toISOString() };
-      const { error } = await supabase
+      const { error } = await api
         .from("health_credits_redemption_config" as never)
         .upsert(payload as never, { onConflict: "tenant_id" });
       if (error) throw error;

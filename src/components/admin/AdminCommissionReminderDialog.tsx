@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Users, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 
 const INTERVAL_MS = 45 * 60 * 1000; // 45 minutos
 const STORAGE_KEY = "clinicnest_admin_commission_reminder_last";
@@ -34,15 +34,15 @@ export function AdminCommissionReminderDialog() {
     if (!profile?.tenant_id || !isAdmin) return [];
 
     const [profilesRes, rolesRes, commissionsRes] = await Promise.all([
-      supabase
+      api
         .from("profiles")
         .select("id, user_id, full_name")
         .eq("tenant_id", profile.tenant_id),
-      supabase
+      api
         .from("user_roles")
         .select("user_id, role")
         .eq("tenant_id", profile.tenant_id),
-      supabase
+      api
         .from("professional_commissions")
         .select("user_id")
         .eq("tenant_id", profile.tenant_id),

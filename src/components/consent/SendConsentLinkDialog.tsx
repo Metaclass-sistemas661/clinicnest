@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import {
   Send,
@@ -73,7 +73,7 @@ export function SendConsentLinkDialog({
   const fetchTemplates = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("consent_templates")
         .select("id, title, is_required, is_active")
         .eq("is_active", true)
@@ -118,7 +118,7 @@ export function SendConsentLinkDialog({
 
     setIsGenerating(true);
     try {
-      const { data, error } = await supabase.rpc("create_consent_signing_link", {
+      const { data, error } = await api.rpc("create_consent_signing_link", {
         p_client_id: client.id,
         p_template_ids: selectedTemplates,
         p_expires_hours: expiresHours,

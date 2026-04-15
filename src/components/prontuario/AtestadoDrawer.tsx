@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import { FileSignature, Printer, Save, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -116,7 +116,7 @@ export function AtestadoDrawer({
       const certificateType = tipo === "comparecimento" ? "declaracao_comparecimento" : "atestado";
 
       if (tenantId && profile?.id) {
-        const { error } = await supabase.from("medical_certificates").insert({
+        const { error } = await api.from("medical_certificates").insert({
           tenant_id: tenantId,
           patient_id: context.patientId,
           professional_id: profile.id,

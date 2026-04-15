@@ -2,7 +2,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Input } from "@/components/ui/input";
 import { Search, User, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export function GlobalSearch() {
       const cleaned = term.replace(/[.\-/()]/g, "");
       const isNumeric = /^\d+$/.test(cleaned);
 
-      let q = supabase
+      let q = api
         .from("patients")
         .select("id, name, phone, cpf, email")
         .eq("tenant_id", profile.tenant_id)

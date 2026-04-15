@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import {
@@ -112,7 +112,7 @@ export function ProfessionalPaymentAccountForm({
     setIsLoading(true);
     try {
       // Load gateway config
-      const { data: gatewayData } = await supabase
+      const { data: gatewayData } = await api
         .from("tenant_payment_gateways")
         .select("id, provider, is_split_enabled")
         .eq("tenant_id", tenantId)
@@ -124,7 +124,7 @@ export function ProfessionalPaymentAccountForm({
         setGateway(gatewayData as GatewayConfig);
 
         // Load existing account
-        const { data: accountData } = await supabase
+        const { data: accountData } = await api
           .from("professional_payment_accounts")
           .select("*")
           .eq("tenant_id", tenantId)
@@ -179,13 +179,13 @@ export function ProfessionalPaymentAccountForm({
       };
 
       if (account.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from("professional_payment_accounts")
           .update(payload)
           .eq("id", account.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("professional_payment_accounts")
           .insert(payload);
         if (error) throw error;

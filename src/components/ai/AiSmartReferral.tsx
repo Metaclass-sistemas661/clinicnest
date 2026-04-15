@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -64,10 +64,10 @@ export function AiSmartReferral({
 
   const referralMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) throw new Error("Não autenticado");
 
-      const res = await supabase.functions.invoke("ai-smart-referral", {
+      const res = await api.functions.invoke("ai-smart-referral", {
         body: {
           chief_complaint: chiefComplaint,
           diagnosis,

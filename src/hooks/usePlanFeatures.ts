@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import { useSubscription, parsePlanKey } from './useSubscription';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import {
   SubscriptionTier,
   FeatureKey,
@@ -63,7 +63,7 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
   useEffect(() => {
     const loadOverrides = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_tenant_overrides');
+        const { data, error } = await api.rpc('get_tenant_overrides');
         if (error) {
           console.warn('Failed to load tenant overrides:', error);
           setOverrides({ features: [], limits: [] });

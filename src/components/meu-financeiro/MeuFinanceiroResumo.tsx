@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { logger } from "@/lib/logger";
 import { Wallet, CreditCard, TrendingUp, TrendingDown, Calendar, AlertTriangle, CheckCircle2, Info } from "lucide-react";
@@ -68,7 +68,7 @@ export function MeuFinanceiroResumo() {
       const prevMonthEnd = endOfMonth(subMonths(now, 1));
 
       // Comissões pendentes
-      const { data: pendingData } = await supabase
+      const { data: pendingData } = await api
         .from("commission_payments")
         .select("amount, created_at")
         .eq("tenant_id", profile.tenant_id)
@@ -89,7 +89,7 @@ export function MeuFinanceiroResumo() {
       setOldPendingAmount(oldPending);
 
       // Recebido este mês (comissões + salários)
-      const { data: paidCommissions } = await supabase
+      const { data: paidCommissions } = await api
         .from("commission_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -98,7 +98,7 @@ export function MeuFinanceiroResumo() {
         .gte("payment_date", monthStart.toISOString())
         .lte("payment_date", monthEnd.toISOString());
 
-      const { data: paidSalaries } = await supabase
+      const { data: paidSalaries } = await api
         .from("salary_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -118,7 +118,7 @@ export function MeuFinanceiroResumo() {
       setPaidThisMonth(paidComm + paidSal);
 
       // Dados do mês anterior para comparação
-      const { data: prevMonthCommissions } = await supabase
+      const { data: prevMonthCommissions } = await api
         .from("commission_payments")
         .select("amount")
         .eq("tenant_id", profile.tenant_id)
@@ -136,7 +136,7 @@ export function MeuFinanceiroResumo() {
       const next30 = new Date();
       next30.setDate(next30.getDate() + 30);
 
-      const { data: futureAppointments } = await supabase
+      const { data: futureAppointments } = await api
         .from("appointments")
         .select("id, procedure:procedures(price)")
         .eq("tenant_id", profile.tenant_id)
@@ -146,7 +146,7 @@ export function MeuFinanceiroResumo() {
         .lte("scheduled_at", next30.toISOString());
 
       // Buscar regra de comissão ativa
-      const { data: commissionRule } = await supabase
+      const { data: commissionRule } = await api
         .from("commission_rules")
         .select("percentage")
         .eq("tenant_id", profile.tenant_id)
@@ -175,7 +175,7 @@ export function MeuFinanceiroResumo() {
         const mStart = startOfMonth(monthDate);
         const mEnd = endOfMonth(monthDate);
 
-        const { data: monthComm } = await supabase
+        const { data: monthComm } = await api
           .from("commission_payments")
           .select("amount")
           .eq("tenant_id", profile.tenant_id)
@@ -184,7 +184,7 @@ export function MeuFinanceiroResumo() {
           .gte("payment_date", mStart.toISOString())
           .lte("payment_date", mEnd.toISOString());
 
-        const { data: monthSal } = await supabase
+        const { data: monthSal } = await api
           .from("salary_payments")
           .select("amount")
           .eq("tenant_id", profile.tenant_id)
@@ -224,14 +224,14 @@ export function MeuFinanceiroResumo() {
       ]);
 
       // Buscar média da clínica (se admin permitir)
-      const { data: tenantSettings } = await supabase
+      const { data: tenantSettings } = await api
         .from("tenant_settings")
         .select("show_clinic_average_to_staff")
         .eq("tenant_id", profile.tenant_id)
         .maybeSingle();
 
       if (tenantSettings?.show_clinic_average_to_staff) {
-        const { data: allProfessionalsComm } = await supabase
+        const { data: allProfessionalsComm } = await api
           .from("commission_payments")
           .select("amount, professional_id")
           .eq("tenant_id", profile.tenant_id)

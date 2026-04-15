@@ -13,7 +13,7 @@ import {
   BarChart3, Calendar,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { TOOTH_CONDITIONS } from "./odontogramConstants";
 
@@ -40,7 +40,7 @@ export function DentalDashboard() {
 
   const loadDashboard = async () => {
     try {
-      const { data: result, error } = await (supabase.rpc as any)("get_dental_dashboard", {
+      const { data: result, error } = await (api.rpc as any)("get_dental_dashboard", {
         p_tenant_id: profile!.tenant_id,
       });
       if (error) throw error;

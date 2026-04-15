@@ -21,7 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { TussCombobox } from "@/components/ui/tuss-combobox";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -116,13 +116,13 @@ export function CommissionRuleForm({
     const loadData = async () => {
       try {
         const [proceduresRes, insurancesRes] = await Promise.all([
-          supabase
+          api
             .from("procedures")
             .select("id, name")
             .eq("tenant_id", profile.tenant_id)
             .eq("is_active", true)
             .order("name"),
-          supabase
+          api
             .from("insurance_plans")
             .select("id, name")
             .eq("tenant_id", profile.tenant_id)
@@ -251,7 +251,7 @@ export function CommissionRuleForm({
       };
 
       if (rule?.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from("commission_rules")
           .update(ruleData)
           .eq("id", rule.id);
@@ -259,7 +259,7 @@ export function CommissionRuleForm({
         if (error) throw error;
         toast.success("Regra atualizada com sucesso!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("commission_rules")
           .insert(ruleData);
 

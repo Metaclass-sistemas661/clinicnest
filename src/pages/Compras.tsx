@@ -36,12 +36,12 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
-import { cancelPurchaseV1, createPurchaseV1 } from "@/lib/supabase-typed-rpc";
+import { cancelPurchaseV1, createPurchaseV1 } from "@/lib/typed-rpc";
 import {
   Plus,
   Trash2,
@@ -150,18 +150,18 @@ export default function Compras() {
       setIsLoading(true);
       try {
         const [supRes, prodRes, purchaseRes] = await Promise.all([
-          supabase
+          api
             .from("suppliers")
             .select("id,name,phone,email")
             .eq("tenant_id", profile.tenant_id)
             .order("name", { ascending: true }),
-          supabase
+          api
             .from("products")
             .select("id,name,cost,quantity")
             .eq("tenant_id", profile.tenant_id)
             .eq("is_active", true)
             .order("name", { ascending: true }),
-          supabase
+          api
             .from("purchases")
             .select(
               "id,purchased_at,status,total_amount,invoice_number,purchased_with_company_cash,supplier:suppliers(name)"
@@ -193,7 +193,7 @@ export default function Compras() {
     if (!profile?.tenant_id) return;
     setIsPurchasesLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("purchases")
         .select(
           "id,purchased_at,status,total_amount,invoice_number,purchased_with_company_cash,supplier:suppliers(name)"
@@ -222,7 +222,7 @@ export default function Compras() {
     setIsPurchaseDetailOpen(true);
     setIsLoadingItems(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("purchase_items")
         .select("id,quantity,unit_cost,line_total,product:products(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -371,7 +371,7 @@ export default function Compras() {
 
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("suppliers")
         .insert({
           tenant_id: profile.tenant_id,

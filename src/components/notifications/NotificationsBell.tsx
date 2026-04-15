@@ -7,7 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,7 +40,7 @@ export function NotificationsBell() {
 
   const fetchNotifications = async () => {
     if (!user?.id || !profile?.tenant_id) return;
-    const { data } = await supabase
+    const { data } = await api
       .from("notifications")
       .select("id, type, title, body, read_at, created_at")
       .eq("user_id", user.id)
@@ -52,7 +52,7 @@ export function NotificationsBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const channel = supabase
+    const channel = api
       .channel("notifications-changes")
       .on(
         "postgres_changes",
@@ -66,13 +66,13 @@ export function NotificationsBell() {
       )
       .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [user?.id, profile?.tenant_id]);
 
   const markAsRead = async (id: string) => {
     if (!user?.id) return;
-    await supabase
+    await api
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("id", id)
@@ -82,7 +82,7 @@ export function NotificationsBell() {
 
   const markAllRead = async () => {
     if (!user?.id) return;
-    await supabase
+    await api
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("user_id", user.id)

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { useClinicSubscriptionStatus } from "@/hooks/useClinicSubscriptionStatus";
 import { Building2, Clock } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -71,7 +71,7 @@ export function PatientSubscriptionGuard({ children }: PatientSubscriptionGuardP
             variant="outline"
             className="w-full"
             onClick={async () => {
-              await supabasePatient.auth.signOut();
+              await apiPatient.auth.signOut();
               navigate("/paciente/login", { replace: true });
             }}
           >

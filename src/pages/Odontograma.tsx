@@ -41,7 +41,7 @@ import {
   Undo2, Redo2, Filter, Zap, LayoutTemplate, Share2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 
@@ -289,7 +289,7 @@ export default function Odontograma() {
     setIsDirty(false);
     setCompareMode(false);
     try {
-      const { data: odontograms, error } = await (supabase
+      const { data: odontograms, error } = await (api
         .rpc as any)("get_client_odontograms", {
           p_tenant_id: profile.tenant_id,
           p_client_id: patientId,
@@ -327,7 +327,7 @@ export default function Odontograma() {
 
   // ── Load teeth for a specific odontogram ──
   const loadOdontogramTeeth = async (odontogramId: string) => {
-    const { data: teethData, error } = await (supabase
+    const { data: teethData, error } = await (api
       .rpc as any)("get_odontogram_teeth", { p_odontogram_id: odontogramId });
 
     if (error) {
@@ -432,7 +432,7 @@ export default function Odontograma() {
         priority: t.priority || "normal",
       }));
 
-      const { error } = await (supabase
+      const { error } = await (api
         .rpc as any)("create_odontogram_with_teeth", {
           p_tenant_id: profile.tenant_id,
           p_client_id: selectedPatient,
@@ -491,7 +491,7 @@ export default function Odontograma() {
     setCompareMode(true);
     setCompareIndex(compareWithIdx);
 
-    const { data: teethData } = await (supabase
+    const { data: teethData } = await (api
       .rpc as any)("get_odontogram_teeth", { p_odontogram_id: historyEntries[compareWithIdx].id });
 
     const map = new Map<number, ToothRecord>();
@@ -577,7 +577,7 @@ export default function Odontograma() {
     toast.success(`Template "${template.label}" aplicado`);
   };
 
-  /** Cria o plano de tratamento no Supabase e navega para a página */
+  /** Cria o plano de tratamento e navega para a página */
   const handleCreateTreatmentPlan = async () => {
     if (!profile?.tenant_id || !selectedPatient) return;
 
@@ -590,7 +590,7 @@ export default function Odontograma() {
     setIsCreatingPlan(true);
     try {
       // 1. Criar o plano
-      const { data: plan, error: planError } = await (supabase.from("treatment_plans") as any)
+      const { data: plan, error: planError } = await (api.from("treatment_plans") as any)
         .insert({
           tenant_id: profile.tenant_id,
           patient_id: selectedPatient,
@@ -620,7 +620,7 @@ export default function Odontograma() {
         };
       });
 
-      const { error: itemsError } = await (supabase.from("treatment_plan_items") as any).insert(items);
+      const { error: itemsError } = await (api.from("treatment_plan_items") as any).insert(items);
       if (itemsError) throw itemsError;
 
       toast.success(`Plano criado com ${items.length} procedimento(s)! Preencha os valores na página de Planos.`);

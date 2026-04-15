@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Pill, Plus, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -134,7 +134,7 @@ export function ReceitaDrawer({
         : "simples";
 
       if (tenantId && profile?.id) {
-        const { error } = await supabase.from("prescriptions").insert({
+        const { error } = await api.from("prescriptions").insert({
           tenant_id: tenantId,
           patient_id: context.patientId,
           professional_id: profile.id,

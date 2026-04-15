@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Loader2, User, Lock, Bell, ShieldCheck, Camera, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -99,7 +99,7 @@ export default function MinhasConfiguracoes() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
+    api
       .from("user_notification_preferences")
       .select("*")
       .eq("user_id", user.id)
@@ -124,7 +124,7 @@ export default function MinhasConfiguracoes() {
     if (!user?.id) return;
     setIsLoadingLgpdRequests(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("lgpd_data_requests")
         .select("id, request_type, request_details, status, requested_at, due_at, sla_days, resolved_at, resolution_notes")
         .eq("requester_user_id", user.id)
@@ -151,7 +151,7 @@ export default function MinhasConfiguracoes() {
     if (!user?.id) return;
     setIsSavingProfile(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("profiles")
         .update({ phone: phone.trim() || null })
         .eq("user_id", user.id);
@@ -191,16 +191,16 @@ export default function MinhasConfiguracoes() {
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
       const path = `${user.id}/avatar.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const { data: urlData } = api.storage.from("avatars").getPublicUrl(path);
       const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await api
         .from("profiles")
         .update({ avatar_url: publicUrl })
         .eq("user_id", user.id);
@@ -223,7 +223,7 @@ export default function MinhasConfiguracoes() {
     if (!user?.id) return;
     setIsUploadingAvatar(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("profiles")
         .update({ avatar_url: null })
         .eq("user_id", user.id);
@@ -244,7 +244,7 @@ export default function MinhasConfiguracoes() {
     if (!user?.id) return;
     setIsSavingPrefs(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("user_notification_preferences")
         .upsert(
           {
@@ -276,7 +276,7 @@ export default function MinhasConfiguracoes() {
     }
     setIsSavingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await api.auth.updateUser({ password });
       if (error) throw error;
       toast.success("Senha alterada com sucesso!");
       setPassword("");
@@ -301,7 +301,7 @@ export default function MinhasConfiguracoes() {
 
     setIsSubmittingLgpdRequest(true);
     try {
-      const { error } = await supabase.from("lgpd_data_requests").insert({
+      const { error } = await api.from("lgpd_data_requests").insert({
         tenant_id: profile.tenant_id,
         requester_user_id: user.id,
         requester_email: user.email ?? null,

@@ -16,7 +16,7 @@ import {
   Building2,
   Clock,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
@@ -53,7 +53,7 @@ export default function ConfirmarRetornoPublico() {
 
     const validateToken = async () => {
       try {
-        const { data, error } = await supabase.rpc("validate_return_token", {
+        const { data, error } = await api.rpc("validate_return_token", {
           p_token: token,
         });
 
@@ -89,7 +89,7 @@ export default function ConfirmarRetornoPublico() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.rpc("confirm_return_via_token", {
+      const { data, error } = await api.rpc("confirm_return_via_token", {
         p_token: token,
       });
 
@@ -113,7 +113,7 @@ export default function ConfirmarRetornoPublico() {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.rpc("cancel_return_via_token", {
+      const { data, error } = await api.rpc("cancel_return_via_token", {
         p_token: token,
         p_reason: cancelReason || null,
       });

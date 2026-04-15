@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -100,7 +100,7 @@ export function useONAIndicators(periodoInicio?: string, periodoFim?: string) {
   return useQuery({
     queryKey: ["ona-indicators", tenantId, periodoInicio, periodoFim],
     queryFn: async () => {
-      let query = supabase
+      let query = api
         .from("ona_indicators")
         .select("*")
         .order("periodo_fim", { ascending: false });
@@ -126,7 +126,7 @@ export function useLatestONAIndicators() {
   return useQuery({
     queryKey: ["ona-indicators-latest", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("ona_indicators")
         .select("*")
         .order("periodo_fim", { ascending: false })
@@ -154,7 +154,7 @@ export function useCalculateONAIndicators() {
       fim: string;
       tipoPeriodo?: string;
     }) => {
-      const { data, error } = await supabase.rpc("calcular_indicadores_ona", {
+      const { data, error } = await api.rpc("calcular_indicadores_ona", {
         p_tenant_id: tenantId,
         p_inicio: inicio,
         p_fim: fim,
@@ -181,7 +181,7 @@ export function useAdverseEvents(status?: string) {
   return useQuery({
     queryKey: ["adverse-events", tenantId, status],
     queryFn: async () => {
-      let query = supabase
+      let query = api
         .from("adverse_events")
         .select(`
           *,
@@ -207,7 +207,7 @@ export function useAdverseEvent(id: string) {
   return useQuery({
     queryKey: ["adverse-event", id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("adverse_events")
         .select(`
           *,
@@ -230,11 +230,11 @@ export function useCreateAdverseEvent() {
 
   return useMutation({
     mutationFn: async (input: CreateAdverseEventInput) => {
-      const { data: numero } = await supabase.rpc("generate_adverse_event_number", {
+      const { data: numero } = await api.rpc("generate_adverse_event_number", {
         p_tenant_id: tenantId,
       });
 
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("adverse_events")
         .insert({
           tenant_id: tenantId,
@@ -265,7 +265,7 @@ export function useUpdateAdverseEvent() {
       id,
       ...updates
     }: Partial<AdverseEvent> & { id: string }) => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("adverse_events")
         .update(updates)
         .eq("id", id)

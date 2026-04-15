@@ -1,17 +1,17 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { Activity } from "lucide-react";
 
 export function TriageRealtimeListener() {
   const { profile } = useAuth();
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof api.channel> | null>(null);
 
   useEffect(() => {
     if (!profile?.tenant_id) return;
 
-    const channel = supabase
+    const channel = api
       .channel("triage-new-records")
       .on(
         "postgres_changes",

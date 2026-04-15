@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useClinicalAudit } from "@/hooks/useClinicalAudit";
 import {
   ClipboardList, Plus, Search, User, Calendar,
@@ -249,7 +249,7 @@ export default function Prontuarios() {
 
       if (triageId) {
         // Buscar dados da triagem e abrir form com eles pré-preenchidos
-        supabase.from("triage_records").select("*").eq("id", triageId).single().then(({ data: tr }) => {
+        api.from("triage_records").select("*").eq("id", triageId).single().then(({ data: tr }) => {
           if (tr) {
             const triageData: TriageData = {
               id: tr.id,
@@ -287,7 +287,7 @@ export default function Prontuarios() {
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase.from("patients")
+      const { data, error } = await api.from("patients")
         .select("id, name, phone, email").eq("tenant_id", profile.tenant_id).order("name");
       if (error) throw error;
       setPatients((data as PatientOption[]) || []);
@@ -298,7 +298,7 @@ export default function Prontuarios() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.from("medical_records")
+      const { data, error } = await api.from("medical_records")
         .select("*, patient:patients(name), profiles(full_name)")
         .eq("tenant_id", profile.tenant_id).order("record_date", { ascending: false });
       if (error) throw error;
@@ -332,7 +332,7 @@ export default function Prontuarios() {
   const fetchTemplates = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase.from("record_field_templates")
+      const { data, error } = await api.from("record_field_templates")
         .select("id, name, specialty_id, fields, is_default")
         .eq("tenant_id", profile.tenant_id).order("name");
       if (error) throw error;
@@ -347,7 +347,7 @@ export default function Prontuarios() {
     if (!profile?.tenant_id) return;
     try {
       const today = new Date().toISOString().split("T")[0];
-      const { data, error } = await supabase.from("triage_records")
+      const { data, error } = await api.from("triage_records")
         .select("*, patient:patients(name)")
         .eq("tenant_id", profile.tenant_id).eq("status", "pendente")
         .gte("triaged_at", `${today}T00:00:00`)
@@ -450,7 +450,7 @@ export default function Prontuarios() {
     setVersionsLoading(true);
     setVersionsOpen(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("medical_record_versions")
         .select("id, version_number, changed_by, changed_at, change_reason, digital_hash, profiles(full_name)")
         .eq("record_id", recordId)
@@ -481,10 +481,10 @@ export default function Prontuarios() {
 
     try {
       // Exportação completa via Edge Function (inclui prescrições, atestados, exames, etc.)
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) { toast.error("Sessão expirada"); return; }
 
-      const resp = await supabase.functions.invoke("export-patient-fhir", {
+      const resp = await api.functions.invoke("export-patient-fhir", {
         body: { patient_id: selectedPatientId },
       });
 

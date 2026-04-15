@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import {
   ClockArrowUp, Plus, Loader2, Search, User, Calendar,
   Bell, CheckCircle2, XCircle, CalendarPlus,
@@ -91,10 +91,10 @@ export default function ListaEspera() {
     setIsLoading(true);
     try {
       const [cRes, sRes, pRes, wRes] = await Promise.all([
-        supabase.from("patients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name").limit(500),
-        supabase.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(200),
-        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
-        supabase.from("waitlist")
+        api.from("patients").select("id, name, phone").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        api.from("procedures").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(200),
+        api.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
+        api.from("waitlist")
           .select("*, patient:patients(name, phone), procedure:procedures(name), profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .order("created_at", { ascending: false })
@@ -128,7 +128,7 @@ export default function ListaEspera() {
     if (!formData.patient_id) { toast.error("Selecione um paciente"); return; }
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("waitlist").insert({
+      const { error } = await api.from("waitlist").insert({
         tenant_id: profile!.tenant_id,
         patient_id: formData.patient_id,
         procedure_id: formData.procedure_id || null,
@@ -155,14 +155,14 @@ export default function ListaEspera() {
       const updates: any = { status };
       if (status === "notificado") updates.notified_at = new Date().toISOString();
       if (status === "agendado") updates.scheduled_at = new Date().toISOString();
-      const { error } = await supabase.from("waitlist").update(updates).eq("id", id);
+      const { error } = await api.from("waitlist").update(updates).eq("id", id);
       if (error) throw error;
 
       // If notifying, send real WhatsApp/email via notify-patient-events
       if (status === "notificado") {
         const entry = entries.find((e) => e.id === id);
         if (entry?.patient_id) {
-          supabase.functions.invoke("notify-patient-events", {
+          api.functions.invoke("notify-patient-events", {
             body: {
               event_type: "waitlist_slot_available",
               patient_id: entry.patient_id,

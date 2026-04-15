@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import {
@@ -69,7 +69,7 @@ export default function ConfigurarRegras() {
 
     const loadProfessionals = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("profiles")
           .select("user_id, full_name, email, professional_type")
           .eq("tenant_id", profile.tenant_id)
@@ -102,7 +102,7 @@ export default function ConfigurarRegras() {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("commission_rules")
         .select(`
           *,
@@ -143,7 +143,7 @@ export default function ConfigurarRegras() {
     if (!deleteRule) return;
 
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("commission_rules")
         .delete()
         .eq("id", deleteRule.id);
@@ -161,7 +161,7 @@ export default function ConfigurarRegras() {
 
   const handleToggleActive = async (rule: CommissionRule, active: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("commission_rules")
         .update({ is_active: active })
         .eq("id", rule.id);

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Coins, TrendingUp, Gift, Star, ArrowUp, ArrowDown, Clock, Shield, Award, Sparkles } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 const TIER_CONFIG = {
@@ -49,9 +49,9 @@ function usePatientProfile() {
   return useQuery({
     queryKey: ["patient-profile-for-credits"],
     queryFn: async () => {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return null;
-      const { data: pp } = await supabasePatient
+      const { data: pp } = await apiPatient
         .from("patient_profiles")
         .select("client_id, tenant_id")
         .eq("user_id", user.id)
@@ -70,7 +70,7 @@ export default function PatientHealthCredits() {
     queryKey: ["patient-health-credits-balance", pp?.tenant_id, pp?.client_id],
     enabled: !!pp,
     queryFn: async () => {
-      const { data } = await supabasePatient
+      const { data } = await apiPatient
         .from("health_credits_balance" as never)
         .select("*")
         .eq("tenant_id", pp!.tenant_id)
@@ -86,7 +86,7 @@ export default function PatientHealthCredits() {
     queryKey: ["patient-health-credits-transactions", pp?.tenant_id, pp?.client_id],
     enabled: !!pp,
     queryFn: async () => {
-      const { data } = await supabasePatient
+      const { data } = await apiPatient
         .from("health_credits_transactions" as never)
         .select("*")
         .eq("tenant_id", pp!.tenant_id)
@@ -105,7 +105,7 @@ export default function PatientHealthCredits() {
     queryKey: ["patient-health-credits-rules", pp?.tenant_id],
     enabled: !!pp,
     queryFn: async () => {
-      const { data } = await supabasePatient
+      const { data } = await apiPatient
         .from("health_credits_rules" as never)
         .select("name, trigger_type, points, is_active")
         .eq("tenant_id", pp!.tenant_id)
@@ -120,7 +120,7 @@ export default function PatientHealthCredits() {
     queryKey: ["patient-credits-redeem-config", pp?.tenant_id],
     enabled: !!pp,
     queryFn: async () => {
-      const { data } = await supabasePatient
+      const { data } = await apiPatient
         .from("health_credits_redemption_config" as never)
         .select("credits_per_real, min_redeem, max_discount_percent, is_active")
         .eq("tenant_id", pp!.tenant_id)

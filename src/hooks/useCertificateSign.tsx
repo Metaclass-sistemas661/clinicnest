@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { signWithCertificate, type ICPSignatureResult } from "@/lib/icp-brasil-signature";
 import { decryptPfx } from "@/components/settings/CertificateManager";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ export function useCertificateSign(): UseSignatureReturn {
     setState(s => ({ ...s, isLoading: true, error: null }));
     
     try {
-      const { data, error } = await supabase.rpc("get_certificate_for_signing");
+      const { data, error } = await api.rpc("get_certificate_for_signing");
       
       if (error) throw error;
       
@@ -96,7 +96,7 @@ export function useCertificateSign(): UseSignatureReturn {
     setState(s => ({ ...s, isLoading: true, error: null }));
 
     try {
-      const { data: certData, error } = await supabase.rpc("get_certificate_for_signing", {
+      const { data: certData, error } = await api.rpc("get_certificate_for_signing", {
         p_certificate_id: state.certificate.id,
       });
 

@@ -8,7 +8,7 @@ import {
   AlertTriangle, Heart, Thermometer, Users, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -68,19 +68,19 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
 
     try {
       const [triagesRes, roomsRes, arrivedRes, triagedTodayRes] = await Promise.all([
-        supabase
+        api
           .from("triage_records")
           .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pendente")
           .order("triaged_at", { ascending: true })
           .limit(15),
-        supabase
+        api
           .from("clinic_rooms")
           .select("id, name, room_type, floor")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true),
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -88,7 +88,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("triage_records")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)
@@ -109,7 +109,7 @@ export const DashboardEnfermeiro = memo(function DashboardEnfermeiro() {
       setPendingTriages(triagesMapped);
 
       const roomsRaw = (roomsRes.data || []) as any[];
-      const occupanciesRes = await supabase
+      const occupanciesRes = await api
         .from("room_occupancies")
         .select("room_id")
         .eq("tenant_id", profile.tenant_id)

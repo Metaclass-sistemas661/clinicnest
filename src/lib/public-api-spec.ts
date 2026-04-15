@@ -16,7 +16,7 @@ export interface OpenAPISpec {
   security: Array<Record<string, string[]>>;
 }
 
-export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
+export function generateOpenAPISpec(apiBaseUrl: string): OpenAPISpec {
   return {
     openapi: "3.0.3",
     info: {
@@ -29,8 +29,7 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
       contact: { email: "api@ClinicNest.com.br" },
     },
     servers: [
-      { url: `${supabaseUrl}/rest/v1`, description: "Supabase REST (PostgREST)" },
-      { url: `${supabaseUrl}/functions/v1`, description: "Supabase Edge Functions" },
+      { url: `${apiBaseUrl}/api`, description: "ClinicNest Cloud Run API" },
     ],
     paths: {
       "/patients": {
@@ -157,13 +156,13 @@ export function generateOpenAPISpec(supabaseUrl: string): OpenAPISpec {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Token JWT obtido via autenticação Supabase (supabase.auth.signIn)",
+          description: "Token JWT obtido via autenticação Firebase (auth.signInWithPassword)",
         },
         ApiKeyAuth: {
           type: "apiKey",
           in: "header",
           name: "apikey",
-          description: "Chave anon/service_role do projeto Supabase",
+          description: "Chave de API do projeto",
         },
       },
       schemas: {

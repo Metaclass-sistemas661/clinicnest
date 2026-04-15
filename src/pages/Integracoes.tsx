@@ -13,7 +13,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 import {
@@ -181,7 +181,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data } = await (api as any)
           .from("tenants")
           .select("google_calendar_email, google_calendar_auto_sync")
           .eq("id", tenantId)
@@ -217,7 +217,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
   const handleDisconnect = async () => {
     setIsDisconnecting(true);
     try {
-      await (supabase as any)
+      await (api as any)
         .from("tenants")
         .update({ google_calendar_email: null, google_calendar_refresh_token: null, google_calendar_auto_sync: false })
         .eq("id", tenantId);
@@ -231,7 +231,7 @@ function TabGoogleCalendar({ tenantId }: { tenantId: string }) {
   const handleToggleSync = async (v: boolean) => {
     setAutoSync(v);
     try {
-      await (supabase as any)
+      await (api as any)
         .from("tenants")
         .update({ google_calendar_auto_sync: v })
         .eq("id", tenantId);
@@ -378,8 +378,8 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
     setIsLoading(true);
     try {
       const [whRes, dlRes] = await Promise.all([
-        (supabase as any).from("outbound_webhooks").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        (supabase as any).from("outbound_webhook_log").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(50),
+        (api as any).from("outbound_webhooks").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        (api as any).from("outbound_webhook_log").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(50),
       ]);
       setWebhooks((whRes.data ?? []) as OutboundWebhook[]);
       setDeliveries((dlRes.data ?? []) as WebhookDelivery[]);
@@ -394,7 +394,7 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
     if (formEvents.length === 0) { toast.error("Selecione ao menos um evento."); return; }
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any).from("outbound_webhooks").insert({
+      const { error } = await (api as any).from("outbound_webhooks").insert({
         tenant_id: tenantId,
         name: formName.trim(),
         url: formUrl.trim(),
@@ -414,13 +414,13 @@ function TabWebhooks({ tenantId }: { tenantId: string }) {
   };
 
   const handleToggle = async (id: string, active: boolean) => {
-    await (supabase as any).from("outbound_webhooks").update({ active }).eq("id", id).eq("tenant_id", tenantId);
+    await (api as any).from("outbound_webhooks").update({ active }).eq("id", id).eq("tenant_id", tenantId);
     setWebhooks((prev) => prev.map((w) => w.id === id ? { ...w, active } : w));
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    await (supabase as any).from("outbound_webhooks").delete().eq("id", deleteId).eq("tenant_id", tenantId);
+    await (api as any).from("outbound_webhooks").delete().eq("id", deleteId).eq("tenant_id", tenantId);
     setWebhooks((prev) => prev.filter((w) => w.id !== deleteId));
     setDeleteId(null);
     toast.success("Webhook removido.");
@@ -688,7 +688,7 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data } = await (supabase as any)
+      const { data } = await (api as any)
         .from("api_keys")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -705,7 +705,7 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
     setIsSaving(true);
     const key = generateApiKey();
     try {
-      const { error } = await (supabase as any).from("api_keys").insert({
+      const { error } = await (api as any).from("api_keys").insert({
         tenant_id: tenantId,
         name: formName.trim(),
         key_prefix: key.slice(0, 14), // "bg_live_XXXXXX"
@@ -726,7 +726,7 @@ function TabApiZapier({ tenantId }: { tenantId: string }) {
 
   const handleRevoke = async () => {
     if (!deleteId) return;
-    await (supabase as any).from("api_keys").update({ active: false }).eq("id", deleteId).eq("tenant_id", tenantId);
+    await (api as any).from("api_keys").update({ active: false }).eq("id", deleteId).eq("tenant_id", tenantId);
     setApiKeys((prev) => prev.map((k) => k.id === deleteId ? { ...k, active: false } : k));
     setDeleteId(null);
     toast.success("Chave revogada.");
@@ -937,7 +937,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data } = await (api as any)
           .from("tenants")
           .select("payment_gateway_type, payment_gateway_config")
           .eq("id", tenantId)
@@ -960,7 +960,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
     }
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("tenants")
         .update({
           payment_gateway_type: gateway || null,
@@ -980,7 +980,7 @@ function TabPaymentGateway({ tenantId }: { tenantId: string }) {
   const handleDisconnect = async () => {
     setIsSaving(true);
     try {
-      await (supabase as any)
+      await (api as any)
         .from("tenants")
         .update({ payment_gateway_type: null, payment_gateway_config: {} })
         .eq("id", tenantId);
@@ -1172,7 +1172,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await (supabase as any)
+        const { data } = await (api as any)
           .from("tenants")
           .select("stone_api_key, stone_terminal_serial, stone_active")
           .eq("id", tenantId)
@@ -1193,7 +1193,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
     if (!apiKey.trim()) { toast.error("Informe a chave de API Stone."); return; }
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("tenants")
         .update({
           stone_api_key: apiKey.trim(),
@@ -1214,7 +1214,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   const handleDisconnect = async () => {
     setIsSaving(true);
     try {
-      await (supabase as any)
+      await (api as any)
         .from("tenants")
         .update({ stone_api_key: null, stone_terminal_serial: null, stone_active: false })
         .eq("id", tenantId);
@@ -1386,7 +1386,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
   const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getAuthHeaders = async () => {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await api.auth.getSession();
     if (error) throw error;
     const token = data.session?.access_token;
     if (!token) throw new Error("Sessão ausente. Faça login novamente.");
@@ -1395,7 +1395,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
 
   const callProxy = async (action: string) => {
     const headers = await getAuthHeaders();
-    const { data, error } = await supabase.functions.invoke("evolution-proxy", {
+    const { data, error } = await api.functions.invoke("evolution-proxy", {
       headers,
       body: { action, tenant_id: tenantId },
     });
@@ -1407,7 +1407,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: tenant } = await (supabase as any)
+        const { data: tenant } = await (api as any)
           .from("tenants")
           .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
           .eq("id", tenantId)
@@ -1514,7 +1514,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
           toast.success("WhatsApp conectado com sucesso! ✅");
 
           // Reload tenant data
-          const { data: tenant } = await (supabase as any)
+          const { data: tenant } = await (api as any)
             .from("tenants")
             .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
             .eq("id", tenantId)
@@ -1586,7 +1586,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     setIsTesting(true);
     try {
       const headers = await getAuthHeaders();
-      const { data, error } = await supabase.functions.invoke("whatsapp-sender", {
+      const { data, error } = await api.functions.invoke("whatsapp-sender", {
         headers,
         body: {
           phone: testPhone.trim(),
@@ -1614,7 +1614,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
   const handleSaveManual = async () => {
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("tenants")
         .update({
           whatsapp_api_url: apiUrl.trim() || null,
@@ -1922,7 +1922,7 @@ export default function Integracoes({ embedded = false }: { embedded?: boolean }
   const [webhookCount, setWebhookCount] = useState<number | null>(null);
   useEffect(() => {
     if (!tenantId) return;
-    (supabase as any)
+    (api as any)
       .from("outbound_webhooks")
       .select("id", { count: "exact", head: true })
       .eq("tenant_id", tenantId)

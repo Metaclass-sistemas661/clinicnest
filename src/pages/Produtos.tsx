@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { Plus, AlertTriangle, ArrowUp, ArrowDown, Tag, ChevronDown, Package, Trash2 } from "lucide-react";
 import {
@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
-import { adjustStock, createProductCategoryV2, createProductV2, updateProductPricesV2 } from "@/lib/supabase-typed-rpc";
+import { adjustStock, createProductCategoryV2, createProductV2, updateProductPricesV2 } from "@/lib/typed-rpc";
 import type { Product, ProductCategory, StockMovement, StockOutReasonType } from "@/types/database";
 import {
   ProductCategoryDialog,
@@ -99,7 +99,7 @@ export default function Produtos() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("product_categories")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -117,7 +117,7 @@ export default function Produtos() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("products")
         .select("*, category:product_categories(*)")
         .eq("tenant_id", profile.tenant_id)
@@ -138,7 +138,7 @@ export default function Produtos() {
 
     setIsDamagedLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("stock_movements")
         .select("id, tenant_id, product_id, quantity, movement_type, reason, created_by, created_at, out_reason_type")
         .eq("tenant_id", profile.tenant_id)

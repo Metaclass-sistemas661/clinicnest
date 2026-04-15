@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ClipboardList, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 interface PendingItem {
@@ -41,7 +41,7 @@ export function PendingPlanItemsSuggestion({ patientId, tenantId, procedures, on
     (async () => {
       try {
         // Fetch pending items from active treatment plans
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("treatment_plan_items" as never)
           .select("id, procedure_name, procedure_code, tooth_number, surface, treatment_plans!inner(title, status, tenant_id, client_id)")
           .eq("status", "pendente")

@@ -8,7 +8,7 @@ import {
   ClipboardList, AlertTriangle, Plus, ArrowRight, Megaphone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -88,7 +88,7 @@ export const DashboardMedico = memo(function DashboardMedico() {
 
     try {
       const [aptsRes, triagesRes, recordsRes, waitlistRes, completedRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -96,28 +96,28 @@ export const DashboardMedico = memo(function DashboardMedico() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("triage_records")
           .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "pendente")
           .order("triaged_at", { ascending: true })
           .limit(8),
-        supabase
+        api
           .from("medical_records")
           .select("id, template_type, created_at, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", profile.id)
           .order("created_at", { ascending: false })
           .limit(5),
-        supabase
+        api
           .from("waitlist")
           .select("id, priority, preferred_period, created_at, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("status", "waiting")
           .order("created_at", { ascending: true })
           .limit(5),
-        supabase
+        api
           .from("appointments")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)

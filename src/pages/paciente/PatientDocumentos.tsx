@@ -30,7 +30,7 @@ import {
   Pen,
   FileDown,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/utils/getClientIp";
 import { format } from "date-fns";
@@ -92,10 +92,10 @@ export default function PatientDocumentos() {
 
   const resolvePatient = useCallback(async () => {
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return null;
       setAuthUserId(user.id);
-      const { data } = await (supabasePatient as any)
+      const { data } = await (apiPatient as any)
         .from("patients")
         .select("id, tenant_id, name, cpf, date_of_birth, birth_date, email, phone, street, street_number, neighborhood, city, state, zip_code, address_street, address_city, address_state, address_zip")
         .eq("email", user.email!)
@@ -105,7 +105,7 @@ export default function PatientDocumentos() {
 
       let tenantData: any = null;
       if (data.tenant_id) {
-        const { data: t } = await (supabasePatient as any)
+        const { data: t } = await (apiPatient as any)
           .from("tenants")
           .select("name, cnpj, address, responsible_doctor, responsible_crm")
           .eq("id", data.tenant_id)
@@ -125,7 +125,7 @@ export default function PatientDocumentos() {
   const fetchConsents = useCallback(async (pId: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_all_consents", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_all_consents", {
         p_patient_id: pId,
       });
       if (error) throw error;
@@ -137,13 +137,13 @@ export default function PatientDocumentos() {
       for (const c of rows) {
         if (c.consent_id && c.is_signed) {
           if (c.facial_photo_path) {
-            const { data: urlData } = await supabasePatient.storage
+            const { data: urlData } = await apiPatient.storage
               .from("consent-photos")
               .createSignedUrl(c.facial_photo_path, 600);
             if (urlData?.signedUrl) urls[`photo_${c.consent_id}`] = urlData.signedUrl;
           }
           if (c.manual_signature_path) {
-            const { data: urlData } = await supabasePatient.storage
+            const { data: urlData } = await apiPatient.storage
               .from("consent-signatures")
               .createSignedUrl(c.manual_signature_path, 600);
             if (urlData?.signedUrl) urls[`sig_${c.consent_id}`] = urlData.signedUrl;
@@ -156,14 +156,14 @@ export default function PatientDocumentos() {
       for (const c of rows) {
         if (c.is_signed && c.consent_id && !c.sealed_pdf_path) {
           try {
-            const { data: sealData, error: sealErr } = await supabasePatient.functions
+            const { data: sealData, error: sealErr } = await apiPatient.functions
               .invoke("seal-consent-pdf", { body: { consent_id: c.consent_id } });
             if (sealErr) {
               logger.warn("[PatientDocumentos] auto-seal failed:", c.consent_id, sealErr);
             } else {
               logger.info("[PatientDocumentos] auto-seal success:", c.consent_id, sealData);
               // Re-fetch to pick up sealed_pdf_path
-              const { data: refreshed } = await (supabasePatient as any).rpc("get_patient_all_consents", { p_patient_id: pId });
+              const { data: refreshed } = await (apiPatient as any).rpc("get_patient_all_consents", { p_patient_id: pId });
               if (refreshed) setConsents(refreshed as ConsentRow[]);
             }
           } catch (err) {
@@ -231,7 +231,7 @@ export default function PatientDocumentos() {
       // Resolve auth user ID for storage folder (matches RLS policy)
       let resolvedAuthId = authUserId;
       if (!resolvedAuthId) {
-        const { data: { user: freshUser } } = await supabasePatient.auth.getUser();
+        const { data: { user: freshUser } } = await apiPatient.auth.getUser();
         resolvedAuthId = freshUser?.id ?? null;
         if (resolvedAuthId) setAuthUserId(resolvedAuthId);
       }
@@ -243,7 +243,7 @@ export default function PatientDocumentos() {
 
       if (signMethod === "facial" && capturedBlob) {
         const fileName = `${resolvedAuthId}/${signTarget.template_id}_${Date.now()}.jpg`;
-        const { error: uploadError } = await supabasePatient.storage
+        const { error: uploadError } = await apiPatient.storage
           .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
         if (uploadError) throw uploadError;
@@ -252,7 +252,7 @@ export default function PatientDocumentos() {
         const res = await fetch(manualDataUrl);
         const blob = await res.blob();
         const fileName = `${resolvedAuthId}/${signTarget.template_id}_${Date.now()}.png`;
-        const { error: uploadError } = await supabasePatient.storage
+        const { error: uploadError } = await apiPatient.storage
           .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });
         if (uploadError) throw uploadError;
@@ -280,7 +280,7 @@ export default function PatientDocumentos() {
             p_user_agent: navigator.userAgent,
           };
 
-      const { data, error } = await supabasePatient.rpc(rpcName as any, rpcParams as any);
+      const { data, error } = await apiPatient.rpc(rpcName as any, rpcParams as any);
       if (error) throw error;
 
       const result = data as any;
@@ -289,13 +289,13 @@ export default function PatientDocumentos() {
       const consentId = result?.consent_id;
       if (consentId) {
         const filledHtml = replaceVariables(signTarget.body_html, varsData);
-        await (supabasePatient as any)
+        await (apiPatient as any)
           .from("patient_consents")
           .update({ template_snapshot_html: filledHtml })
           .eq("id", consentId);
 
         // Trigger seal-consent-pdf (fire & forget)
-        supabasePatient.functions
+        apiPatient.functions
           .invoke("seal-consent-pdf", { body: { consent_id: consentId } })
           .then(({ error: sealErr }) => {
             if (sealErr) logger.warn("[PatientDocumentos] seal-consent-pdf:", sealErr);
@@ -318,7 +318,7 @@ export default function PatientDocumentos() {
   const handleDownloadSealedPdf = async (consent: ConsentRow) => {
     if (!consent.sealed_pdf_path) return;
     try {
-      const { data, error } = await supabasePatient.storage
+      const { data, error } = await apiPatient.storage
         .from("consent-sealed-pdfs")
         .createSignedUrl(consent.sealed_pdf_path, 300);
       if (error) throw error;
@@ -333,7 +333,7 @@ export default function PatientDocumentos() {
     if (!consent.consent_id) return;
     setSealingId(consent.consent_id);
     try {
-      const { data: sealData, error: sealErr } = await supabasePatient.functions
+      const { data: sealData, error: sealErr } = await apiPatient.functions
         .invoke("seal-consent-pdf", { body: { consent_id: consent.consent_id } });
 
       if (sealErr) {

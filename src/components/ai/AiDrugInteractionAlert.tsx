@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle, ShieldAlert, Shield, Info, Loader2, Pill, ArrowRightLeft, Check,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 // ── Types ───────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ export function AiDrugInteractionAlert({ prescriptions, currentMedications, alle
     setError(null);
 
     try {
-      const resp = await supabase.functions.invoke("ai-drug-interactions", {
+      const resp = await api.functions.invoke("ai-drug-interactions", {
         body: {
           prescribed_medications: prescribed,
           current_medications: parseMedsList(currentMedications || ""),

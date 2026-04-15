@@ -4,7 +4,7 @@
  * Based on historical patterns and patient behavior
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 interface PatientHistory {
@@ -78,7 +78,7 @@ async function getPatientHistory(
   patientId: string,
   tenantId: string
 ): Promise<PatientHistory | null> {
-  const { data, error } = await supabase
+  const { data, error } = await api
     .from("appointments")
     .select("status, scheduled_at")
     .eq("patient_id", patientId)
@@ -133,7 +133,7 @@ async function getProfessionalNoShowRate(
   professionalId: string,
   tenantId: string
 ): Promise<number> {
-  const { data, error } = await supabase
+  const { data, error } = await api
     .from("appointments")
     .select("status")
     .eq("professional_id", professionalId)
@@ -156,7 +156,7 @@ async function getTimeSlotNoShowRate(
   hour: number,
   tenantId: string
 ): Promise<number> {
-  const { data, error } = await supabase.rpc("get_time_slot_no_show_rate", {
+  const { data, error } = await api.rpc("get_time_slot_no_show_rate", {
     p_tenant_id: tenantId,
     p_day_of_week: dayOfWeek,
     p_hour: hour,
@@ -293,7 +293,7 @@ export async function predictNoShow(
   tenantId: string
 ): Promise<NoShowPrediction> {
   // Get appointment details
-  const { data: appointment, error } = await supabase
+  const { data: appointment, error } = await api
     .from("appointments")
     .select(`
       id,

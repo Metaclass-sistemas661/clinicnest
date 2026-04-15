@@ -14,11 +14,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 import { toastRpcError } from "@/lib/rpc-error";
-import { createScheduleBlockV1, deleteScheduleBlockV1, upsertProfessionalWorkingHoursV1 } from "@/lib/supabase-typed-rpc";
+import { createScheduleBlockV1, deleteScheduleBlockV1, upsertProfessionalWorkingHoursV1 } from "@/lib/typed-rpc";
 import { CalendarX, Clock } from "lucide-react";
 import type { Profile } from "@/types/database";
 
@@ -119,12 +119,12 @@ export default function Disponibilidade() {
     setIsLoading(true);
     try {
       const [profRes, blocksRes] = await Promise.all([
-        supabase
+        api
           .from("profiles")
           .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("full_name"),
-        supabase
+        api
           .from("schedule_blocks")
           .select("*, professional:profiles!professional_id(id, full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -162,7 +162,7 @@ export default function Disponibilidade() {
   const refreshWorkingHours = async (professionalId: string) => {
     if (!profile?.tenant_id || !professionalId) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("professional_working_hours")
         .select("*")
         .eq("tenant_id", profile.tenant_id)

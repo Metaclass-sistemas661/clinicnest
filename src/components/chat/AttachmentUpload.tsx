@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Paperclip, X, FileIcon, ImageIcon, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -87,7 +87,7 @@ export function AttachmentUpload({
 
         try {
           const fileName = `${profile.tenant_id}/chat/${Date.now()}_${file.name}`;
-          const { data, error } = await supabase.storage
+          const { data, error } = await api.storage
             .from("attachments")
             .upload(fileName, file, {
               cacheControl: "3600",
@@ -96,7 +96,7 @@ export function AttachmentUpload({
 
           if (error) throw error;
 
-          const { data: urlData } = supabase.storage
+          const { data: urlData } = api.storage
             .from("attachments")
             .getPublicUrl(data.path);
 

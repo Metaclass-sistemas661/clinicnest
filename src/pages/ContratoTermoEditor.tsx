@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Save, Eye, Copy, Info } from "lucide-react";
@@ -63,7 +63,7 @@ export default function ContratoTermoEditor() {
     if (!profile?.tenant_id || !id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("contract_templates")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -117,11 +117,11 @@ export default function ContratoTermoEditor() {
       };
 
       if (isNew) {
-        const { error } = await supabase.from("contract_templates").insert(payload);
+        const { error } = await api.from("contract_templates").insert(payload);
         if (error) throw error;
         toast.success("Contrato criado com sucesso!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("contract_templates")
           .update(payload)
           .eq("id", id)

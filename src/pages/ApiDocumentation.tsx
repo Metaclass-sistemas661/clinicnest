@@ -10,7 +10,7 @@ import { Code2, Download, ExternalLink, Copy, Check } from "lucide-react";
 import { generateOpenAPISpec, downloadOpenAPISpec } from "@/lib/public-api-spec";
 import { toast } from "sonner";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
@@ -24,7 +24,7 @@ function MethodBadge({ method }: { method: string }) {
 
 export default function ApiDocumentation() {
   const [copied, setCopied] = useState<string | null>(null);
-  const spec = generateOpenAPISpec(SUPABASE_URL);
+  const spec = generateOpenAPISpec(API_BASE_URL);
 
   const endpoints = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods as Record<string, any>).map(([method, info]) => ({
@@ -42,34 +42,30 @@ export default function ApiDocumentation() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const baseUrl = `${SUPABASE_URL}/rest/v1`;
+  const baseUrl = `${API_BASE_URL}/api`;
 
-  const curlExample = `curl -X GET "${baseUrl}/clients?select=id,name,cpf&limit=10" \\
-  -H "apikey: YOUR_ANON_KEY" \\
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
-  -H "Content-Type: application/json"`;
+  const curlExample = `curl -X GET "${baseUrl}/rest" \\
+  -H "Authorization: Bearer YOUR_FIREBASE_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"table":"clients","select":"id,name,cpf","limit":10}'`;
 
-  const jsExample = `import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  '${SUPABASE_URL}',
-  'YOUR_ANON_KEY'
-)
+  const jsExample = `import { api } from '@/integrations/gcp/client'
+import { auth } from '@/integrations/gcp/auth'
 
 // Autenticar
-const { data: { session } } = await supabase.auth.signInWithPassword({
+const { data: { session } } = await auth.signInWithPassword({
   email: 'user@clinic.com',
   password: 'password'
 })
 
 // Listar pacientes
-const { data: patients } = await supabase
+const { data: patients } = await api
   .from("patients")
   .select('id, name, cpf, phone')
   .limit(10)
 
 // Criar agendamento
-const { data } = await supabase.rpc('create_appointment_v2', {
+const { data } = await api.rpc('create_appointment_v2', {
   p_client_id: 'uuid-do-paciente',
   p_service_id: 'uuid-do-servico',
   p_professional_id: 'uuid-do-profissional',

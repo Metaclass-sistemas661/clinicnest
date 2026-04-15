@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import {
   FilePlus2,
   Plus,
@@ -148,7 +148,7 @@ export default function Receituarios() {
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("id, name, phone, cpf")
         .eq("tenant_id", profile.tenant_id)
@@ -163,7 +163,7 @@ export default function Receituarios() {
   const fetchRecentAppointments = async (patientId: string) => {
     if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("appointments")
         .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
@@ -226,7 +226,7 @@ export default function Receituarios() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("prescriptions")
         .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
@@ -264,7 +264,7 @@ export default function Receituarios() {
     setIsSaving(true);
     try {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
-      const { error } = await supabase.from("prescriptions").insert({
+      const { error } = await api.from("prescriptions").insert({
         tenant_id: profile!.tenant_id,
         patient_id: formData.patient_id,
         professional_id: profile!.id,
@@ -470,7 +470,7 @@ export default function Receituarios() {
           return;
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await api
           .from("prescriptions")
           .update({
             digital_signature: signResult.signature,
@@ -487,7 +487,7 @@ export default function Receituarios() {
 
         toast.success("Receita assinada com certificado ICP-Brasil!");
       } else {
-        const { data, error } = await supabase.rpc("sign_prescription", {
+        const { data, error } = await api.rpc("sign_prescription", {
           p_prescription_id: signingPrescription.id,
         });
         

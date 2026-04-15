@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Loader2, Send, RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 
 interface Props {
@@ -21,13 +21,13 @@ export function AiWeeklySummaryCard({ className }: Props) {
     setLoading(true);
     setResult(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) {
         toast.error("Sessão expirada. Faça login novamente.");
         return;
       }
 
-      const res = await supabase.functions.invoke("ai-weekly-summary", {
+      const res = await api.functions.invoke("ai-weekly-summary", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 

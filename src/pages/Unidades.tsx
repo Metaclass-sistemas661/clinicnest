@@ -26,7 +26,7 @@ import {
   Hash,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -72,7 +72,7 @@ export default function Unidades() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("clinic_units")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -128,7 +128,7 @@ export default function Unidades() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("clinic_units")
           .update(payload)
           .eq("id", editingId)
@@ -136,7 +136,7 @@ export default function Unidades() {
         if (error) throw error;
         toast.success("Unidade atualizada");
       } else {
-        const { error } = await supabase.from("clinic_units").insert(payload);
+        const { error } = await api.from("clinic_units").insert(payload);
         if (error) throw error;
         toast.success("Unidade criada");
       }
@@ -153,7 +153,7 @@ export default function Unidades() {
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta unidade?")) return;
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("clinic_units")
         .delete()
         .eq("id", id)

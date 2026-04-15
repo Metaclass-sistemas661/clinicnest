@@ -1,0 +1,92 @@
+/**
+ * Firebase Auth middleware
+ * Replaces: _shared/auth.ts (JWT validation)
+ * 
+ * Validates Firebase ID token from Authorization header,
+ * extracts user info, and attaches to req.user.
+ */
+import { Request, Response, NextFunction } from 'express';
+import * as admin from 'firebase-admin';
+import { adminQuery } from './db';
+
+// Initialize Firebase Admin (uses GOOGLE_APPLICATION_CREDENTIALS or default SA)
+if (!admin.apps.length) {
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (serviceAccountKey) {
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else {
+    admin.initializeApp();
+  }
+}
+
+export interface AuthenticatedUser {
+  uid: string;
+  email: string;
+  tenant_id: string;
+  role: string;
+  professional_type?: string;
+}
+
+/**
+ * Express middleware: validates Firebase JWT and loads tenant from DB.
+ * Attaches req.user with uid, email, tenant_id, role.
+ */
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  }
+  
+  const token = authHeader.substring(7);
+  
+  try {
+    // Verify Firebase ID token
+    const decoded = await admin.auth().verifyIdToken(token);
+    
+    // Load tenant_id and role from profiles table
+    const result = await adminQuery(
+      `SELECT p.tenant_id, ur.role, p.professional_type
+       FROM profiles p
+       LEFT JOIN user_roles ur ON ur.user_id = p.uid AND ur.tenant_id = p.tenant_id
+       WHERE p.id = $1
+       LIMIT 1`,
+      [decoded.uid]
+    );
+    
+    const profile = result.rows[0];
+    
+    (req as any).user = {
+      uid: decoded.uid,
+      email: decoded.email || '',
+      tenant_id: profile?.tenant_id || '',
+      role: profile?.role || 'authenticated',
+      professional_type: profile?.professional_type || null,
+    } as AuthenticatedUser;
+    
+    next();
+  } catch (error: any) {
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ error: 'Token expired' });
+    }
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+/**
+ * Verify internal/cron requests (by secret key, not JWT).
+ */
+export function internalAuthMiddleware(secretEnvVar: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const expected = process.env[secretEnvVar];
+    const provided = req.headers['x-secret-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    
+    if (!expected || provided !== expected) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  };
+}

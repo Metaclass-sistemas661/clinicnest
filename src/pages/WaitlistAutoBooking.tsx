@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +29,7 @@ export default function WaitlistAutoBooking() {
       if (!waitlistId) { setState("error"); return; }
 
       try {
-        const { data, error } = await supabase.functions.invoke("waitlist-auto-book", {
+        const { data, error } = await api.functions.invoke("waitlist-auto-book", {
           body: { action: "check", waitlist_id: waitlistId, token },
         });
 
@@ -52,7 +52,7 @@ export default function WaitlistAutoBooking() {
     if (!waitlistId) return;
     setIsBooking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("waitlist-auto-book", {
+      const { data, error } = await api.functions.invoke("waitlist-auto-book", {
         body: { action: "book", waitlist_id: waitlistId, token },
       });
 

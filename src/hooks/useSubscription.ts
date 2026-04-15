@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface SubscriptionStatus {
@@ -98,7 +98,7 @@ export function useSubscription() {
 
     try {
       // Consulta direto no banco (evita depender da Edge Function check-subscription)
-      const { data: profile } = await supabase
+      const { data: profile } = await api
         .from('profiles')
         .select('tenant_id')
         .eq('user_id', user.id)
@@ -118,7 +118,7 @@ export function useSubscription() {
         return;
       }
 
-      const { data: sub } = await supabase
+      const { data: sub } = await api
         .from('subscriptions')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -181,12 +181,8 @@ export function useSubscription() {
       return { tier, interval };
     })();
 
-    const { data, error } = await supabase.functions.invoke('create-checkout', {
+    const { data, error } = await api.functions.invoke('create-checkout', {
       body: payload,
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
     });
 
     if (data?.url) {

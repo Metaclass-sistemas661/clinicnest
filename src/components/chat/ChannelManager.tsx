@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Hash, Lock, Trash2, Users, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -77,7 +77,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("chat_channels")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -96,7 +96,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
   const fetchMembers = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("profiles")
         .select("id, full_name")
         .eq("tenant_id", profile.tenant_id)
@@ -115,7 +115,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
     }
     setIsCreating(true);
     try {
-      const { data, error } = await supabase.rpc("create_chat_channel", {
+      const { data, error } = await api.rpc("create_chat_channel", {
         p_name: newChannelName.trim(),
         p_description: newChannelDescription.trim() || null,
         p_is_private: newChannelPrivate,
@@ -144,7 +144,7 @@ export function ChannelManager({ open, onOpenChange, onChannelCreated }: Channel
       return;
     }
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("chat_channels")
         .delete()
         .eq("id", channelId);

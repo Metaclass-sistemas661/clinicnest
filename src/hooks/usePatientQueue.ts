@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -53,7 +53,7 @@ export function useWaitingQueue(limit: number = 10) {
   return useQuery({
     queryKey: ["waiting-queue", tenantId, limit],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_waiting_queue", {
+      const { data, error } = await api.rpc("get_waiting_queue", {
         p_tenant_id: tenantId,
         p_limit: limit,
       });
@@ -72,7 +72,7 @@ export function useCurrentCall() {
   return useQuery({
     queryKey: ["current-call", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_current_call", {
+      const { data, error } = await api.rpc("get_current_call", {
         p_tenant_id: tenantId,
       });
 
@@ -90,7 +90,7 @@ export function useQueueStatistics() {
   return useQuery({
     queryKey: ["queue-statistics", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_queue_statistics", {
+      const { data, error } = await api.rpc("get_queue_statistics", {
         p_tenant_id: tenantId,
       });
 
@@ -114,7 +114,7 @@ export function useCallNextPatient() {
       roomId?: string;
       professionalId?: string;
     } = {}) => {
-      const { data, error } = await supabase.rpc("call_next_patient", {
+      const { data, error } = await api.rpc("call_next_patient", {
         p_tenant_id: tenantId,
         p_room_id: roomId || null,
         p_professional_id: professionalId || null,
@@ -144,7 +144,7 @@ export function useRecallPatient() {
 
   return useMutation({
     mutationFn: async (callId: string) => {
-      const { error } = await supabase.rpc("recall_patient", {
+      const { error } = await api.rpc("recall_patient", {
         p_call_id: callId,
       });
 
@@ -165,7 +165,7 @@ export function useStartService() {
 
   return useMutation({
     mutationFn: async (callId: string) => {
-      const { error } = await supabase.rpc("start_patient_service", {
+      const { error } = await api.rpc("start_patient_service", {
         p_call_id: callId,
       });
 
@@ -188,7 +188,7 @@ export function useCompleteService() {
 
   return useMutation({
     mutationFn: async (callId: string) => {
-      const { error } = await supabase.rpc("complete_patient_service", {
+      const { error } = await api.rpc("complete_patient_service", {
         p_call_id: callId,
       });
 
@@ -205,7 +205,7 @@ export function useMarkNoShow() {
 
   return useMutation({
     mutationFn: async (callId: string) => {
-      const { error } = await supabase.rpc("mark_patient_no_show", {
+      const { error } = await api.rpc("mark_patient_no_show", {
         p_call_id: callId,
       });
 
@@ -242,7 +242,7 @@ export function useAddToQueue() {
       priority?: number;
       priorityLabel?: string;
     }) => {
-      const { data, error } = await supabase.rpc("add_patient_to_queue", {
+      const { data, error } = await api.rpc("add_patient_to_queue", {
         p_tenant_id: tenantId,
         p_patient_id: patientId,
         p_appointment_id: appointmentId || null,
@@ -275,7 +275,7 @@ export function useQueueRealtime() {
   useEffect(() => {
     if (!tenantId) return;
 
-    const channel = supabase
+    const channel = api
       .channel("patient_calls_changes")
       .on(
         "postgres_changes",
@@ -294,7 +294,7 @@ export function useQueueRealtime() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      api.removeChannel(channel);
     };
   }, [tenantId, queryClient]);
 }

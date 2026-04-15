@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -52,7 +52,7 @@ export function useRetentionStatistics() {
   return useQuery({
     queryKey: ["retention-statistics", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_retention_statistics", {
+      const { data, error } = await api.rpc("get_retention_statistics", {
         p_tenant_id: tenantId,
       });
 
@@ -69,7 +69,7 @@ export function usePatientsNearExpiry(monthsAhead: number = 12) {
   return useQuery({
     queryKey: ["patients-near-expiry", tenantId, monthsAhead],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_clients_near_retention_expiry", {
+      const { data, error } = await api.rpc("get_clients_near_retention_expiry", {
         p_tenant_id: tenantId,
         p_months_ahead: monthsAhead,
       });
@@ -87,7 +87,7 @@ export function useDeletionAttempts(startDate?: string, endDate?: string) {
   return useQuery({
     queryKey: ["deletion-attempts", tenantId, startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_retention_deletion_attempts", {
+      const { data, error } = await api.rpc("get_retention_deletion_attempts", {
         p_tenant_id: tenantId,
         p_start_date: startDate || null,
         p_end_date: endDate || null,
@@ -106,7 +106,7 @@ export function useArchivedPatients(cpf?: string, name?: string) {
   return useQuery({
     queryKey: ["archived-patients", tenantId, cpf, name],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_archived_client_data", {
+      const { data, error } = await api.rpc("get_archived_client_data", {
         p_tenant_id: tenantId,
         p_client_cpf: cpf || null,
         p_client_name: name || null,
@@ -132,7 +132,7 @@ export function useArchivePatient() {
       pdfUrl?: string;
       xmlUrl?: string;
     }) => {
-      const { data, error } = await supabase.rpc("archive_client_clinical_data", {
+      const { data, error } = await api.rpc("archive_client_clinical_data", {
         p_client_id: patientId,
         p_export_pdf_url: pdfUrl || null,
         p_export_xml_url: xmlUrl || null,
@@ -163,7 +163,7 @@ export function useUpdateRetentionYears() {
         throw new Error("O período mínimo de retenção é 20 anos (CFM 1.821/2007)");
       }
 
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update({ retention_years: years })
         .eq("id", tenantId);

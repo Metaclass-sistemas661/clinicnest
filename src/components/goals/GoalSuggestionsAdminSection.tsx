@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Send, Check, X, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -59,7 +59,7 @@ export function GoalSuggestionsAdminSection({
 
   const fetchSuggestions = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("goal_suggestions")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -93,7 +93,7 @@ export function GoalSuggestionsAdminSection({
           product_id: null,
           show_in_header: false,
         };
-      const { data: goal, error: insertError } = await supabase
+      const { data: goal, error: insertError } = await api
         .from("goals")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- goals insert shape varies from generated types
         .insert(insertData as any)
@@ -102,12 +102,12 @@ export function GoalSuggestionsAdminSection({
 
       if (insertError) throw insertError;
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await api
         .from("goal_suggestions")
         .update({
           status: "approved",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: (await api.auth.getUser()).data.user?.id,
           created_goal_id: goal?.id,
         })
         .eq("id", suggestion.id);
@@ -117,7 +117,7 @@ export function GoalSuggestionsAdminSection({
       // Notificar profissional (user_id = auth.users id do profissional)
       const profUserId = professionals.find((p) => p.id === suggestion.professional_id)?.user_id;
       const { data: prefs } = profUserId
-        ? await supabase
+        ? await api
             .from("user_notification_preferences")
             .select("goal_approved")
             .eq("user_id", profUserId)
@@ -125,7 +125,7 @@ export function GoalSuggestionsAdminSection({
         : { data: null };
       const shouldNotify = profUserId && prefs?.goal_approved !== false;
       if (shouldNotify && profUserId) {
-        await supabase.from("notifications").insert({
+        await api.from("notifications").insert({
           tenant_id: tenantId,
           user_id: profUserId,
           type: "goal_approved",
@@ -150,12 +150,12 @@ export function GoalSuggestionsAdminSection({
 
     setActionLoading(rejectDialog.suggestion.id);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("goal_suggestions")
         .update({
           status: "rejected",
           reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: (await api.auth.getUser()).data.user?.id,
           rejection_reason: rejectDialog.reason.trim() || null,
         })
         .eq("id", rejectDialog.suggestion.id);
@@ -165,7 +165,7 @@ export function GoalSuggestionsAdminSection({
       // Notificar profissional (user_id = auth.users id do profissional)
       const profUserId = professionals.find((p) => p.id === rejectDialog.suggestion.professional_id)?.user_id;
       const { data: prefs } = profUserId
-        ? await supabase
+        ? await api
             .from("user_notification_preferences")
             .select("goal_rejected")
             .eq("user_id", profUserId)
@@ -173,7 +173,7 @@ export function GoalSuggestionsAdminSection({
         : { data: null };
       const shouldNotify = profUserId && prefs?.goal_rejected !== false;
       if (shouldNotify && profUserId) {
-        await supabase.from("notifications").insert({
+        await api.from("notifications").insert({
           tenant_id: tenantId,
           user_id: profUserId,
           type: "goal_rejected",

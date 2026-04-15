@@ -56,7 +56,7 @@ export interface TSAVerificationResult {
 const SERPRO_CONFIG = {
   tokenUrl: 'https://gateway.apiserpro.serpro.gov.br/token',
   timestampUrl: 'https://gateway.apiserpro.serpro.gov.br/apitimestamp/v1/timestamp',
-  // Credenciais vêm das variáveis de ambiente (Firebase Hosting/Supabase)
+  // Credenciais vêm das variáveis de ambiente
   get consumerKey() {
     return import.meta.env.VITE_SERPRO_CONSUMER_KEY || '';
   },

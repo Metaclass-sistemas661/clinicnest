@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -126,20 +126,20 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     setIsLoading(true);
     try {
       const [rulesRes, proceduresRes, insurancesRes] = await Promise.all([
-        supabase
+        api
           .from("commission_rules")
           .select("*, procedure:procedures(id, name), insurance:insurance_plans(id, name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("professional_id", professionalId)
           .eq("is_active", true)
           .order("priority", { ascending: false }),
-        supabase
+        api
           .from("procedures")
           .select("id, name, price")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
           .order("name"),
-        supabase
+        api
           .from("insurance_plans")
           .select("id, name")
           .eq("tenant_id", profile.tenant_id)
@@ -239,14 +239,14 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
       };
 
       if (editingRule) {
-        const { error } = await supabase
+        const { error } = await api
           .from("commission_rules")
           .update(payload)
           .eq("id", editingRule.id);
         if (error) throw error;
         toast.success("Regra atualizada");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("commission_rules")
           .insert(payload);
         if (error) throw error;
@@ -267,7 +267,7 @@ export function CommissionRulesDrawer({ open, onOpenChange, professionalId, prof
     if (!confirm(`Excluir regra "${RULE_TYPE_LABELS[rule.rule_type]}"?`)) return;
     
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("commission_rules")
         .update({ is_active: false })
         .eq("id", rule.id);

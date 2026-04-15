@@ -139,8 +139,8 @@ export async function validateCouncilAsync(
 
   // 2. Tentar validação via Edge Function
   try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    const { data, error } = await supabase.functions.invoke('validate-council-number', {
+    const { api } = await import("@/integrations/gcp/client");
+    const { data, error } = await api.functions.invoke('validate-council-number', {
       body: {
         council_type: councilType,
         council_number: councilNumber.trim(),

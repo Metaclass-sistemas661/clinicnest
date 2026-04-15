@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
 import type { ProfessionalType, PermissionAction } from "@/types/database";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 interface ProtectedRouteProps {
@@ -80,7 +80,7 @@ export function ProtectedRoute({
     }
 
     if (denied) {
-      (supabase as any)
+      (api as any)
         .rpc("log_access_denied", {
           p_resource: deniedResource,
           p_action: action,

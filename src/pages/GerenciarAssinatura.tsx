@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { formatInAppTz } from "@/lib/date";
@@ -101,7 +101,7 @@ export default function GerenciarAssinatura() {
 
     setIsLoading(true);
     try {
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await api
         .from("profiles")
         .select("tenant_id")
         .eq("user_id", user.id)
@@ -113,7 +113,7 @@ export default function GerenciarAssinatura() {
         return;
       }
 
-      const { data: sub, error: subError } = await supabase
+      const { data: sub, error: subError } = await api
         .from("subscriptions")
         .select(
           "id,tenant_id,status,plan,current_period_end,trial_end,billing_provider,asaas_subscription_id"
@@ -144,12 +144,8 @@ export default function GerenciarAssinatura() {
         throw new Error("Not authenticated");
       }
 
-      const { data, error } = await supabase.functions.invoke("cancel-subscription", {
+      const { data, error } = await api.functions.invoke("cancel-subscription", {
         body: {},
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
       });
 
       if (error) throw error;

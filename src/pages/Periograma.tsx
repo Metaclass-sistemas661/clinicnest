@@ -20,7 +20,7 @@ import {
   AlertTriangle, Download, LineChart as LineChartIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { generatePeriogramPdf } from "@/utils/periogramPdf";
@@ -96,7 +96,7 @@ export default function Periograma() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc("get_client_periograms", {
+      const { data, error } = await api.rpc("get_client_periograms", {
         p_tenant_id: profile.tenant_id,
         p_client_id: patientId,
       });
@@ -119,7 +119,7 @@ export default function Periograma() {
   };
 
   const loadPeriogramMeasurements = async (periogramId: string) => {
-    const { data, error } = await supabase.rpc("get_periogram_measurements", {
+    const { data, error } = await api.rpc("get_periogram_measurements", {
       p_periogram_id: periogramId,
     });
     if (error) {
@@ -196,7 +196,7 @@ export default function Periograma() {
           furcation: m.furcation,
         }));
 
-      const { error } = await supabase.rpc("save_periogram_with_measurements", {
+      const { error } = await api.rpc("save_periogram_with_measurements", {
         p_tenant_id: profile.tenant_id,
         p_client_id: selectedPatient,
         p_professional_id: profile.id,

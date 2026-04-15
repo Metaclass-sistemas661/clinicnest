@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TussCombobox } from "@/components/ui/tuss-combobox";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { logger } from "@/lib/logger";
@@ -68,13 +68,13 @@ export function CommissionSimulator({ professionalId, rules }: CommissionSimulat
     const loadData = async () => {
       try {
         const [proceduresRes, insurancesRes] = await Promise.all([
-          supabase
+          api
             .from("procedures")
             .select("id, name, price")
             .eq("tenant_id", profile.tenant_id)
             .eq("is_active", true)
             .order("name"),
-          supabase
+          api
             .from("insurance_plans")
             .select("id, name")
             .eq("tenant_id", profile.tenant_id)

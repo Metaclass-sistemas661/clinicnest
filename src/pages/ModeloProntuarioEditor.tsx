@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Loader2, Save } from "lucide-react";
@@ -69,7 +69,7 @@ export default function ModeloProntuarioEditor() {
   const fetchSpecialties = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("specialties")
         .select("id, name")
         .eq("tenant_id", profile.tenant_id)
@@ -85,7 +85,7 @@ export default function ModeloProntuarioEditor() {
     if (!profile?.tenant_id || !id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("record_field_templates")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -122,11 +122,11 @@ export default function ModeloProntuarioEditor() {
       };
 
       if (isNew) {
-        const { error } = await supabase.from("record_field_templates").insert(payload);
+        const { error } = await api.from("record_field_templates").insert(payload);
         if (error) throw error;
         toast.success("Modelo criado com sucesso!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("record_field_templates")
           .update(payload)
           .eq("id", id)

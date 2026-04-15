@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import {
   initWebPki,
@@ -94,7 +94,7 @@ export function CertificateSelector({
   const loadA1Certificates = useCallback(async () => {
     setA1Loading(true);
     try {
-      const { data, error } = await supabase.rpc("list_my_certificates");
+      const { data, error } = await api.rpc("list_my_certificates");
       if (error) throw error;
       
       const certs = data?.certificates || [];

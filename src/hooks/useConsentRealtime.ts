@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api, RealtimeChannel } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+
 
 interface UseConsentRealtimeOptions {
   /** ID do tenant para filtrar atualizações */
@@ -16,7 +16,7 @@ interface UseConsentRealtimeOptions {
 }
 
 /**
- * Hook que escuta atualizações em patient_consents via Supabase Realtime.
+ * Hook que escuta atualizações em patient_consents via Realtime channel.
  * Dispara callback e/ou toast quando um PDF é selado (sealed_pdf_path preenchido).
  */
 export function useConsentRealtime({
@@ -30,7 +30,7 @@ export function useConsentRealtime({
   useEffect(() => {
     if (!enabled || !tenantId) return;
 
-    const channel = supabase
+    const channel = api
       .channel(`consent-sealed-${tenantId}`)
       .on(
         "postgres_changes" as any,
@@ -69,7 +69,7 @@ export function useConsentRealtime({
 
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        api.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };

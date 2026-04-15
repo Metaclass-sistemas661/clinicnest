@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,7 @@ export default function VerificarDocumento() {
       }
 
       try {
-        const { data, error: rpcError } = await supabase.rpc("verify_document_public", {
+        const { data, error: rpcError } = await api.rpc("verify_document_public", {
           p_hash: hash,
           p_verifier_ip: null,
           p_verifier_user_agent: navigator.userAgent,

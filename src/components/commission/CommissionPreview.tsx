@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { logger } from "@/lib/logger";
 import {
@@ -67,7 +67,7 @@ export function CommissionPreview({
       setIsLoading(true);
       try {
         // Fetch all active rules for this professional
-        const { data: rules, error } = await supabase
+        const { data: rules, error } = await api
           .from("commission_rules")
           .select(`
             id,

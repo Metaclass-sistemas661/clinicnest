@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Star, TrendingUp, TrendingDown, Minus, MessageCircle, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,7 +70,7 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
     setIsLoading(true);
     try {
       // Fetch summary stats
-      const { data: ratingsData, error: ratingsError } = await supabase
+      const { data: ratingsData, error: ratingsError } = await api
         .from("appointment_ratings")
         .select("rating")
         .eq("tenant_id", tenantId)
@@ -98,7 +98,7 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
       });
 
       // Fetch recent ratings with details
-      const { data: recentData, error: recentError } = await supabase
+      const { data: recentData, error: recentError } = await api
         .from("appointment_ratings")
         .select(`
           id,
@@ -146,7 +146,7 @@ export function TabSatisfacao({ tenantId, periodStart, periodEnd }: TabSatisfaca
       // If we have more data from the full ratings, do full aggregation
       if (ratings.length > 0 && ratings.length > 20) {
         // For full professional aggregation, do a separate query
-        const { data: profData } = await supabase
+        const { data: profData } = await api
           .from("appointment_ratings")
           .select(`
             rating,

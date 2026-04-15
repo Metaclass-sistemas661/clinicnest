@@ -30,7 +30,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -337,7 +337,7 @@ export function CsvImportDialog({
     const cpfField = fieldMap.get("cpf");
     let existingCpfs = new Set<string>();
     if (cpfField) {
-      const { data } = await supabase
+      const { data } = await api
         .from("patients")
         .select("cpf")
         .eq("tenant_id", profile.tenant_id)
@@ -422,7 +422,7 @@ export function CsvImportDialog({
       }
 
       if (records.length > 0) {
-        const { error, data } = await supabase
+        const { error, data } = await api
           .from("patients")
           .insert(records as never[])
           .select("id");

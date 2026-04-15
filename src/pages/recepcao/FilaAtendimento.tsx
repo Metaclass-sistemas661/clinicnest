@@ -22,7 +22,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatInAppTz } from "@/lib/date";
 import { toast } from "sonner";
 import { CallNextButton } from "@/components/queue/CallNextButton";
@@ -77,7 +77,7 @@ export default function FilaAtendimento() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("recall_patient", {
+      const { error } = await api.rpc("recall_patient", {
         p_call_id: callId,
       });
       if (error) throw error;
@@ -94,7 +94,7 @@ export default function FilaAtendimento() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("start_patient_service", {
+      const { error } = await api.rpc("start_patient_service", {
         p_call_id: callId,
       });
       if (error) throw error;
@@ -112,7 +112,7 @@ export default function FilaAtendimento() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("mark_patient_no_show", {
+      const { error } = await api.rpc("mark_patient_no_show", {
         p_call_id: callId,
       });
       if (error) throw error;

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useClinicalAudit } from "@/hooks/useClinicalAudit";
 import {
   ArrowLeft, User, Calendar, FileText, Heart, Activity,
@@ -98,7 +98,7 @@ export default function ProntuarioDetalhe() {
     if (!id || !profile?.tenant_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("medical_records")
         .select("*, patient:patients(name), profiles(full_name)")
         .eq("id", id)
@@ -129,13 +129,13 @@ export default function ProntuarioDetalhe() {
       logAccess("medical_records", id, rec.patient_id);
 
       const [histRes, verRes] = await Promise.all([
-        supabase.from("medical_records")
+        api.from("medical_records")
           .select("id, record_date, chief_complaint, diagnosis, cid_code, blood_pressure_systolic, blood_pressure_diastolic, heart_rate, temperature, oxygen_saturation, weight_kg, respiratory_rate, profiles(full_name)")
           .eq("tenant_id", profile.tenant_id)
           .eq("patient_id", r.patient_id)
           .order("record_date", { ascending: false })
           .limit(20),
-        supabase.from("medical_record_versions")
+        api.from("medical_record_versions")
           .select("id, version_number, changed_by, changed_at, change_reason, digital_hash, profiles(full_name)")
           .eq("record_id", id)
           .order("version_number", { ascending: false }),
@@ -164,22 +164,22 @@ export default function ProntuarioDetalhe() {
         ? `medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.eq.${r.appointment_id})`
         : `medical_record_id.eq.${id},and(patient_id.eq.${r.patient_id},appointment_id.is.null)`;
       const [rxRes, certRes, examRes, refRes] = await Promise.all([
-        supabase.from("prescriptions").select("id, issued_at, medications, prescription_type")
+        api.from("prescriptions").select("id, issued_at, medications, prescription_type")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
           .order("issued_at", { ascending: false })
           .limit(50),
-        supabase.from("medical_certificates").select("id, issued_at, certificate_type, content")
+        api.from("medical_certificates").select("id, issued_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
           .order("issued_at", { ascending: false })
           .limit(50),
-        supabase.from("exam_results").select("id, created_at, exam_name, status")
+        api.from("exam_results").select("id, created_at, exam_name, status")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
           .order("created_at", { ascending: false })
           .limit(50),
-        supabase.from("referrals").select("id, created_at, reason, status, specialties(name)")
+        api.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id)
           .or(orFilter)
           .order("created_at", { ascending: false })
@@ -215,7 +215,7 @@ export default function ProntuarioDetalhe() {
       setLinkedDocs(docs);
 
       // Fetch linked evolutions
-      const evoQuery = (supabase as any).from("clinical_evolutions")
+      const evoQuery = (api as any).from("clinical_evolutions")
         .select("*, patient:patients(name), profiles(full_name)")
         .eq("tenant_id", profile.tenant_id)
         .eq("patient_id", r.patient_id)

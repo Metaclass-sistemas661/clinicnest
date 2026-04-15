@@ -1,7 +1,7 @@
 // Hook para sistema de relatórios customizáveis
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { toast } from 'sonner';
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
@@ -109,7 +109,7 @@ export function useReports() {
   // Buscar templates disponíveis
   const fetchTemplates = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('report_definitions')
         .select('*')
         .eq('is_template', true)
@@ -128,7 +128,7 @@ export function useReports() {
     if (!profile?.id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('user_saved_reports')
         .select(`
           *,
@@ -158,7 +158,7 @@ export function useReports() {
     if (!profile?.tenant_id || !profile?.id) return null;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('user_saved_reports')
         .insert({
           tenant_id: profile.tenant_id,
@@ -188,7 +188,7 @@ export function useReports() {
   // Alternar favorito
   const toggleFavorite = useCallback(async (savedReportId: string, isFavorite: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from('user_saved_reports')
         .update({ is_favorite: isFavorite })
         .eq('id', savedReportId);
@@ -203,7 +203,7 @@ export function useReports() {
   // Deletar relatório salvo
   const deleteSavedReport = useCallback(async (savedReportId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from('user_saved_reports')
         .delete()
         .eq('id', savedReportId);
@@ -228,7 +228,7 @@ export function useReports() {
   ) => {
     if (!profile?.tenant_id) return;
     try {
-      await supabase.from('report_executions').insert({
+      await api.from('report_executions').insert({
         tenant_id: profile.tenant_id,
         report_definition_id: reportDefinitionId,
         saved_report_id: savedReportId,
@@ -242,13 +242,13 @@ export function useReports() {
       // Atualizar contador do relatório salvo
       if (savedReportId) {
         // Primeiro buscar o run_count atual
-        const { data: currentReport } = await supabase
+        const { data: currentReport } = await api
           .from('user_saved_reports')
           .select('run_count')
           .eq('id', savedReportId)
           .single();
         
-        await supabase
+        await api
           .from('user_saved_reports')
           .update({ 
             last_run_at: new Date().toISOString(),
@@ -265,7 +265,7 @@ export function useReports() {
   const fetchExecutions = useCallback(async (limit = 50) => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('report_executions')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -296,7 +296,7 @@ export function useReports() {
     if (!profile?.tenant_id) return null;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('report_schedules')
         .insert({
           tenant_id: profile.tenant_id,

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   buildVariablesFromClientAndTenant,
@@ -56,7 +56,7 @@ export function GenerateContractsDialog({ open, onOpenChange, patient, onGenerat
     if (!patient?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("consent_templates")
         .select("*")
         .eq("tenant_id", patient.tenant_id)

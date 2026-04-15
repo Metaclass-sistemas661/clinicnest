@@ -19,7 +19,7 @@ import {
   ClipboardList,
   Loader2,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -54,7 +54,7 @@ export function PatientActivityHistory() {
 
   const fetchEntries = useCallback(async (offset = 0) => {
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_activity_log", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_activity_log", {
         p_limit: 20,
         p_offset: offset,
       });

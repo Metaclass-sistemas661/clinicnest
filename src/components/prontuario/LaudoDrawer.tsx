@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { LAUDO_TIPOS } from "@/data/exam-types";
 import { toast } from "sonner";
@@ -113,7 +113,7 @@ export function LaudoDrawer({
     try {
       // Salvar na tabela medical_reports (CFM Res. 1.658/2002)
       if (tenantId && profile?.id) {
-        const { error } = await supabase.from("medical_reports").insert({
+        const { error } = await api.from("medical_reports").insert({
           tenant_id: tenantId,
           patient_id: context.patientId,
           professional_id: profile.id,

@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 import { PatientBannerCarousel } from "@/components/patient/PatientBannerCarousel";
 import { dashboardBanners } from "@/components/patient/patientBannerData";
 import { NestAvatar } from "@/components/patient/NestAvatar";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { format, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -72,20 +72,20 @@ export default function PatientDashboard() {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: userData } = await supabasePatient.auth.getUser();
+        const { data: userData } = await apiPatient.auth.getUser();
         setUserName(userData.user?.user_metadata?.full_name ?? "Paciente");
 
         // Check if patient is linked and get dashboard data
-        const { data: dashData, error } = await (supabasePatient as any).rpc("get_patient_dashboard_summary");
+        const { data: dashData, error } = await (apiPatient as any).rpc("get_patient_dashboard_summary");
         
         if (!error && dashData) {
           // If not linked, try auto-linking before showing the banner
           if (!dashData.is_linked) {
             try {
-              const { data: linkResult } = await (supabasePatient as any).rpc("auto_link_patient");
+              const { data: linkResult } = await (apiPatient as any).rpc("auto_link_patient");
               if (linkResult?.linked) {
                 // Re-fetch dashboard after successful auto-link
-                const { data: refreshed } = await (supabasePatient as any).rpc("get_patient_dashboard_summary");
+                const { data: refreshed } = await (apiPatient as any).rpc("get_patient_dashboard_summary");
                 if (refreshed) {
                   setDashboardData({
                     isLinked: refreshed.is_linked ?? false,

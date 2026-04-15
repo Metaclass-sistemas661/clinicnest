@@ -3,8 +3,7 @@ import { X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Message {
   role: "user" | "assistant";
@@ -52,11 +51,10 @@ export function LandingChatWidget() {
         content: m.content,
       }));
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/landing-chat`, {
+      const res = await fetch(`${API_BASE_URL}/api/landing-chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: SUPABASE_KEY,
         },
         body: JSON.stringify({ messages: chatHistory }),
       });

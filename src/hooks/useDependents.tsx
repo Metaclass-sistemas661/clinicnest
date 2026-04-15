@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 export interface Dependent {
@@ -30,7 +30,7 @@ export function DependentsProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await (supabasePatient as any).rpc("get_patient_dependents");
+      const { data, error: rpcError } = await (apiPatient as any).rpc("get_patient_dependents");
       
       if (rpcError) {
         throw rpcError;

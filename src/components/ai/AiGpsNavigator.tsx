@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,7 @@ export function AiGpsNavigator({ input, className }: Props) {
     ai.start("gps");
 
     try {
-      const resp = await supabase.functions.invoke("ai-gps-evaluate", {
+      const resp = await api.functions.invoke("ai-gps-evaluate", {
         body: {
           chief_complaint: input.chief_complaint,
           anamnesis: input.anamnesis,

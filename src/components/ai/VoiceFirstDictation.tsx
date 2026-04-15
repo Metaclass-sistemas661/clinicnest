@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -121,7 +121,7 @@ export function VoiceFirstDictation({
       const base64 = btoa(
         new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
       );
-      const { data, error } = await supabase.functions.invoke("ai-transcribe", {
+      const { data, error } = await api.functions.invoke("ai-transcribe", {
         body: {
           action: "transcribe",
           audio_base64: base64,
@@ -185,7 +185,7 @@ export function VoiceFirstDictation({
   // Step 2: Generate SOAP from transcript
   const soapMutation = useMutation({
     mutationFn: async (text: string) => {
-      const { data, error } = await supabase.functions.invoke("ai-generate-soap", {
+      const { data, error } = await api.functions.invoke("ai-generate-soap", {
         body: {
           transcript: text,
           specialty,

@@ -36,7 +36,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -234,7 +234,7 @@ export default function ModelosProntuario() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("record_field_templates")
         .select("*, specialties(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -260,7 +260,7 @@ export default function ModelosProntuario() {
   const fetchSpecialties = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("specialties")
         .select("id, name")
         .eq("tenant_id", profile.tenant_id)
@@ -306,7 +306,7 @@ export default function ModelosProntuario() {
         tenant_id: profile!.tenant_id,
       };
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("record_field_templates")
           .update(payload)
           .eq("id", editingId)
@@ -314,7 +314,7 @@ export default function ModelosProntuario() {
         if (error) throw error;
         toast.success("Modelo atualizado");
       } else {
-        const { error } = await supabase.from("record_field_templates").insert(payload);
+        const { error } = await api.from("record_field_templates").insert(payload);
         if (error) throw error;
         toast.success("Modelo criado");
       }
@@ -331,7 +331,7 @@ export default function ModelosProntuario() {
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir este modelo?")) return;
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("record_field_templates")
         .delete()
         .eq("id", id)
@@ -389,7 +389,7 @@ export default function ModelosProntuario() {
         tenant_id: profile.tenant_id,
       };
       if (builderEditingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("record_field_templates")
           .update(payload)
           .eq("id", builderEditingId)
@@ -397,7 +397,7 @@ export default function ModelosProntuario() {
         if (error) throw error;
         toast.success("Modelo atualizado via Builder");
       } else {
-        const { error } = await supabase.from("record_field_templates").insert(payload);
+        const { error } = await api.from("record_field_templates").insert(payload);
         if (error) throw error;
         toast.success("Modelo criado via Builder");
       }

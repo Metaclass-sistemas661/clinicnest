@@ -10,7 +10,7 @@ import { FacialCapture } from "@/components/consent/FacialCapture";
 import { SignatureMethodSelector, type SignatureMethod } from "@/components/signature/SignatureMethodSelector";
 import { SignatureCanvas } from "@/components/signature/SignatureCanvas";
 import { toast } from "sonner";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/utils/getClientIp";
 import { replaceVariables, buildVariablesFromClientAndTenant, type ConsentVariablesData } from "@/lib/consent-variables";
@@ -48,7 +48,7 @@ export default function PatientConsentSigning() {
   // Resolve the patient's patient_id from their auth user
   const resolveClientId = useCallback(async () => {
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return null;
 
       setAuthUserId(user.id);
@@ -56,7 +56,7 @@ export default function PatientConsentSigning() {
       const email = user.email;
       if (!email) return null;
 
-      const { data, error } = await supabasePatient
+      const { data, error } = await apiPatient
         .from("patients")
         .select("id, tenant_id, name, cpf, date_of_birth, birth_date, email, phone, street, street_number, neighborhood, city, state, zip_code, address_street, address_city, address_state, address_zip")
         .eq("email", email)
@@ -70,7 +70,7 @@ export default function PatientConsentSigning() {
 
       let tenantData: any = null;
       if (data.tenant_id) {
-        const { data: t } = await supabasePatient
+        const { data: t } = await apiPatient
           .from("tenants")
           .select("name, cnpj, address, responsible_doctor, responsible_crm")
           .eq("id", data.tenant_id)
@@ -88,7 +88,7 @@ export default function PatientConsentSigning() {
 
   const fetchPending = useCallback(async (cId: string) => {
     try {
-      const { data, error } = await supabasePatient.rpc("get_pending_consents", {
+      const { data, error } = await apiPatient.rpc("get_pending_consents", {
         p_client_id: cId,
       });
       if (error) throw error;
@@ -138,7 +138,7 @@ export default function PatientConsentSigning() {
       // Resolve auth user ID at sign time (state may lag on mount)
       let resolvedAuthId = authUserId;
       if (!resolvedAuthId) {
-        const { data: { user: freshUser } } = await supabasePatient.auth.getUser();
+        const { data: { user: freshUser } } = await apiPatient.auth.getUser();
         resolvedAuthId = freshUser?.id ?? null;
         if (resolvedAuthId) setAuthUserId(resolvedAuthId);
       }
@@ -154,7 +154,7 @@ export default function PatientConsentSigning() {
       if (signatureMethod === "facial" && capturedBlob) {
         // Upload facial photo — use auth user ID as folder (matches RLS policy)
         const fileName = `${resolvedAuthId}/${currentTemplate.id}_${Date.now()}.jpg`;
-        const { error: uploadError } = await supabasePatient.storage
+        const { error: uploadError } = await apiPatient.storage
           .from("consent-photos")
           .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
 
@@ -170,7 +170,7 @@ export default function PatientConsentSigning() {
         const res = await fetch(manualSignatureDataUrl);
         const blob = await res.blob();
         const fileName = `${resolvedAuthId}/${currentTemplate.id}_${Date.now()}.png`;
-        const { error: uploadError } = await supabasePatient.storage
+        const { error: uploadError } = await apiPatient.storage
           .from("consent-signatures")
           .upload(fileName, blob, { contentType: "image/png", upsert: false });
 
@@ -204,7 +204,7 @@ export default function PatientConsentSigning() {
             p_user_agent: navigator.userAgent,
           };
 
-      const { data, error } = await supabasePatient.rpc(rpcName as any, rpcParams as any);
+      const { data, error } = await apiPatient.rpc(rpcName as any, rpcParams as any);
 
       if (error) {
         logger.error("[PatientConsent] sign error", error);
@@ -223,13 +223,13 @@ export default function PatientConsentSigning() {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const clientDocHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 
-        await supabasePatient
+        await apiPatient
           .from("patient_consents")
           .update({ template_snapshot_html: filledHtml, document_hash: clientDocHash })
           .eq("id", consentId);
 
         // 4) Trigger seal-consent-pdf Edge Function (fire & forget)
-        supabasePatient.functions
+        apiPatient.functions
           .invoke("seal-consent-pdf", { body: { consent_id: consentId } })
           .then(({ error: sealErr }) => {
             if (sealErr) {
@@ -400,7 +400,7 @@ export default function PatientConsentSigning() {
                         <Button
                           variant="outline"
                           onClick={async () => {
-                            const { data } = await supabasePatient.storage
+                            const { data } = await apiPatient.storage
                               .from("consent-pdfs")
                               .createSignedUrl(currentTemplate.pdf_storage_path!, 300);
                             if (data?.signedUrl) window.open(data.signedUrl, "_blank");

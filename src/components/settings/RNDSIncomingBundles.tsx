@@ -35,7 +35,7 @@ import {
   RefreshCw,
   Inbox,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { parseFhirBundle, type ParsedBundle } from "@/utils/fhirBundleParser";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -82,7 +82,7 @@ export function RNDSIncomingBundles() {
   const loadBundles = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("incoming_rnds_bundles")
         .select("*")
         .order("received_at", { ascending: false })
@@ -114,7 +114,7 @@ export function RNDSIncomingBundles() {
     if (!selectedBundle || !profile?.id) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("incoming_rnds_bundles")
         .update({
           review_status: status,

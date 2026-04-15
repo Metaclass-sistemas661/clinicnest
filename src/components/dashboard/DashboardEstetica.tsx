@@ -12,7 +12,7 @@ import {
   Plus, ArrowRight, Camera,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -38,7 +38,7 @@ export const DashboardEstetica = memo(function DashboardEstetica() {
 
     try {
       const [aptsRes, completedRes, sessionsRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes)")
           .eq("tenant_id", profile.tenant_id)
@@ -46,7 +46,7 @@ export const DashboardEstetica = memo(function DashboardEstetica() {
           .gte("scheduled_at", dayStart)
           .lte("scheduled_at", dayEnd)
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("appointments")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", profile.tenant_id)
@@ -54,7 +54,7 @@ export const DashboardEstetica = memo(function DashboardEstetica() {
           .eq("status", "completed")
           .gte("scheduled_at", monthStart)
           .lte("scheduled_at", monthEnd),
-        supabase
+        api
           .from("aesthetic_sessions")
           .select("applications")
           .eq("tenant_id", profile.tenant_id)

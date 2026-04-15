@@ -4,8 +4,8 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { createPatientPackageV1 } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { createPatientPackageV1 } from "@/lib/typed-rpc";
 import { Plus, Search, Lock, Sparkles, FileSpreadsheet } from "lucide-react";
 import { GenerateContractsDialog } from "@/components/consent/GenerateContractsDialog";
 import { SendConsentLinkDialog } from "@/components/consent/SendConsentLinkDialog";
@@ -54,7 +54,7 @@ export default function Pacientes() {
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("id,tenant_id,name,phone,email,notes,cpf,access_code,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,allergies,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
@@ -72,7 +72,7 @@ export default function Pacientes() {
   const fetchProcedures = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("procedures")
         .select("id, name")
         .eq("tenant_id", profile.tenant_id)
@@ -97,7 +97,7 @@ export default function Pacientes() {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await supabase
+        const { data } = await api
           .from("appointments")
           .select("patient_id")
           .eq("tenant_id", profile.tenant_id)

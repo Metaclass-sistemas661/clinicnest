@@ -13,7 +13,7 @@ import {
   User,
   Building2,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isToday, isYesterday } from "date-fns";
@@ -41,17 +41,17 @@ export default function PatientMensagens() {
     void loadMessages();
   }, []);
 
-  // ── Supabase Realtime: escutar novas mensagens em tempo real ──
+  // ── Realtime: escutar novas mensagens em tempo real ──
   useEffect(() => {
-    let channel: ReturnType<typeof supabasePatient.channel> | null = null;
+    let channel: ReturnType<typeof apiPatient.channel> | null = null;
 
     const setupRealtime = async () => {
       try {
-        const { data: { user } } = await supabasePatient.auth.getUser();
+        const { data: { user } } = await apiPatient.auth.getUser();
         if (!user) return;
 
         // Buscar patient_profile para obter client_id e tenant_id
-        const { data: link } = await supabasePatient
+        const { data: link } = await apiPatient
           .from("patient_profiles")
           .select("client_id, tenant_id")
           .eq("user_id", user.id)
@@ -61,7 +61,7 @@ export default function PatientMensagens() {
 
         if (!link?.client_id) return;
 
-        channel = supabasePatient
+        channel = apiPatient
           .channel("patient-messages-realtime")
           .on(
             "postgres_changes" as any,
@@ -88,7 +88,7 @@ export default function PatientMensagens() {
 
     return () => {
       if (channel) {
-        void supabasePatient.removeChannel(channel);
+        void apiPatient.removeChannel(channel);
       }
     };
   }, []);
@@ -104,7 +104,7 @@ export default function PatientMensagens() {
   const loadMessages = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_messages", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_messages", {
         p_limit: 100,
         p_offset: 0,
       });
@@ -122,7 +122,7 @@ export default function PatientMensagens() {
 
     setIsSending(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("send_patient_message", {
+      const { data, error } = await (apiPatient as any).rpc("send_patient_message", {
         p_content: newMessage.trim(),
       });
       if (error) throw error;

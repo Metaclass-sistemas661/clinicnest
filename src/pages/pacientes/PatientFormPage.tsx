@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, MapPin, AlertTriangle, ArrowLeft, KeyRound, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { toastRpcError } from "@/lib/rpc-error";
-import { upsertPatientV2 } from "@/lib/supabase-typed-rpc";
-import { supabase } from "@/integrations/supabase/client";
+import { upsertPatientV2 } from "@/lib/typed-rpc";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 import type { Patient } from "@/types/database";
@@ -44,7 +44,7 @@ export default function PatientFormPage() {
     (async () => {
       setIsLoadingPatient(true);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("patients")
           .select("id,tenant_id,name,phone,email,notes,cpf,access_code,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,allergies,created_at,updated_at")
           .eq("id", id)

@@ -13,8 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { getSalaryPayments } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -68,7 +68,7 @@ export function MeuFinanceiroRelatorios() {
 
       // Buscar comissões
       if (reportType === "commissions" || reportType === "both" || reportType === "annual_ir") {
-        const { data } = await supabase
+        const { data } = await api
           .from("commission_payments")
           .select(`
             id,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 
 /**
  * Hook que verifica se a clínica vinculada ao paciente tem assinatura ativa.
@@ -14,7 +14,7 @@ export function useClinicSubscriptionStatus() {
 
   const check = useCallback(async () => {
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) {
         setClinicHasAccess(true); // sem user = não logado, deixa o PatientProtectedRoute cuidar
         setIsLoading(false);
@@ -22,7 +22,7 @@ export function useClinicSubscriptionStatus() {
       }
 
       // 1. Resolver tenant_id do paciente via patient_profiles
-      const { data: link } = await supabasePatient
+      const { data: link } = await apiPatient
         .from("patient_profiles")
         .select("tenant_id")
         .eq("user_id", user.id)
@@ -38,7 +38,7 @@ export function useClinicSubscriptionStatus() {
       }
 
       // 2. Buscar nome da clínica
-      const { data: tenant } = await supabasePatient
+      const { data: tenant } = await apiPatient
         .from("tenants")
         .select("name")
         .eq("id", link.tenant_id)
@@ -49,7 +49,7 @@ export function useClinicSubscriptionStatus() {
       }
 
       // 3. Verificar subscription da clínica
-      const { data: sub } = await supabasePatient
+      const { data: sub } = await apiPatient
         .from("subscriptions")
         .select("status, trial_end, current_period_end, plan")
         .eq("tenant_id", link.tenant_id)

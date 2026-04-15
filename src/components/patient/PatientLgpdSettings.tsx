@@ -14,7 +14,7 @@ import {
   XCircle,
   Scale,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import {
@@ -43,7 +43,7 @@ export function PatientLgpdSettings() {
 
   const checkDeletionStatus = useCallback(async () => {
     try {
-      const { data, error } = await (supabasePatient as any)
+      const { data, error } = await (apiPatient as any)
         .from("patient_deletion_requests")
         .select("scheduled_for")
         .eq("status", "pending")
@@ -70,7 +70,7 @@ export function PatientLgpdSettings() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("export_patient_data");
+      const { data, error } = await (apiPatient as any).rpc("export_patient_data");
 
       if (error) {
         logger.error("[LGPD] export error:", error);
@@ -115,7 +115,7 @@ export function PatientLgpdSettings() {
 
     setIsDeleting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc(
+      const { data, error } = await (apiPatient as any).rpc(
         "request_patient_account_deletion",
         { p_reason: deleteReason.trim() || null }
       );
@@ -151,7 +151,7 @@ export function PatientLgpdSettings() {
   const handleCancelDeletion = async () => {
     setIsCancelling(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc(
+      const { data, error } = await (apiPatient as any).rpc(
         "cancel_patient_account_deletion"
       );
 

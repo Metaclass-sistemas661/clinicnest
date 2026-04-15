@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, X, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 
 interface PatientOption {
   id: string;
@@ -52,7 +52,7 @@ export function PatientCombobox({
     if (!value || selectedName) return;
     if (!tenantId) return;
     void (async () => {
-      const { data } = await supabase
+      const { data } = await api
         .from("patients")
         .select("name")
         .eq("id", value)
@@ -72,7 +72,7 @@ export function PatientCombobox({
       if (offset === 0) setIsSearching(true);
       else setIsLoadingMore(true);
 
-      const { data } = await supabase
+      const { data } = await api
         .from("patients")
         .select("id, name")
         .eq("tenant_id", tenantId)

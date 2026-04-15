@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 
@@ -10,7 +10,7 @@ export function useUnreadChatCount() {
   const fetchUnreadCount = useCallback(async () => {
     if (!profile?.tenant_id || !profile?.id) return;
     try {
-      const { data, error } = await supabase.rpc("get_unread_chat_count", {
+      const { data, error } = await api.rpc("get_unread_chat_count", {
         p_channel: null,
         p_channel_id: null,
       });
@@ -26,7 +26,7 @@ export function useUnreadChatCount() {
 
     const interval = setInterval(fetchUnreadCount, 30000);
 
-    const channel = supabase
+    const channel = api
       .channel(`unread-chat:${profile?.tenant_id}`)
       .on(
         "postgres_changes",
@@ -44,7 +44,7 @@ export function useUnreadChatCount() {
 
     return () => {
       clearInterval(interval);
-      void supabase.removeChannel(channel);
+      void api.removeChannel(channel);
     };
   }, [profile?.tenant_id, fetchUnreadCount]);
 

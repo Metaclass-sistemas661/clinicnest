@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 
 export interface AIChatMessage {
   id: string;
@@ -18,12 +18,12 @@ interface SendResult {
 
 interface UseAIAgentChatOptions {
   functionName: "ai-agent-chat" | "ai-patient-chat";
-  /** Override the supabase client (e.g. supabasePatient) */
-  client?: typeof supabase;
+  /** Override the API client (e.g. apiPatient) */
+  client?: typeof api;
 }
 
 export function useAIAgentChat(opts: UseAIAgentChatOptions = { functionName: "ai-agent-chat" }) {
-  const client = opts.client ?? supabase;
+  const client = opts.client ?? api;
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
 interface ContractStatusBadgeProps {
@@ -19,11 +19,11 @@ export function ContractStatusBadge({ patientId, tenantId }: ContractStatusBadge
     const load = async () => {
       try {
         const [consentsRes, templatesRes] = await Promise.all([
-          (supabase as any)
+          (api as any)
             .from("patient_consents")
             .select("template_id")
             .eq("patient_id", patientId),
-          (supabase as any)
+          (api as any)
             .from("consent_templates")
             .select("id")
             .eq("tenant_id", tenantId)

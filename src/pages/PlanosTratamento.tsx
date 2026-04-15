@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ClipboardList, Plus, Search, Loader2, MoreHorizontal, Eye, Pencil, Trash2, FileText, CheckCircle, Smile } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { generateTreatmentPlanPdf } from "@/lib/treatment-plan-pdf";
@@ -59,7 +59,7 @@ export default function PlanosTratamento() {
 
   const fetchPlans = async () => {
     setIsLoading(true);
-    const { data } = await supabase.rpc("get_client_treatment_plans", { p_tenant_id: profile!.tenant_id, p_client_id: selectedPatient });
+    const { data } = await api.rpc("get_client_treatment_plans", { p_tenant_id: profile!.tenant_id, p_client_id: selectedPatient });
     let filtered = (data || []) as TreatmentPlan[];
     if (statusFilter !== "all") filtered = filtered.filter(p => p.status === statusFilter);
     setPlans(filtered);
@@ -68,7 +68,7 @@ export default function PlanosTratamento() {
 
   const handleCreatePlan = async () => {
     setIsSaving(true);
-    const { data, error } = await supabase.from("treatment_plans").insert({ tenant_id: profile!.tenant_id, patient_id: selectedPatient, professional_id: profile!.id, title: formData.title, description: formData.description || null, valid_until: formData.valid_until || null, payment_conditions: formData.payment_conditions || null, discount_percent: parseFloat(formData.discount_percent) || 0 }).select().single();
+    const { data, error } = await api.from("treatment_plans").insert({ tenant_id: profile!.tenant_id, patient_id: selectedPatient, professional_id: profile!.id, title: formData.title, description: formData.description || null, valid_until: formData.valid_until || null, payment_conditions: formData.payment_conditions || null, discount_percent: parseFloat(formData.discount_percent) || 0 }).select().single();
     setIsSaving(false);
     if (error) { toast.error("Erro ao criar plano"); return; }
     toast.success("Plano criado!");
@@ -79,20 +79,20 @@ export default function PlanosTratamento() {
   };
 
   const handleViewPlan = async (planId: string) => {
-    const { data } = await supabase.rpc("get_treatment_plan_with_items", { p_plan_id: planId });
+    const { data } = await api.rpc("get_treatment_plan_with_items", { p_plan_id: planId });
     setSelectedPlan(data);
     setIsViewOpen(true);
   };
 
   const handleDeletePlan = async (planId: string) => {
     if (!confirm("Excluir este plano?")) return;
-    await supabase.from("treatment_plans").delete().eq("id", planId);
+    await api.from("treatment_plans").delete().eq("id", planId);
     toast.success("Plano excluído");
     fetchPlans();
   };
 
   const handleGeneratePdf = async (planId: string) => {
-    const { data } = await supabase.rpc("get_treatment_plan_with_items", { p_plan_id: planId });
+    const { data } = await api.rpc("get_treatment_plan_with_items", { p_plan_id: planId });
     if (data) generateTreatmentPlanPdf(data.plan, data.items);
   };
 
@@ -163,7 +163,7 @@ function PlanDetailDialog({ open, onOpenChange, planData, onRefresh }: { open: b
     setIsSaving(true);
     const unitPrice = parseFloat(itemForm.unit_price) || 0;
     const qty = parseInt(itemForm.quantity) || 1;
-    const { error } = await supabase.from("treatment_plan_items").insert({ plan_id: plan.id, tooth_number: itemForm.tooth_number ? parseInt(itemForm.tooth_number) : null, surface: itemForm.surface || null, procedure_name: itemForm.procedure_name, procedure_code: itemForm.procedure_code || null, unit_price: unitPrice, quantity: qty, total_price: unitPrice * qty });
+    const { error } = await api.from("treatment_plan_items").insert({ plan_id: plan.id, tooth_number: itemForm.tooth_number ? parseInt(itemForm.tooth_number) : null, surface: itemForm.surface || null, procedure_name: itemForm.procedure_name, procedure_code: itemForm.procedure_code || null, unit_price: unitPrice, quantity: qty, total_price: unitPrice * qty });
     setIsSaving(false);
     if (error) { toast.error("Erro ao adicionar"); return; }
     toast.success("Adicionado!");
@@ -173,13 +173,13 @@ function PlanDetailDialog({ open, onOpenChange, planData, onRefresh }: { open: b
   };
 
   const handleCompleteItem = async (itemId: string) => {
-    await supabase.rpc("complete_treatment_plan_item", { p_item_id: itemId });
+    await api.rpc("complete_treatment_plan_item", { p_item_id: itemId });
     toast.success("Concluído!");
     onRefresh();
   };
 
   const handleDeleteItem = async (itemId: string) => {
-    await supabase.from("treatment_plan_items").delete().eq("id", itemId);
+    await api.from("treatment_plan_items").delete().eq("id", itemId);
     toast.success("Removido");
     onRefresh();
   };

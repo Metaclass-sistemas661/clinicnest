@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FacialCapture } from "@/components/consent/FacialCapture";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { getClientIp } from "@/utils/getClientIp";
 import { replaceVariables, type ConsentVariablesData } from "@/lib/consent-variables";
@@ -80,7 +80,7 @@ export default function AssinarTermosPublico() {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc("validate_consent_token", {
+      const { data, error } = await api.rpc("validate_consent_token", {
         p_token: token,
       });
 
@@ -147,13 +147,13 @@ export default function AssinarTermosPublico() {
       // Determine storage folder: use auth.uid() if authenticated (matches RLS policy)
       let storageFolder = tokenData.client.id;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await api.auth.getUser();
         if (user?.id) storageFolder = user.id;
       } catch { /* anon — keep client.id */ }
 
       // 1) Upload facial photo
       const fileName = `${storageFolder}/${currentTemplate.id}_${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from("consent-photos")
         .upload(fileName, capturedBlob, { contentType: "image/jpeg", upsert: false });
 
@@ -166,7 +166,7 @@ export default function AssinarTermosPublico() {
 
       // 2) Sign via RPC
       const clientIp = await getClientIp();
-      const { data, error } = await supabase.rpc("sign_consent_via_token", {
+      const { data, error } = await api.rpc("sign_consent_via_token", {
         p_token: token,
         p_template_id: currentTemplate.id,
         p_facial_photo_path: fileName,
@@ -193,7 +193,7 @@ export default function AssinarTermosPublico() {
 
       // 3) Trigger seal-consent-pdf Edge Function (fire & forget)
       if (result.consent_id) {
-        supabase.functions
+        api.functions
           .invoke("seal-consent-pdf", { body: { consent_id: result.consent_id } })
           .then(({ error: sealErr }) => {
             if (sealErr) {
@@ -370,7 +370,7 @@ export default function AssinarTermosPublico() {
                     <Button
                       variant="outline"
                       onClick={async () => {
-                        const { data } = await supabase.storage
+                        const { data } = await api.storage
                           .from("consent-pdfs")
                           .createSignedUrl(currentTemplate.pdf_storage_path!, 300);
                         if (data?.signedUrl) window.open(data.signedUrl, "_blank");

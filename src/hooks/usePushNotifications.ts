@@ -1,7 +1,7 @@
 // Hook para gerenciar Push Notifications
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { 
   requestNotificationPermission, 
   onForegroundMessage, 
@@ -89,7 +89,7 @@ export function usePushNotifications() {
 
       // Salvar token no banco
       const deviceInfo = getDeviceInfo();
-      const { error } = await supabase
+      const { error } = await api
         .from('push_subscriptions')
         .upsert({
           user_id: profile.id,
@@ -127,7 +127,7 @@ export function usePushNotifications() {
     if (!profile?.id || !fcmToken) return;
 
     try {
-      await supabase
+      await api
         .from('push_subscriptions')
         .update({ is_active: false })
         .eq('user_id', profile.id)

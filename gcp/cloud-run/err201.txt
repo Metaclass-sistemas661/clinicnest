@@ -1,0 +1,175 @@
+src/functions/activate-patient-account.ts(85,24): error TS18047: 'authData' is possibly 'null'.
+src/functions/ai-agent-chat.ts(72,19): error TS7022: 'user' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/functions/ai-agent-chat.ts(74,19): error TS2448: Block-scoped variable 'user' used before its declaration.
+src/functions/ai-agent-chat.ts(165,34): error TS2304: Cannot find name 'invokeBedrockClaudeWithTools'.
+src/functions/ai-agent-chat.ts(177,24): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/functions/ai-agent-chat.ts(196,75): error TS2554: Expected 3-4 arguments, but got 5.
+src/functions/ai-agent-chat.ts(225,44): error TS2304: Cannot find name 'anyToolUse'.
+src/functions/ai-agent-chat.ts(274,43): error TS2322: Type 'any[]' is not assignable to type 'string'.
+src/functions/ai-benchmarking.ts(36,17): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/ai-cancel-prediction.ts(171,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-cancel-prediction.ts(178,34): error TS2339: Property 'replace' does not exist on type 'VertexResponse'.
+src/functions/ai-cid-suggest.ts(136,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-cid-suggest.ts(145,36): error TS2339: Property 'match' does not exist on type 'VertexResponse'.
+src/functions/ai-clinical-protocols.ts(100,35): error TS2554: Expected 3 arguments, but got 2.
+src/functions/ai-clinical-protocols.ts(124,62): error TS2559: Type 'string' has no properties in common with type '{ temperature?: number | undefined; maxTokens?: number | undefined; systemInstruction?: string | undefined; }'.
+src/functions/ai-clinical-protocols.ts(128,38): error TS2339: Property 'replace' does not exist on type 'VertexResponse'.
+src/functions/ai-copilot.ts(199,32): error TS2304: Cannot find name 'invokeBedrockClaude'.
+src/functions/ai-copilot.ts(253,40): error TS2554: Expected 3-4 arguments, but got 5.
+src/functions/ai-deterioration-alert.ts(137,17): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/functions/ai-deterioration-alert.ts(137,20): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/functions/ai-deterioration-alert.ts(158,70): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-deterioration-alert.ts(165,40): error TS2339: Property 'match' does not exist on type 'VertexResponse'.
+src/functions/ai-deterioration-alert.ts(176,15): error TS2554: Expected 3-4 arguments, but got 2.
+src/functions/ai-drug-interactions.ts(150,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-drug-interactions.ts(157,34): error TS2339: Property 'replace' does not exist on type 'VertexResponse'.
+src/functions/ai-explain-patient.ts(111,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-explain-patient.ts(118,34): error TS2339: Property 'replace' does not exist on type 'VertexResponse'.
+src/functions/ai-generate-soap.ts(140,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-generate-soap.ts(149,36): error TS2339: Property 'match' does not exist on type 'VertexResponse'.
+src/functions/ai-gps-evaluate.ts(202,30): error TS2304: Cannot find name 'invokeBedrockClaude'.
+src/functions/ai-gps-evaluate.ts(251,40): error TS2554: Expected 3-4 arguments, but got 5.
+src/functions/ai-ocr-exam.ts(146,35): error TS2554: Expected 3 arguments, but got 2.
+src/functions/ai-patient-chat.ts(71,19): error TS7022: 'user' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/functions/ai-patient-chat.ts(73,19): error TS2448: Block-scoped variable 'user' used before its declaration.
+src/functions/ai-patient-chat.ts(168,34): error TS2304: Cannot find name 'invokeBedrockClaudeWithTools'.
+src/functions/ai-patient-chat.ts(179,24): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/functions/ai-patient-chat.ts(207,44): error TS2304: Cannot find name 'anyToolUse'.
+src/functions/ai-patient-chat.ts(215,19): error TS2554: Expected 4 arguments, but got 5.
+src/functions/ai-patient-chat.ts(233,43): error TS2322: Type 'any[]' is not assignable to type 'string'.
+src/functions/ai-revenue-intelligence.ts(116,35): error TS2554: Expected 3 arguments, but got 2.
+src/functions/ai-revenue-intelligence.ts(212,62): error TS2559: Type 'string' has no properties in common with type '{ temperature?: number | undefined; maxTokens?: number | undefined; systemInstruction?: string | undefined; }'.
+src/functions/ai-revenue-intelligence.ts(217,38): error TS2339: Property 'replace' does not exist on type 'VertexResponse'.
+src/functions/ai-sentiment.ts(137,11): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-sentiment.ts(146,36): error TS2339: Property 'match' does not exist on type 'VertexResponse'.
+src/functions/ai-smart-referral.ts(101,70): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-smart-referral.ts(108,40): error TS2339: Property 'match' does not exist on type 'VertexResponse'.
+src/functions/ai-summary.ts(211,63): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-transcribe.ts(19,15): error TS2304: Cannot find name 'MedicalSpecialty'.
+src/functions/ai-transcribe.ts(110,28): error TS2552: Cannot find name 'transcribeAudioBase64'. Did you mean 'transcribeAudio'?
+src/functions/ai-triage.ts(25,11): error TS2427: Interface name cannot be 'any'.
+src/functions/ai-triage.ts(226,77): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/ai-triage.ts(238,11): error TS2322: Type '{ promptTokens: number; completionTokens: number; } | undefined' is not assignable to type '{ input_tokens: number; output_tokens: number; } | undefined'.
+src/functions/ai-triage.ts(259,43): error TS2339: Property 'input_tokens' does not exist on type '{ promptTokens: number; completionTokens: number; }'.
+src/functions/ai-triage.ts(260,47): error TS2339: Property 'output_tokens' does not exist on type '{ promptTokens: number; completionTokens: number; }'.
+src/functions/ai-triage.ts(274,76): error TS2339: Property 'input_tokens' does not exist on type '{ promptTokens: number; completionTokens: number; }'.
+src/functions/ai-triage.ts(274,90): error TS2554: Expected 3-4 arguments, but got 5.
+src/functions/ai-triage.ts(274,105): error TS2339: Property 'output_tokens' does not exist on type '{ promptTokens: number; completionTokens: number; }'.
+src/functions/ai-weekly-summary.ts(116,23): error TS2554: Expected 0-1 arguments, but got 2.
+src/functions/ai-weekly-summary.ts(235,19): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/ai-weekly-summary.ts(256,19): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/ai-weekly-summary.ts(264,19): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/ai-weekly-summary.ts(295,21): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/ai-weekly-summary.ts(307,21): error TS2339: Property 'data' does not exist on type 'DbClient'.
+src/functions/asaas-pix.ts(105,13): error TS2304: Cannot find name 'authError'.
+src/functions/asaas-pix.ts(105,27): error TS2304: Cannot find name 'tenant_id'.
+src/functions/asaas-pix.ts(115,21): error TS2304: Cannot find name 'tenant_id'.
+src/functions/automation-worker.ts(957,33): error TS2339: Property 'uid' does not exist on type 'TenantSettings'.
+src/functions/create-checkout.ts(22,11): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(63,3): error TS2740: Type 'Response' is missing the following properties from type 'Response<any, Record<string, any>>': sendStatus, links, send, jsonp, and 85 more.
+src/functions/evolution-proxy.ts(85,11): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(94,38): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(100,38): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(107,13): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(143,11): error TS2304: Cannot find name 'db'.
+src/functions/evolution-proxy.ts(174,26): error TS2304: Cannot find name 'getAuthenticatedUserWithTenant'.
+src/functions/hl7-receiver.ts(172,34): error TS2339: Property 'text' does not exist on type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+src/functions/invite-team-member.ts(24,11): error TS2304: Cannot find name 'db'.
+src/functions/invite-team-member.ts(342,27): error TS2554: Expected 0-1 arguments, but got 2.
+src/functions/invite-team-member.ts(406,95): error TS2339: Property 'status' does not exist on type '{ message: string; code?: string | undefined; }'.
+src/functions/invite-team-member.ts(421,54): error TS18047: 'newUser' is possibly 'null'.
+src/functions/invite-team-member.ts(421,68): error TS2339: Property 'id' does not exist on type 'UserRecord'.
+src/functions/invite-team-member.ts(461,21): error TS18047: 'newUser' is possibly 'null'.
+src/functions/invite-team-member.ts(461,35): error TS2339: Property 'id' does not exist on type 'UserRecord'.
+src/functions/invite-team-member.ts(471,22): error TS18047: 'newUser' is possibly 'null'.
+src/functions/invite-team-member.ts(471,36): error TS2339: Property 'id' does not exist on type 'UserRecord'.
+src/functions/jwt-probe.ts(11,32): error TS2304: Cannot find name 'getAuthenticatedUser'.
+src/functions/landing-chat.ts(114,71): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/notify-patient-appointment.ts(95,43): error TS2304: Cannot find name 'db'.
+src/functions/notify-patient-events.ts(92,40): error TS2304: Cannot find name 'db'.
+src/functions/notify-patient-events.ts(99,36): error TS2304: Cannot find name 'db'.
+src/functions/notify-patient-invoice-due.ts(36,40): error TS2304: Cannot find name 'db'.
+src/functions/notify-patient-invoice-due.ts(43,43): error TS2304: Cannot find name 'db'.
+src/functions/notify-patient-invoice-due.ts(200,25): error TS2304: Cannot find name 'ClinicInfo'.
+src/functions/notify-patient-invoice-due.ts(219,13): error TS2304: Cannot find name 'greeting'.
+src/functions/notify-patient-invoice-due.ts(221,13): error TS2304: Cannot find name 'infoBox'.
+src/functions/notify-patient-invoice-due.ts(230,37): error TS2554: Expected 3-4 arguments, but got 1.
+src/functions/notify-patient-message.ts(66,43): error TS2304: Cannot find name 'db'.
+src/functions/payment-webhook-handler.ts(31,38): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/functions/payment-webhook-handler.ts(31,50): error TS2349: This expression is not callable.
+src/functions/payment-webhook-handler.ts(282,12): error TS2551: Property 'catch' does not exist on type 'PostgrestQueryBuilder'. Did you mean 'match'?
+src/functions/register-user.ts(40,10): error TS2304: Cannot find name 'BRAND'.
+src/functions/register-user.ts(221,63): error TS2304: Cannot find name 'BRAND'.
+src/functions/register-user.ts(222,27): error TS2304: Cannot find name 'verificationCodeEmailHtml'.
+src/functions/register-user.ts(223,27): error TS2304: Cannot find name 'verificationCodeEmailText'.
+src/functions/remove-team-member.ts(23,11): error TS2304: Cannot find name 'db'.
+src/functions/remove-team-member.ts(100,25): error TS2554: Expected 0-1 arguments, but got 2.
+src/functions/reset-team-member-password.ts(23,11): error TS2304: Cannot find name 'db'.
+src/functions/rnds-receive-bundle.ts(62,37): error TS7022: 'user' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/functions/rnds-receive-bundle.ts(62,54): error TS2448: Block-scoped variable 'user' used before its declaration.
+src/functions/rnds-receive-bundle.ts(115,29): error TS5076: '??' and '||' operations cannot be mixed without parentheses.
+src/functions/rnds-submit.ts(26,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+src/functions/rnds-submit.ts(28,24): error TS2307: Cannot find module 'https://esm.sh/node-forge@1.3.1' or its corresponding type declarations.
+src/functions/rnds-submit.ts(131,41): error TS2304: Cannot find name 'db'.
+src/functions/rnds-submit.ts(147,39): error TS2304: Cannot find name 'db'.
+src/functions/rnds-submit.ts(185,11): error TS2304: Cannot find name 'db'.
+src/functions/rnds-submit.ts(227,37): error TS2339: Property 'id' does not exist on type '{}'.
+src/functions/rnds-submit.ts(232,37): error TS2339: Property 'issue' does not exist on type '{}'.
+src/functions/rnds-submit.ts(233,40): error TS2339: Property 'issue' does not exist on type '{}'.
+src/functions/rnds-submit.ts(234,39): error TS2339: Property 'message' does not exist on type '{}'.
+src/functions/run-campaign.ts(200,112): error TS2339: Property 'uid' does not exist on type '{ ok: boolean; id?: string | undefined; error?: string | undefined; }'.
+src/functions/run-campaign.ts(307,68): error TS2339: Property 'uid' does not exist on type '{ ok: boolean; id?: string | undefined; error?: string | undefined; }'.
+src/functions/seal-consent-pdf.ts(12,44): error TS2307: Cannot find module 'pdf-lib' or its corresponding type declarations.
+src/functions/seal-consent-pdf.ts(184,27): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(185,27): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(186,28): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(187,28): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(188,28): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(189,28): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(190,28): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(286,18): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(375,20): error TS2304: Cannot find name 'rgb'.
+src/functions/seal-consent-pdf.ts(384,21): error TS2339: Property 'data' does not exist on type 'GcsStorageClient'.
+src/functions/seal-consent-pdf.ts(384,36): error TS2339: Property 'error' does not exist on type 'GcsStorageClient'.
+src/functions/seal-consent-pdf.ts(386,16): error TS2339: Property 'download' does not exist on type 'PostgrestQueryBuilder'.
+src/functions/seal-consent-pdf.ts(427,21): error TS2339: Property 'data' does not exist on type 'GcsStorageClient'.
+src/functions/seal-consent-pdf.ts(427,38): error TS2339: Property 'error' does not exist on type 'GcsStorageClient'.
+src/functions/seal-consent-pdf.ts(429,16): error TS2339: Property 'download' does not exist on type 'PostgrestQueryBuilder'.
+src/functions/seal-consent-pdf.ts(507,17): error TS2339: Property 'error' does not exist on type 'GcsStorageClient'.
+src/functions/seal-consent-pdf.ts(509,12): error TS2339: Property 'upload' does not exist on type 'PostgrestQueryBuilder'.
+src/functions/send-weekly-financial-summary.ts(76,14): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(76,19): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(90,14): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(90,19): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(104,14): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(104,19): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(116,14): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(116,19): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/functions/send-weekly-financial-summary.ts(122,27): error TS2554: Expected 0-1 arguments, but got 2.
+src/functions/twilio-token.ts(44,26): error TS2304: Cannot find name 'getAuthenticatedUserWithTenant'.
+src/functions/twilio-token.ts(111,30): error TS2304: Cannot find name 'twilioJwt'.
+src/functions/twilio-token.ts(112,29): error TS2304: Cannot find name 'twilioJwt'.
+src/functions/twilio-video-token.ts(137,34): error TS2304: Cannot find name 'getAuthenticatedUser'.
+src/functions/update-password.ts(202,32): error TS2304: Cannot find name 'getAuthenticatedUser'.
+src/functions/whatsapp-sales-chatbot.ts(382,36): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(391,13): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(400,13): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(407,11): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(417,42): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(434,9): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(442,9): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(450,36): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(472,9): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(483,40): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(489,11): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(491,11): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(521,13): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(551,17): error TS2304: Cannot find name 'db'.
+src/functions/whatsapp-sales-chatbot.ts(638,66): error TS2554: Expected 1-2 arguments, but got 3.
+src/functions/whatsapp-sender.ts(49,26): error TS2304: Cannot find name 'getAuthenticatedUserWithTenant'.
+src/server.ts(47,10): error TS2614: Module '"./functions/create-patient-payment"' has no exported member 'createPatientPayment'. Did you mean to use 'import createPatientPayment from "./functions/create-patient-payment"' instead?
+src/server.ts(52,10): error TS2614: Module '"./functions/notify-patient-events"' has no exported member 'notifyPatientEvents'. Did you mean to use 'import notifyPatientEvents from "./functions/notify-patient-events"' instead?
+src/server.ts(66,10): error TS2614: Module '"./functions/export-patient-fhir"' has no exported member 'exportPatientFhir'. Did you mean to use 'import exportPatientFhir from "./functions/export-patient-fhir"' instead?
+src/server.ts(100,9): error TS2769: No overload matches this call.
+src/shared/cors.ts(19,12): error TS7006: Parameter 'origin' implicitly has an 'any' type.
+src/shared/cors.ts(19,20): error TS7006: Parameter 'callback' implicitly has an 'any' type.

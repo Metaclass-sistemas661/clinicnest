@@ -15,7 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 interface AiDeteriorationAlertProps {
@@ -58,10 +58,10 @@ export function AiDeteriorationAlert({ patientId, className }: AiDeteriorationAl
 
   const analysisMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) throw new Error("Não autenticado");
 
-      const res = await supabase.functions.invoke("ai-deterioration-alert", {
+      const res = await api.functions.invoke("ai-deterioration-alert", {
         body: { patient_id: patientId },
       });
 

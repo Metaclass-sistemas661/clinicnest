@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Loader2, Send, Users, Eye, Mail } from "lucide-react";
@@ -44,7 +44,7 @@ export default function NovaCampanha() {
     if (!profile?.tenant_id) return;
     setIsLoadingPatients(true);
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("patients")
         .select("id, name, email")
         .eq("tenant_id", profile.tenant_id)
@@ -99,7 +99,7 @@ export default function NovaCampanha() {
     if (!profile?.tenant_id) return;
     setIsSaving(true);
     try {
-      const db: any = supabase;
+      const db: any = api;
       const { error } = await db.from("campaigns").insert({
         tenant_id: profile.tenant_id,
         name: name.trim(),

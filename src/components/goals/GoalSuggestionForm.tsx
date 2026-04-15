@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { goalTypeLabels, periodLabels, type GoalType, type GoalPeriod } from "@/lib/goals";
@@ -39,7 +39,7 @@ export function GoalSuggestionForm({ tenantId, professionalId, onSuccess }: Goal
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("goal_suggestions").insert({
+      const { error } = await api.from("goal_suggestions").insert({
         tenant_id: tenantId,
         professional_id: professionalId,
         name: name.trim() || `Meta ${goalTypeLabels[goalType]}`,

@@ -38,7 +38,7 @@ import {
   EyeOff,
   Info,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -136,7 +136,7 @@ export default function CertificateManager() {
 
   const fetchCertificates = useCallback(async () => {
     try {
-      const { data, error } = await supabase.rpc("list_my_certificates");
+      const { data, error } = await api.rpc("list_my_certificates");
       if (error) throw error;
       if (data?.success) {
         setCertificates(data.certificates || []);
@@ -200,7 +200,7 @@ export default function CertificateManager() {
       const { encrypted, iv, salt } = await encryptPfx(pfxBytes, pfxPassword);
       const thumbprint = generateThumbprint(pfxBytes);
 
-      const { data, error } = await supabase.rpc("register_certificate_a1", {
+      const { data, error } = await api.rpc("register_certificate_a1", {
         p_common_name: certInfo.commonName,
         p_cpf_cnpj: certInfo.cpfCnpj || null,
         p_issuer: certInfo.issuer,
@@ -232,7 +232,7 @@ export default function CertificateManager() {
 
   const handleSetDefault = async (certId: string) => {
     try {
-      const { data, error } = await supabase.rpc("set_default_certificate", {
+      const { data, error } = await api.rpc("set_default_certificate", {
         p_certificate_id: certId,
       });
       if (error) throw error;
@@ -248,7 +248,7 @@ export default function CertificateManager() {
   const handleDelete = async () => {
     if (!deletingId) return;
     try {
-      const { data, error } = await supabase.rpc("remove_certificate", {
+      const { data, error } = await api.rpc("remove_certificate", {
         p_certificate_id: deletingId,
       });
       if (error) throw error;

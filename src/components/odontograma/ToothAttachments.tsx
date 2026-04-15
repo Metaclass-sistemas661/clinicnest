@@ -1,7 +1,7 @@
 /**
  * ToothAttachments — Upload de radiografias e fotos intraorais (F1/F17)
  *
- * Usa Supabase Storage para upload de imagens vinculadas ao dente.
+ * Usa Cloud Storage para upload de imagens vinculadas ao dente.
  */
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -58,13 +58,13 @@ export function ToothAttachments({
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${tenantId}/${patientId}/tooth_${toothNumber}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from(BUCKET)
         .upload(path, file, { contentType: file.type, upsert: false });
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const { data: urlData } = api.storage.from(BUCKET).getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
 
       onUrlsChanged([...attachmentUrls, publicUrl]);
@@ -81,10 +81,10 @@ export function ToothAttachments({
   const handleRemove = async (url: string) => {
     try {
       // Extract path from public URL for deletion
-      const bucketUrl = supabase.storage.from(BUCKET).getPublicUrl("").data.publicUrl;
+      const bucketUrl = api.storage.from(BUCKET).getPublicUrl("").data.publicUrl;
       const path = url.replace(bucketUrl, "");
       if (path) {
-        await supabase.storage.from(BUCKET).remove([path]);
+        await api.storage.from(BUCKET).remove([path]);
       }
       onUrlsChanged(attachmentUrls.filter((u) => u !== url));
       toast.success("Imagem removida");

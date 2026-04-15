@@ -1,7 +1,7 @@
 import { Spinner } from "@/components/ui/spinner";
 import { ReactNode, useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { Loader2 } from "lucide-react";
 import { logger } from "@/lib/logger";
 
@@ -31,7 +31,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
     }
 
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user?.email) {
         // No user or no email — let PatientProtectedRoute handle redirect
         setAllowed(true);
@@ -40,7 +40,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
       }
 
       // Resolve patient_id
-      const { data: client } = await supabasePatient
+      const { data: client } = await apiPatient
         .from("patients")
         .select("id")
         .eq("email", user.email)
@@ -55,7 +55,7 @@ export function ConsentGate({ children }: ConsentGateProps) {
       }
 
       // Check pending consents
-      const { data: pending, error } = await supabasePatient.rpc("get_pending_consents", {
+      const { data: pending, error } = await apiPatient.rpc("get_pending_consents", {
         p_client_id: client.id,
       });
 

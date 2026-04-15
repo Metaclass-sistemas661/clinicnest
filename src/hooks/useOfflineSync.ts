@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { offlineCache } from "@/lib/offline-cache";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
@@ -34,26 +34,26 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       const [appointmentsRes, patientsRes, servicesRes, professionalsRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(id, name, phone), procedure:procedures(id, name), professional:profiles!professional_id(id, full_name)")
           .eq("tenant_id", tenantId)
           .gte("scheduled_at", today.toISOString().split("T")[0])
           .lte("scheduled_at", tomorrow.toISOString().split("T")[0] + "T23:59:59")
           .order("scheduled_at"),
-        supabase
+        api
           .from("patients")
           .select("id, full_name, phone, email, cpf, birth_date")
           .eq("tenant_id", tenantId)
           .order("full_name")
           .limit(500),
-        supabase
+        api
           .from("procedures")
           .select("id, name, price, duration_minutes, category")
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
           .order("name"),
-        supabase
+        api
           .from("profiles")
           .select("id, full_name, professional_type")
           .eq("tenant_id", tenantId)
@@ -114,11 +114,11 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}) {
         const dataWithTenant = { ...item.data, tenant_id: tenantId };
 
         if (item.action === "create") {
-          await supabase.from(item.table as any).insert(dataWithTenant);
+          await api.from(item.table as any).insert(dataWithTenant);
         } else if (item.action === "update") {
-          await supabase.from(item.table as any).update(dataWithTenant).eq("id", item.data.id).eq("tenant_id", tenantId);
+          await api.from(item.table as any).update(dataWithTenant).eq("id", item.data.id).eq("tenant_id", tenantId);
         } else if (item.action === "delete") {
-          await supabase.from(item.table as any).delete().eq("id", item.data.id).eq("tenant_id", tenantId);
+          await api.from(item.table as any).delete().eq("id", item.data.id).eq("tenant_id", tenantId);
         }
 
         await offlineCache.removeSyncItem(item.id);

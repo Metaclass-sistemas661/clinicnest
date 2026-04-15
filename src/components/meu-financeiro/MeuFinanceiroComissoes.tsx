@@ -35,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -93,7 +93,7 @@ export function MeuFinanceiroComissoes() {
       const start = startOfMonth(new Date(year, month - 1));
       const end = endOfMonth(new Date(year, month - 1));
 
-      let query = supabase
+      let query = api
         .from("commission_payments")
         .select(`
           id,
@@ -197,7 +197,7 @@ export function MeuFinanceiroComissoes() {
 
     setIsSubmittingDispute(true);
     try {
-      const { error } = await supabase.from("commission_disputes").insert({
+      const { error } = await api.from("commission_disputes").insert({
         tenant_id: profile.tenant_id,
         commission_id: selectedCommission.id,
         professional_id: profile.user_id,

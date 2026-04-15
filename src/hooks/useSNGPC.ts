@@ -1,7 +1,7 @@
 // Hook para integração SNGPC
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { toast } from 'sonner';
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
@@ -76,7 +76,7 @@ export function useSNGPC() {
   const fetchCredenciais = useCallback(async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('sngpc_credenciais')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -118,13 +118,13 @@ export function useSNGPC() {
       if (passwordEnc) payload.password_encrypted = passwordEnc;
 
       if (credenciais?.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from('sngpc_credenciais')
           .update(payload)
           .eq('id', credenciais.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from('sngpc_credenciais')
           .insert(payload);
         if (error) throw error;
@@ -147,7 +147,7 @@ export function useSNGPC() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('sngpc_transmissoes')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -168,7 +168,7 @@ export function useSNGPC() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('sngpc_movimentacoes')
         .select(`
           id,
@@ -220,7 +220,7 @@ export function useSNGPC() {
   const fetchDashboard = useCallback(async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('sngpc_transmissoes')
         .select('status, total_medicamentos, data_envio')
         .eq('tenant_id', profile.tenant_id);
@@ -266,7 +266,7 @@ export function useSNGPC() {
     if (!profile?.tenant_id) return null;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('sngpc_transmissoes')
         .insert({
           tenant_id: profile.tenant_id,
@@ -314,7 +314,7 @@ export function useSNGPC() {
       if (status === 'enviado') updates.data_envio = new Date().toISOString();
       if (status === 'validado') updates.data_validacao = new Date().toISOString();
 
-      const { error } = await supabase
+      const { error } = await api
         .from('sngpc_transmissoes')
         .update(updates)
         .eq('id', id)

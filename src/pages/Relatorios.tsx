@@ -2,7 +2,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useState, useMemo, useCallback, lazy, Suspense, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -434,8 +434,8 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
     enabled: loaded,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<InactivePatient[]> => {
-      const db = supabase as unknown as {
-        from: (t: string) => ReturnType<typeof supabase.from>;
+      const db = api as unknown as {
+        from: (t: string) => ReturnType<typeof api.from>;
       };
 
       const cutoffDate = subDays(new Date(), Number(cutoff));
@@ -471,7 +471,7 @@ function TabPacientesInativos({ tenantId, period }: { tenantId: string; period: 
       });
 
       // All patients
-      const { data: allPatients } = await (supabase as any)
+      const { data: allPatients } = await (api as any)
         .from("patients")
         .select("id, name, phone, email")
         .eq("tenant_id", tenantId)
@@ -873,7 +873,7 @@ export default function Relatorios() {
     enabled: !!profile?.tenant_id,
     staleTime: 3 * 60 * 1000,
     queryFn: async (): Promise<ApptRow[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (api as any)
         .from("appointments")
         .select(
           "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"
@@ -894,7 +894,7 @@ export default function Relatorios() {
     enabled: !!profile?.tenant_id,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<ApptRow[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (api as any)
         .from("appointments")
         .select(
           "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price, duration_minutes), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"
@@ -915,7 +915,7 @@ export default function Relatorios() {
     enabled: !!profile?.tenant_id && activeTab === "pacientes",
     staleTime: 10 * 60 * 1000,
     queryFn: async (): Promise<ApptRow[]> => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (api as any)
         .from("appointments")
         .select(
           "id, scheduled_at, patient_id, professional_id, status, procedure:procedures(id, name, price), profiles!appointments_professional_id_fkey(full_name), patient:patients(id, name, phone, created_at, referral_source)"

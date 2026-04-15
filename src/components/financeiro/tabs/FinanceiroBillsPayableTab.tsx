@@ -33,9 +33,9 @@ import {
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db: any = supabase;
+const db: any = api;
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { toastRpcError } from "@/lib/rpc-error";

@@ -31,7 +31,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, addHours, addDays } from "date-fns";
@@ -112,16 +112,16 @@ export default function PatientConsultas() {
     void fetchAppointments();
   }, [filter]);
 
-  // ── Supabase Realtime: escutar alterações de consultas em tempo real ──
+  // ── Realtime: escutar alterações de consultas em tempo real ──
   useEffect(() => {
-    let channel: ReturnType<typeof supabasePatient.channel> | null = null;
+    let channel: ReturnType<typeof apiPatient.channel> | null = null;
 
     const setupRealtime = async () => {
       try {
-        const { data: { user } } = await supabasePatient.auth.getUser();
+        const { data: { user } } = await apiPatient.auth.getUser();
         if (!user) return;
 
-        const { data: link } = await supabasePatient
+        const { data: link } = await apiPatient
           .from("patient_profiles")
           .select("client_id")
           .eq("user_id", user.id)
@@ -131,7 +131,7 @@ export default function PatientConsultas() {
 
         if (!link?.client_id) return;
 
-        channel = supabasePatient
+        channel = apiPatient
           .channel("patient-appointments-realtime")
           .on(
             "postgres_changes" as any,
@@ -156,7 +156,7 @@ export default function PatientConsultas() {
 
     return () => {
       if (channel) {
-        void supabasePatient.removeChannel(channel);
+        void apiPatient.removeChannel(channel);
       }
     };
   }, [filter]);
@@ -171,7 +171,7 @@ export default function PatientConsultas() {
         p_status: null,
       };
 
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_appointments", params);
+      const { data, error } = await (apiPatient as any).rpc("get_patient_appointments", params);
       if (error) throw error;
 
       const list = (Array.isArray(data) ? data : []) as PatientAppointment[];
@@ -194,7 +194,7 @@ export default function PatientConsultas() {
     if (!cancelTarget) return;
     setIsCancelling(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("patient_cancel_appointment", {
+      const { data, error } = await (apiPatient as any).rpc("patient_cancel_appointment", {
         p_appointment_id: cancelTarget.id,
         p_reason: cancelReason.trim() || null,
       });
@@ -226,7 +226,7 @@ export default function PatientConsultas() {
     if (!checkinTarget) return;
     setIsCheckingIn(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("patient_online_checkin", {
+      const { data, error } = await (apiPatient as any).rpc("patient_online_checkin", {
         p_appointment_id: checkinTarget.id,
       });
       if (error) throw error;
@@ -259,7 +259,7 @@ export default function PatientConsultas() {
 
       setIsLoadingSlots(true);
       try {
-        const { data, error } = await (supabasePatient as any).rpc(
+        const { data, error } = await (apiPatient as any).rpc(
           "get_available_slots_for_patient",
           {
             p_service_id: rescheduleTarget.procedure_id,
@@ -288,7 +288,7 @@ export default function PatientConsultas() {
 
     setIsRescheduling(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("patient_reschedule_appointment", {
+      const { data, error } = await (apiPatient as any).rpc("patient_reschedule_appointment", {
         p_appointment_id: rescheduleTarget.id,
         p_new_scheduled_at: selectedRescheduleSlot.slot_datetime,
         p_reason: rescheduleReason.trim() || null,

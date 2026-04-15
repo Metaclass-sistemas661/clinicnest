@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -78,7 +78,7 @@ export function usePendingReturns(
   return useQuery({
     queryKey: ["pending-returns", tenantId, status, fromDate, toDate, professionalId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_pending_returns", {
+      const { data, error } = await api.rpc("get_pending_returns", {
         p_tenant_id: tenantId,
         p_status: status || null,
         p_from_date: fromDate || null,
@@ -99,7 +99,7 @@ export function useReturnStatistics(fromDate?: string, toDate?: string) {
   return useQuery({
     queryKey: ["return-statistics", tenantId, fromDate, toDate],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_return_statistics", {
+      const { data, error } = await api.rpc("get_return_statistics", {
         p_tenant_id: tenantId,
         p_from_date: fromDate || null,
         p_to_date: toDate || null,
@@ -117,7 +117,7 @@ export function useCreateReturnReminder() {
 
   return useMutation({
     mutationFn: async (input: CreateReturnReminderInput) => {
-      const { data, error } = await supabase.rpc("create_return_reminder", {
+      const { data, error } = await api.rpc("create_return_reminder", {
         p_medical_record_id: input.medicalRecordId,
         p_return_days: input.returnDays,
         p_reason: input.reason || null,
@@ -153,7 +153,7 @@ export function useLinkAppointmentToReturn() {
       reminderId: string;
       appointmentId: string;
     }) => {
-      const { error } = await supabase.rpc("link_appointment_to_return", {
+      const { error } = await api.rpc("link_appointment_to_return", {
         p_reminder_id: reminderId,
         p_appointment_id: appointmentId,
       });
@@ -181,7 +181,7 @@ export function useUpdateReturnStatus() {
       reminderId: string;
       status: string;
     }) => {
-      const { error } = await supabase
+      const { error } = await api
         .from("return_reminders")
         .update({ status, updated_at: new Date().toISOString() })
         .eq("id", reminderId);
@@ -205,7 +205,7 @@ export function useReturnsToNotify() {
   return useQuery({
     queryKey: ["returns-to-notify", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_returns_to_notify", {
+      const { data, error } = await api.rpc("get_returns_to_notify", {
         p_tenant_id: tenantId,
       });
 

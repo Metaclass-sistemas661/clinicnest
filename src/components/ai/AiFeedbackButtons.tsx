@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -23,20 +23,9 @@ export function AiFeedbackButtons({ interactionId, className, size = "xs" }: Pro
     setSubmitted(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const url = `${import.meta.env.VITE_SUPABASE_URL || ""}/rest/v1/rpc/submit_ai_feedback`;
-      fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
-        },
-        body: JSON.stringify({
-          p_interaction_id: interactionId,
-          p_feedback: value,
-        }),
+      api.rpc("submit_ai_feedback", {
+        p_interaction_id: interactionId,
+        p_feedback: value,
       }).catch(() => {});
     } catch {
       // silently fail

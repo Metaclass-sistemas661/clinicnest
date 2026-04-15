@@ -59,10 +59,10 @@ interface TenantContext {
 
 type Step = "loading" | "error" | "disabled" | "select" | "slots" | "form" | "success" | "cancel";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 async function callBookingApi(body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/public-booking`, {
+  const res = await fetch(`${API_BASE_URL}/api/public-booking`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

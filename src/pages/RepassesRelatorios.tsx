@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -101,7 +101,7 @@ export default function RepassesRelatorios({ embedded = false }: { embedded?: bo
   useEffect(() => {
     if (!profile?.tenant_id) return;
     
-    supabase
+    api
       .from("profiles")
       .select("id, full_name")
       .eq("tenant_id", profile.tenant_id)
@@ -135,7 +135,7 @@ export default function RepassesRelatorios({ embedded = false }: { embedded?: bo
   };
 
   const fetchRepasseProfissional = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await api
       .from("commission_payments")
       .select(`
         professional_id,
@@ -177,7 +177,7 @@ export default function RepassesRelatorios({ embedded = false }: { embedded?: bo
   };
 
   const fetchRepasseConvenio = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await api
       .from("commission_payments")
       .select(`
         amount,
@@ -224,7 +224,7 @@ export default function RepassesRelatorios({ embedded = false }: { embedded?: bo
   };
 
   const fetchRepasseProcedimento = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await api
       .from("commission_payments")
       .select(`
         amount,
@@ -274,7 +274,7 @@ export default function RepassesRelatorios({ embedded = false }: { embedded?: bo
       const monthStart = format(startOfMonth(monthDate), "yyyy-MM-dd");
       const monthEnd = format(endOfMonth(monthDate), "yyyy-MM-dd");
 
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("commission_payments")
         .select("amount, service_price")
         .eq("tenant_id", profile!.tenant_id)

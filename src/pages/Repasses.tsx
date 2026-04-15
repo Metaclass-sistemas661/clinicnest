@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { getSalaryPayments, getProfessionalsWithSalary } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { getSalaryPayments, getProfessionalsWithSalary } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -46,7 +46,7 @@ export default function Repasses() {
 
     try {
       const [commissionsResult, salariesResult, professionalsResult] = await Promise.all([
-        supabase
+        api
           .from("commission_payments")
           .select(`*, commission_config:professional_commissions(payment_type)`)
           .eq("tenant_id", profile.tenant_id)

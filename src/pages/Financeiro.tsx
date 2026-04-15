@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { financialTransactionFormSchema } from "@/lib/validation";
 import {
   DollarSign,
@@ -139,7 +139,7 @@ export default function Financeiro() {
       const endStr   = format(endDate,   "yyyy-MM-dd");
 
       // Buscar transações no período escolhido
-      const { data: txData, error: txError } = await supabase
+      const { data: txData, error: txError } = await api
         .from("financial_transactions")
         .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
@@ -153,7 +153,7 @@ export default function Financeiro() {
       const endOfDay = new Date(endDate);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const { data: commData } = await supabase
+      const { data: commData } = await api
         .from("commission_payments")
         .select("id,professional_id,appointment_id,amount,service_price,commission_type,status,created_at,payment_date")
         .eq("tenant_id", profile.tenant_id)
@@ -162,7 +162,7 @@ export default function Financeiro() {
         .order("created_at", { ascending: true });
 
       // Nome do tenant para o cabeçalho do PDF
-      const { data: tenantData } = await supabase
+      const { data: tenantData } = await api
         .from("tenants")
         .select("name")
         .eq("id", profile.tenant_id)
@@ -202,7 +202,7 @@ export default function Financeiro() {
     const end = endOfMonth(new Date(year, month - 1));
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("financial_transactions")
         .select("id,tenant_id,appointment_id,type,category,amount,description,transaction_date,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
@@ -236,7 +236,7 @@ export default function Financeiro() {
     setIsSaving(true);
 
     try {
-      const { error } = await supabase.rpc("create_financial_transaction_v2", {
+      const { error } = await api.rpc("create_financial_transaction_v2", {
         p_type: parsed.data.type,
         p_category: parsed.data.category,
         p_amount: amount,

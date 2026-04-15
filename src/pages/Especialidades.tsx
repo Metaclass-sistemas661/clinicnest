@@ -28,7 +28,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -70,7 +70,7 @@ export default function Especialidades() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("specialties")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -129,7 +129,7 @@ export default function Especialidades() {
         is_active: formData.is_active,
       };
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("specialties")
           .update(payload)
           .eq("id", editingId)
@@ -137,7 +137,7 @@ export default function Especialidades() {
         if (error) throw error;
         toast.success("Especialidade atualizada!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("specialties")
           .insert({ ...payload, tenant_id: profile!.tenant_id });
         if (error) throw error;
@@ -155,7 +155,7 @@ export default function Especialidades() {
 
   const toggleActive = async (id: string, current: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("specialties")
         .update({ is_active: !current })
         .eq("id", id)

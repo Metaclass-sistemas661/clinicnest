@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 /**
@@ -33,7 +33,7 @@ export function usePatientSessionTimeout() {
     logger.info(`[SessionTimeout] Logout reason: ${reason}`);
 
     try {
-      await supabasePatient.auth.signOut();
+      await apiPatient.auth.signOut();
     } catch (err) {
       logger.error("[SessionTimeout] signOut error:", err);
     }

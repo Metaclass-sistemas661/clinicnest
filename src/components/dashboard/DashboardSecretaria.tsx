@@ -8,7 +8,7 @@ import {
   Plus, ArrowRight, CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -37,7 +37,7 @@ export const DashboardSecretaria = memo(function DashboardSecretaria() {
 
     try {
       const [aptsRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name, duration_minutes), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)

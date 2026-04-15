@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Smile, Trash2, Loader2, ExternalLink } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { Link } from "react-router-dom";
@@ -62,7 +62,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
   const loadLatestOdontogram = async (cancelled = false) => {
     setIsLoading(true);
     try {
-      const { data: odontograms, error } = await (supabase
+      const { data: odontograms, error } = await (api
         .rpc as any)("get_client_odontograms", {
           p_tenant_id: tenantId,
           p_client_id: patientId,
@@ -77,7 +77,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
         if (cancelled) return;
         setDentitionType((latest.dentition_type as DentitionType) || "permanent");
 
-        const { data: teethData } = await (supabase
+        const { data: teethData } = await (api
           .rpc as any)("get_odontogram_teeth", { p_odontogram_id: latest.id });
 
         if (cancelled) return;
@@ -152,7 +152,7 @@ export function OdontogramaEmbed({ tenantId, patientId, professionalId, appointm
         priority: t.priority || "normal",
       }));
 
-      const { error } = await (supabase
+      const { error } = await (api
         .rpc as any)("create_odontogram_with_teeth", {
           p_tenant_id: tenantId,
           p_client_id: patientId,

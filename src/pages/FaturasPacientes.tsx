@@ -44,7 +44,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
@@ -116,7 +116,7 @@ export default function FaturasPacientes() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      let query = supabase
+      let query = api
         .from("patient_invoices")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -140,7 +140,7 @@ export default function FaturasPacientes() {
   const fetchClients = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("patients")
         .select("id, full_name")
         .eq("tenant_id", tenantId)
@@ -165,7 +165,7 @@ export default function FaturasPacientes() {
     }
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("patient_invoices").insert({
+      const { error } = await api.from("patient_invoices").insert({
         tenant_id: tenantId,
         client_id: newClientId,
         description: newDescription.trim(),
@@ -192,7 +192,7 @@ export default function FaturasPacientes() {
     if (!markPaidInvoice) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("patient_invoices")
         .update({
           status: "paid",
@@ -215,7 +215,7 @@ export default function FaturasPacientes() {
 
   const handleCancel = async (inv: Invoice) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("patient_invoices")
         .update({ status: "cancelled" })
         .eq("id", inv.id);

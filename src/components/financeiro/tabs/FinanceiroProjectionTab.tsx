@@ -28,7 +28,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCashFlowProjectionV1 } from "@/lib/supabase-typed-rpc";
+import { getCashFlowProjectionV1 } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { CashFlowProjectionResult, CashFlowSeriesPoint } from "@/types/supabase-extensions";
+import type { CashFlowProjectionResult, CashFlowSeriesPoint } from "@/types/database-extensions";
 
 const DAYS_OPTIONS = [
   { label: "30 dias", value: 30 },

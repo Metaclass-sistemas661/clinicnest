@@ -23,7 +23,7 @@ import {
   Scale,
   ArrowUpRight,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format, differenceInDays, isValid, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -145,11 +145,11 @@ export default function PatientSaude() {
     setIsLoading(true);
     try {
       const [timelineRes, medsRes, healthRes, vitalsRes, vaccinesRes] = await Promise.all([
-        (supabasePatient as any).rpc("get_patient_health_timeline", { p_limit: 50 }),
-        (supabasePatient as any).rpc("get_patient_active_medications"),
-        (supabasePatient as any).rpc("get_patient_health_info"),
-        (supabasePatient as any).rpc("get_patient_vital_signs_history", { p_limit: 20 }),
-        (supabasePatient as any).rpc("get_patient_vaccinations"),
+        (apiPatient as any).rpc("get_patient_health_timeline", { p_limit: 50 }),
+        (apiPatient as any).rpc("get_patient_active_medications"),
+        (apiPatient as any).rpc("get_patient_health_info"),
+        (apiPatient as any).rpc("get_patient_vital_signs_history", { p_limit: 20 }),
+        (apiPatient as any).rpc("get_patient_vaccinations"),
       ]);
 
       if (!timelineRes.error) setTimeline((timelineRes.data as TimelineEvent[]) || []);

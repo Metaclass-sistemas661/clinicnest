@@ -13,7 +13,7 @@ import {
   Smile, Activity, ClipboardList, Pill, FileText,
   Calendar, ChevronRight,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -49,7 +49,7 @@ export function UnifiedDentalRecord({ patientId }: Props) {
       const all: TimelineEvent[] = [];
 
       // Odontograms
-      const { data: odontograms } = await supabase
+      const { data: odontograms } = await api
         .from("odontograms")
         .select("id, created_at, notes")
         .eq("tenant_id", tenantId)
@@ -69,7 +69,7 @@ export function UnifiedDentalRecord({ patientId }: Props) {
       });
 
       // Periograms
-      const { data: periograms } = await supabase
+      const { data: periograms } = await api
         .from("periograms")
         .select("id, created_at, diagnosis")
         .eq("tenant_id", tenantId)
@@ -89,7 +89,7 @@ export function UnifiedDentalRecord({ patientId }: Props) {
       });
 
       // Treatment Plans
-      const { data: plans } = await supabase
+      const { data: plans } = await api
         .from("treatment_plans")
         .select("id, created_at, title, status")
         .eq("tenant_id", tenantId)
@@ -109,7 +109,7 @@ export function UnifiedDentalRecord({ patientId }: Props) {
       });
 
       // Prescriptions
-      const { data: prescriptions } = await supabase
+      const { data: prescriptions } = await api
         .from("dental_prescriptions" as any)
         .select("id, prescription_date, diagnosis")
         .eq("tenant_id", tenantId)

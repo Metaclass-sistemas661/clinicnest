@@ -14,7 +14,7 @@ import {
   FileText, RefreshCw, Building2, Stethoscope, Calendar,
   Download, Upload, Trash2, CheckCircle2, Clock, XCircle, SunMedium,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -117,7 +117,7 @@ export default function PatientExames() {
   const fetchExams = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_exam_results");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_exam_results");
       if (error) throw error;
       setExams((data ?? []) as ExamResult[]);
     } catch (err) {
@@ -131,7 +131,7 @@ export default function PatientExames() {
   const fetchUploads = async () => {
     setIsLoadingUploads(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_uploaded_exams");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_uploaded_exams");
       if (error) throw error;
       setUploads((data ?? []) as UploadedExam[]);
     } catch (err) {
@@ -158,14 +158,14 @@ export default function PatientExames() {
 
     setUploading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) throw new Error("not_authenticated");
 
       const ext = uploadFile.name.split(".").pop() ?? "pdf";
       const storagePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
 
       // 1. Upload to storage
-      const { error: storageError } = await supabasePatient.storage
+      const { error: storageError } = await apiPatient.storage
         .from("patient-exams")
         .upload(storagePath, uploadFile, {
           contentType: uploadFile.type,
@@ -174,7 +174,7 @@ export default function PatientExames() {
       if (storageError) throw storageError;
 
       // 2. Create DB record via RPC
-      const { error: rpcError } = await (supabasePatient as any).rpc("patient_upload_exam", {
+      const { error: rpcError } = await (apiPatient as any).rpc("patient_upload_exam", {
         p_file_name: uploadFile.name,
         p_file_path: storagePath,
         p_file_size: uploadFile.size,
@@ -201,9 +201,9 @@ export default function PatientExames() {
   const handleDeleteUpload = async (examId: string, filePath: string) => {
     try {
       // Delete storage file
-      await supabasePatient.storage.from("patient-exams").remove([filePath]);
+      await apiPatient.storage.from("patient-exams").remove([filePath]);
       // Delete DB record
-      await (supabasePatient as any).rpc("patient_delete_uploaded_exam", { p_exam_id: examId });
+      await (apiPatient as any).rpc("patient_delete_uploaded_exam", { p_exam_id: examId });
       toast.success("Exame removido.");
       void fetchUploads();
     } catch (err) {
@@ -215,7 +215,7 @@ export default function PatientExames() {
   /* ── Download uploaded exam ── */
   const handleDownloadUpload = async (filePath: string, fileName: string) => {
     try {
-      const { data, error } = await supabasePatient.storage
+      const { data, error } = await apiPatient.storage
         .from("patient-exams")
         .download(filePath);
       if (error) throw error;

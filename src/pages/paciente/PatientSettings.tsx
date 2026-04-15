@@ -22,7 +22,7 @@ import {
   BellOff,
   Send,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { usePatientPushNotifications } from "@/hooks/usePatientPushNotifications";
 import { PatientMfaSettings } from "@/components/patient/PatientMfaSettings";
@@ -115,7 +115,7 @@ export default function PatientSettings() {
     try {
       const {
         data: { user },
-      } = await supabasePatient.auth.getUser();
+      } = await apiPatient.auth.getUser();
       if (!user) return;
 
       const stored = user.user_metadata?.notification_preferences;
@@ -142,7 +142,7 @@ export default function PatientSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabasePatient.auth.updateUser({
+      const { error } = await apiPatient.auth.updateUser({
         data: { notification_preferences: prefs },
       });
       if (error) throw error;

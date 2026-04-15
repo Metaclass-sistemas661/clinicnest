@@ -1,9 +1,8 @@
 import { Spinner } from "@/components/ui/spinner";
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { Loader2 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
 import { PatientSubscriptionGuard } from "@/components/subscription/PatientSubscriptionGuard";
 
 interface PatientProtectedRouteProps {
@@ -18,7 +17,7 @@ export function PatientProtectedRoute({ children }: PatientProtectedRouteProps) 
     let cancelled = false;
 
     const check = async () => {
-      const { data: { session } } = await supabasePatient.auth.getSession();
+      const { data: { session } } = await apiPatient.auth.getSession();
       if (cancelled) return;
 
       if (!session?.user) {
@@ -40,7 +39,7 @@ export function PatientProtectedRoute({ children }: PatientProtectedRouteProps) 
 
     void check();
 
-    const { data: { subscription } } = supabasePatient.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = apiPatient.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       if (!session?.user || session.user.user_metadata?.account_type !== "patient") {
         setPatientUser(null);

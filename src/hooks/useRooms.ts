@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface Room {
@@ -17,7 +17,7 @@ export function useRooms() {
   return useQuery({
     queryKey: ["rooms", tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("clinic_rooms")
         .select("id, name, room_type, capacity, is_active, tenant_id")
         .eq("tenant_id", tenantId!)

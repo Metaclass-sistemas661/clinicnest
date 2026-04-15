@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 interface PatientPromsViewerProps {
@@ -66,7 +66,7 @@ export function PatientPromsViewer({ patientId }: PatientPromsViewerProps) {
   const { data: proms, isLoading } = useQuery({
     queryKey: ["patient-proms", patientId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patient_proms" as never)
         .select("*")
         .eq("patient_id", patientId)

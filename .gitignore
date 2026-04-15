@@ -12,6 +12,8 @@ dist
 .env
 .env.*
 !.env.example
+!.env.secrets.example
+gcp/secrets/.env.secrets
 vite.config.ts.timestamp-*.mjs
 .env.*.local
 dist-ssr

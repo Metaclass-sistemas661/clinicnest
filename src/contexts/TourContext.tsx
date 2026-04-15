@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { X, ChevronLeft, ChevronRight, SkipForward } from "lucide-react";
@@ -156,7 +156,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     async (idx: number, completed: boolean) => {
       if (!tenantId || !user?.id) return;
       try {
-        await supabase.rpc("upsert_user_tour_progress", {
+        await api.rpc("upsert_user_tour_progress", {
           p_tenant_id: tenantId,
           p_tour_key: TOUR_KEY,
           p_step_index: idx,
@@ -172,7 +172,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const loadProgress = useCallback(async () => {
     if (!tenantId || !user?.id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("user_tour_progress")
         .select("step_index, completed_at")
         .eq("user_id", user.id)
@@ -213,7 +213,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const reset = useCallback(async () => {
     try {
-      await supabase.rpc("reset_user_tour_progress", { p_tour_key: TOUR_KEY });
+      await api.rpc("reset_user_tour_progress", { p_tour_key: TOUR_KEY });
     } catch {
       // ignore
     }

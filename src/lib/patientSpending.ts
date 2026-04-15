@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { format } from "date-fns";
 import { formatInAppTz } from "./date";
 
@@ -36,7 +36,7 @@ export type ClientSpendingByPeriod = PatientSpendingByPeriod;
 export async function fetchPatientSpendingAllTime(
   tenantId: string
 ): Promise<PatientSpendingRow[]> {
-  const { data, error } = await supabase
+  const { data, error } = await api
     .from("financial_transactions")
     .select(
       `
@@ -139,7 +139,7 @@ export async function fetchPatientSpendingByPeriod(
   const monthStart = format(today, "yyyy-MM-01");
   const monthEnd = format(today, "yyyy-MM-dd");
 
-  const { data, error } = await supabase
+  const { data, error } = await api
     .from("financial_transactions")
     .select(
       `

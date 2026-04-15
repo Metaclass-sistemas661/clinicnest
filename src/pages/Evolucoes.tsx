@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { MODAL_SIZES } from "@/lib/modal-constants";
@@ -41,7 +41,7 @@ import { ptBR } from "date-fns/locale";
 import { generateEvolutionPdf } from "@/utils/patientDocumentPdf";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as any;
+const db = api as any;
 
 // Helper Components
 function EmptyEvolutionsState({ type }: { type?: "soap" | "enfermagem" }) {
@@ -307,14 +307,14 @@ export default function Evolucoes() {
           .eq("tenant_id", tenantId)
           .order("evolution_date", { ascending: false })
           .limit(200),
-        supabase.from("nursing_evolutions")
+        api.from("nursing_evolutions")
           .select("*, patient:patients(name), profiles(full_name)")
           .eq("tenant_id", tenantId)
           .order("evolution_date", { ascending: false })
           .limit(200),
-        supabase.from("patients").select("id, name")
+        api.from("patients").select("id, name")
           .eq("tenant_id", tenantId).order("name").limit(500),
-        supabase.from("profiles").select("id, full_name")
+        api.from("profiles").select("id, full_name")
           .eq("tenant_id", tenantId).order("full_name").limit(200),
       ]);
       if (evoRes.error) throw evoRes.error;
@@ -353,7 +353,7 @@ export default function Evolucoes() {
 
   const fetchAppointments = useCallback(async (patientId: string) => {
     if (!tenantId || !patientId) { setAppointments([]); return; }
-    const { data } = await supabase.from("appointments")
+    const { data } = await api.from("appointments")
       .select("id, appointment_date, start_time, patient_id")
       .eq("tenant_id", tenantId).eq("patient_id", patientId)
       .order("appointment_date", { ascending: false }).limit(20);
@@ -599,7 +599,7 @@ export default function Evolucoes() {
     }
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("nursing_evolutions").insert({
+      const { error } = await api.from("nursing_evolutions").insert({
         tenant_id: tenantId,
         patient_id: nfPatientId,
         professional_id: profile.id,
@@ -632,7 +632,7 @@ export default function Evolucoes() {
     if (!deletingNursingId || !tenantId) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("nursing_evolutions")
+      const { error } = await api.from("nursing_evolutions")
         .delete().eq("id", deletingNursingId).eq("tenant_id", tenantId);
       if (error) throw error;
       toast.success("Evolução de enfermagem excluída");

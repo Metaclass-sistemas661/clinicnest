@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStatus } from "@/contexts/AppStatusContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Plus, Calendar, Users, Package, DollarSign, Wallet, CreditCard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, SlidersHorizontal, ArrowUp, ArrowDown, Activity, Stethoscope, TrendingUp, TrendingDown, Clock, Gift, Video, FileText, Star, Sparkles, Brain, MessageSquare, Shield, Crown, UserCheck, BarChart3, Zap } from "lucide-react";
 import { InteractiveBody } from "@/components/dashboard/InteractiveBody";
 import { Link, useNavigate } from "react-router-dom";
@@ -27,7 +27,7 @@ import {
   getDashboardPatientsCount,
   getOpenCashSessionSummaryV1,
   getSalaryPayments,
-} from "@/lib/supabase-typed-rpc";
+} from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { processNumericRpc } from "@/lib/rpc-fallback";
 import { useSimpleMode } from "@/lib/simple-mode";
@@ -210,7 +210,7 @@ export default function Dashboard() {
     if (!isAdmin || simpleModeEnabled || !profile?.tenant_id) return;
     setActivityLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("audit_logs")
         .select("id,action,entity_type,entity_id,actor_user_id,created_at")
         .eq("tenant_id", profile.tenant_id)
@@ -336,7 +336,7 @@ export default function Dashboard() {
       try {
         const mStart = startOfMonth(calendarMonth);
         const mEnd = endOfMonth(calendarMonth);
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("appointments")
           .select("scheduled_at, status")
           .eq("tenant_id", profile.tenant_id)
@@ -382,7 +382,7 @@ export default function Dashboard() {
       return { pending: p, paid };
     } catch {
       if (asAdmin) {
-        const { data } = await supabase
+        const { data } = await api
           .from("commission_payments")
           .select("amount, status")
           .eq("tenant_id", tenantId)
@@ -396,7 +396,7 @@ export default function Dashboard() {
         };
       }
       if (professionalUserId) {
-        const { data } = await supabase
+        const { data } = await api
           .from("commission_payments")
           .select("amount, status")
           .eq("tenant_id", tenantId)
@@ -449,7 +449,7 @@ export default function Dashboard() {
       ] = await Promise.all([
         // 1. Financeiro do mês (admin)
         isAdmin
-          ? supabase
+          ? api
               .from("financial_transactions")
               .select("type, amount")
               .eq("tenant_id", profile.tenant_id)
@@ -458,7 +458,7 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 2. Financeiro do dia (admin) - só transações de hoje; zera à meia-noite
         isAdmin
-          ? supabase
+          ? api
               .from("financial_transactions")
               .select("type, amount")
               .eq("tenant_id", profile.tenant_id)
@@ -467,7 +467,7 @@ export default function Dashboard() {
         // 2b. Caixa aberto (admin) - saldo do dia baseado no caixa
         isAdmin ? getOpenCashSessionSummaryV1() : Promise.resolve({ data: null, error: null }),
         // 3. Agendamentos de hoje
-        supabase
+        api
           .from("appointments")
           .select(`
             *,
@@ -481,12 +481,12 @@ export default function Dashboard() {
           .order("scheduled_at", { ascending: true }),
         // 4. Contagem de pendentes (admin = todos; staff = só seus)
         isAdmin
-          ? supabase
+          ? api
               .from("appointments")
               .select("*", { count: "exact", head: true })
               .eq("tenant_id", profile.tenant_id)
               .eq("status", "pending")
-          : supabase
+          : api
               .from("appointments")
               .select("*", { count: "exact", head: true })
               .eq("tenant_id", profile.tenant_id)
@@ -494,7 +494,7 @@ export default function Dashboard() {
               .eq("status", "pending"),
         // 5. Produtos (admin) para estoque baixo
         isAdmin
-          ? supabase
+          ? api
               .from("products")
               .select("id,tenant_id,name,description,cost,quantity,min_quantity,is_active,created_at,updated_at")
               .eq("tenant_id", profile.tenant_id)
@@ -518,7 +518,7 @@ export default function Dashboard() {
                   p_month: null,
                 }),
                 async () => {
-                  const { data: fallbackData } = await supabase
+                  const { data: fallbackData } = await api
                     .from("stock_movements")
                     .select("quantity, product:products(cost)")
                     .eq("tenant_id", profile.tenant_id)
@@ -545,7 +545,7 @@ export default function Dashboard() {
           const val = await processNumericRpc(
             await getDashboardPatientsCount({ p_tenant_id: profile.tenant_id }),
             async () => {
-              const { count } = await supabase
+              const { count } = await api
                 .from("patients")
                 .select("id", { count: "exact", head: true })
                 .eq("tenant_id", profile.tenant_id);
@@ -557,7 +557,7 @@ export default function Dashboard() {
         })(),
         // 9. Staff: desempenho do mês (procedimentos concluídos, valor gerado)
         !isAdmin && profile?.id
-          ? supabase
+          ? api
               .from("appointments")
               .select("id, price, status")
               .eq("tenant_id", profile.tenant_id)
@@ -568,7 +568,7 @@ export default function Dashboard() {
           : Promise.resolve({ data: null }),
         // 11. Staff: pacientes únicos que atendeu (distinct patient_id dos seus agendamentos)
         !isAdmin && profile?.id
-          ? supabase
+          ? api
               .from("appointments")
               .select("patient_id")
               .eq("tenant_id", profile.tenant_id)
@@ -578,7 +578,7 @@ export default function Dashboard() {
         // 10. Staff: configuração de salário fixo
         !isAdmin && profile?.user_id
           ? new Promise<{ data: { salary_amount?: number; payment_type?: string } | null; error: unknown }>((resolve) => {
-              supabase
+              api
                 .from("professional_commissions")
                 .select("salary_amount, payment_type")
                 .eq("tenant_id", profile.tenant_id)
@@ -601,7 +601,7 @@ export default function Dashboard() {
             })
           : Promise.resolve({ data: null }),
         // 16. Triagens pendentes (admin: todas; staff: todas — exibir no dashboard)
-        supabase
+        api
           .from("triage_records")
           .select("id, chief_complaint, priority, triaged_at, appointment_id, patient:patients(name)")
           .eq("tenant_id", profile.tenant_id)

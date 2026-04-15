@@ -16,11 +16,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { getDreSimpleV1 } from "@/lib/supabase-typed-rpc";
+import { getDreSimpleV1 } from "@/lib/typed-rpc";
 import { toastRpcError } from "@/lib/rpc-error";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import type { DreSimpleResult } from "@/types/supabase-extensions";
+import type { DreSimpleResult } from "@/types/database-extensions";
 import {
   BarChart3,
   TrendingUp,

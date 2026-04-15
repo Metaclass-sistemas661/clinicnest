@@ -20,7 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isToday, isTomorrow, startOfDay, endOfDay, addDays } from "date-fns";
@@ -79,7 +79,7 @@ export default function Teleconsulta() {
       const from = startOfDay(baseDate).toISOString();
       const to = endOfDay(baseDate).toISOString();
 
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("appointments")
         .select(`
           id, scheduled_at, duration_minutes, status, telemedicine_url,
@@ -118,7 +118,7 @@ export default function Teleconsulta() {
   const joinTwilio = async (appt: TelemedicineAppointment) => {
     setJoiningId(appt.id);
     try {
-      const { data, error } = await supabase.functions.invoke("twilio-video-token", {
+      const { data, error } = await api.functions.invoke("twilio-video-token", {
         body: { appointment_id: appt.id, role: "staff" },
       });
 
@@ -153,7 +153,7 @@ export default function Teleconsulta() {
   const generateLink = async (apptId: string) => {
     setGeneratingLinkId(apptId);
     try {
-      const { data, error } = await (supabase as any).rpc("generate_telemedicine_token", {
+      const { data, error } = await (api as any).rpc("generate_telemedicine_token", {
         p_appointment_id: apptId,
       });
 

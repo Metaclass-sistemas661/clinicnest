@@ -45,7 +45,7 @@ import {
   type GlogauType,
 } from "@/components/estetica/aestheticConstants";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { cn } from "@/lib/utils";
@@ -166,11 +166,11 @@ export default function EsteticaMapping() {
     try {
       const ext = file.name.split(".").pop() ?? "jpg";
       const path = `${profile.tenant_id}/estetica/${selectedPatient}/${pairId}_${type}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await api.storage
         .from("clinic-assets")
         .upload(path, file, { contentType: file.type, upsert: false });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("clinic-assets").getPublicUrl(path);
+      const { data: urlData } = api.storage.from("clinic-assets").getPublicUrl(path);
       const photo = {
         id: crypto.randomUUID(),
         type,
@@ -202,7 +202,7 @@ export default function EsteticaMapping() {
     if (!profile?.tenant_id) return;
     setSearchingPatients(true);
     try {
-      const { data } = await (supabase
+      const { data } = await (api
         .from("patients") as any)
         .select("id, name, phone")
         .eq("tenant_id", profile.tenant_id)
@@ -236,7 +236,7 @@ export default function EsteticaMapping() {
       loadAnamnesis(patientIdFromUrl);
       loadProtocols(patientIdFromUrl);
       // Fetch patient name
-      supabase.from("patients").select("name").eq("id", patientIdFromUrl).single()
+      api.from("patients").select("name").eq("id", patientIdFromUrl).single()
         .then(({ data }) => {
           if (data) setSelectedPatientName((data as any).name);
         });
@@ -248,7 +248,7 @@ export default function EsteticaMapping() {
     if (!profile?.tenant_id) return;
     setLoadingHistory(true);
     try {
-      const { data, error } = await (supabase
+      const { data, error } = await (api
         .from("aesthetic_sessions") as any)
         .select("id, session_date, glogau_type, clinical_notes, applications, product_usages, profiles!aesthetic_sessions_professional_id_fkey(full_name)")
         .eq("tenant_id", profile.tenant_id)
@@ -278,7 +278,7 @@ export default function EsteticaMapping() {
   const loadAnamnesis = async (pid: string) => {
     if (!profile?.tenant_id) return;
     try {
-      const { data } = await (supabase
+      const { data } = await (api
         .from("aesthetic_anamnesis") as any)
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -306,7 +306,7 @@ export default function EsteticaMapping() {
     if (!profile?.tenant_id || !selectedPatient) return;
     setSavingAnamnesis(true);
     try {
-      const { error } = await (supabase
+      const { error } = await (api
         .from("aesthetic_anamnesis") as any)
         .upsert({
           tenant_id: profile.tenant_id,
@@ -327,7 +327,7 @@ export default function EsteticaMapping() {
   const loadProtocols = async (pid: string) => {
     if (!profile?.tenant_id) return;
     try {
-      const { data } = await (supabase
+      const { data } = await (api
         .from("aesthetic_protocols") as any)
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -347,7 +347,7 @@ export default function EsteticaMapping() {
     try {
       const nextDate = new Date();
       nextDate.setDate(nextDate.getDate() + newProtocol.interval_days);
-      const { error } = await (supabase
+      const { error } = await (api
         .from("aesthetic_protocols") as any)
         .insert({
           tenant_id: profile.tenant_id,
@@ -375,7 +375,7 @@ export default function EsteticaMapping() {
       const nextDate = completed < protocol.total_sessions
         ? new Date(Date.now() + protocol.interval_days * 86400000).toISOString()
         : null;
-      const { error } = await (supabase
+      const { error } = await (api
         .from("aesthetic_protocols") as any)
         .update({
           completed_sessions: completed,
@@ -434,7 +434,7 @@ export default function EsteticaMapping() {
 
     setSaving(true);
     try {
-      const { error } = await (supabase.from("aesthetic_sessions") as any).insert({
+      const { error } = await (api.from("aesthetic_sessions") as any).insert({
         tenant_id: profile.tenant_id,
         patient_id: selectedPatient,
         professional_id: profile.id,

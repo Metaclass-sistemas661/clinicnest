@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import {
   ArrowRightLeft, Plus, Loader2, Search, User, Calendar,
   AlertTriangle, Clock, CheckCircle2, XCircle,
@@ -95,7 +95,7 @@ export default function Encaminhamentos() {
   const fetchRecentAppointments = async (patientId: string) => {
     if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("appointments")
         .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
@@ -121,10 +121,10 @@ export default function Encaminhamentos() {
     setIsLoading(true);
     try {
       const [cRes, pRes, sRes, rRes] = await Promise.all([
-        supabase.from("patients").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(500),
-        supabase.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
-        supabase.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(100),
-        supabase.from("referrals")
+        api.from("patients").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(500),
+        api.from("profiles").select("id, full_name").eq("tenant_id", profile.tenant_id).order("full_name").limit(200),
+        api.from("specialties").select("id, name").eq("tenant_id", profile.tenant_id).order("name").limit(100),
+        api.from("referrals")
           .select("*, patient:patients(name), from:profiles!referrals_from_professional_fkey(full_name), to:profiles!referrals_to_professional_fkey(full_name), specialties(name)")
           .eq("tenant_id", profile.tenant_id)
           .order("created_at", { ascending: false })
@@ -163,7 +163,7 @@ export default function Encaminhamentos() {
     setIsSaving(true);
     try {
       const selectedAppt = recentAppointments.find(a => a.id === formData.appointment_id);
-      const { error } = await supabase.from("referrals").insert({
+      const { error } = await api.from("referrals").insert({
         tenant_id: profile!.tenant_id,
         patient_id: formData.patient_id,
         from_professional: profile!.id,
@@ -194,7 +194,7 @@ export default function Encaminhamentos() {
       const updates: any = { status };
       if (status === "aceito" || status === "recusado") updates.responded_at = new Date().toISOString();
       if (status === "concluido") updates.completed_at = new Date().toISOString();
-      const { error } = await supabase.from("referrals").update(updates).eq("id", id);
+      const { error } = await api.from("referrals").update(updates).eq("id", id);
       if (error) throw error;
       toast.success(`Encaminhamento ${statusConfig[status]?.label?.toLowerCase() || status}`);
       fetchAll();

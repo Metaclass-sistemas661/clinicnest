@@ -12,7 +12,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import type { PatientConsent, ConsentTemplate } from "@/types/database";
 import {
@@ -53,12 +53,12 @@ export function PatientConsentsViewer({ patientId, patientName, tenantId }: Pati
     setIsLoading(true);
     try {
       const [consentsRes, templatesRes] = await Promise.all([
-        supabase
+        api
           .from("patient_consents")
           .select("*")
           .eq("patient_id", patientId)
           .order("signed_at", { ascending: false }),
-        supabase
+        api
           .from("consent_templates")
           .select("*")
           .eq("tenant_id", tenantId)
@@ -98,7 +98,7 @@ export function PatientConsentsViewer({ patientId, patientName, tenantId }: Pati
       return;
     }
     const loadPhoto = async () => {
-      const { data } = await supabase.storage
+      const { data } = await api.storage
         .from("consent-photos")
         .createSignedUrl(viewConsent.facial_photo_path!, 300); // 5 min
       setViewPhotoUrl(data?.signedUrl ?? null);

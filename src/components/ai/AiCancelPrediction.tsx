@@ -7,7 +7,7 @@ import {
   AlertTriangle, Phone, MessageSquare, Mail, CalendarClock,
   Video, Users, Loader2, Sparkles, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 
 interface PreventiveAction {
@@ -54,7 +54,7 @@ export function AiCancelPrediction({ appointmentId, compact, className }: Props)
   const analyze = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await supabase.functions.invoke("ai-cancel-prediction", {
+      const resp = await api.functions.invoke("ai-cancel-prediction", {
         body: { appointment_id: appointmentId },
       });
       if (resp.error) throw resp.error;

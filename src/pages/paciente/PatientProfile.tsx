@@ -29,7 +29,7 @@ import {
   ShieldCheck,
   Heart,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { format, parseISO } from "date-fns";
@@ -145,11 +145,11 @@ export default function PatientProfile() {
     try {
       const {
         data: { user },
-      } = await supabasePatient.auth.getUser();
+      } = await apiPatient.auth.getUser();
       if (!user) return;
 
       // Usa RPC SECURITY DEFINER — sem depender de RLS direta na tabela patients
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_profile");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_profile");
 
       if (error) {
         console.error("[PatientProfile] Erro no RPC get_patient_profile:", error);
@@ -229,7 +229,7 @@ export default function PatientProfile() {
     if (!patient) return;
     setIsSaving(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("update_patient_contact", {
+      const { data, error } = await (apiPatient as any).rpc("update_patient_contact", {
         p_phone: editPhone.replace(/\D/g, "") || null,
         p_email: editEmail.trim() || null,
         p_zip_code: editZipCode.replace(/\D/g, "") || null,

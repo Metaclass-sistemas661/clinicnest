@@ -33,10 +33,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { getSalaryPayments, getProfessionalsWithSalary, paySalary } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { getSalaryPayments, getProfessionalsWithSalary, paySalary } from "@/lib/typed-rpc";
 import { paySalaryDaysWorkedSchema } from "@/lib/validation";
-import type { SalaryPaymentRow, ProfessionalWithSalaryRow, PaySalaryResult } from "@/types/supabase-extensions";
+import type { SalaryPaymentRow, ProfessionalWithSalaryRow, PaySalaryResult } from "@/types/database-extensions";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";

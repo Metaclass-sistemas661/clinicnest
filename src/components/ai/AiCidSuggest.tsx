@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,7 +39,7 @@ export function AiCidSuggest({ onSelect, specialty, className }: AiCidSuggestPro
 
   const suggestMutation = useMutation({
     mutationFn: async (desc: string) => {
-      const { data, error } = await supabase.functions.invoke("ai-cid-suggest", {
+      const { data, error } = await api.functions.invoke("ai-cid-suggest", {
         body: { description: desc, specialty },
       });
       if (error) throw error;

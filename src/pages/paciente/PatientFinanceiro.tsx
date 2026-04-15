@@ -36,7 +36,7 @@ import {
   Printer,
   FileDown,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isPast, isToday, addDays } from "date-fns";
@@ -131,7 +131,7 @@ export default function PatientFinanceiro() {
   const loadSummary = async () => {
     setIsLoadingSummary(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_financial_summary");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_financial_summary");
       if (error) throw error;
       setSummary(data as FinancialSummary);
     } catch (err) {
@@ -144,7 +144,7 @@ export default function PatientFinanceiro() {
   const loadInvoices = async () => {
     setIsLoadingInvoices(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_invoices", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_invoices", {
         p_status: invoiceFilter,
         p_from: null,
         p_to: null,
@@ -161,7 +161,7 @@ export default function PatientFinanceiro() {
   const loadPayments = async () => {
     setIsLoadingPayments(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_payment_history", {
+      const { data, error } = await (apiPatient as any).rpc("get_patient_payment_history", {
         p_limit: 50,
         p_offset: 0,
       });
@@ -184,7 +184,7 @@ export default function PatientFinanceiro() {
   const handleGenerateBoleto = async (invoice: Invoice) => {
     setIsGeneratingBoleto(true);
     try {
-      const { data, error } = await supabasePatient.functions.invoke("create-patient-payment", {
+      const { data, error } = await apiPatient.functions.invoke("create-patient-payment", {
         body: { 
           invoice_id: invoice.id,
           payment_method: "boleto",
@@ -225,7 +225,7 @@ export default function PatientFinanceiro() {
   const handleDownloadExtract = async () => {
     setIsDownloadingExtract(true);
     try {
-      const { data, error } = await supabasePatient.functions.invoke("generate-patient-extract", {
+      const { data, error } = await apiPatient.functions.invoke("generate-patient-extract", {
         body: { format: "pdf" },
       });
 
@@ -254,7 +254,7 @@ export default function PatientFinanceiro() {
     
     setIsGeneratingPayment(true);
     try {
-      const { data, error } = await supabasePatient.functions.invoke("create-patient-payment", {
+      const { data, error } = await apiPatient.functions.invoke("create-patient-payment", {
         body: { 
           invoice_id: selectedInvoice.id,
           payment_method: "gateway",
@@ -282,7 +282,7 @@ export default function PatientFinanceiro() {
     
     setIsGeneratingPayment(true);
     try {
-      const { data, error } = await supabasePatient.functions.invoke("create-patient-payment", {
+      const { data, error } = await apiPatient.functions.invoke("create-patient-payment", {
         body: { 
           invoice_id: selectedInvoice.id,
           payment_method: "pix",

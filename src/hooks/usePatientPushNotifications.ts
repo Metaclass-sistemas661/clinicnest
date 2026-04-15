@@ -1,9 +1,9 @@
 /**
  * Hook de Push Notifications para o portal do paciente.
- * Usa supabasePatient para salvar token FCM e gerenciar permissões.
+ * Usa apiPatient para salvar token FCM e gerenciar permissões.
  */
 import { useState, useEffect, useCallback } from "react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import {
   requestNotificationPermission,
   onForegroundMessage,
@@ -61,7 +61,7 @@ export function usePatientPushNotifications() {
   const enableNotifications = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) {
         toast.error("Faça login para habilitar notificações");
         return false;
@@ -77,7 +77,7 @@ export function usePatientPushNotifications() {
 
       // Save token in push_subscriptions (same table, no tenant_id for patients)
       const deviceInfo = getDeviceInfo();
-      const { error } = await (supabasePatient as any)
+      const { error } = await (apiPatient as any)
         .from("push_subscriptions")
         .upsert(
           {
@@ -113,10 +113,10 @@ export function usePatientPushNotifications() {
   const disableNotifications = useCallback(async () => {
     if (!fcmToken) return;
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return;
 
-      await (supabasePatient as any)
+      await (apiPatient as any)
         .from("push_subscriptions")
         .update({ is_active: false })
         .eq("user_id", user.id)

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { ShieldCheck, FileText, Clock3, Send, CheckCircle } from "lucide-react";
 
 type LgpdRequestType =
@@ -56,7 +56,7 @@ export default function CanalLgpd() {
     try {
       let notificationSent = true;
       try {
-        const { data, error } = await supabase.functions.invoke("submit-contact-message", {
+        const { data, error } = await api.functions.invoke("submit-contact-message", {
           body: {
             name,
             phone,
@@ -80,7 +80,7 @@ export default function CanalLgpd() {
           "Falha no envio LGPD por Edge Function. Aplicando fallback para gravação direta.",
           invokeError
         );
-        const { error: fallbackError } = await supabase.from("contact_messages").insert({
+        const { error: fallbackError } = await api.from("contact_messages").insert({
           name,
           email,
           subject: `Canal LGPD - ${lgpdTypeLabel[requestType]}`,

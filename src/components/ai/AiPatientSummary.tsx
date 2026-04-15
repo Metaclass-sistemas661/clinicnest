@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,7 +39,7 @@ export function AiPatientSummary({ patientId, patientName, className }: AiPatien
   });
   const summaryMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("ai-summary", {
+      const { data, error } = await api.functions.invoke("ai-summary", {
         body: {
           patient_id: patientId,
           ...options,

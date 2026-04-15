@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pill, Plus, Trash2, Save, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 interface Medication {
@@ -75,7 +75,7 @@ export function PeriodontalPrescription({
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from("dental_prescriptions" as any).insert({
+      const { error } = await api.from("dental_prescriptions" as any).insert({
         tenant_id: tenantId,
         patient_id: patientId,
         professional_id: professionalId,

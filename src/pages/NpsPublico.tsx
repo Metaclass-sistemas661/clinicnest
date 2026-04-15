@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -49,7 +49,7 @@ export default function NpsPublico() {
   const load = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.rpc("get_nps_public_v1", { p_token: token });
+      const { data, error } = await api.rpc("get_nps_public_v1", { p_token: token });
       if (error) throw error;
       const payload = (data as any) as PublicNps;
       setData(payload);
@@ -77,7 +77,7 @@ export default function NpsPublico() {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase.rpc("submit_nps_public_v1", {
+      const { data, error } = await api.rpc("submit_nps_public_v1", {
         p_token: token,
         p_score: selectedScore,
         p_comment: comment,

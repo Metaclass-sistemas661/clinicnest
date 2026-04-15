@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { History, ArrowRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { TOOTH_CONDITIONS } from "./odontogramConstants";
 import { format } from "date-fns";
@@ -40,7 +40,7 @@ export function ToothHistoryTimeline({ odontogramId, toothNumber }: Props) {
 
   const loadHistory = async () => {
     try {
-      const { data, error } = await (supabase.rpc as any)("get_tooth_history", {
+      const { data, error } = await (api.rpc as any)("get_tooth_history", {
         p_odontogram_id: odontogramId,
         p_tooth_number: toothNumber,
       });

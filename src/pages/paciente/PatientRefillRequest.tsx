@@ -18,7 +18,7 @@ import {
   CalendarDays,
   RefreshCw,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -52,10 +52,10 @@ export default function PatientRefillRequest() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabasePatient
+      const { data: profile } = await apiPatient
         .from("patient_profiles" as never)
         .select("client_id, tenant_id")
         .eq("user_id", user.id)
@@ -67,7 +67,7 @@ export default function PatientRefillRequest() {
       setPatientId(pp.client_id);
       setTenantId(pp.tenant_id);
 
-      const { data: requests } = await supabasePatient
+      const { data: requests } = await apiPatient
         .from("prescription_refill_requests" as never)
         .select("id, medication_name, reason, status, reviewer_notes, reviewed_at, created_at")
         .eq("patient_id", pp.client_id)
@@ -89,7 +89,7 @@ export default function PatientRefillRequest() {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabasePatient
+      const { error } = await apiPatient
         .from("prescription_refill_requests" as never)
         .insert({
           tenant_id: tenantId,

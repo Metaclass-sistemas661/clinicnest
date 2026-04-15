@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -65,11 +65,11 @@ export function RbacWizard({ open, onOpenChange, onComplete }: RbacWizardProps) 
     setIsLoading(true);
     try {
       const [profilesRes, rolesRes] = await Promise.all([
-        supabase
+        api
           .from("profiles")
           .select("user_id, full_name, email, professional_type")
           .eq("tenant_id", profile.tenant_id),
-        supabase
+        api
           .from("user_roles")
           .select("user_id, role")
           .eq("tenant_id", profile.tenant_id),
@@ -117,7 +117,7 @@ export function RbacWizard({ open, onOpenChange, onComplete }: RbacWizardProps) 
     setIsSaving(true);
     try {
       for (const [userId, profType] of Object.entries(assignments)) {
-        const { error } = await supabase
+        const { error } = await api
           .from("profiles")
           .update({ professional_type: profType })
           .eq("user_id", userId)

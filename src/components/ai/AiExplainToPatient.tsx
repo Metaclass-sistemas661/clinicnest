@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   MessageSquareText, Loader2, Copy, Check, Send, Sparkles,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +45,7 @@ export function AiExplainToPatient({
 
     setLoading(true);
     try {
-      const resp = await supabase.functions.invoke("ai-explain-patient", {
+      const resp = await api.functions.invoke("ai-explain-patient", {
         body: { medical_text: medicalText, context, patient_name: patientName },
       });
 

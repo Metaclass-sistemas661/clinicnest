@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Bell, Check, CheckCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -24,7 +24,7 @@ export default function Notificacoes() {
 
   const fetchNotifications = async () => {
     if (!user?.id) return;
-    const { data } = await supabase
+    const { data } = await api
       .from("notifications")
       .select("id, type, title, body, read_at, created_at")
       .eq("user_id", user.id)
@@ -39,7 +39,7 @@ export default function Notificacoes() {
 
   const markAsRead = async (id: string) => {
     if (!user?.id) return;
-    await supabase
+    await api
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("id", id)
@@ -49,7 +49,7 @@ export default function Notificacoes() {
 
   const markAllRead = async () => {
     if (!user?.id) return;
-    await supabase
+    await api
       .from("notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("user_id", user.id)

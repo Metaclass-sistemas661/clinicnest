@@ -29,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -88,7 +88,7 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
   const loadConfig = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("tenant_payment_gateways")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -171,13 +171,13 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
       };
 
       if (config.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from("tenant_payment_gateways")
           .update(payload)
           .eq("id", config.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("tenant_payment_gateways")
           .insert(payload);
         if (error) throw error;
@@ -198,7 +198,7 @@ export function PaymentGatewayConfig({ tenantId }: PaymentGatewayConfigProps) {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("tenant_payment_gateways")
         .update({ is_active: false })
         .eq("id", config.id);

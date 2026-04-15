@@ -25,7 +25,7 @@ import {
   Sparkles,
   ShieldCheck,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, addDays } from "date-fns";
@@ -105,7 +105,7 @@ function PatientAgendarInner() {
 
   // Load user name
   useEffect(() => {
-    supabasePatient.auth.getUser().then(({ data }) => {
+    apiPatient.auth.getUser().then(({ data }) => {
       setUserName(data.user?.user_metadata?.full_name?.split(" ")[0] || "Eu mesmo");
     });
   }, []);
@@ -114,7 +114,7 @@ function PatientAgendarInner() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const { data, error } = await (supabasePatient as any).rpc("get_patient_booking_settings");
+        const { data, error } = await (apiPatient as any).rpc("get_patient_booking_settings");
         if (error) throw error;
         setSettings(data as BookingSettings);
       } catch (err) {
@@ -134,7 +134,7 @@ function PatientAgendarInner() {
     const loadServices = async () => {
       setIsLoadingServices(true);
       try {
-        const { data, error } = await (supabasePatient as any).rpc("get_patient_bookable_services");
+        const { data, error } = await (apiPatient as any).rpc("get_patient_bookable_services");
         if (error) throw error;
         setProcedures((data as ProcedureOption[]) || []);
       } catch (err) {
@@ -157,7 +157,7 @@ function PatientAgendarInner() {
     const loadProfessionals = async () => {
       setIsLoadingProfessionals(true);
       try {
-        const { data, error } = await (supabasePatient as any).rpc(
+        const { data, error } = await (apiPatient as any).rpc(
           "get_patient_bookable_professionals",
           { p_service_id: selectedProcedure.id }
         );
@@ -180,7 +180,7 @@ function PatientAgendarInner() {
 
       setIsLoadingSlots(true);
       try {
-        const { data, error } = await (supabasePatient as any).rpc(
+        const { data, error } = await (apiPatient as any).rpc(
           "get_available_slots_for_patient",
           {
             p_service_id: selectedProcedure.id,
@@ -228,7 +228,7 @@ function PatientAgendarInner() {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("patient_create_appointment", {
+      const { data, error } = await (apiPatient as any).rpc("patient_create_appointment", {
         p_procedure_id: selectedProcedure.id,
         p_professional_id: selectedProfessional.id,
         p_scheduled_at: selectedSlot.slot_datetime,

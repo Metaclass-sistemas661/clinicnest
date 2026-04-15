@@ -8,7 +8,7 @@ import {
   TrendingDown, BarChart3, ArrowRight,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -59,21 +59,21 @@ export const DashboardFaturista = memo(function DashboardFaturista() {
 
     try {
       const [guidesRes, glosaRes, monthGuidesRes] = await Promise.all([
-        supabase
+        api
           .from("tiss_guides")
           .select("id, guide_type, status, total_amount, insurance_name, created_at")
           .eq("tenant_id", profile.tenant_id)
           .in("status", ["draft", "pending", "submitted"])
           .order("created_at", { ascending: false })
           .limit(10),
-        supabase
+        api
           .from("tiss_glosa_appeals")
           .select("id, guide_id, glosa_code, glosa_description, glosa_amount, appeal_status, created_at")
           .eq("tenant_id", profile.tenant_id)
           .in("appeal_status", ["pending", "submitted"])
           .order("created_at", { ascending: false })
           .limit(10),
-        supabase
+        api
           .from("tiss_guides")
           .select("id, guide_type, status, total_amount, insurance_name")
           .eq("tenant_id", profile.tenant_id)

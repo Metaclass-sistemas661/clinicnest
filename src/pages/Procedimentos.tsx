@@ -18,8 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { setProcedureActiveV2, upsertProcedureV2 } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { setProcedureActiveV2, upsertProcedureV2 } from "@/lib/typed-rpc";
 import { Stethoscope, Plus, Clock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
@@ -64,7 +64,7 @@ export default function Procedimentos() {
     if (!profile?.tenant_id) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("procedures")
         .select("id,tenant_id,name,description,duration_minutes,price,is_active,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)

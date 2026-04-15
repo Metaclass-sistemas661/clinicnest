@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -34,11 +34,11 @@ export function PatientNotificationsBell() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const fetchNotifications = useCallback(async () => {
-    const { data: { user } } = await supabasePatient.auth.getUser();
+    const { data: { user } } = await apiPatient.auth.getUser();
     if (!user?.id) return;
     setUserId(user.id);
 
-    const { data } = await supabasePatient
+    const { data } = await apiPatient
       .from("patient_notifications")
       .select("id, type, title, body, read_at, created_at")
       .eq("user_id", user.id)
@@ -57,7 +57,7 @@ export function PatientNotificationsBell() {
   useEffect(() => {
     if (!userId) return;
 
-    const channel = supabasePatient
+    const channel = apiPatient
       .channel("patient-notifications-realtime")
       .on(
         "postgres_changes",
@@ -72,13 +72,13 @@ export function PatientNotificationsBell() {
       .subscribe();
 
     return () => {
-      supabasePatient.removeChannel(channel);
+      apiPatient.removeChannel(channel);
     };
   }, [userId, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
     if (!userId) return;
-    await supabasePatient
+    await apiPatient
       .from("patient_notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("id", id)
@@ -88,7 +88,7 @@ export function PatientNotificationsBell() {
 
   const markAllRead = async () => {
     if (!userId) return;
-    await supabasePatient
+    await apiPatient
       .from("patient_notifications")
       .update({ read_at: new Date().toISOString() })
       .eq("user_id", userId)

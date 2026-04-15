@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getGoalsWithProgress } from "@/lib/supabase-typed-rpc";
+import { getGoalsWithProgress } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { Progress } from "@/components/ui/progress";
 import { Target } from "lucide-react";

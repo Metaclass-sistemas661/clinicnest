@@ -42,7 +42,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { normalizeError } from "@/utils/errorMessages";
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { validateCNES, validateUF } from '@/lib/rnds-client';
 import { RNDSIncomingBundles } from './RNDSIncomingBundles';
@@ -102,7 +102,7 @@ export function RNDSConfigTab() {
     
     setIsLoading(true);
     try {
-      const { data: configData, error: configError } = await supabase
+      const { data: configData, error: configError } = await api
         .rpc('get_tenant_rnds_config');
       
       if (configError) throw configError;
@@ -119,7 +119,7 @@ export function RNDSConfigTab() {
         });
       }
       
-      const { data: statsData, error: statsError } = await supabase
+      const { data: statsData, error: statsError } = await api
         .rpc('get_rnds_statistics');
       
       if (!statsError && statsData && statsData.length > 0) {
@@ -163,7 +163,7 @@ export function RNDSConfigTab() {
     
     setIsSaving(true);
     try {
-      const { error } = await supabase.rpc('update_tenant_rnds_config', {
+      const { error } = await api.rpc('update_tenant_rnds_config', {
         p_rnds_enabled: formData.rnds_enabled,
         p_rnds_cnes: formData.rnds_cnes || null,
         p_rnds_uf: formData.rnds_uf || null,
@@ -201,7 +201,7 @@ export function RNDSConfigTab() {
           return;
         }
         
-        const { error } = await supabase.from('rnds_certificates').insert({
+        const { error } = await api.from('rnds_certificates').insert({
           tenant_id: tenant?.id,
           name: certificateFile.name,
           certificate_data: base64,

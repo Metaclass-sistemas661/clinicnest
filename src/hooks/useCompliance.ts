@@ -1,7 +1,7 @@
 // Hook para sistema de Compliance e Certificações
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { toast } from 'sonner';
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from '@/lib/logger';
@@ -80,7 +80,7 @@ export function useCompliance() {
   const fetchTSAConfig = useCallback(async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('tsa_config')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -107,13 +107,13 @@ export function useCompliance() {
       };
 
       if (tsaConfig?.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from('tsa_config')
           .update(payload)
           .eq('id', tsaConfig.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from('tsa_config')
           .insert(payload);
         if (error) throw error;
@@ -135,7 +135,7 @@ export function useCompliance() {
   const fetchTSATimestamps = useCallback(async (limit = 50) => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('tsa_timestamps')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -154,7 +154,7 @@ export function useCompliance() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('prontuario_exports')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -188,7 +188,7 @@ export function useCompliance() {
     if (!profile?.tenant_id) return null;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('prontuario_exports')
         .insert({
           tenant_id: profile.tenant_id,
@@ -227,7 +227,7 @@ export function useCompliance() {
   const fetchRIPDReports = useCallback(async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('ripd_reports')
         .select('*')
         .eq('tenant_id', profile.tenant_id)
@@ -247,7 +247,7 @@ export function useCompliance() {
     if (!profile?.tenant_id) return null;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('ripd_reports')
         .insert({
           tenant_id: profile.tenant_id,
@@ -284,7 +284,7 @@ export function useCompliance() {
   const fetchBackupLogs = useCallback(async (limit = 30) => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from('backup_logs')
         .select('*')
         .or(`tenant_id.eq.${profile.tenant_id},tenant_id.is.null`)

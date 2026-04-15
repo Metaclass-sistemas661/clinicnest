@@ -20,7 +20,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 interface OnboardingTourProps {
@@ -93,7 +93,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
 
   const handleComplete = async () => {
     try {
-      await (supabasePatient as any).rpc("update_patient_onboarding", {
+      await (apiPatient as any).rpc("update_patient_onboarding", {
         p_tour_completed: true,
       });
     } catch (err) {
@@ -105,7 +105,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
 
   const handleSkip = async () => {
     try {
-      await (supabasePatient as any).rpc("update_patient_onboarding", {
+      await (apiPatient as any).rpc("update_patient_onboarding", {
         p_tour_skipped: true,
       });
     } catch (err) {
@@ -196,7 +196,7 @@ export function useOnboardingTour() {
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
-        const { data, error } = await (supabasePatient as any).rpc(
+        const { data, error } = await (apiPatient as any).rpc(
           "get_patient_onboarding_status"
         );
         if (error) throw error;

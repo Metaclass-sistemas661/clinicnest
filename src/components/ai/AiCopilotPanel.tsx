@@ -9,7 +9,7 @@ import {
   Sparkles, Pill, FlaskConical, AlertTriangle, ChevronDown, ChevronRight,
   Loader2, Stethoscope, ArrowRight, Copy, Check, ShieldAlert, RefreshCw, ClipboardList,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AiClinicalProtocols } from "./AiClinicalProtocols";
@@ -146,10 +146,10 @@ export function AiCopilotPanel({
     ai.start("copilot");
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       if (!session) throw new Error("Não autenticado");
 
-      const resp = await supabase.functions.invoke("ai-copilot", {
+      const resp = await api.functions.invoke("ai-copilot", {
         body: inp,
       });
 

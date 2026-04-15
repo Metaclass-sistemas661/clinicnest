@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { cn } from "@/lib/utils";
@@ -96,11 +96,11 @@ export default function PatientTreatmentPlans() {
   const loadPlans = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return;
 
       // Get patient profile
-      const { data: profile } = await supabasePatient
+      const { data: profile } = await apiPatient
         .from("patient_profiles" as never)
         .select("client_id, tenant_id")
         .eq("user_id", user.id)
@@ -110,7 +110,7 @@ export default function PatientTreatmentPlans() {
       if (!profile) return;
       const p = profile as { client_id: string; tenant_id: string };
 
-      const { data, error } = await (supabasePatient as any).rpc("get_client_treatment_plans", {
+      const { data, error } = await (apiPatient as any).rpc("get_client_treatment_plans", {
         p_tenant_id: p.tenant_id,
         p_client_id: p.client_id,
       });
@@ -137,7 +137,7 @@ export default function PatientTreatmentPlans() {
     setLoadingItems(true);
     setExpandedPlan(planId);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_treatment_plan_with_items", {
+      const { data, error } = await (apiPatient as any).rpc("get_treatment_plan_with_items", {
         p_plan_id: planId,
       });
       if (error) throw error;
@@ -210,7 +210,7 @@ export default function PatientTreatmentPlans() {
       const canvas = signatureRef.current;
       const signatureData = canvas ? canvas.toDataURL("image/png") : null;
 
-      const { error } = await (supabasePatient as any).rpc("approve_treatment_plan", {
+      const { error } = await (apiPatient as any).rpc("approve_treatment_plan", {
         p_plan_id: approveDialog.planId,
         p_signature: signatureData,
         p_ip: null,
@@ -231,7 +231,7 @@ export default function PatientTreatmentPlans() {
   const handleReject = async () => {
     setIsSubmitting(true);
     try {
-      const { error } = await (supabasePatient as any)
+      const { error } = await (apiPatient as any)
         .from("treatment_plans")
         .update({
           status: "cancelado",

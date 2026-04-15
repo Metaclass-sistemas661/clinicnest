@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Palette, RotateCcw, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -84,7 +84,7 @@ export function ThemeCustomizer() {
   async function loadTheme() {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc("get_tenant_theme", { p_tenant_id: tenantId });
+      const { data, error } = await api.rpc("get_tenant_theme", { p_tenant_id: tenantId });
       if (!error && data) {
         setSettings(data as ThemeSettings);
       }
@@ -126,7 +126,7 @@ export function ThemeCustomizer() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.rpc("upsert_tenant_theme", {
+      const { error } = await api.rpc("upsert_tenant_theme", {
         p_tenant_id: tenantId,
         p_primary_h: settings.primary_h,
         p_primary_s: settings.primary_s,

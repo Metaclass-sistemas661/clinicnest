@@ -13,7 +13,7 @@ import {
   Stethoscope,
   TrendingDown,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { cn } from "@/lib/utils";
 import { formatInAppTz } from "@/lib/date";
 import type { Appointment, Patient } from "@/types/database";
@@ -58,7 +58,7 @@ export function NextPatientDashboard({ appointment, className }: NextPatientDash
     queryKey: ["next-patient-last-record", patientId],
     queryFn: async () => {
       if (!patientId) return null;
-      const { data } = await supabase
+      const { data } = await api
         .from("medical_records")
         .select("id, chief_complaint, diagnosis, treatment_plan, cid_code, created_at")
         .eq("patient_id", patientId)
@@ -75,7 +75,7 @@ export function NextPatientDashboard({ appointment, className }: NextPatientDash
     queryKey: ["next-patient-future-apts", patientId],
     queryFn: async () => {
       if (!patientId) return 0;
-      const { count } = await supabase
+      const { count } = await api
         .from("appointments")
         .select("id", { count: "exact", head: true })
         .eq("patient_id", patientId)
@@ -91,7 +91,7 @@ export function NextPatientDashboard({ appointment, className }: NextPatientDash
     queryKey: ["next-patient-prom", patientId],
     queryFn: async () => {
       if (!patientId) return null;
-      const { data } = await supabase
+      const { data } = await api
         .from("patient_proms" as never)
         .select("severity, total_score, max_score, created_at")
         .eq("patient_id", patientId)

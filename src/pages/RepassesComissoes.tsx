@@ -35,7 +35,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -73,7 +73,7 @@ export default function RepassesComissoes() {
     const end = endOfMonth(new Date(year, month - 1));
 
     try {
-      const { data: commissionsData, error: commissionsError } = await supabase
+      const { data: commissionsData, error: commissionsError } = await api
         .from("commission_payments")
         .select(`*, commission_config:professional_commissions(payment_type)`)
         .eq("tenant_id", profile.tenant_id)
@@ -92,7 +92,7 @@ export default function RepassesComissoes() {
         return paymentType === null || paymentType === "commission" || paymentType === undefined;
       });
 
-      const { data: profilesData } = await supabase
+      const { data: profilesData } = await api
         .from("profiles")
         .select("user_id, full_name, email")
         .eq("tenant_id", profile.tenant_id);
@@ -133,7 +133,7 @@ export default function RepassesComissoes() {
     const commission = commissions.find((c) => c.id === commissionId);
 
     try {
-      const { error } = await supabase.rpc("mark_commission_paid", {
+      const { error } = await api.rpc("mark_commission_paid", {
         p_commission_payment_id: commissionId,
         p_payment_date: formatInAppTz(new Date(), "yyyy-MM-dd"),
       });

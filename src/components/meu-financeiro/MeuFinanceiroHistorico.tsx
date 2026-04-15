@@ -11,8 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { getSalaryPayments } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -51,7 +51,7 @@ export function MeuFinanceiroHistorico() {
       const sixMonthsAgo = subMonths(new Date(), 6);
 
       // Buscar comissões
-      const { data: commissions } = await supabase
+      const { data: commissions } = await api
         .from("commission_payments")
         .select(`
           id,

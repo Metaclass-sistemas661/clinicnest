@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from '@/integrations/gcp/client';
+import { auth, type AuthUser, type AuthSession } from '@/integrations/gcp/auth';
 import { logger } from '@/lib/logger';
 import type { Profile, UserRole, Tenant, ProfessionalType, PermissionsMap } from '@/types/database';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   profile: Profile | null;
   userRole: UserRole | null;
   tenant: Tenant | null;
@@ -68,7 +68,7 @@ function getAuthRedirectOrigin(): string {
   return import.meta.env.VITE_APP_URL || "https://clinicnest.metaclass.com.br";
 }
 
-/** Normaliza erros de signup/auth do Supabase e Edge Functions para PT-BR */
+/** Normaliza erros de signup/auth para PT-BR */
 function normalizeSignUpError(message: string): string {
   const m = message.toLowerCase();
   // Email já existe
@@ -121,8 +121,8 @@ function normalizeAuthError(message: string): string {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Prefer single-roundtrip context load via RPC (enterprise hardening)
       try {
-        const { data: ctx, error: ctxError } = await (supabase as any).rpc("get_my_context");
+        const { data: ctx, error: ctxError } = await api.rpc("get_my_context");
         if (ctxError) {
           logger.warn('[AuthContext] get_my_context RPC failed:', ctxError.message);
         }
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fallback to legacy multi-query path
       }
 
-      const { data: profileData } = await supabase
+      const { data: profileData } = await api
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
@@ -171,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let roleData: UserRole | null = null;
       let tenantData: Tenant | null = null;
 
-      const { data: role } = await supabase
+      const { data: role } = await api
         .from('user_roles')
         .select('*')
         .eq('user_id', userId)
@@ -179,12 +179,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       if (role) roleData = role as UserRole;
 
-      const { data: tenant } = await supabase
+      const { data: tenantResult } = await api
         .from('tenants')
         .select('*')
         .eq('id', profileData.tenant_id)
         .single();
-      if (tenant) tenantData = tenant as Tenant;
+      if (tenantResult) tenantData = tenantResult as Tenant;
 
       return {
         profile: profileData as Profile,
@@ -216,8 +216,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applyRef = React.useRef(0);
   const profileRef = React.useRef(profile);
 
-  const applySession = async (session: Session | null, event?: string) => {
-    const seq = ++applyRef.current; // gera número de sequência
+  const applySession = async (session: AuthSession | null, event?: string) => {
+    const seq = ++applyRef.current;
 
     // Ignorar sessões de paciente — o portal do paciente usa seu próprio client isolado.
     if (session?.user?.user_metadata?.account_type === 'patient') {
@@ -229,22 +229,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
 
     if (session?.user) {
-      // TOKEN_REFRESHED: apenas o JWT foi renovado — perfil/roles/permissões não mudam.
-      // Atualizar session + user já é suficiente para que as próximas queries usem o novo token.
-      // Retorno antecipado evita: (a) setIsLoading(true) → spinner → desmonta a página,
-      // e (b) setProfile(null) caso fetchUserData falhe → mesma consequência.
       if (event === 'TOKEN_REFRESHED') {
         return;
       }
 
-      // Se já temos profile carregado (sessão ativa), NÃO entrar em loading.
-      // Isso evita que o ProtectedRoute desmonte a página atual (ex: formulário de prontuário aberto)
-      // quando o Supabase emite SIGNED_IN ao voltar de outra aba (tab visibility recovery).
-      // O refresh dos dados acontece silenciosamente em background.
       const alreadyHydrated = !!profileRef.current;
 
       if (!alreadyHydrated) {
-        // Primeiro carregamento (login inicial): precisa bloquear a UI enquanto carrega.
         setIsLoading(true);
       }
 
@@ -272,10 +263,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    // Supabase v2 onAuthStateChange emits INITIAL_SESSION on subscribe,
-    // so there is no need for a separate getSession() call.
-    // This avoids race conditions where both fire and cause double processing.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    // Firebase onAuthStateChange emits INITIAL_SESSION on subscribe.
+    const { data: { subscription } } = auth.onAuthStateChange(
       (event, session) => {
         if (cancelled) return;
         logger.info('[AuthContext] onAuthStateChange event:', event);
@@ -290,7 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string, captchaToken?: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await auth.signInWithPassword({
       email,
       password,
       options: captchaToken ? { captchaToken } : undefined,
@@ -314,12 +303,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     _captchaToken?: string,
   ) => {
     // Usa Edge Function register-user para:
-    // 1. Criar usuário via admin.createUser (NÃO envia email padrão do Supabase)
+    // 1. Criar usuário via admin.createUser (NÃO envia email padrão do Firebase)
     // 2. Gerar link de confirmação
     // 3. Enviar email customizado via Resend com template ClinicNest
     // O trigger handle_new_user() continua criando tenant, profile, user_roles e subscription
     try {
-      const { data, error } = await supabase.functions.invoke("register-user", {
+      const { data, error } = await api.functions.invoke("register-user", {
         body: {
           email,
           password,
@@ -357,7 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyEmailCode = async (email: string, code: string): Promise<{ error: Error | null; message?: string }> => {
     try {
-      const { data, error } = await supabase.functions.invoke("verify-email-code", {
+      const { data, error } = await api.functions.invoke("verify-email-code", {
         body: { email, code },
       });
 
@@ -383,7 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Chamar Edge Function para enviar email customizado
       // A Edge Function buscará o nome do usuário internamente
       // Não precisa de autenticação para reset de senha
-      const { data, error } = await supabase.functions.invoke("send-custom-auth-email", {
+      const { data, error } = await api.functions.invoke("send-custom-auth-email", {
         body: {
           email,
           type: "password_reset",
@@ -392,8 +381,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        // Fallback para método padrão do Supabase se Edge Function falhar
-        const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
+        // Fallback para Firebase Auth reset
+        const { error: fallbackError } = await auth.resetPasswordForEmail(email, {
           redirectTo,
           captchaToken,
         });
@@ -401,8 +390,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!data?.success) {
-        // Fallback para método padrão
-        const { error: fallbackError } = await supabase.auth.resetPasswordForEmail(email, {
+        // Fallback para Firebase Auth reset
+        const { error: fallbackError } = await auth.resetPasswordForEmail(email, {
           redirectTo,
           captchaToken,
         });
@@ -411,8 +400,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error: null };
     } catch (err) {
-      // Fallback para método padrão em caso de erro
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      // Fallback para Firebase Auth reset
+      const { error } = await auth.resetPasswordForEmail(email, {
         redirectTo,
         captchaToken,
       });
@@ -421,7 +410,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await auth.signOut();
     setUser(null);
     setSession(null);
     setProfile(null);

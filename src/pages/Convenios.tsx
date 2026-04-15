@@ -34,7 +34,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 
@@ -84,7 +84,7 @@ export default function Convenios() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("insurance_plans")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -157,7 +157,7 @@ export default function Convenios() {
         is_active: formData.is_active,
       };
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("insurance_plans")
           .update(payload)
           .eq("id", editingId)
@@ -165,7 +165,7 @@ export default function Convenios() {
         if (error) throw error;
         toast.success("Convênio atualizado!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("insurance_plans")
           .insert({ ...payload, tenant_id: profile!.tenant_id });
         if (error) throw error;
@@ -183,7 +183,7 @@ export default function Convenios() {
 
   const toggleActive = async (id: string, current: boolean) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("insurance_plans")
         .update({ is_active: !current })
         .eq("id", id)

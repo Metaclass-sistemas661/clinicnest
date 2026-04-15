@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "./logger";
 
 export type NotificationType =
@@ -37,7 +37,7 @@ export async function notifyUser(
 ): Promise<void> {
   try {
     const prefKey = PREF_MAP[type];
-    const { data: prefs } = await supabase
+    const { data: prefs } = await api
       .from("user_notification_preferences")
       .select(prefKey)
       .eq("user_id", userId)
@@ -47,7 +47,7 @@ export async function notifyUser(
 
     if (!enabled) return;
 
-    await supabase.from("notifications").insert({
+    await api.from("notifications").insert({
       tenant_id: tenantId,
       user_id: userId,
       type,

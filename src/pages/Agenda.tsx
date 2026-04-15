@@ -26,8 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoalMotivation } from "@/contexts/GoalMotivationContext";
-import { supabase } from "@/integrations/supabase/client";
-import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { createAppointmentV2, deleteAppointmentV2, getGoalsWithProgress, setAppointmentStatusV2, updateAppointmentV2 } from "@/lib/typed-rpc";
 import { Plus, ChevronLeft, ChevronRight, Loader2, CalendarDays, FilterX, Clock, ShieldCheck } from "lucide-react";
 import { addDays, startOfWeek, endOfWeek, startOfDay, endOfDay, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, format as fnsFormat } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
@@ -145,7 +145,7 @@ export default function Agenda() {
       try {
         const mStart = startOfMonth(calendarMonth);
         const mEnd = endOfMonth(calendarMonth);
-        const { data, error } = await supabase
+        const { data, error } = await api
           .from("appointments")
           .select("scheduled_at, status")
           .eq("tenant_id", profile.tenant_id)
@@ -186,7 +186,7 @@ export default function Agenda() {
 
     try {
       const [appointmentsRes, clientsRes, proceduresRes, professionalsRes, productsRes, insurancePlansRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select(`
             *,
@@ -198,30 +198,30 @@ export default function Agenda() {
           .gte("scheduled_at", start.toISOString())
           .lte("scheduled_at", end.toISOString())
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("patients")
           .select("id,tenant_id,name,phone,email,notes,insurance_plan_id,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .order("name"),
-        supabase
+        api
           .from("procedures")
           .select("id,tenant_id,name,description,duration_minutes,price,is_active,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
           .order("name"),
-        supabase
+        api
           .from("profiles")
           .select("id,user_id,tenant_id,full_name,email,phone,avatar_url,professional_type,created_at,updated_at")
           .eq("tenant_id", profile.tenant_id)
           .not("professional_type", "in", '("secretaria","faturista")')
           .order("full_name"),
-        supabase
+        api
           .from("products")
           .select("id, name, cost, quantity, is_active")
           .eq("tenant_id", profile.tenant_id)
           .eq("is_active", true)
           .order("name"),
-        supabase
+        api
           .from("insurance_plans")
           .select("*")
           .eq("tenant_id", profile.tenant_id)
@@ -253,7 +253,7 @@ export default function Agenda() {
     const dayStart = startOfDay(new Date(date));
     const dayEnd = endOfDay(new Date(date));
 
-    const { data } = await supabase
+    const { data } = await api
       .from("appointments")
       .select(`
         *,
@@ -352,7 +352,7 @@ export default function Agenda() {
         if (formData.insurance_plan_id) extraFields.insurance_plan_id = formData.insurance_plan_id;
         if (formData.insurance_authorization) extraFields.insurance_authorization = formData.insurance_authorization;
         if (Object.keys(extraFields).length > 0) {
-          await supabase
+          await api
             .from("appointments")
             .update(extraFields)
             .eq("id", createdId);
@@ -431,7 +431,7 @@ export default function Agenda() {
 
       // Fallback: se 'arrived', garante entrada na fila manualmente (idempotente)
       if (status === "arrived" && apt && profile?.tenant_id && apt.patient_id) {
-        const { error: queueError } = await supabase.rpc("add_patient_to_queue", {
+        const { error: queueError } = await api.rpc("add_patient_to_queue", {
           p_tenant_id: profile.tenant_id,
           p_patient_id: apt.patient_id,
           p_appointment_id: id,
@@ -475,7 +475,7 @@ export default function Agenda() {
           ).catch(() => {});
         }
         // Notificar paciente via email + push (Edge Function)
-        supabase.functions.invoke("notify-patient-appointment", {
+        api.functions.invoke("notify-patient-appointment", {
           body: {
             appointment_id: id,
             notification_type: "confirmed",
@@ -497,7 +497,7 @@ export default function Agenda() {
     const apt = appointments.find((a) => a.id === id);
 
     try {
-      const { error } = await supabase.rpc("cancel_appointment", {
+      const { error } = await api.rpc("cancel_appointment", {
         p_appointment_id: id,
         p_reason: cancelReason || null,
       });
@@ -561,7 +561,7 @@ export default function Agenda() {
         insurance_plan_id: data.insurance_plan_id || null,
         insurance_authorization: data.insurance_authorization || null,
       };
-      await supabase
+      await api
         .from("appointments")
         .update(extraFields)
         .eq("id", id);
@@ -607,7 +607,7 @@ export default function Agenda() {
     try {
       // Usar RPC para concluir: atualiza status, registra venda, cria comissão e insere em
       // appointment_completion_summaries (que aciona o popup de lucro do admin via Realtime)
-      const { data: rpcData, error } = await supabase.rpc("complete_appointment_with_sale", {
+      const { data: rpcData, error } = await api.rpc("complete_appointment_with_sale", {
         p_appointment_id: appointment.id,
         p_product_id: sale?.productId ?? null,
         p_quantity: sale?.quantity ?? null,

@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import {
   FileText, Plus, Loader2, Search, Printer, User, Calendar,
   Trash2, Pencil, Download, ShieldCheck, CheckCircle2, AlertTriangle, FileSignature,
@@ -211,7 +211,7 @@ export default function Atestados() {
   const fetchPatients = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patients")
         .select("id, name, phone, cpf")
         .eq("tenant_id", profile.tenant_id)
@@ -226,7 +226,7 @@ export default function Atestados() {
   const fetchRecentAppointments = async (patientId: string) => {
     if (!profile?.tenant_id || !patientId) { setRecentAppointments([]); return; }
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("appointments")
         .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", profile.tenant_id)
@@ -251,7 +251,7 @@ export default function Atestados() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("medical_certificates")
         .select(`*, patient:patients(name), profiles(full_name)`)
         .eq("tenant_id", profile.tenant_id)
@@ -331,14 +331,14 @@ export default function Atestados() {
       };
 
       if (editingId) {
-        const { error } = await supabase
+        const { error } = await api
           .from("medical_certificates")
           .update(payload)
           .eq("id", editingId);
         if (error) throw error;
         toast.success("Atestado atualizado!");
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("medical_certificates")
           .insert(payload);
         if (error) throw error;
@@ -359,7 +359,7 @@ export default function Atestados() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("medical_certificates")
         .delete()
         .eq("id", deleteId);
@@ -424,7 +424,7 @@ export default function Atestados() {
           return;
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await api
           .from("medical_certificates")
           .update({
             digital_signature: signResult.signature,
@@ -441,7 +441,7 @@ export default function Atestados() {
 
         toast.success("Atestado assinado com certificado ICP-Brasil!");
       } else {
-        const { data, error } = await supabase.rpc("sign_medical_certificate", {
+        const { data, error } = await api.rpc("sign_medical_certificate", {
           p_certificate_id: signingCertificate.id,
         });
         
@@ -477,7 +477,7 @@ export default function Atestados() {
     setVerifyDialogOpen(true);
     
     try {
-      const { data, error } = await supabase.rpc("verify_certificate_signature", {
+      const { data, error } = await api.rpc("verify_certificate_signature", {
         p_certificate_id: c.id,
       });
       

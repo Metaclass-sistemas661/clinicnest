@@ -51,7 +51,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useExamResults, type ExamResult } from "@/hooks/useExamResults";
 import {
   EXAM_TYPES,
@@ -188,7 +188,7 @@ export default function Laudos() {
   // ─── Fetch Patients ─────────────────────────────────────────
   useEffect(() => {
     if (!tenantId) return;
-    supabase
+    api
       .from("patients")
       .select("id, name")
       .eq("tenant_id", tenantId)
@@ -200,7 +200,7 @@ export default function Laudos() {
   const fetchRecentAppointments = useCallback(async (patientId: string) => {
     if (!tenantId || !patientId) { setRecentAppointments([]); return; }
     try {
-      const { data } = await supabase
+      const { data } = await api
         .from("appointments")
         .select("id, scheduled_at, procedure:procedures(name), medical_records(id)")
         .eq("tenant_id", tenantId)

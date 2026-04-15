@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, MessageSquare, MapPin, Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Link } from "react-router-dom";
 
 export default function Contato() {
@@ -57,7 +57,7 @@ export default function Contato() {
     try {
       let notificationSent = true;
       try {
-        const { data, error } = await supabase.functions.invoke("submit-contact-message", {
+        const { data, error } = await api.functions.invoke("submit-contact-message", {
           body: {
             name,
             phone,
@@ -78,7 +78,7 @@ export default function Contato() {
         notificationSent = data?.notificationSent !== false;
       } catch (invokeError) {
         logger.warn("Falha no envio por Edge Function. Aplicando fallback para gravação direta.", invokeError);
-        const { error: fallbackError } = await supabase.from("contact_messages").insert({
+        const { error: fallbackError } = await api.from("contact_messages").insert({
           name,
           email,
           subject,

@@ -51,7 +51,7 @@ import { format } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { Appointment, AppointmentStatus, Patient, Procedure, Profile, Product, InsurancePlan, ConsultationType } from "@/types/database";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { TimeSlotPicker } from "./TimeSlotPicker";
 import { NoCommissionWarningDialog } from "./NoCommissionWarningDialog";
 import { RegisterPaymentDialog } from "./RegisterPaymentDialog";
@@ -193,7 +193,7 @@ export function AppointmentsTable({
 
     if (appointment.id) {
       try {
-        const { count } = await supabase
+        const { count } = await api
           .from("medical_records")
           .select("id", { count: "exact", head: true })
           .eq("appointment_id", appointment.id);

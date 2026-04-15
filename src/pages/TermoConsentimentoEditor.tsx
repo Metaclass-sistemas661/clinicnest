@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { upsertConsentTemplate } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { upsertConsentTemplate } from "@/lib/typed-rpc";
 import { toastRpcError } from "@/lib/rpc-error";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
@@ -51,7 +51,7 @@ export default function TermoConsentimentoEditor() {
     if (!profile?.tenant_id || !id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("consent_templates")
         .select("*")
         .eq("tenant_id", profile.tenant_id)

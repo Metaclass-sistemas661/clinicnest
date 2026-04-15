@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 
 const PATIENT_QUICK_ACTIONS = [
   { label: "Meus agendamentos", message: "Quais são meus próximos agendamentos?" },
@@ -24,16 +24,16 @@ const PATIENT_QUICK_ACTIONS = [
 ];
 
 interface AiPatientChatProps {
-  /** Optional: override supabase client for patient portal */
-  supabaseClient?: typeof import("@/integrations/supabase/client").supabase;
+  /** Optional: override API client for patient portal */
+  apiClient?: typeof import("@/integrations/gcp/client").api;
   className?: string;
 }
 
-export function AiPatientChat({ supabaseClient, className }: AiPatientChatProps) {
+export function AiPatientChat({ apiClient, className }: AiPatientChatProps) {
   const { hasFeature } = usePlanFeatures();
   const { messages, isLoading, error, sendMessage, clearChat } = useAIAgentChat({
     functionName: "ai-patient-chat",
-    client: supabaseClient ?? supabasePatient,
+    client: apiClient ?? apiPatient,
   });
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);

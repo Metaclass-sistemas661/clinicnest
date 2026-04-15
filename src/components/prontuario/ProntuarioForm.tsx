@@ -14,7 +14,7 @@ import { Cid10Combobox } from "@/components/ui/cid10-combobox";
 import { generateRecordHash, buildSignaturePayload } from "@/lib/digital-signature";
 import { readPfxFile, parsePfxCertificateInfo, signWithCertificate, validateICPCertificate, type ICPCertificateInfo } from "@/lib/icp-brasil-signature";
 import { useCertificateSign } from "@/hooks/useCertificateSign";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -350,7 +350,7 @@ export function ProntuarioForm({
     if (!cid) { setTriage(null); return; }
     try {
       const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
+      const { data } = await api
         .from("triage_records")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -533,7 +533,7 @@ export function ProntuarioForm({
           signed_by_crm: editRecord.signed_by_crm,
         };
 
-        const { data: maxVer } = await supabase
+        const { data: maxVer } = await api
           .from("medical_record_versions")
           .select("version_number")
           .eq("record_id", editRecord.id)
@@ -541,7 +541,7 @@ export function ProntuarioForm({
           .limit(1);
         const nextVersion = (maxVer?.[0]?.version_number ?? 0) + 1;
 
-        await supabase.from("medical_record_versions").insert({
+        await api.from("medical_record_versions").insert({
           record_id: editRecord.id,
           tenant_id: tenantId,
           version_number: nextVersion,
@@ -551,7 +551,7 @@ export function ProntuarioForm({
           digital_hash: editRecord.digital_hash,
         });
 
-        const { error } = await supabase.from("medical_records").update({
+        const { error } = await api.from("medical_records").update({
           chief_complaint: base.chief_complaint,
           anamnesis: base.anamnesis || null,
           physical_exam: base.physical_exam || null,
@@ -584,7 +584,7 @@ export function ProntuarioForm({
         // ── Criar/atualizar lembrete de retorno na edição ──
         if (returnConfig.returnDays && editRecord.id) {
           try {
-            await supabase.rpc("create_return_reminder", {
+            await api.rpc("create_return_reminder", {
               p_medical_record_id: editRecord.id,
               p_return_days: returnConfig.returnDays,
               p_reason: returnConfig.reason || null,
@@ -601,7 +601,7 @@ export function ProntuarioForm({
 
         toast.success("Prontuário atualizado! Versão anterior salva no histórico.");
       } else {
-        const { data: insertedData, error } = await supabase.from("medical_records").insert({
+        const { data: insertedData, error } = await api.from("medical_records").insert({
           tenant_id: tenantId,
           professional_id: professionalId,
           patient_id: patientId,
@@ -644,7 +644,7 @@ export function ProntuarioForm({
         // ── Criar lembrete de retorno se configurado ──
         if (returnConfig.returnDays && insertedData?.id) {
           try {
-            await supabase.rpc("create_return_reminder", {
+            await api.rpc("create_return_reminder", {
               p_medical_record_id: insertedData.id,
               p_return_days: returnConfig.returnDays,
               p_reason: returnConfig.reason || null,
@@ -662,7 +662,7 @@ export function ProntuarioForm({
         }
 
         if (triage?.id) {
-          await supabase.from("triage_records").update({ status: "concluida" }).eq("id", triage.id);
+          await api.from("triage_records").update({ status: "concluida" }).eq("id", triage.id);
         }
         toast.success("Prontuário salvo com sucesso!");
       }

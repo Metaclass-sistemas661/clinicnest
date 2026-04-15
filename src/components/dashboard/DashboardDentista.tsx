@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Smile, ClipboardList, Calendar, Clock, TrendingUp, FileText, Users, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -66,7 +66,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
 
     try {
       // Agendamentos do dia
-      const { data: appts } = await supabase
+      const { data: appts } = await api
         .from("appointments")
         .select("id, scheduled_at, status, patient:patients(name), procedure:procedures(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -86,7 +86,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
       );
 
       // Planos pendentes de aprovação
-      const { data: plans } = await supabase
+      const { data: plans } = await api
         .from("treatment_plans")
         .select("id, plan_number, title, final_value, created_at, patient:patients(name), treatment_plan_items(id)")
         .eq("tenant_id", profile.tenant_id)
@@ -108,7 +108,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
       );
 
       // Estatísticas do mês
-      const { data: monthPlans } = await supabase
+      const { data: monthPlans } = await api
         .from("treatment_plans")
         .select("id, status, final_value")
         .eq("tenant_id", profile.tenant_id)
@@ -116,7 +116,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
         .gte("created_at", monthStart)
         .lte("created_at", monthEnd);
 
-      const { data: monthItems } = await supabase
+      const { data: monthItems } = await api
         .from("treatment_plan_items")
         .select("id, total_price, status, plan_id")
         .in("plan_id", (monthPlans || []).map((p) => p.id));
@@ -133,7 +133,7 @@ export const DashboardDentista = memo(function DashboardDentista() {
       });
 
       // Top procedimentos (simulado - em produção viria de uma query agregada)
-      const { data: recentItems } = await supabase
+      const { data: recentItems } = await api
         .from("treatment_plan_items")
         .select("procedure_name")
         .eq("status", "concluido")

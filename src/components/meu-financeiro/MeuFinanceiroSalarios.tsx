@@ -25,8 +25,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { getSalaryPayments } from "@/lib/supabase-typed-rpc";
+import { api } from "@/integrations/gcp/client";
+import { getSalaryPayments } from "@/lib/typed-rpc";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
@@ -138,7 +138,7 @@ export function MeuFinanceiroSalarios() {
     let tenantName = "Clínica";
     let tenantCnpj = "";
     if (profile?.tenant_id) {
-      const { data: tenant } = await supabase
+      const { data: tenant } = await api
         .from("tenants")
         .select("name, cnpj")
         .eq("id", profile.tenant_id)

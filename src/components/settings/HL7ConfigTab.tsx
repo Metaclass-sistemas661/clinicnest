@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus, Trash2, Copy, RefreshCw, CheckCircle2, XCircle, AlertCircle,
@@ -96,9 +96,9 @@ export function HL7ConfigTab() {
     setLoading(true);
     try {
       const [connRes, statsRes, logsRes] = await Promise.all([
-        supabase.from("hl7_connections").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
-        supabase.rpc("get_hl7_dashboard_stats", { p_tenant_id: tenantId, p_days: 30 }),
-        supabase.from("hl7_message_log").select("id, direction, message_type, status, error_message, received_at, patient_id")
+        api.from("hl7_connections").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }),
+        api.rpc("get_hl7_dashboard_stats", { p_tenant_id: tenantId, p_days: 30 }),
+        api.from("hl7_message_log").select("id, direction, message_type, status, error_message, received_at, patient_id")
           .eq("tenant_id", tenantId).order("received_at", { ascending: false }).limit(50),
       ]);
 
@@ -125,11 +125,9 @@ export function HL7ConfigTab() {
     }
 
     const webhookSecret = generateSecret();
-    const baseUrl = window.location.origin.includes("localhost")
-      ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
-      : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+    const baseUrl = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
-    const { error } = await supabase.from("hl7_connections").insert({
+    const { error } = await api.from("hl7_connections").insert({
       tenant_id: tenantId,
       name: newConnection.name,
       description: newConnection.description || null,
@@ -161,7 +159,7 @@ export function HL7ConfigTab() {
   }
 
   async function toggleConnection(id: string, active: boolean) {
-    const { error } = await supabase.from("hl7_connections").update({ is_active: active }).eq("id", id);
+    const { error } = await api.from("hl7_connections").update({ is_active: active }).eq("id", id);
     if (error) {
       toast.error("Erro ao atualizar conexão", { description: normalizeError(error, "Não foi possível atualizar a conexão.") });
       return;
@@ -171,7 +169,7 @@ export function HL7ConfigTab() {
   }
 
   async function deleteConnection(id: string) {
-    const { error } = await supabase.from("hl7_connections").delete().eq("id", id);
+    const { error } = await api.from("hl7_connections").delete().eq("id", id);
     if (error) {
       toast.error("Erro ao excluir conexão", { description: normalizeError(error, "Não foi possível excluir a conexão.") });
       return;

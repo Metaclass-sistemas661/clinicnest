@@ -12,12 +12,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import type { User } from "@supabase/supabase-js";
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { Spinner } from "@/components/ui/spinner";
 import { PatientSubscriptionGuard } from "@/components/subscription/PatientSubscriptionGuard";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -78,7 +78,7 @@ export function PatientShellRoute() {
     let cancelled = false;
 
     const check = async () => {
-      const { data: { session } } = await supabasePatient.auth.getSession();
+      const { data: { session } } = await apiPatient.auth.getSession();
       if (cancelled) return;
 
       if (!session?.user || session.user.user_metadata?.account_type !== "patient") {
@@ -93,7 +93,7 @@ export function PatientShellRoute() {
 
     void check();
 
-    const { data: { subscription } } = supabasePatient.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = apiPatient.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       if (!session?.user || session.user.user_metadata?.account_type !== "patient") {
         setPatientUser(null);
@@ -123,7 +123,7 @@ export function PatientShellRoute() {
     }
 
     try {
-      const { data: client } = await (supabasePatient as any)
+      const { data: client } = await (apiPatient as any)
         .from("patients")
         .select("id")
         .eq("email", patientUser.email)
@@ -137,7 +137,7 @@ export function PatientShellRoute() {
         return;
       }
 
-      const { data: pending, error } = await (supabasePatient as any).rpc("get_pending_consents", {
+      const { data: pending, error } = await (apiPatient as any).rpc("get_pending_consents", {
         p_client_id: client.id,
       });
 

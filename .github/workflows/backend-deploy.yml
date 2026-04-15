@@ -1,0 +1,139 @@
+name: Backend Deploy — Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'gcp/cloud-run/**'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: sistema-de-gestao-16e15
+  REGION: southamerica-east1
+  SERVICE: clinicnest-api
+  REGISTRY: southamerica-east1-docker.pkg.dev/sistema-de-gestao-16e15/clinicnest/clinicnest-api
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # Job 1 — Build & Test
+  # ──────────────────────────────────────────────────────────────
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: gcp/cloud-run
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gcp/cloud-run/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-run-dist
+          path: |
+            gcp/cloud-run/dist/
+            gcp/cloud-run/package.json
+            gcp/cloud-run/package-lock.json
+            gcp/cloud-run/Dockerfile
+          retention-days: 3
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 2 — Deploy to Cloud Run
+  # ──────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloud Run
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cloud-run-dist
+          path: deploy/
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push Docker image
+        working-directory: deploy/gcp/cloud-run
+        run: |
+          IMAGE="${{ env.REGISTRY }}:${{ github.sha }}"
+          docker build -t "$IMAGE" -t "${{ env.REGISTRY }}:latest" .
+          docker push "$IMAGE"
+          docker push "${{ env.REGISTRY }}:latest"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image "$IMAGE" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --memory 1Gi \
+            --cpu 2 \
+            --min-instances 1 \
+            --max-instances 10 \
+            --timeout 300 \
+            --port 8080 \
+            --allow-unauthenticated \
+            --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:clinicnest-db \
+            --service-account clinicnest-api@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-env-vars "GCP_PROJECT_ID=${{ env.PROJECT_ID }},NODE_ENV=production,FRONTEND_URL=https://clinicnest.metaclass.com.br" \
+            --set-secrets "CLOUDSQL_CONNECTION_STRING=CLOUDSQL_CONNECTION_STRING:latest,CRON_SECRET=CRON_SECRET:latest,RESEND_API_KEY=RESEND_API_KEY:latest,ASAAS_API_KEY=ASAAS_API_KEY:latest,ASAAS_API_BASE_URL=ASAAS_API_BASE_URL:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,AUTOMATION_WORKER_KEY=AUTOMATION_WORKER_KEY:latest,EMAIL_FROM=EMAIL_FROM:latest,SITE_URL=SITE_URL:latest,PUBLIC_SITE_URL=PUBLIC_SITE_URL:latest,PUBLIC_APP_URL=PUBLIC_APP_URL:latest,GCP_SERVICE_ACCOUNT_KEY=GCP_SERVICE_ACCOUNT_KEY:latest,GCP_REGION=GCP_REGION:latest,GEMINI_MODEL=GEMINI_MODEL:latest,CLINIC_EMAIL_DOMAIN=CLINIC_EMAIL_DOMAIN:latest,SALES_CHATBOT_SECRET=SALES_CHATBOT_SECRET:latest,CONTACT_ADMIN_EMAIL=CONTACT_ADMIN_EMAIL:latest,CONTACT_EMAIL_FROM=CONTACT_EMAIL_FROM:latest,SUPPORT_EMAIL_FROM=SUPPORT_EMAIL_FROM:latest,SUPPORT_EMAIL_TO=SUPPORT_EMAIL_TO:latest" \
+            --quiet
+
+      - name: Verify deployment
+        run: |
+          URL=$(gcloud run services describe ${{ env.SERVICE }} \
+            --region ${{ env.REGION }} \
+            --format "value(status.url)")
+          echo "Service URL: $URL"
+
+          HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$URL/health" --retry 3 --retry-delay 5)
+          echo "Health check: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Health check failed!"
+            exit 1
+          fi

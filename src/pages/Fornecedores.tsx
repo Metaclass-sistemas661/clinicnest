@@ -11,7 +11,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { MODAL_SIZES } from "@/lib/modal-constants";
@@ -101,7 +101,7 @@ export default function Fornecedores() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("suppliers")
         .select("id,name,phone,email,document,notes,created_at,updated_at")
         .eq("tenant_id", profile.tenant_id)
@@ -155,7 +155,7 @@ export default function Fornecedores() {
     setIsSaving(true);
     try {
       if (editing) {
-        const { error } = await supabase
+        const { error } = await api
           .from("suppliers")
           .update({
             name,
@@ -170,7 +170,7 @@ export default function Fornecedores() {
         if (error) throw error;
         toast.success("Fornecedor atualizado!");
       } else {
-        const { error } = await supabase.from("suppliers").insert({
+        const { error } = await api.from("suppliers").insert({
           tenant_id: profile.tenant_id,
           name,
           phone: form.phone.trim() || null,
@@ -200,7 +200,7 @@ export default function Fornecedores() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("suppliers")
         .delete()
         .eq("id", deleteTarget.id)

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, Lock } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 
 interface ReauthDialogProps {
@@ -45,7 +45,7 @@ export function ReauthDialog({
     setIsVerifying(true);
     try {
       // Get current user email
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user?.email) {
         toast.error("Sessão expirada. Faça login novamente.");
         onOpenChange(false);
@@ -53,7 +53,7 @@ export function ReauthDialog({
       }
 
       // Re-authenticate by signing in with current credentials
-      const { error } = await supabasePatient.auth.signInWithPassword({
+      const { error } = await apiPatient.auth.signInWithPassword({
         email: user.email,
         password: password.trim(),
       });

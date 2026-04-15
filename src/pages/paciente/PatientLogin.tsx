@@ -20,7 +20,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import TurnstileWidget, { useTurnstile } from "@/components/auth/TurnstileWidget";
 import { PasswordStrengthIndicator, isPasswordValid } from "@/components/patient/PasswordStrengthIndicator";
@@ -79,7 +79,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabasePatient.rpc("validate_patient_access", {
+      const { data, error } = await apiPatient.rpc("validate_patient_access", {
         p_identifier: identifier.trim(),
       });
 
@@ -131,7 +131,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabasePatient.auth.signInWithPassword({
+      const { data, error } = await apiPatient.auth.signInWithPassword({
         email: loginEmail.trim(),
         password,
         options: captchaToken ? { captchaToken } : undefined,
@@ -145,7 +145,7 @@ export default function PatientLogin() {
 
       const accountType = data.user?.user_metadata?.account_type;
       if (accountType !== "patient") {
-        await supabasePatient.auth.signOut();
+        await apiPatient.auth.signOut();
         toast.error("Esta conta não é de paciente.", {
           description: "Use o login de clínica se for profissional.",
         });
@@ -187,7 +187,7 @@ export default function PatientLogin() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabasePatient.functions.invoke("activate-patient-account", {
+      const { data, error } = await apiPatient.functions.invoke("activate-patient-account", {
         body: {
           patient_id: patientInfo.patient_id,
           email: email.trim(),
@@ -230,7 +230,7 @@ export default function PatientLogin() {
     }
     setIsLoading(true);
     try {
-      const { error } = await supabasePatient.auth.signInWithPassword({
+      const { error } = await apiPatient.auth.signInWithPassword({
         email: email.trim(),
         password: newPassword,
       });

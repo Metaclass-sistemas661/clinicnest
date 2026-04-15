@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { DoorOpen, Plus, UserCheck, UserX, Loader2, Clock, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -92,7 +92,7 @@ export default function GestaoSalas() {
   // Realtime subscription
   useEffect(() => {
     if (!profile?.tenant_id) return;
-    const channel = supabase
+    const channel = api
       .channel("room-occupancies-realtime")
       .on("postgres_changes", {
         event: "*",
@@ -104,14 +104,14 @@ export default function GestaoSalas() {
       })
       .subscribe();
 
-    return () => { void supabase.removeChannel(channel); };
+    return () => { void api.removeChannel(channel); };
   }, [profile?.tenant_id]);
 
   const fetchRooms = async () => {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("clinic_rooms")
         .select("*, clinic_units(name)")
         .eq("tenant_id", profile.tenant_id)
@@ -137,7 +137,7 @@ export default function GestaoSalas() {
   const fetchOccupancies = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("room_occupancies")
         .select("*, profiles(full_name)")
         .eq("tenant_id", profile.tenant_id)
@@ -166,7 +166,7 @@ export default function GestaoSalas() {
     setIsSavingRoom(true);
     try {
       const eq = roomForm.equipment.split(",").map(s => s.trim()).filter(Boolean);
-      const { error } = await supabase.from("clinic_rooms").insert({
+      const { error } = await api.from("clinic_rooms").insert({
         tenant_id: profile!.tenant_id,
         name: roomForm.name,
         room_type: roomForm.room_type,
@@ -192,7 +192,7 @@ export default function GestaoSalas() {
     if (!occupyForm.client_name.trim()) { toast.error("Nome do paciente é obrigatório"); return; }
     setIsSavingOccupy(true);
     try {
-      const { error } = await supabase.from("room_occupancies").insert({
+      const { error } = await api.from("room_occupancies").insert({
         tenant_id: profile.tenant_id,
         room_id: occupyRoom.id,
         professional_id: profile.id,
@@ -215,7 +215,7 @@ export default function GestaoSalas() {
 
   const handleRelease = async (occupancy: Occupancy) => {
     try {
-      const { error } = await supabase
+      const { error } = await api
         .from("room_occupancies")
         .update({ status: "released", ended_at: new Date().toISOString() })
         .eq("id", occupancy.id)

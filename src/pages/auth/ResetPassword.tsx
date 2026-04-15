@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { auth } from "@/integrations/gcp/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,8 @@ function normalizeResetError(message: string): string {
     return "A nova senha deve ser diferente da senha atual.";
   if (m.includes("password") && (m.includes("weak") || m.includes("short") || m.includes("length")))
     return "A senha é muito fraca. Use no mínimo 6 caracteres.";
-  if (m.includes("session expired") || m.includes("refresh_token") || m.includes("not authenticated"))
-    return "Sessão expirada. Solicite um novo link de recuperação.";
+  if (m.includes("session expired") || m.includes("refresh_token") || m.includes("not authenticated") || m.includes("expired") || m.includes("invalid-action-code"))
+    return "Link expirado ou já utilizado. Solicite um novo link de recuperação.";
   if (m.includes("fetch") || m.includes("network") || m.includes("failed to fetch"))
     return "Erro de conexão. Verifique sua internet e tente novamente.";
   if (m.includes("rate limit") || m.includes("too many"))
@@ -29,50 +29,31 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isValid, setIsValid] = useState(false);
+  const [oobCode, setOobCode] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Verificar se há um token válido na URL e estabelecer sessão
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsValid(true);
-      } else {
-        // Tentar recuperar sessão do hash da URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get("access_token");
-        const type = hashParams.get("type");
+    // Firebase password reset links use ?oobCode=xxx&mode=resetPassword
+    const code = searchParams.get("oobCode");
+    const mode = searchParams.get("mode");
 
-        if (accessToken && type === "recovery") {
-          // Estabelecer sessão com o token do link
-          try {
-            const { data: { session: newSession }, error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: hashParams.get("refresh_token") || "",
-            });
-            
-            if (sessionError || !newSession) {
-              logger.error("[ResetPassword] Erro ao estabelecer sessão:", sessionError);
-              toast.error("Link inválido ou expirado");
-              setTimeout(() => navigate("/forgot-password"), 2000);
-              return;
-            }
-            
-            setIsValid(true);
-          } catch (err) {
-            logger.error("[ResetPassword] Exceção ao estabelecer sessão:", err);
-            toast.error("Link inválido ou expirado");
-            setTimeout(() => navigate("/forgot-password"), 2000);
-          }
+    if (code && mode === "resetPassword") {
+      setOobCode(code);
+      setIsValid(true);
+    } else {
+      // Fallback: check if user is already signed in (e.g., changing password from settings)
+      auth.getSession().then(({ data }) => {
+        if (data?.session) {
+          setIsValid(true);
         } else {
+          logger.warn("[ResetPassword] No oobCode and no session — invalid link");
           toast.error("Link inválido ou expirado");
           setTimeout(() => navigate("/forgot-password"), 2000);
         }
-      }
-    };
-
-    checkSession();
-  }, [navigate]);
+      });
+    }
+  }, [navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,95 +70,41 @@ export default function ResetPassword() {
 
     setIsLoading(true);
 
-    // Usar Edge Function para atualizar senha sem email automático do Supabase
-    // A Edge Function atualiza a senha usando admin.updateUserById (não envia email automático)
-    // e então envia nosso email customizado
     try {
-      logger.debug("[ResetPassword] Iniciando atualização de senha");
-      logger.debug("[ResetPassword] Verificando sessão antes de chamar Edge Function");
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        logger.error("[ResetPassword] Nenhuma sessão encontrada!");
-        toast.error("Sessão expirada. Por favor, solicite um novo link de recuperação.");
-        setIsLoading(false);
-        return;
-      }
-      
-      logger.debug("[ResetPassword] Sessão encontrada, chamando Edge Function update-password");
-      const { data, error } = await supabase.functions.invoke("update-password", {
-        body: {
-          password: password,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-      });
-
-      logger.debug("[ResetPassword] Resposta da Edge Function:", { data, error });
-
-      if (error) {
-        logger.error("[ResetPassword] Erro na Edge Function:", error);
-        // Fallback: usar método padrão se Edge Function falhar
-        const { error: fallbackError } = await supabase.auth.updateUser({
-          password: password,
-        });
-        if (fallbackError) {
+      if (oobCode) {
+        // Firebase flow: confirm password reset with oobCode
+        logger.debug("[ResetPassword] Confirmando reset via oobCode");
+        const { error } = await auth.confirmPasswordReset(oobCode, password);
+        if (error) {
+          logger.error("[ResetPassword] confirmPasswordReset failed:", error);
           toast.error("Erro ao atualizar senha", {
-            description: normalizeResetError(fallbackError.message),
+            description: normalizeResetError(error.message || "Erro desconhecido"),
           });
           setIsLoading(false);
           return;
         }
-        toast.success("Senha atualizada com sucesso!");
-        setTimeout(() => navigate("/login"), 2000);
-        return;
-      }
-
-      if (!data?.success) {
-        logger.error("[ResetPassword] Edge Function retornou erro:", data);
-        // Fallback: usar método padrão
-        const { error: fallbackError } = await supabase.auth.updateUser({
-          password: password,
-        });
-        if (fallbackError) {
+      } else {
+        // Fallback: user is already signed in, update password directly
+        logger.debug("[ResetPassword] Atualizando senha via updateUser (usuário autenticado)");
+        const { error } = await auth.updateUser({ password });
+        if (error) {
+          logger.error("[ResetPassword] updateUser failed:", error);
           toast.error("Erro ao atualizar senha", {
-            description: normalizeResetError(fallbackError.message),
+            description: normalizeResetError(error.message || "Erro desconhecido"),
           });
           setIsLoading(false);
           return;
         }
-        toast.success("Senha atualizada com sucesso!");
-        setTimeout(() => navigate("/login"), 2000);
-        return;
       }
 
-      logger.debug("[ResetPassword] Senha atualizada com sucesso via Edge Function");
       toast.success("Senha atualizada com sucesso!");
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       logger.error("[ResetPassword] Exceção ao atualizar senha:", err);
-      // Fallback: usar método padrão
-      try {
-        const { error: fallbackError } = await supabase.auth.updateUser({
-          password: password,
-        });
-        if (fallbackError) {
-          toast.error("Erro ao atualizar senha", {
-            description: fallbackError.message,
-          });
-          setIsLoading(false);
-          return;
-        }
-        toast.success("Senha atualizada com sucesso!");
-        setTimeout(() => navigate("/login"), 2000);
-      } catch (fallbackErr) {
-        toast.error("Erro ao atualizar senha", {
-          description: fallbackErr instanceof Error ? normalizeResetError(fallbackErr.message) : "Erro desconhecido. Tente novamente.",
-        });
-        setIsLoading(false);
-      }
+      toast.error("Erro ao atualizar senha", {
+        description: err instanceof Error ? normalizeResetError(err.message) : "Erro desconhecido. Tente novamente.",
+      });
+      setIsLoading(false);
     }
   };
 

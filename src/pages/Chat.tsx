@@ -30,7 +30,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -128,7 +128,7 @@ export default function Chat() {
     void fetchMessages(activeChannel, activeChannelId);
     void markAsRead();
 
-    const channel = supabase
+    const channel = api
       .channel(`chat:${profile.tenant_id}:${activeChannel}`)
       .on(
         "postgres_changes",
@@ -208,7 +208,7 @@ export default function Chat() {
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      void api.removeChannel(channel);
     };
   }, [profile?.tenant_id, activeChannel, activeChannelId, members, myProfileId]);
 
@@ -219,7 +219,7 @@ export default function Chat() {
   const fetchMembers = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("profiles")
         .select("id, full_name, user_id")
         .eq("tenant_id", profile.tenant_id)
@@ -234,7 +234,7 @@ export default function Chat() {
   const fetchChannels = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("chat_channels")
         .select("*")
         .eq("tenant_id", profile.tenant_id)
@@ -257,7 +257,7 @@ export default function Chat() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      let query = supabase
+      let query = api
         .from("internal_messages")
         .select("id, channel, channel_id, content, created_at, sender_id, mentions, attachments, edited_at, deleted_at, profiles(full_name)")
         .eq("tenant_id", profile.tenant_id)
@@ -302,7 +302,7 @@ export default function Chat() {
   const markAsRead = async () => {
     if (!profile?.tenant_id || !myProfileId) return;
     try {
-      await supabase.rpc("mark_chat_as_read", {
+      await api.rpc("mark_chat_as_read", {
         p_channel: activeChannel,
         p_channel_id: activeChannelId,
       });
@@ -317,7 +317,7 @@ export default function Chat() {
     setIsSending(true);
     try {
       const mentionIds = mentions.length > 0 ? mentions : [];
-      const { error } = await supabase.rpc("send_chat_message", {
+      const { error } = await api.rpc("send_chat_message", {
         p_channel: activeChannel,
         p_channel_id: activeChannelId,
         p_content: text,
@@ -341,7 +341,7 @@ export default function Chat() {
     if (!searchQuery.trim() || !profile?.tenant_id) return;
     setIsSearching(true);
     try {
-      const { data, error } = await supabase.rpc("search_chat_messages", {
+      const { data, error } = await api.rpc("search_chat_messages", {
         p_query: searchQuery.trim(),
         p_channel: null,
         p_limit: 50,
@@ -375,7 +375,7 @@ export default function Chat() {
   const handleEditMessage = async (messageId: string) => {
     if (!editContent.trim()) return;
     try {
-      const { data, error } = await supabase.rpc("edit_chat_message", {
+      const { data, error } = await api.rpc("edit_chat_message", {
         p_message_id: messageId,
         p_content: editContent.trim(),
       });
@@ -394,7 +394,7 @@ export default function Chat() {
   const handleDeleteMessage = async (messageId: string) => {
     if (!confirm("Excluir esta mensagem?")) return;
     try {
-      const { data, error } = await supabase.rpc("delete_chat_message", {
+      const { data, error } = await api.rpc("delete_chat_message", {
         p_message_id: messageId,
       });
       if (error) throw error;

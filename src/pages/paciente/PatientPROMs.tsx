@@ -19,7 +19,7 @@ import {
   ClipboardList,
   CalendarDays,
 } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -147,11 +147,11 @@ export default function PatientPROMs() {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabasePatient.auth.getUser();
+      const { data: { user } } = await apiPatient.auth.getUser();
       if (!user) return;
 
       // Get patient link
-      const { data: link } = await supabasePatient
+      const { data: link } = await apiPatient
         .from("patient_profiles" as never)
         .select("client_id, tenant_id")
         .eq("user_id", user.id)
@@ -164,7 +164,7 @@ export default function PatientPROMs() {
       setTenantId(l.tenant_id);
 
       // Load history
-      const { data: proms } = await supabasePatient
+      const { data: proms } = await apiPatient
         .from("patient_proms" as never)
         .select("id, questionnaire, total_score, max_score, severity, notes, created_at")
         .eq("patient_id", l.patient_id)
@@ -191,7 +191,7 @@ export default function PatientPROMs() {
     const severity = severityFromScore(totalScore, MAX_GENERAL_SCORE);
 
     try {
-      const { error } = await supabasePatient
+      const { error } = await apiPatient
         .from("patient_proms" as never)
         .insert({
           tenant_id: tenantId,

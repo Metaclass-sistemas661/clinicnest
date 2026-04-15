@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -55,7 +55,7 @@ export default function SmsConfig() {
     if (!tenant?.id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("tenants")
         .select("sms_provider, sms_api_key, sms_sender")
         .eq("id", tenant.id)
@@ -103,7 +103,7 @@ export default function SmsConfig() {
             sms_sender: null,
           };
 
-      const { error } = await supabase
+      const { error } = await api
         .from("tenants")
         .update(payload as any)
         .eq("id", tenant.id);
@@ -127,9 +127,9 @@ export default function SmsConfig() {
     }
     setIsTesting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await api.auth.getSession();
       const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL || "https://cxficwktocdouerhamhh.supabase.co"}/functions/v1/sms-sender`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/sms-sender`,
         {
           method: "POST",
           headers: {

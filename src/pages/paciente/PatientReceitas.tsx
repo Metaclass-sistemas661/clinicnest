@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Pill, RefreshCw, Building2, Stethoscope, Calendar, Clock, Download, Send } from "lucide-react";
-import { supabasePatient } from "@/integrations/supabase/client";
+import { apiPatient } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,7 +57,7 @@ export default function PatientReceitas() {
   const fetchPrescriptions = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabasePatient as any).rpc("get_patient_prescriptions");
+      const { data, error } = await (apiPatient as any).rpc("get_patient_prescriptions");
       if (error) throw error;
       setPrescriptions((data ?? []) as Prescription[]);
     } catch (err) {

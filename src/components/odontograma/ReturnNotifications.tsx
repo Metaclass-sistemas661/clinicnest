@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Bell, Calendar, Check } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 
 /** Intervalo de retorno (meses) baseado na severidade do diagnóstico */
@@ -60,7 +60,7 @@ export function ReturnNotifications({
   const handleSchedule = async () => {
     setScheduling(true);
     try {
-      const { error } = await supabase.from("notifications" as any).insert({
+      const { error } = await api.from("notifications" as any).insert({
         tenant_id: tenantId,
         patient_id: patientId,
         type: "dental_return",

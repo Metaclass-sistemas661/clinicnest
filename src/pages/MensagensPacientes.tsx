@@ -18,7 +18,7 @@ import {
   Search,
   ChevronLeft,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format, isToday, isYesterday } from "date-fns";
@@ -77,7 +77,7 @@ export default function MensagensPacientes() {
   const loadConversations = async () => {
     setIsLoadingConversations(true);
     try {
-      const { data, error } = await (supabase as any).rpc("get_patient_conversations");
+      const { data, error } = await (api as any).rpc("get_patient_conversations");
       if (error) throw error;
       setConversations((data as Conversation[]) || []);
     } catch (err) {
@@ -90,7 +90,7 @@ export default function MensagensPacientes() {
   const loadMessages = async (patientId: string) => {
     setIsLoadingMessages(true);
     try {
-      const { data, error } = await (supabase as any).rpc("get_messages_for_patient", {
+      const { data, error } = await (api as any).rpc("get_messages_for_patient", {
         p_client_id: patientId,
         p_limit: 100,
       });
@@ -109,7 +109,7 @@ export default function MensagensPacientes() {
 
     setIsSending(true);
     try {
-      const { data, error } = await (supabase as any).rpc("send_clinic_message_to_patient", {
+      const { data, error } = await (api as any).rpc("send_clinic_message_to_patient", {
         p_client_id: selectedConversation.patient_id,
         p_content: newMessage.trim(),
       });

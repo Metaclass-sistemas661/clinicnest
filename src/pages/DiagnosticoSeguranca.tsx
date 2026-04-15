@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
-import { getSecurityDiagnosticsV1, type SecurityDiagnosticsV1 } from "@/lib/supabase-typed-rpc";
+import { getSecurityDiagnosticsV1, type SecurityDiagnosticsV1 } from "@/lib/typed-rpc";
 import { CheckCircle2, XCircle, RefreshCw, Shield } from "lucide-react";
 
 function StatusBadge({ ok }: { ok: boolean }) {

@@ -32,14 +32,14 @@ import {
   Activity,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatInAppTz } from "@/lib/date";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { CallNextButton } from "@/components/queue/CallNextButton";
 import { useWaitingQueue, useCurrentCall, useQueueStatistics, useQueueRealtime } from "@/hooks/usePatientQueue";
-import { setAppointmentStatusV2 } from "@/lib/supabase-typed-rpc";
+import { setAppointmentStatusV2 } from "@/lib/typed-rpc";
 import type { Appointment } from "@/types/database";
 
 const statusBadge: Record<string, { className: string; label: string }> = {
@@ -160,7 +160,7 @@ export default function DashboardRecepcao() {
       // 2. Fallback: adiciona à fila manualmente (idempotente — se trigger já criou, retorna o ID existente)
       const apt = appointments.find((a) => a.id === appointmentId);
       if (apt && profile?.tenant_id) {
-        const { error: queueError } = await supabase.rpc("add_patient_to_queue", {
+        const { error: queueError } = await api.rpc("add_patient_to_queue", {
           p_tenant_id: profile.tenant_id,
           p_patient_id: apt.patient_id,
           p_appointment_id: appointmentId,
@@ -197,7 +197,7 @@ export default function DashboardRecepcao() {
 
     try {
       const [aptsRes, returnsRes] = await Promise.all([
-        supabase
+        api
           .from("appointments")
           .select("*, patient:patients(name, phone), procedure:procedures(name), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -205,7 +205,7 @@ export default function DashboardRecepcao() {
           .lte("scheduled_at", dayEnd)
           .neq("status", "cancelled")
           .order("scheduled_at", { ascending: true }),
-        supabase
+        api
           .from("return_reminders")
           .select("*, patient:patients(name, phone), professional:profiles!professional_id(full_name)")
           .eq("tenant_id", profile.tenant_id)
@@ -246,7 +246,7 @@ export default function DashboardRecepcao() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("recall_patient", {
+      const { error } = await api.rpc("recall_patient", {
         p_call_id: callId,
       });
       if (error) throw error;
@@ -263,7 +263,7 @@ export default function DashboardRecepcao() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("start_patient_service", {
+      const { error } = await api.rpc("start_patient_service", {
         p_call_id: callId,
       });
       if (error) throw error;
@@ -281,7 +281,7 @@ export default function DashboardRecepcao() {
     if (!profile?.tenant_id) return;
     setActionLoading(callId);
     try {
-      const { error } = await supabase.rpc("mark_patient_no_show", {
+      const { error } = await api.rpc("mark_patient_no_show", {
         p_call_id: callId,
       });
       if (error) throw error;

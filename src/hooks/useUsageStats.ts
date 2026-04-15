@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from '@/contexts/AuthContext';
 import { LimitKey } from '@/types/subscription-plans';
 
@@ -50,33 +50,33 @@ export function useUsageStats() {
         automationsResult,
         customReportsResult,
       ] = await Promise.all([
-        supabase
+        api
           .from('profiles')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId),
-        supabase
+        api
           .from("patients")
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId),
-        supabase
+        api
           .from('appointments')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
           .gte('scheduled_at', startOfMonth)
           .lte('scheduled_at', endOfMonth),
-        supabase
+        api
           .from('appointments')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
           .eq('telemedicine', true)
           .gte('scheduled_at', startOfMonth)
           .lte('scheduled_at', endOfMonth),
-        supabase
+        api
           .from('automations')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
           .eq('is_active', true),
-        supabase
+        api
           .from('custom_reports')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId),

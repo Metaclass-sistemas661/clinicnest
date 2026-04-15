@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2, Plus, Replace, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ export function VoiceFieldButton({ onTranscript, currentValue, className, title 
         new Uint8Array(arrayBuffer).reduce((s, b) => s + String.fromCharCode(b), "")
       );
       const ext = audioBlob.type.split("/")[1]?.split(";")[0] || "webm";
-      const { data, error } = await supabase.functions.invoke("ai-transcribe", {
+      const { data, error } = await api.functions.invoke("ai-transcribe", {
         body: {
           action: "transcribe",
           audio_base64: base64,

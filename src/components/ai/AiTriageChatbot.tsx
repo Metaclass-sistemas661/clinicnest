@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
 
   const triageMutation = useMutation({
     mutationFn: async (msgs: Message[]) => {
-      const { data, error } = await supabase.functions.invoke("ai-triage", {
+      const { data, error } = await api.functions.invoke("ai-triage", {
         body: { messages: msgs },
       });
       if (error) throw error;

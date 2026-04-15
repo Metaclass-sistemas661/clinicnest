@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import { logger } from "@/lib/logger";
@@ -86,7 +86,7 @@ export default function ContratosTermos() {
     if (!profile?.tenant_id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("patient_consents")
         .select("*, patient:patients(name), consent_templates(title, slug)")
         .eq("tenant_id", profile.tenant_id)
@@ -126,7 +126,7 @@ export default function ContratosTermos() {
       return;
     }
     const loadPhoto = async () => {
-      const { data } = await supabase.storage
+      const { data } = await api.storage
         .from("consent-photos")
         .createSignedUrl(viewConsent.facial_photo_path!, 300);
       setViewPhotoUrl(data?.signedUrl ?? null);

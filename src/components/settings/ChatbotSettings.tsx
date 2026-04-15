@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
@@ -75,7 +75,7 @@ export default function ChatbotSettings() {
     if (!tenant?.id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("chatbot_settings" as any)
         .select("*")
         .eq("tenant_id", tenant.id)
@@ -125,13 +125,13 @@ export default function ChatbotSettings() {
       };
 
       if (form.id) {
-        const { error } = await supabase
+        const { error } = await api
           .from("chatbot_settings" as any)
           .update(payload)
           .eq("id", form.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await api
           .from("chatbot_settings" as any)
           .insert(payload);
         if (error) throw error;

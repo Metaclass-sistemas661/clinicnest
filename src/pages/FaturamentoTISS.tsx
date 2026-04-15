@@ -52,7 +52,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { logger } from "@/lib/logger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -252,7 +252,7 @@ export default function FaturamentoTISS() {
   const fetchPlans = async () => {
     if (!profile?.tenant_id) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("insurance_plans")
         .select("id, name, ans_code, tiss_version")
         .eq("tenant_id", profile.tenant_id)
@@ -271,7 +271,7 @@ export default function FaturamentoTISS() {
     setIsLoadingEligible(true);
     setSelected(new Set());
     try {
-      let q = supabase
+      let q = api
         .from("appointments")
         .select(`
           id, scheduled_at, status, cid_code, insurance_authorization, insurance_plan_id,
@@ -295,7 +295,7 @@ export default function FaturamentoTISS() {
 
       // Verificar quais já foram faturados
       const apptIds = ((data ?? []) as AppointmentRaw[]).map((r) => r.id);
-      const { data: billed } = await supabase
+      const { data: billed } = await api
         .from("tiss_guides")
         .select("appointment_id")
         .eq("tenant_id", profile.tenant_id)
@@ -336,7 +336,7 @@ export default function FaturamentoTISS() {
     if (!profile?.tenant_id) return;
     setIsGenerating(true);
     try {
-      const tenant = (await supabase.from("tenants").select("*").eq("id", profile.tenant_id).single()).data;
+      const tenant = (await api.from("tenants").select("*").eq("id", profile.tenant_id).single()).data;
       if (!tenant) throw new Error("Tenant não encontrado");
 
       const toGenerate = eligible.filter((a) => selected.has(a.id));
@@ -494,7 +494,7 @@ export default function FaturamentoTISS() {
         xmlFiles.push({ name: `guia_${guideType}_${guideNum}.xml`, content: xml });
       });
 
-      const { error } = await supabase.from("tiss_guides").insert(guideRecords);
+      const { error } = await api.from("tiss_guides").insert(guideRecords);
       if (error) throw error;
 
       xmlFiles.forEach((f) => downloadTissXml(f.content, f.name));
@@ -516,7 +516,7 @@ export default function FaturamentoTISS() {
     if (!profile?.tenant_id) return;
     setIsLoadingGuides(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("tiss_guides")
         .select("*, insurance_plans(name), appointments(patient:patients(name))")
         .eq("tenant_id", profile.tenant_id)
@@ -552,7 +552,7 @@ export default function FaturamentoTISS() {
     try {
       const patch: Record<string, string> = { status };
       if (status === "submitted") patch.submitted_at = new Date().toISOString();
-      const { error } = await supabase
+      const { error } = await api
         .from("tiss_guides")
         .update(patch)
         .eq("id", id)
@@ -610,7 +610,7 @@ export default function FaturamentoTISS() {
         if (guia.valorGlosado != null) updates.glosa_value = guia.valorGlosado;
         if (guia.valorLiberado != null) updates.released_value = guia.valorLiberado;
 
-        const { error } = await supabase
+        const { error } = await api
           .from("tiss_guides")
           .update(updates)
           .eq("tenant_id", profile.tenant_id)
@@ -634,7 +634,7 @@ export default function FaturamentoTISS() {
     if (!profile?.tenant_id) return;
     setIsLoadingAppeals(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await api
         .from("tiss_glosa_appeals")
         .select("*, tiss_guides(guide_number, insurance_plans(name), appointments(patient:patients(name)))")
         .eq("tenant_id", profile.tenant_id)
@@ -677,7 +677,7 @@ export default function FaturamentoTISS() {
     setIsSavingAppeal(true);
     try {
       const appealNum = `RG${Date.now().toString(36).toUpperCase()}`;
-      const { error } = await supabase.from("tiss_glosa_appeals").insert({
+      const { error } = await api.from("tiss_glosa_appeals").insert({
         tenant_id: profile.tenant_id,
         tiss_guide_id: appealGuide.id,
         appeal_number: appealNum,
@@ -704,7 +704,7 @@ export default function FaturamentoTISS() {
       if (status === "accepted" || status === "denied" || status === "partial") {
         patch.resolved_at = new Date().toISOString();
       }
-      const { error } = await supabase
+      const { error } = await api
         .from("tiss_glosa_appeals")
         .update(patch)
         .eq("id", id)

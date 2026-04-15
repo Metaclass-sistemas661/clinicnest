@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/gcp/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
@@ -53,7 +53,7 @@ export function SmartConfirmationSettings() {
     if (!tenantId) return;
     setIsLoading(true);
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (api as any)
         .from("tenants")
         .select(
           "smart_confirmation_enabled, smart_confirmation_4h_channel, smart_confirmation_1h_channel, smart_confirmation_autorelease_minutes, pre_consultation_enabled"
@@ -86,7 +86,7 @@ export function SmartConfirmationSettings() {
     if (!tenantId) return;
     setIsSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await (api as any)
         .from("tenants")
         .update({
           smart_confirmation_enabled: settings.smart_confirmation_enabled,
