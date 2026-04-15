@@ -41,22 +41,22 @@ describe('CORS Security', () => {
     return app;
   }
 
-  it('allows requests from clinicnest.com.br', async () => {
+  it('allows requests from clinicnest.metaclass.com.br', async () => {
     const app = createCorsApp();
     const res = await request(app)
       .get('/test')
-      .set('Origin', 'https://clinicnest.com.br');
+      .set('Origin', 'https://clinicnest.metaclass.com.br');
     expect(res.status).toBe(200);
-    expect(res.headers['access-control-allow-origin']).toBe('https://clinicnest.com.br');
+    expect(res.headers['access-control-allow-origin']).toBe('https://clinicnest.metaclass.com.br');
   });
 
-  it('allows requests from app.clinicnest.com.br', async () => {
+  it('allows requests from clinicnest-app.web.app', async () => {
     const app = createCorsApp();
     const res = await request(app)
       .get('/test')
-      .set('Origin', 'https://app.clinicnest.com.br');
+      .set('Origin', 'https://clinicnest-app.web.app');
     expect(res.status).toBe(200);
-    expect(res.headers['access-control-allow-origin']).toBe('https://app.clinicnest.com.br');
+    expect(res.headers['access-control-allow-origin']).toBe('https://clinicnest-app.web.app');
   });
 
   it('blocks request from evil-domain.com', async () => {
@@ -72,7 +72,7 @@ describe('CORS Security', () => {
     const app = createCorsApp();
     const res = await request(app)
       .get('/test')
-      .set('Origin', 'https://evil.clinicnest.com.br.attacker.com');
+      .set('Origin', 'https://evil.metaclass.com.br.attacker.com');
     expect(res.status).toBe(403);
   });
 
@@ -80,7 +80,7 @@ describe('CORS Security', () => {
     const app = createCorsApp();
     const res = await request(app)
       .options('/test')
-      .set('Origin', 'https://clinicnest.com.br');
+      .set('Origin', 'https://clinicnest.metaclass.com.br');
     expect(res.status).toBe(204);
     expect(res.headers['access-control-allow-methods']).toContain('POST');
   });
