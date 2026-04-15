@@ -238,6 +238,7 @@ describe('Path Traversal Prevention', () => {
   ];
 
   for (const path of traversalPayloads) {
+    // eslint-disable-next-line no-control-regex
     const sanitized = path.replace(new RegExp('[\\u0000-\\u001f]', 'g'), '?');
     it(`blocks path "${sanitized}"`, async () => {
       const app = createAuthApp(user);

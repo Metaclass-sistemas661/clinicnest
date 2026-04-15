@@ -406,6 +406,7 @@ export async function storageProxy(req: Request, res: Response) {
 
   // Path traversal protection
   const normalizedPath = rawPath.replace(/\\/g, '/');
+  // eslint-disable-next-line no-control-regex
   const controlCharRegex = new RegExp('[\\u0000-\\u001f]');
   if (normalizedPath.includes('..') || normalizedPath.startsWith('/') || controlCharRegex.test(normalizedPath)) {
     return res.status(400).json({ error: 'Invalid file path' });
