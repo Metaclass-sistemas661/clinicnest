@@ -127,7 +127,8 @@ export async function chatCompletion(
     body.systemInstruction = { parts: [{ text: options.systemInstruction }] };
   }
   if (options?.tools) {
-    body.tools = options.tools;
+    const declarations = options.tools.flat();
+    body.tools = [{ functionDeclarations: declarations }];
   }
 
   const res = await fetch(url, {
