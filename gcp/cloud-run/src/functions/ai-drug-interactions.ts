@@ -128,14 +128,14 @@ export async function aiDrugInteractions(req: Request, res: Response) {
         const body: DrugCheckRequest = req.body;
 
         if (!body.prescribed_medications?.length) {
-          return new Response(JSON.stringify({
+          return res.json({
             interactions: [],
             allergy_alerts: [],
             contraindications: [],
             dose_alerts: [],
             safe_count: 0,
             checked_pairs: 0,
-          }), {});
+          });
         }
 
         const parts: string[] = [];
@@ -172,7 +172,7 @@ export async function aiDrugInteractions(req: Request, res: Response) {
           medications: body.prescribed_medications.length,
         }).catch(() => {});
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });

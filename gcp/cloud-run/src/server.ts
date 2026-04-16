@@ -4,6 +4,7 @@ import compression from 'compression';
 import * as Sentry from '@sentry/node';
 import { corsMiddleware } from './shared/cors';
 import { authMiddleware } from './shared/auth';
+import { subscriptionMiddleware } from './shared/subscriptionMiddleware';
 import { dbMiddleware, adminQuery, pool } from './shared/db';
 import { errorHandler } from './shared/errorHandler';
 import { setCorrelationId } from './shared/logging';
@@ -231,6 +232,7 @@ app.post('/api/internal/waitlist-auto-book', waitlistAutoBook);
 // Authenticated endpoints (JWT required)
 app.use('/api', authMiddleware);
 app.use('/api', dbMiddleware);
+app.use('/api', subscriptionMiddleware);
 
 // AI endpoints
 app.post('/api/ai-agent-chat', aiAgentChat);

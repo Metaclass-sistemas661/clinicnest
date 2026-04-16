@@ -183,7 +183,7 @@ export async function aiCancelPrediction(req: Request, res: Response) {
           parsed = { probability: 0, risk_level: "baixo", risk_factors: [], preventive_actions: [], raw: result.text };
         }
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });

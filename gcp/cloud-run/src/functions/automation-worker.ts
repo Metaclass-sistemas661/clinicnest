@@ -1094,9 +1094,7 @@ export async function automationWorker(req: Request, res: Response) {
         (req.headers['x-worker-key'] as string)?.trim() ||
         "";
       if (!provided || provided !== workerKey) {
-        return new Response(JSON.stringify({ error: "Não autorizado (x-automation-worker-key)" }), {
-          status: 401,
-        });
+        return res.status(401).json({ error: "Não autorizado (x-automation-worker-key)" });
       }
       const sinceMinutes = Math.max(1, Number(new URL(req.url).searchParams.get("since_minutes") ?? 10));
 

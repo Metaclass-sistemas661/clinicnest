@@ -224,18 +224,14 @@ export async function aiPatientChat(req: Request, res: Response) {
           }
         }
 
-        return new Response(
-          JSON.stringify({
+        return res.json({
             conversation_id: conversationId,
             message: "Desculpe, não consegui processar sua mensagem completamente. Tente reformular.",
             tools_used: toolsUsed,
-          }),
-          { headers: { ...{}, "Content-Type": "application/json" } });
+          });
       } catch (error: any) {
         console.error("[ai-patient-chat] Error:", error);
-        return new Response(
-          JSON.stringify({ error: (error as Error).message || "Erro interno do servidor." }),
-          { status: 500, headers: { ...{}, "Content-Type": "application/json" } });
+        return res.status(500).json({ error: (error as Error).message || "Erro interno do servidor." });
       }
   } catch (err: any) {
     console.error(`[ai-patient-chat] Error:`, err.message || err);

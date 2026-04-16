@@ -125,7 +125,7 @@ export async function aiExplainPatient(req: Request, res: Response) {
 
         await logAiUsage(profile.tenant_id, user.id, "explain_patient", { context }).catch(() => {});
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });

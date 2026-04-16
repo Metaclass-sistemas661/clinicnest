@@ -220,7 +220,7 @@ export async function aiRevenueIntelligence(req: Request, res: Response) {
 
         await logAiUsage(tenantId, user.id, "weekly_summary");
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         return res.status(500).json({ error: err instanceof Error ? err.message : "Internal error" });
       }

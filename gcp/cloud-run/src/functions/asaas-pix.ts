@@ -146,7 +146,7 @@ export async function asaasPix(req: Request, res: Response) {
           log("Fetching PIX QR code...");
           const qrcode = await asaasRequest(`/payments/${charge.id}/pixQrCode`, "GET", apiKey);
 
-          return new Response(JSON.stringify({
+          return res.json({
             success: true,
             charge_id: charge.id,
             invoice_url: charge.invoiceUrl ?? null,
@@ -154,7 +154,7 @@ export async function asaasPix(req: Request, res: Response) {
             pix_copy_paste: qrcode.payload ?? null,
             expiration_date: qrcode.expirationDate ?? null,
             status: charge.status,
-          }), {});
+          });
         }
 
         if (body.action === "get_qrcode") {
@@ -168,14 +168,14 @@ export async function asaasPix(req: Request, res: Response) {
             asaasRequest(`/payments/${charge_id}/pixQrCode`, "GET", apiKey),
           ]);
 
-          return new Response(JSON.stringify({
+          return res.json({
             success: true,
             charge_id,
             status: charge.status,
             pix_encoded_image: qrcode.encodedImage ?? null,
             pix_copy_paste: qrcode.payload ?? null,
             expiration_date: qrcode.expirationDate ?? null,
-          }), {});
+          });
         }
 
         if (body.action === "cancel_charge") {
@@ -185,7 +185,7 @@ export async function asaasPix(req: Request, res: Response) {
           }
 
           await asaasRequest(`/payments/${charge_id}`, "DELETE", apiKey);
-          return new Response(JSON.stringify({ success: true, charge_id }), {});
+          return res.json({ success: true, charge_id });
         }
 
         return res.status(400).json({ error: "action inválida" });

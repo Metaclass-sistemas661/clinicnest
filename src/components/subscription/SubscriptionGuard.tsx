@@ -7,7 +7,7 @@ interface SubscriptionGuardProps {
   children: ReactNode;
 }
 
-const ALLOWED_PATHS_WHEN_EXPIRED = ["/assinatura", "/perfil", "/logout"];
+const ALLOWED_PATHS_WHEN_EXPIRED = ["/assinatura", "/minhas-configuracoes", "/logout"];
 
 export function SubscriptionGuard({ children }: SubscriptionGuardProps) {
   const { has_access, trial_expired, isLoading } = useSubscription();

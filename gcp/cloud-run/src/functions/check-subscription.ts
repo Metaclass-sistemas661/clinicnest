@@ -34,13 +34,11 @@ export async function checkSubscription(req: Request, res: Response) {
 
         if (!profileData?.tenant_id) {
           logStep("No tenant found for user");
-          return new Response(JSON.stringify({
+          return res.json({
             subscribed: false,
             trialing: false,
             trial_expired: false,
-            days_remaining: 0
-          }), {
-            status: 200,
+            days_remaining: 0,
           });
         }
 
@@ -76,7 +74,7 @@ export async function checkSubscription(req: Request, res: Response) {
           hasAccess,
         });
 
-        return new Response(JSON.stringify({
+        return res.json({
           subscribed,
           trialing: isTrialing && !trialExpired,
           trial_expired: isTrialing && trialExpired,
@@ -84,15 +82,11 @@ export async function checkSubscription(req: Request, res: Response) {
           plan: subscriptionData?.plan ?? null,
           subscription_end: periodEnd?.toISOString() ?? null,
           has_access: hasAccess,
-        }), {
-          status: 200,
         });
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logStep("ERROR", { message: errorMessage });
-        return new Response(JSON.stringify({ error: errorMessage }), {
-          status: 500,
-        });
+        return res.status(500).json({ error: errorMessage });
       }
   } catch (err: any) {
     console.error(`[check-subscription] Error:`, err.message || err);

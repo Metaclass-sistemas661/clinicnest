@@ -170,13 +170,13 @@ export async function aiCopilot(req: Request, res: Response) {
         }
 
         if (parts.length < 1) {
-          return new Response(JSON.stringify({
+          return res.json({
             cid_suggestions: [],
             medication_suggestions: [],
             exam_suggestions: [],
             alerts: [],
             conduct_suggestions: [],
-          }), {});
+          });
         }
 
         // ── Grounding: Fetch internal DB data for validation ──
@@ -251,7 +251,7 @@ export async function aiCopilot(req: Request, res: Response) {
 
         await logAiUsage(user.id, profile.tenant_id, "copilot", { inputTokens: aiResult.usage?.promptTokens, outputTokens: aiResult.usage?.completionTokens }).catch(() => {});
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });

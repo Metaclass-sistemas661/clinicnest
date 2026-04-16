@@ -151,13 +151,13 @@ export function useSubscription() {
         has_access: hasAccess,
         error: null,
       });
-    } catch {
+    } catch (err: any) {
       hasLoadedOnce.current = true;
       setStatus(prev => ({
         ...prev,
         isLoading: false,
-        has_access: true,
-        error: null,
+        has_access: false,
+        error: 'Falha ao verificar assinatura.',
       }));
     }
   }, [session?.access_token, user]);

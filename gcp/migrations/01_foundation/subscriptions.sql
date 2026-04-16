@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   status TEXT DEFAULT 'trialing' NOT NULL,
   plan TEXT,
   trial_start TIMESTAMPTZ DEFAULT now() NOT NULL,
-  trial_end TIMESTAMPTZ DEFAULT (now() + '5 days'::interval) NOT NULL,
+  trial_end TIMESTAMPTZ DEFAULT (now() + '7 days'::interval) NOT NULL,
   current_period_start TIMESTAMPTZ,
   current_period_end TIMESTAMPTZ,
   team_limit INTEGER DEFAULT 1,

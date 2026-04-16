@@ -78,8 +78,8 @@ export function useClinicSubscriptionStatus() {
 
       setClinicHasAccess(hasAccess);
     } catch {
-      // Em caso de erro, permitir acesso para não bloquear pacientes indevidamente
-      setClinicHasAccess(true);
+      // Fail-closed: erro na verificação bloqueia acesso (segurança)
+      setClinicHasAccess(false);
     } finally {
       setIsLoading(false);
     }

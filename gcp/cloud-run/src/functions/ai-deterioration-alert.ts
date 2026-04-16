@@ -118,15 +118,12 @@ export async function aiDeteriorationAlert(req: Request, res: Response) {
           .limit(5);
 
         if (!records || records.length < 2) {
-          return new Response(
-            JSON.stringify({
+          return res.json({
               risk_level: "low",
               alerts: [],
               summary: "Dados insuficientes para análise de deterioração. Necessário ao menos 2 prontuários.",
               trend: "stable",
-            }),
-            { headers: { ...{}, "Content-Type": "application/json" } }
-          );
+            });
         }
 
         // Build prompt
@@ -174,7 +171,7 @@ export async function aiDeteriorationAlert(req: Request, res: Response) {
 
         await logAiUsage(user.id, profile.tenant_id, "ai-deterioration-alert");
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         console.error("ai-deterioration-alert error:", err);
         return res.status(500).json({ error: "Erro interno ao analisar deterioração" });

@@ -18,16 +18,12 @@ export async function cancelSubscription(req: Request, res: Response) {
         logStep("Function started");
 
         if (!user?.id || !user.email) {
-          return new Response(JSON.stringify({ error: "Usuário não autenticado" }), {
-            status: 403,
-          });
+          return res.status(403).json({ error: "Usuário não autenticado" });
         }
 
         const rl = await checkRateLimit(`cancel-sub:${user.id}`, 5, 60);
         if (!rl.allowed) {
-          return new Response(JSON.stringify({ error: "Muitas requisições" }), {
-            status: 429,
-          });
+          return res.status(429).json({ error: "Muitas requisições" });
         }
 
         // DB accessed via shared/db module
@@ -38,16 +34,12 @@ export async function cancelSubscription(req: Request, res: Response) {
 
         if (profileError) {
           logStep("ERROR", { message: profileError.message });
-          return new Response(JSON.stringify({ error: "Erro ao buscar tenant" }), {
-            status: 500,
-          });
+          return res.status(500).json({ error: "Erro ao buscar tenant" });
         }
 
         const tenantId = profileData?.tenant_id;
         if (!tenantId) {
-          return new Response(JSON.stringify({ error: "Tenant não encontrado" }), {
-            status: 403,
-          });
+          return res.status(403).json({ error: "Tenant não encontrado" });
         }
 
         const { data: subscriptionData, error: subscriptionError } = await db.from("subscriptions")
@@ -57,28 +49,20 @@ export async function cancelSubscription(req: Request, res: Response) {
 
         if (subscriptionError) {
           logStep("ERROR", { message: subscriptionError.message });
-          return new Response(JSON.stringify({ error: "Erro ao buscar assinatura" }), {
-            status: 500,
-          });
+          return res.status(500).json({ error: "Erro ao buscar assinatura" });
         }
 
         if (!subscriptionData?.id) {
-          return new Response(JSON.stringify({ error: "Assinatura não encontrada" }), {
-            status: 404,
-          });
+          return res.status(404).json({ error: "Assinatura não encontrada" });
         }
 
         if (!subscriptionData.asaas_subscription_id) {
-          return new Response(
-            JSON.stringify({ error: "Assinatura Asaas não vinculada neste tenant" }),
-            { headers: { "Content-Type": "application/json" }, status: 400 });
+          return res.status(400).json({ error: "Assinatura Asaas não vinculada neste tenant" });
         }
 
         const asaasApiKey = process.env.ASAAS_API_KEY;
         if (!asaasApiKey) {
-          return new Response(JSON.stringify({ error: "ASAAS_API_KEY não configurada" }), {
-            status: 500,
-          });
+          return res.status(500).json({ error: "ASAAS_API_KEY não configurada" });
         }
 
         const apiBase = process.env.ASAAS_API_BASE_URL || "https://api.asaas.com";
@@ -93,9 +77,7 @@ export async function cancelSubscription(req: Request, res: Response) {
         const asaasText = await asaasResp.text();
         if (!asaasResp.ok) {
           logStep("ERROR: Asaas cancel failed", { status: asaasResp.status, body: asaasText.slice(0, 500) });
-          return new Response(
-            JSON.stringify({ error: `Erro ao cancelar no Asaas (${asaasResp.status})` }),
-            { headers: { "Content-Type": "application/json" }, status: 500 });
+          return res.status(500).json({ error: `Erro ao cancelar no Asaas (${asaasResp.status})` });
         }
 
         await db.from("subscriptions")
@@ -107,15 +89,11 @@ export async function cancelSubscription(req: Request, res: Response) {
 
         logStep("Subscription inactivated", { tenantId, asaasSubscriptionId: subscriptionData.asaas_subscription_id });
 
-        return new Response(JSON.stringify({ ok: true }), {
-          status: 200,
-        });
+        return res.json({ ok: true });
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logStep("ERROR", { message: errorMessage });
-        return new Response(JSON.stringify({ error: errorMessage }), {
-          status: 500,
-        });
+        return res.status(500).json({ error: errorMessage });
       }
   } catch (err: any) {
     console.error(`[cancel-subscription] Error:`, err.message || err);

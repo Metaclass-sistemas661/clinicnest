@@ -259,10 +259,7 @@ export async function rndsSubmit(req: Request, res: Response) {
         }
 
         if (!submissions || submissions.length === 0) {
-          return new Response(
-            JSON.stringify({ message: 'Nenhuma submissão pendente', processed: 0 }),
-            { headers: { ...{}, 'Content-Type': 'application/json' } }
-          );
+          return res.json({ message: 'Nenhuma submissão pendente', processed: 0 });
         }
 
         const results = {
@@ -322,13 +319,10 @@ export async function rndsSubmit(req: Request, res: Response) {
           }
         }
 
-        return new Response(
-          JSON.stringify({
+        return res.json({
             message: 'Processamento concluído',
             ...results,
-          }),
-          { headers: { ...{}, 'Content-Type': 'application/json' } }
-        );
+          });
       } catch (error: any) {
         console.error('Erro no rnds-submit:', error);
 

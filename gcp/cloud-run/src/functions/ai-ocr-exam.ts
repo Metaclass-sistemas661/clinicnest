@@ -228,7 +228,7 @@ export async function aiOcrExam(req: Request, res: Response) {
             results = { raw_text: rawText, error: "Não foi possível estruturar os dados" };
           }
 
-          return new Response(JSON.stringify({ results }), {});
+          return res.json({ results });
         } finally {
           clearTimeout(timer);
         }

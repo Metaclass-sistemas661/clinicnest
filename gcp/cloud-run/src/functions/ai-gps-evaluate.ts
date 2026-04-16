@@ -186,7 +186,7 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
         parts.push(`Etapas pendentes: ${emptySteps.join(", ") || "nenhuma"}`);
 
         if (filledSteps.length === 0) {
-          return new Response(JSON.stringify({
+          return res.json({
             etapa_atual: 0,
             etapa_atual_label: "Início",
             completude_etapa: 0,
@@ -198,7 +198,7 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
             confidence_score: 100,
             alertas: [],
             progresso_geral: 0,
-          }), {});
+          });
         }
 
         const prompt = `Analise o prontuário abaixo e sugira o próximo passo clínico com justificativa robusta:\n\n${parts.join("\n")}`;
@@ -247,7 +247,7 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
 
         await logAiUsage(user.id, profile.tenant_id, "copilot", { inputTokens: result?.usage?.promptTokens, outputTokens: result?.usage?.completionTokens }).catch(() => {});
 
-        return new Response(JSON.stringify(parsed), {});
+        return res.json(parsed);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });
