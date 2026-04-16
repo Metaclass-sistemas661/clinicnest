@@ -46,7 +46,7 @@ describe('REST Proxy', () => {
         .post('/api/rest')
         .send({ operation: 'select' });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('Missing');
+      expect(res.body.error).toContain('tabela ou operação não informada');
     });
 
     it('rejects missing operation', async () => {
@@ -63,7 +63,7 @@ describe('REST Proxy', () => {
         .post('/api/rest')
         .send({ table: 'pg_shadow', operation: 'select' });
       expect(res.status).toBe(403);
-      expect(res.body.error).toContain('not accessible');
+      expect(res.body.error).toContain('não está disponível');
     });
 
     it('rejects SQL injection in table name', async () => {
@@ -204,7 +204,7 @@ describe('REST Proxy', () => {
         .post('/api/rest')
         .send({ table: 'patients', operation: 'update', data: { name: 'X' } });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('filter');
+      expect(res.body.error).toContain('filtro');
     });
 
     it('updates with filters', async () => {
@@ -235,7 +235,7 @@ describe('REST Proxy', () => {
           onConflict: '"; DROP TABLE--',
         });
       expect(res.status).toBe(400);
-      expect(res.body.error).toContain('Invalid onConflict');
+      expect(res.body.error).toContain('onConflict');
     });
 
     it('accepts multi-column onConflict', async () => {
@@ -306,7 +306,7 @@ describe('REST Proxy', () => {
         .post('/api/rest')
         .send({ table: 'patients', operation: 'select' });
       expect(res.status).toBe(500);
-      expect(res.body.error).toContain('constraint violation');
+      expect(res.body.error).toContain('Registro duplicado');
       expect(res.body.error).not.toContain('unique_violation'); // no internal detail leak
     });
 
@@ -328,7 +328,7 @@ describe('REST Proxy', () => {
         .post('/api/rest')
         .send({ table: 'patients', operation: 'select', columns: 'nonexistent' });
       expect(res.status).toBe(500);
-      expect(res.body.error).toContain('Invalid query');
+      expect(res.body.error).toContain('Campo solicitado não existe');
       expect(res.body.error).not.toContain('does not exist');
     });
   });
@@ -433,7 +433,7 @@ describe('Storage Proxy', () => {
       .post('/api/storage/avatars')
       .send({ operation: 'download', path: '../../../etc/passwd' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid file path');
+    expect(res.body.error).toContain('Caminho de arquivo inválido');
   });
 
   it('blocks path starting with /', async () => {
@@ -458,7 +458,7 @@ describe('Storage Proxy', () => {
       .post('/api/storage/DROP TABLE')
       .send({ operation: 'download', path: 'test.jpg' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('Invalid bucket name');
+    expect(res.body.error).toContain('bucket inválido');
   });
 
   it('rejects non-string path', async () => {

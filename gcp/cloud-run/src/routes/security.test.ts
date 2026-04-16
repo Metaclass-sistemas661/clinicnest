@@ -361,7 +361,7 @@ describe('Error Sanitization', () => {
     expect(res.body.error).not.toContain('cpf');
     expect(res.body.error).not.toContain('12345678901');
     expect(res.body.error).not.toContain('patients_cpf_key');
-    expect(res.body.error).toContain('constraint violation');
+    expect(res.body.error).toContain('Registro duplicado');
   });
 
   it('never leaks PostgreSQL error details (42xxx syntax)', async () => {
@@ -385,7 +385,7 @@ describe('Error Sanitization', () => {
     const res = await request(app).post('/api/rest').send({ table: 'patients', operation: 'select' });
     expect(res.status).toBe(500);
     expect(res.body.error).not.toContain('secret_table');
-    expect(res.body.error).toContain('Invalid query');
+    expect(res.body.error).toContain('não encontrado no sistema');
   });
 
   it('production error handler does not leak stack traces', async () => {
