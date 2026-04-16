@@ -41,12 +41,18 @@ export async function userQuery(
 ) {
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
     await client.query("SELECT set_config('app.current_user_id', $1, true)", [userId]);
     await client.query("SELECT set_config('app.jwt_claims', $1, true)", [
       JSON.stringify({ sub: userId, tenant_id: tenantId, role })
     ]);
     await client.query("SELECT set_config('app.user_role', $1, true)", [role]);
-    return await client.query(text, params);
+    const result = await client.query(text, params);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
   } finally {
     client.release();
   }
