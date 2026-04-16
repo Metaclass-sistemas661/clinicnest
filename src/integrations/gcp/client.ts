@@ -131,6 +131,22 @@ async function apiPost<T = any>(path: string, body: any, requireAuth = true): Pr
           continue;
         }
 
+        // Subscription expired → redirect to subscription page
+        if (res.status === 402) {
+          const code = json?.code || 'SUBSCRIPTION_EXPIRED';
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/assinatura')) {
+            window.location.href = '/assinatura';
+          }
+          return {
+            data: null,
+            error: {
+              message: json?.error || 'Assinatura expirada.',
+              code,
+              details: json,
+            },
+          };
+        }
+
         // Retryable server errors
         if (isRetryableStatus(res.status) && attempt < MAX_RETRIES) {
           lastError = { message: json?.error || `HTTP ${res.status}`, code: String(res.status) };

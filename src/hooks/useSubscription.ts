@@ -139,7 +139,7 @@ export function useSubscription() {
       const periodNotExpired = periodEnd ? now <= periodEnd : false;
       const isInactive = sub?.status === 'inactive';
       const subscribed = Boolean(periodNotExpired && (isActive || isInactive) && sub?.plan);
-      const hasAccess = !sub || subscribed || (isTrialing && !trialExpired);
+      const hasAccess = subscribed || (isTrialing && !trialExpired);
 
       applyResult({
         subscribed,

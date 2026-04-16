@@ -4,15 +4,15 @@
  * After authMiddleware loads the user, this middleware checks the tenant's
  * subscription status. If expired, returns 402 Payment Required.
  * 
- * Exempt paths (always allowed even if expired):
- *  - check-subscription  (needed to display subscription page)
- *  - create-checkout      (needed to purchase)
- *  - cancel-subscription  (needed to manage)
- *  - update-password      (security – always allowed)
+ * Enterprise features:
+ *  - In-memory cache with 60s TTL (avoids DB hit per request)
+ *  - Fail-closed: DB errors block access (503)
+ *  - Exempt paths for subscription management & patient portal
  */
 import { Request, Response, NextFunction } from 'express';
 import { adminQuery } from './db';
 
+/** Paths always allowed even when subscription expired */
 const EXEMPT_PATHS = new Set([
   '/api/check-subscription',
   '/api/create-checkout',
@@ -20,11 +20,42 @@ const EXEMPT_PATHS = new Set([
   '/api/update-password',
 ]);
 
+/** Path prefixes exempt (patient-facing endpoints have their own frontend guard) */
+const EXEMPT_PREFIXES = [
+  '/api/activate-patient-account',
+  '/api/ai-patient-chat',
+];
+
 interface SubRow {
   status: string;
   trial_end: string | null;
   current_period_end: string | null;
   plan: string | null;
+}
+
+// ─── In-memory cache (TTL 60s) ──────────────────────────────────────
+const CACHE_TTL_MS = 60_000;
+const cache = new Map<string, { access: boolean; expiresAt: number }>();
+
+function getCached(tenantId: string): boolean | null {
+  const entry = cache.get(tenantId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(tenantId);
+    return null;
+  }
+  return entry.access;
+}
+
+function setCache(tenantId: string, access: boolean): void {
+  cache.set(tenantId, { access, expiresAt: Date.now() + CACHE_TTL_MS });
+  // Evict stale entries periodically (keep cache bounded)
+  if (cache.size > 10_000) {
+    const now = Date.now();
+    for (const [k, v] of cache) {
+      if (now > v.expiresAt) cache.delete(k);
+    }
+  }
 }
 
 /**
@@ -52,14 +83,30 @@ function hasActiveAccess(sub: SubRow | null): boolean {
 }
 
 export async function subscriptionMiddleware(req: Request, res: Response, next: NextFunction) {
-  // Skip exempt paths
+  // Skip exact exempt paths
   if (EXEMPT_PATHS.has(req.path)) {
+    return next();
+  }
+
+  // Skip exempt prefixes (patient-facing endpoints)
+  if (EXEMPT_PREFIXES.some(p => req.path.startsWith(p))) {
     return next();
   }
 
   const user = (req as any).user;
   if (!user?.tenant_id) {
-    // No tenant = no subscription to check (authMiddleware handles the 401)
+    return next();
+  }
+
+  // Check cache first (avoids DB hit per request)
+  const cached = getCached(user.tenant_id);
+  if (cached !== null) {
+    if (!cached) {
+      return res.status(402).json({
+        error: 'Assinatura expirada. Escolha um plano para continuar usando o sistema.',
+        code: 'SUBSCRIPTION_EXPIRED',
+      });
+    }
     return next();
   }
 
@@ -70,8 +117,11 @@ export async function subscriptionMiddleware(req: Request, res: Response, next: 
       [user.tenant_id]
     );
     const sub: SubRow | null = result.rows[0] || null;
+    const access = hasActiveAccess(sub);
 
-    if (!hasActiveAccess(sub)) {
+    setCache(user.tenant_id, access);
+
+    if (!access) {
       return res.status(402).json({
         error: 'Assinatura expirada. Escolha um plano para continuar usando o sistema.',
         code: 'SUBSCRIPTION_EXPIRED',
@@ -87,4 +137,9 @@ export async function subscriptionMiddleware(req: Request, res: Response, next: 
       code: 'SUBSCRIPTION_CHECK_FAILED',
     });
   }
+}
+
+/** Invalidate cache for a tenant (call after payment webhook updates subscription) */
+export function invalidateSubscriptionCache(tenantId: string): void {
+  cache.delete(tenantId);
 }
