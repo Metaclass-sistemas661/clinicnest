@@ -383,27 +383,51 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          target: clinicnest
+          node-version: 20
 
-      - name: Verify site is live
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Authenticate Firebase
         run: |
-          SITE_URL="https://clinicnest.metaclass.com.br"
-          for i in $(seq 1 5); do
-            HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$SITE_URL" --max-time 10 2>/dev/null || echo "000")
-            echo "Attempt $i/5: HTTP $HTTP_STATUS"
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/firebase-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
+          firebase use sistema-de-gestao-16e15
 
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ Site is live at $SITE_URL"
-              exit 0
+      - name: Deploy to all hosting sites
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
+        run: |
+          firebase deploy --only hosting --project sistema-de-gestao-16e15 --non-interactive
+          echo "✅ Deployed to clinicnest-app + sistema-de-gestao-16e15 (custom domain)"
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f /tmp/firebase-sa.json
+
+      - name: Verify sites are live
+        run: |
+          SITES=("https://clinicnest.metaclass.com.br" "https://clinicnest-app.web.app")
+
+          for SITE_URL in "${SITES[@]}"; do
+            echo ""
+            echo "🔗 Checking $SITE_URL"
+            for i in $(seq 1 5); do
+              HTTP_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "$SITE_URL" --max-time 10 2>/dev/null || echo "000")
+              echo "  Attempt $i/5: HTTP $HTTP_STATUS"
+
+              if [ "$HTTP_STATUS" = "200" ]; then
+                echo "  ✅ Live"
+                break
+              fi
+
+              [ "$i" -lt 5 ] && sleep 10
+            done
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "  ⚠️ $SITE_URL returned HTTP $HTTP_STATUS (may still be propagating)"
             fi
-
-            [ "$i" -lt 5 ] && sleep 10
           done
-
-          echo "⚠️ Site returned HTTP $HTTP_STATUS (may still be propagating)"
