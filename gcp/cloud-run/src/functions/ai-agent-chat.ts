@@ -188,8 +188,7 @@ export async function aiAgentChat(req: Request, res: Response) {
 
             logAiUsage(user.id, tenantId, "agent_chat", { inputTokens: totalInputTokens, outputTokens: totalOutputTokens }).catch(() => {});
 
-            return new Response(
-              JSON.stringify({
+            return res.json({
                 conversation_id: conversationId,
                 message: finalText,
                 tools_used: toolsUsed,
@@ -198,8 +197,7 @@ export async function aiAgentChat(req: Request, res: Response) {
                   completionTokens: totalOutputTokens,
                   rounds,
                 },
-              }),
-              { headers: { ...{}, "Content-Type": "application/json" } });
+              });
           }
 
           // --- Tool use ---
@@ -269,20 +267,16 @@ export async function aiAgentChat(req: Request, res: Response) {
         }
 
         // If we exhausted rounds, return partial
-        return new Response(
-          JSON.stringify({
+        return res.json({
             conversation_id: conversationId,
             message:
               "Desculpe, a operação foi muito complexa e excedeu o limite de etapas. Tente simplificar o pedido.",
             tools_used: toolsUsed,
             usage: { promptTokens: totalInputTokens, completionTokens: totalOutputTokens, rounds },
-          }),
-          { headers: { ...{}, "Content-Type": "application/json" } });
+          });
       } catch (error: any) {
         console.error("[ai-agent-chat] Error:", error);
-        return new Response(
-          JSON.stringify({ error: (error as Error).message || "Erro interno do servidor." }),
-          { status: 500, headers: { ...{}, "Content-Type": "application/json" } });
+        return res.status(500).json({ error: (error as Error).message || "Erro interno do servidor." });
       }
   } catch (err: any) {
     console.error(`[ai-agent-chat] Error:`, err.message || err);
