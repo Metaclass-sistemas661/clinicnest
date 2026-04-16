@@ -129,7 +129,7 @@ export async function aiAgentChat(req: Request, res: Response) {
           if (convErr || !conv) {
             return res.status(500).json({ error: "Erro ao criar conversa" });
           }
-          conversationId = conv.uid;
+          conversationId = conv.id;
         }
 
         // --- Load conversation history (last 20 messages) ---

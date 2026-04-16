@@ -108,8 +108,13 @@ class PostgrestQueryBuilder {
 
   // ── SELECT ──────────────────────────────────────────────────────────
   select(columns: string = '*'): this {
-    this._operation = 'select';
-    this._columns = columns;
+    if (['insert', 'update', 'upsert', 'delete'].includes(this._operation)) {
+      // After mutation, .select() controls RETURNING columns (Supabase compat)
+      this._returning = columns;
+    } else {
+      this._operation = 'select';
+      this._columns = columns;
+    }
     return this;
   }
 
@@ -422,14 +427,16 @@ class PostgrestQueryBuilder {
           `(${keys.map(k => nextParam(row[k])).join(', ')})`
         ).join(', ');
 
-        const sql = `INSERT INTO ${table} (${cols}) VALUES ${valueSets} RETURNING *`;
+        const returning = this._parseSelectColumns(this._returning);
+        const sql = `INSERT INTO ${table} (${cols}) VALUES ${valueSets} RETURNING ${returning}`;
         return { sql, params };
       }
 
       case 'update': {
         const keys = Object.keys(this._body);
         const setClauses = keys.map(k => `"${k}" = ${nextParam(this._body[k])}`).join(', ');
-        const sql = `UPDATE ${table} SET ${setClauses} ${whereClause} RETURNING *`;
+        const returning = this._parseSelectColumns(this._returning);
+        const sql = `UPDATE ${table} SET ${setClauses} ${whereClause} RETURNING ${returning}`;
         return { sql, params };
       }
 
@@ -447,13 +454,14 @@ class PostgrestQueryBuilder {
           .filter(k => k !== this._onConflict)
           .map(k => `"${k}" = EXCLUDED."${k}"`)
           .join(', ');
-
-        const sql = `INSERT INTO ${table} (${cols}) VALUES ${valueSets} ON CONFLICT ("${this._onConflict}") DO UPDATE SET ${updateCols} RETURNING *`;
+        const returning = this._parseSelectColumns(this._returning);
+        const sql = `INSERT INTO ${table} (${cols}) VALUES ${valueSets} ON CONFLICT ("${this._onConflict}") DO UPDATE SET ${updateCols} RETURNING ${returning}`;
         return { sql, params };
       }
 
       case 'delete': {
-        const sql = `DELETE FROM ${table} ${whereClause} RETURNING *`;
+        const returning = this._parseSelectColumns(this._returning);
+        const sql = `DELETE FROM ${table} ${whereClause} RETURNING ${returning}`;
         return { sql, params };
       }
 
