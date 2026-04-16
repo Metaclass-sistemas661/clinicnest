@@ -111,7 +111,7 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
       try {
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -122,13 +122,13 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Rate limit: navigation category (40 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-gps", "navigation");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded" });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Profile + access check
@@ -138,10 +138,10 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
           .single();
 
         if (!profile?.tenant_id) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "copilot");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -249,12 +249,12 @@ export async function aiGpsEvaluate(req: Request, res: Response) {
 
         return new Response(JSON.stringify(parsed), {});
       } catch (err: any) {
-        const message = err instanceof Error ? err.message : "Internal server error";
+        const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });
       }
   } catch (err: any) {
     console.error(`[ai-gps-evaluate] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }
 

@@ -170,7 +170,7 @@ export async function aiTriage(req: Request, res: Response) {
         // Verify authentication
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -181,13 +181,13 @@ export async function aiTriage(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Rate limiting: navigation category (40 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-triage", "navigation");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Plan gating
@@ -197,7 +197,7 @@ export async function aiTriage(req: Request, res: Response) {
           .maybeSingle();
 
         if (_profile?.tenant_id) {
-          const aiAccess = await checkAiAccess(_profile.tenant_id, user.id, "triage");
+          const aiAccess = await checkAiAccess(user.id, _profile.tenant_id, "triage");
           if (!aiAccess.allowed) {
             return res.status(403).json({ error: aiAccess.reason });
           }
@@ -207,7 +207,7 @@ export async function aiTriage(req: Request, res: Response) {
         const { messages } = body;
 
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
-          return res.status(400).json({ error: "Messages array is required" });
+          return res.status(400).json({ error: "Array de mensagens é obrigatório." });
         }
 
         // Validação de tamanho: máx 20 mensagens, máx 2000 chars por msg
@@ -281,6 +281,6 @@ export async function aiTriage(req: Request, res: Response) {
         return res.status(200).json(response);
   } catch (err: any) {
     console.error(`[ai-triage] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

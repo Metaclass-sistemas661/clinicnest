@@ -76,6 +76,6 @@ export async function executeTool(
       return result.rows;
     }
     default:
-      return { error: `Tool '${toolName}' not implemented` };
+      return { error: `Ferramenta '${toolName}' não implementada.` };
   }
 }

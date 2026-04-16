@@ -222,7 +222,7 @@ export async function aiWeeklySummary(req: Request, res: Response) {
           const token = authHeader.replace("Bearer ", "");
           const authResult = (await authAdmin.getUser(token) as any);
           if (authResult.error || !authResult.data) {
-            return res.status(401).json({ error: "Unauthorized" });
+            return res.status(401).json({ error: "Não autorizado." });
           }
           const user = authResult.data.user;
 
@@ -234,7 +234,7 @@ export async function aiWeeklySummary(req: Request, res: Response) {
             .maybeSingle();
 
           if (!role) {
-            return res.status(403).json({ error: "Admin only" });
+            return res.status(403).json({ error: "Apenas administradores podem acessar." });
           }
 
           specificTenantId = role.tenant_id;
@@ -347,11 +347,11 @@ export async function aiWeeklySummary(req: Request, res: Response) {
           });
       } catch (err: any) {
         log(`Fatal error: ${err}`);
-        return res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "Erro interno do servidor." });
       }
 
   } catch (err: any) {
     console.error(`[ai-weekly-summary] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

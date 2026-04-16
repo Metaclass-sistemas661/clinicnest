@@ -12,6 +12,14 @@ interface RateLimitResult {
 // In-memory fallback (per-process)
 const memoryStore = new Map<string, { count: number; resetAt: number }>();
 
+// Periodic cleanup of stale entries (every 2 minutes)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of memoryStore) {
+    if (entry.resetAt < now) memoryStore.delete(key);
+  }
+}, 120_000).unref();
+
 // Upstash Redis REST API rate limiter
 async function checkRedis(key: string, limit: number, windowSec: number): Promise<RateLimitResult | null> {
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;

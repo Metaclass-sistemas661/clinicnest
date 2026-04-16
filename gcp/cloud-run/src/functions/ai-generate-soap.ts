@@ -71,7 +71,7 @@ export async function aiGenerateSoap(req: Request, res: Response) {
     const authAdmin = createAuthAdmin();
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -82,14 +82,14 @@ export async function aiGenerateSoap(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Admin client for data queries (bypasses RLS after manual auth checks)
         // Rate limiting: generation category (8 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-generate-soap", "generation");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Check medical role
@@ -99,7 +99,7 @@ export async function aiGenerateSoap(req: Request, res: Response) {
           .single();
 
         if (!profile) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         const { data: userRole } = await db.from("user_roles")
@@ -112,11 +112,11 @@ export async function aiGenerateSoap(req: Request, res: Response) {
         const isAdmin = userRole?.role === "admin";
         const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
         if (!isAdmin && !hasClinicalRole) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         // Plan gating — uses "transcribe" feature since auto-SOAP is part of transcription flow
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "transcribe");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "transcribe");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -185,6 +185,6 @@ export async function aiGenerateSoap(req: Request, res: Response) {
         });
   } catch (err: any) {
     console.error(`[ai-generate-soap] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

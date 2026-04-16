@@ -28,7 +28,7 @@ export async function aiBenchmarking(req: Request, res: Response) {
       try {
         const user = (req as any).user;
         if (!user?.uid) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         const { data: profile } = await db.from("profiles")
@@ -37,7 +37,7 @@ export async function aiBenchmarking(req: Request, res: Response) {
           .single();
 
         if (!profile?.tenant_id) {
-          return res.status(400).json({ error: "No tenant" });
+          return res.status(400).json({ error: "Tenant não identificado." });
         }
 
         const tenantId = profile.tenant_id;
@@ -189,11 +189,11 @@ export async function aiBenchmarking(req: Request, res: Response) {
 
         return res.status(200).json(result);
       } catch (err: any) {
-        return res.status(500).json({ error: err instanceof Error ? err.message : "Internal error" });
+        return res.status(500).json({ error: err instanceof Error ? err.message : "Erro interno" });
       }
 
   } catch (err: any) {
     console.error(`[ai-benchmarking] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

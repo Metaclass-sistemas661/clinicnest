@@ -57,7 +57,7 @@ export async function aiDeteriorationAlert(req: Request, res: Response) {
         // Rate limit: interaction category (20 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-deterioration", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Get profile
@@ -85,7 +85,7 @@ export async function aiDeteriorationAlert(req: Request, res: Response) {
         }
 
         // Plan gating
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "copilot");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -182,6 +182,6 @@ export async function aiDeteriorationAlert(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error(`[ai-deterioration-alert] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

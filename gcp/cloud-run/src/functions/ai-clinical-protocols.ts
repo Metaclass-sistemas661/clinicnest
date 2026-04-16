@@ -74,7 +74,7 @@ export async function aiClinicalProtocols(req: Request, res: Response) {
           error: authErr,
         } = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
         if (authErr || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         const { data: profile } = await db.from("profiles")
@@ -83,7 +83,7 @@ export async function aiClinicalProtocols(req: Request, res: Response) {
           .single();
 
         if (!profile?.tenant_id) {
-          return res.status(400).json({ error: "No tenant" });
+          return res.status(400).json({ error: "Tenant não identificado." });
         }
 
         const tenantId = profile.tenant_id;
@@ -91,7 +91,7 @@ export async function aiClinicalProtocols(req: Request, res: Response) {
         // Rate limit: interaction category (20 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-protocols", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded" });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Check AI access (use drug_interactions as proxy for Solo+ tier)
@@ -109,7 +109,7 @@ export async function aiClinicalProtocols(req: Request, res: Response) {
         const currentMedications = body.current_medications ?? "";
 
         if (!cidCode) {
-          return res.status(400).json({ error: "cid_code is required" });
+          return res.status(400).json({ error: "Código CID é obrigatório." });
         }
 
         let userPrompt = `Gere o protocolo clínico para o CID-10: ${cidCode}`;
@@ -138,6 +138,6 @@ export async function aiClinicalProtocols(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error(`[ai-clinical-protocols] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

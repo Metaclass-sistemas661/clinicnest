@@ -9,6 +9,59 @@
  */
 import { adminQuery } from './db';
 
+/* ── OR-filter helpers ──────────────────────────────────────── */
+
+/** Split top-level commas respecting parentheses depth */
+function splitOrTop(s: string): string[] {
+  const result: string[] = [];
+  let depth = 0, start = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++;
+    else if (s[i] === ')') depth--;
+    else if (s[i] === ',' && depth === 0) {
+      result.push(s.slice(start, i));
+      start = i + 1;
+    }
+  }
+  result.push(s.slice(start));
+  return result;
+}
+
+/** Parse a single or-atom like "col.eq.val" or "and(col.eq.val,col.eq.val)" */
+function parseOrPart(atom: string, nextParam: (v: any) => string): string | null {
+  // Handle and(...) grouping
+  const andMatch = atom.match(/^and\((.+)\)$/);
+  if (andMatch) {
+    const inner = splitOrTop(andMatch[1]);
+    const parts = inner.map(p => parseOrPart(p.trim(), nextParam)).filter(Boolean);
+    return parts.length > 0 ? `(${parts.join(' AND ')})` : null;
+  }
+  const m = atom.match(/^(\w+)\.(eq|neq|gt|gte|lt|lte|like|ilike|is|in|not_is|not_in)\.(.+)$/);
+  if (!m) return null;
+  const [, col, op, val] = m;
+  switch (op) {
+    case 'eq': return `"${col}" = ${nextParam(val)}`;
+    case 'neq': return `"${col}" != ${nextParam(val)}`;
+    case 'gt': return `"${col}" > ${nextParam(val)}`;
+    case 'gte': return `"${col}" >= ${nextParam(val)}`;
+    case 'lt': return `"${col}" < ${nextParam(val)}`;
+    case 'lte': return `"${col}" <= ${nextParam(val)}`;
+    case 'like': return `"${col}" LIKE ${nextParam(val)}`;
+    case 'ilike': return `"${col}" ILIKE ${nextParam(val)}`;
+    case 'is': return `"${col}" IS ${val === 'null' ? 'NULL' : val}`;
+    case 'not_is': return `"${col}" IS NOT ${val === 'null' ? 'NULL' : val}`;
+    case 'in': {
+      const items = val.replace(/^\(|\)$/g, '').split(',').map((v: string) => nextParam(v.trim()));
+      return `"${col}" IN (${items.join(', ')})`;
+    }
+    case 'not_in': {
+      const items = val.replace(/^\(|\)$/g, '').split(',').map((v: string) => nextParam(v.trim()));
+      return `"${col}" NOT IN (${items.join(', ')})`;
+    }
+    default: return `"${col}" ${op} ${nextParam(val)}`;
+  }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────
 interface QueryResult<T = any> {
   data: T | null;
@@ -229,7 +282,7 @@ class PostgrestQueryBuilder {
 
       if (this._singleRow) {
         if (result.rows.length === 0) {
-          return { data: null, error: { message: 'Row not found', code: 'PGRST116' } };
+          return { data: null, error: { message: 'Nenhum registro encontrado.', code: 'PGRST116' } };
         }
         return { data: result.rows[0], error: null };
       }
@@ -324,23 +377,8 @@ class PostgrestQueryBuilder {
 
     // OR filters (PostgREST style: "col1.eq.val1,col2.eq.val2")
     for (const orFilter of this._orFilters) {
-      const parts = orFilter.split(',').map(part => {
-        const m = part.trim().match(/^(\w+)\.(eq|neq|gt|gte|lt|lte|like|ilike|is|in)\.(.+)$/);
-        if (!m) return part;
-        const [, col, op, val] = m;
-        switch (op) {
-          case 'eq': return `"${col}" = ${nextParam(val)}`;
-          case 'neq': return `"${col}" != ${nextParam(val)}`;
-          case 'gt': return `"${col}" > ${nextParam(val)}`;
-          case 'gte': return `"${col}" >= ${nextParam(val)}`;
-          case 'lt': return `"${col}" < ${nextParam(val)}`;
-          case 'lte': return `"${col}" <= ${nextParam(val)}`;
-          case 'like': return `"${col}" LIKE ${nextParam(val)}`;
-          case 'ilike': return `"${col}" ILIKE ${nextParam(val)}`;
-          case 'is': return `"${col}" IS ${val === 'null' ? 'NULL' : val}`;
-          default: return `"${col}" ${op} ${nextParam(val)}`;
-        }
-      });
+      const atoms = splitOrTop(orFilter);
+      const parts = atoms.map(part => parseOrPart(part.trim(), nextParam)).filter(Boolean);
       if (parts.length > 0) {
         whereParts.push(`(${parts.join(' OR ')})`);
       }

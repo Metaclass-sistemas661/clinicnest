@@ -46,7 +46,7 @@ export async function whatsappSender(req: Request, res: Response) {
       // DB accessed via shared/db module
 
       const auth = await await (async () => { const authAdmin = createAuthAdmin(); const token = ((req.headers['authorization'] as string) || '').replace('Bearer ', ''); const r = await authAdmin.getUser(token); return { user: r.data?.user, tenant_id: (r.data?.user as any)?.user_metadata?.tenant_id }; })();
-      if (!auth.user) return res.status(401).json({ error: 'Unauthorized' });
+      if (!auth.user) return res.status(401).json({ error: 'Não autorizado.' });
       let body: Body;
       try {
         body = req.body;

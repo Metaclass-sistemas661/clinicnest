@@ -170,7 +170,7 @@ async function apiPost<T = any>(path: string, body: any, requireAuth = true): Pr
 
 // ─── Query Builder (.from().select().eq()...) ─────
 
-type FilterOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'is' | 'contains' | 'overlaps';
+type FilterOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'is' | 'contains' | 'overlaps' | string;
 
 interface QueryFilter { column: string; op: FilterOp; value: any }
 interface QueryOrder { column: string; ascending: boolean }
@@ -188,6 +188,7 @@ class QueryBuilder<T = any> {
   private _onConflict?: string;
   private _count?: 'exact' | 'planned' | 'estimated';
   private _returning?: string;
+  private _orFilters: string[] = [];
 
   constructor(table: string) {
     this._table = table;
@@ -239,6 +240,7 @@ class QueryBuilder<T = any> {
   contains(column: string, value: any): this { this._filters.push({ column, op: 'contains', value }); return this; }
   overlaps(column: string, value: any): this { this._filters.push({ column, op: 'overlaps', value }); return this; }
   not(column: string, op: string, value: any): this { this._filters.push({ column, op: `not_${op}` as any, value }); return this; }
+  or(filterString: string): this { this._orFilters.push(filterString); return this; }
 
   // ─── Modifiers ───────────────────────────────────────────────
 
@@ -280,6 +282,7 @@ class QueryBuilder<T = any> {
       onConflict: this._onConflict,
       count: this._count,
       returning: this._returning,
+      orFilters: this._orFilters.length ? this._orFilters : undefined,
     });
   }
 }

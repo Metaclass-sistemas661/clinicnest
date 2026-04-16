@@ -3,11 +3,23 @@ const p = new Pool({ connectionString: 'postgresql://clinicnest_admin:Andre12%40
 
 (async () => {
   try {
-    const r1 = await p.query("SELECT column_name FROM information_schema.columns WHERE table_name='stock_movements' ORDER BY ordinal_position");
-    console.log('stock_movements columns:', r1.rows.map(x => x.column_name));
+    const alters = [
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS date_of_birth DATE',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS marital_status TEXT',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS street TEXT',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS street_number TEXT',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS complement TEXT',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS neighborhood TEXT',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance_plan_id UUID',
+      'ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance_card_number TEXT',
+    ];
+    for (const sql of alters) {
+      await p.query(sql);
+    }
+    console.log('All missing columns added to patients');
 
-    const r2 = await p.query("SELECT to_regclass('public.financial_transactions')");
-    console.log('financial_transactions exists:', r2.rows[0].to_regclass);
+    const r = await p.query("SELECT column_name FROM information_schema.columns WHERE table_name='patients' ORDER BY ordinal_position");
+    console.log('patients columns now:', r.rows.map(x => x.column_name));
   } finally {
     await p.end();
   }

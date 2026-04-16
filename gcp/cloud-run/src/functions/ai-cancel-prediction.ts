@@ -79,7 +79,7 @@ export async function aiCancelPrediction(req: Request, res: Response) {
       try {
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -90,12 +90,12 @@ export async function aiCancelPrediction(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         const rl = await checkAiRateLimit(user.id, "ai-cancel-prediction", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         const { data: profile } = await db.from("profiles")
@@ -104,12 +104,12 @@ export async function aiCancelPrediction(req: Request, res: Response) {
           .single();
 
         if (!profile?.tenant_id) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         const { appointment_id } = req.body;
         if (!appointment_id) {
-          return res.status(400).json({ error: "appointment_id required" });
+          return res.status(400).json({ error: "appointment_id é obrigatório." });
         }
 
         // Fetch appointment data
@@ -124,7 +124,7 @@ export async function aiCancelPrediction(req: Request, res: Response) {
           .single();
 
         if (!appt) {
-          return res.status(404).json({ error: "Appointment not found", detail: apptError?.message });
+          return res.status(404).json({ error: "Consulta não encontrada.", detail: apptError?.message });
         }
 
         // Fetch patient appointment history (last 6 months)
@@ -185,12 +185,12 @@ export async function aiCancelPrediction(req: Request, res: Response) {
 
         return new Response(JSON.stringify(parsed), {});
       } catch (err: any) {
-        const message = err instanceof Error ? err.message : "Internal server error";
+        const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });
       }
   } catch (err: any) {
     console.error(`[ai-cancel-prediction] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }
 

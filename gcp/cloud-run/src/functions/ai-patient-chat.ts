@@ -65,20 +65,20 @@ export async function aiPatientChat(req: Request, res: Response) {
         // --- Auth ---
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const _authRes = await authAdmin.getUser((authHeader || '').replace('Bearer ', ''));
         const authError = _authRes.error;
         const user = _authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // --- Rate limit: navigation category (40 req/min) ---
         const rl = await checkAiRateLimit(user.id, "ai-patient-chat", "navigation");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // --- Admin client ---
@@ -96,7 +96,7 @@ export async function aiPatientChat(req: Request, res: Response) {
         const clientId = clientRecord.uid;
 
         // Plan gating
-        const aiAccess = await checkAiAccess(tenantId, user.id, "patient_chat");
+        const aiAccess = await checkAiAccess(user.id, tenantId, "patient_chat");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -107,7 +107,7 @@ export async function aiPatientChat(req: Request, res: Response) {
         let conversationId = body.conversation_id;
 
         if (!message?.trim()) {
-          return res.status(400).json({ error: "Message is required" });
+          return res.status(400).json({ error: "Mensagem é obrigatória." });
         }
 
         if (message.length > 2000) {
@@ -234,12 +234,12 @@ export async function aiPatientChat(req: Request, res: Response) {
       } catch (error: any) {
         console.error("[ai-patient-chat] Error:", error);
         return new Response(
-          JSON.stringify({ error: (error as Error).message || "Internal server error" }),
+          JSON.stringify({ error: (error as Error).message || "Erro interno do servidor." }),
           { status: 500, headers: { ...{}, "Content-Type": "application/json" } });
       }
   } catch (err: any) {
     console.error(`[ai-patient-chat] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }
 

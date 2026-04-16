@@ -93,7 +93,7 @@ export async function aiRevenueIntelligence(req: Request, res: Response) {
           error: authErr,
         } = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
         if (authErr || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Get tenant
@@ -103,7 +103,7 @@ export async function aiRevenueIntelligence(req: Request, res: Response) {
           .single();
 
         if (!profile?.tenant_id) {
-          return res.status(400).json({ error: "No tenant" });
+          return res.status(400).json({ error: "Tenant não identificado." });
         }
 
         const tenantId = profile.tenant_id;
@@ -227,6 +227,6 @@ export async function aiRevenueIntelligence(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error(`[ai-revenue-intelligence] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

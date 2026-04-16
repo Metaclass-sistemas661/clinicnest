@@ -74,7 +74,7 @@ export async function aiSentiment(req: Request, res: Response) {
     const authAdmin = createAuthAdmin();
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -85,13 +85,13 @@ export async function aiSentiment(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Rate limiting: interaction category (20 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-sentiment", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Check admin role for sentiment analysis
@@ -101,7 +101,7 @@ export async function aiSentiment(req: Request, res: Response) {
           .single();
 
         if (!profile) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         const { data: userRole } = await db.from("user_roles")
@@ -114,11 +114,11 @@ export async function aiSentiment(req: Request, res: Response) {
         const isAdmin = userRole?.role === "admin";
         const hasSentimentRole = sentimentRoles.includes(profile.professional_type ?? "");
         if (!isAdmin && !hasSentimentRole) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         // Plan gating
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "sentiment");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "sentiment");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -127,7 +127,7 @@ export async function aiSentiment(req: Request, res: Response) {
         const { feedback, feedback_id, save_result = false } = body;
 
         if (!feedback || typeof feedback !== "string" || feedback.trim().length < 5) {
-          return res.status(400).json({ error: "Feedback must be at least 5 characters" });
+          return res.status(400).json({ error: "O feedback deve ter ao menos 5 caracteres." });
         }
 
         if (feedback.length > 5000) {
@@ -179,6 +179,6 @@ export async function aiSentiment(req: Request, res: Response) {
         return res.status(200).json(response);
   } catch (err: any) {
     console.error(`[ai-sentiment] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

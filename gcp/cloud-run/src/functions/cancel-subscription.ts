@@ -119,6 +119,6 @@ export async function cancelSubscription(req: Request, res: Response) {
       }
   } catch (err: any) {
     console.error(`[cancel-subscription] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

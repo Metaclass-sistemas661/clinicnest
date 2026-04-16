@@ -338,6 +338,6 @@ export async function rndsSubmit(req: Request, res: Response) {
       }
   } catch (err: any) {
     console.error(`[rnds-submit] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

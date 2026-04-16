@@ -52,7 +52,7 @@ export async function aiSmartReferral(req: Request, res: Response) {
 
         const rl = await checkAiRateLimit(user.id, "ai-referral", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Admin client for data queries (bypasses RLS after manual auth checks)
@@ -78,7 +78,7 @@ export async function aiSmartReferral(req: Request, res: Response) {
           return res.status(403).json({ error: "Sem permissão" });
         }
 
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "copilot");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -123,6 +123,6 @@ export async function aiSmartReferral(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error(`[ai-smart-referral] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

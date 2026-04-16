@@ -50,7 +50,7 @@ export async function aiSummary(req: Request, res: Response) {
     const authAdmin = createAuthAdmin();
     const authHeader = (req.headers['authorization'] as string);
     if (!authHeader) {
-      return res.status(401).json({ error: "Missing authorization header" });
+      return res.status(401).json({ error: "Token de autenticação ausente." });
     }
 
         const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -61,14 +61,14 @@ export async function aiSummary(req: Request, res: Response) {
 
         const user = authRes.data?.user;
     if (authError || !user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Não autorizado." });
     }
 
     // Admin client for data queries (bypasses RLS after manual auth checks)
     // Rate limiting: generation category (8 req/min)
     const rl = await checkAiRateLimit(user.id, "ai-summary", "generation");
     if (!rl.allowed) {
-      return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+      return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
     }
 
     // Check medical role
@@ -78,7 +78,7 @@ export async function aiSummary(req: Request, res: Response) {
       .single();
 
     if (!profile) {
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ error: "Acesso negado." });
     }
 
     // Check admin via user_roles OR professional_type
@@ -92,11 +92,11 @@ export async function aiSummary(req: Request, res: Response) {
     const isAdmin = userRole?.role === "admin";
     const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
     if (!isAdmin && !hasClinicalRole) {
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ error: "Acesso negado." });
     }
 
     // Plan gating
-    const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "summary");
+    const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "summary");
     if (!aiAccess.allowed) {
       return res.status(403).json({ error: aiAccess.reason });
     }
@@ -113,7 +113,7 @@ export async function aiSummary(req: Request, res: Response) {
 
     const resolvedClientId = patient_id || client_id;
     if (!resolvedClientId) {
-      return res.status(400).json({ error: "patient_id is required" });
+      return res.status(400).json({ error: "patient_id é obrigatório." });
     }
 
     // Fetch patient data
@@ -136,7 +136,7 @@ export async function aiSummary(req: Request, res: Response) {
 
     if (clientError || !client) {
       console.error(`[ai-summary] Patient query failed:`, JSON.stringify({ clientError, resolvedClientId, tenant: profile.tenant_id }));
-      return res.status(404).json({ error: "Patient not found" });
+      return res.status(404).json({ error: "Paciente não encontrado." });
     }
 
     // Build patient data object
@@ -224,6 +224,6 @@ export async function aiSummary(req: Request, res: Response) {
     });
   } catch (err: any) {
     console.error(`[ai-summary] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

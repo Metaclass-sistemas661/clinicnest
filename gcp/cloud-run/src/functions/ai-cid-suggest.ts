@@ -70,7 +70,7 @@ export async function aiCidSuggest(req: Request, res: Response) {
         // Verify authentication
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -81,13 +81,13 @@ export async function aiCidSuggest(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         // Rate limiting: interaction category (20 req/min)
         const rl = await checkAiRateLimit(user.id, "ai-cid-suggest", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Check if user has medical role
@@ -97,7 +97,7 @@ export async function aiCidSuggest(req: Request, res: Response) {
           .single();
 
         if (!profile) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         const { data: userRole } = await db.from("user_roles")
@@ -110,11 +110,11 @@ export async function aiCidSuggest(req: Request, res: Response) {
         const isAdmin = userRole?.role === "admin";
         const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
         if (!isAdmin && !hasClinicalRole) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         // Plan gating
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "cid_suggest");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "cid_suggest");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -123,7 +123,7 @@ export async function aiCidSuggest(req: Request, res: Response) {
         const { description, specialty } = body;
 
         if (!description || typeof description !== "string" || description.trim().length < 5) {
-          return res.status(400).json({ error: "Description must be at least 5 characters" });
+          return res.status(400).json({ error: "A descrição deve ter ao menos 5 caracteres." });
         }
 
         if (description.length > 5000) {
@@ -164,6 +164,6 @@ export async function aiCidSuggest(req: Request, res: Response) {
         return res.status(200).json(response);
   } catch (err: any) {
     console.error(`[ai-cid-suggest] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

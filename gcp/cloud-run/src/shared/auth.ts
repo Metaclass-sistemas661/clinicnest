@@ -45,7 +45,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   const authHeader = req.headers.authorization;
   
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    return res.status(401).json({ error: 'Token de autenticação ausente ou inválido.' });
   }
   
   const token = authHeader.substring(7);
@@ -124,9 +124,9 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   } catch (error: any) {
     process.stderr.write(`[authMiddleware] FAIL: code=${error.code} msg=${error.message}\n`);
     if (error.code === 'auth/id-token-expired') {
-      return res.status(401).json({ error: 'Token expired' });
+      return res.status(401).json({ error: 'Sessão expirada. Faça login novamente.' });
     }
-    return res.status(401).json({ error: 'Invalid token', detail: error.code || error.message });
+    return res.status(401).json({ error: 'Token inválido. Faça login novamente.', detail: error.code || error.message });
   }
 }
 
@@ -139,7 +139,7 @@ export function internalAuthMiddleware(secretEnvVar: string) {
     const provided = req.headers['x-secret-key'] || req.headers['authorization']?.replace('Bearer ', '');
     
     if (!expected || provided !== expected) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: 'Acesso não autorizado.' });
     }
     next();
   };

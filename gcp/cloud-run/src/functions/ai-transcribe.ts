@@ -34,7 +34,7 @@ export async function aiTranscribe(req: Request, res: Response) {
     const authAdmin = createAuthAdmin();
     const authHeader = (req.headers['authorization'] as string);
     if (!authHeader) {
-      return res.status(401).json({ error: "Missing authorization header" });
+      return res.status(401).json({ error: "Token de autenticação ausente." });
     }
 
         const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -45,13 +45,13 @@ export async function aiTranscribe(req: Request, res: Response) {
 
         const user = authRes.data?.user;
     if (authError || !user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Não autorizado." });
     }
 
     // Rate limiting: transcription category (5 req/min)
     const rl = await checkAiRateLimit(user.id, "ai-transcribe", "transcription");
     if (!rl.allowed) {
-      return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+      return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
     }
 
     // Admin client for data queries (bypasses RLS after manual auth checks)
@@ -62,7 +62,7 @@ export async function aiTranscribe(req: Request, res: Response) {
       .single();
 
     if (!profile) {
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ error: "Acesso negado." });
     }
 
     const { data: userRole } = await db.from("user_roles")
@@ -75,11 +75,11 @@ export async function aiTranscribe(req: Request, res: Response) {
     const isAdmin = userRole?.role === "admin";
     const hasClinicalRole = clinicalRoles.includes(profile.professional_type ?? "");
     if (!isAdmin && !hasClinicalRole) {
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ error: "Acesso negado." });
     }
 
     // Plan gating
-    const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "transcribe");
+    const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "transcribe");
     if (!aiAccess.allowed) {
       return res.status(403).json({ error: aiAccess.reason });
     }
@@ -92,7 +92,7 @@ export async function aiTranscribe(req: Request, res: Response) {
       const { audio_base64, file_name, content_type, specialty, audio_meta } = body;
 
       if (!audio_base64 || !content_type) {
-        return res.status(400).json({ error: "audio_base64 and content_type are required" });
+        return res.status(400).json({ error: "audio_base64 e content_type são obrigatórios." });
       }
 
       // Limite de tamanho: 10 MB em base64 (~7.5 MB de áudio real)
@@ -143,7 +143,7 @@ export async function aiTranscribe(req: Request, res: Response) {
       const { job_name } = body;
 
       if (!job_name) {
-        return res.status(400).json({ error: "job_name is required" });
+        return res.status(400).json({ error: "job_name é obrigatório." });
       }
 
       const { data: job } = await db.from("transcription_jobs")
@@ -153,7 +153,7 @@ export async function aiTranscribe(req: Request, res: Response) {
         .single();
 
       if (!job) {
-        return res.status(404).json({ error: "Job not found" });
+        return res.status(404).json({ error: "Job não encontrado." });
       }
 
       return res.status(200).json({
@@ -163,9 +163,9 @@ export async function aiTranscribe(req: Request, res: Response) {
       });
     }
 
-    return res.status(400).json({ error: "Invalid action. Use 'transcribe' or 'start'" });
+    return res.status(400).json({ error: "Ação inválida. Use 'transcribe' ou 'start'." });
   } catch (err: any) {
     console.error(`[ai-transcribe] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

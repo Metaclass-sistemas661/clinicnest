@@ -29,6 +29,7 @@ interface RestQuery {
   onConflict?: string;
   count?: 'exact' | 'planned' | 'estimated';
   returning?: string;
+  orFilters?: string[];
 }
 
 // Whitelist of tables the frontend may access (prevents arbitrary table access)
@@ -66,6 +67,7 @@ const ALLOWED_TABLES = new Set([
   'cash_sessions', 'cash_movements',
   'professional_working_hours', 'schedule_blocks',
   'inventory_alerts', 'purchase_orders', 'purchase_order_items',
+  'financial_transactions',
 ]);
 
 // Sanitize column name: only allow alphanumeric, underscore, parentheses (for aggregates), comma, space, asterisk, dot
@@ -191,20 +193,132 @@ function buildFilterClause(filters: QueryFilter[], params: any[], startIdx: numb
   return { clause: clauses.length > 0 ? ' WHERE ' + clauses.join(' AND ') : '', nextIdx: idx };
 }
 
+/**
+ * Parse a single PostgREST-style filter expression like "column.op.value"
+ * Returns SQL fragment + params, or null if invalid.
+ */
+function parseOrAtom(expr: string, params: any[], idx: number): { sql: string; nextIdx: number } | null {
+  // Handle and(...) grouping
+  const andMatch = expr.match(/^and\((.+)\)$/);
+  if (andMatch) {
+    const inner = splitTopLevel(andMatch[1]);
+    const parts: string[] = [];
+    let curIdx = idx;
+    for (const part of inner) {
+      const parsed = parseOrAtom(part.trim(), params, curIdx);
+      if (!parsed) return null;
+      parts.push(parsed.sql);
+      curIdx = parsed.nextIdx;
+    }
+    return { sql: `(${parts.join(' AND ')})`, nextIdx: curIdx };
+  }
+
+  // column.op.value
+  const dotIdx = expr.indexOf('.');
+  if (dotIdx < 0) return null;
+  const column = expr.substring(0, dotIdx);
+  if (!isSafeIdentifier(column)) return null;
+
+  const rest = expr.substring(dotIdx + 1);
+  const dotIdx2 = rest.indexOf('.');
+  let op: string, value: string;
+  if (dotIdx2 >= 0) {
+    op = rest.substring(0, dotIdx2);
+    value = rest.substring(dotIdx2 + 1);
+  } else {
+    op = rest;
+    value = '';
+  }
+
+  switch (op) {
+    case 'eq':
+      params.push(value);
+      return { sql: `"${column}" = $${idx}`, nextIdx: idx + 1 };
+    case 'neq':
+      params.push(value);
+      return { sql: `"${column}" != $${idx}`, nextIdx: idx + 1 };
+    case 'gt':
+      params.push(value);
+      return { sql: `"${column}" > $${idx}`, nextIdx: idx + 1 };
+    case 'gte':
+      params.push(value);
+      return { sql: `"${column}" >= $${idx}`, nextIdx: idx + 1 };
+    case 'lt':
+      params.push(value);
+      return { sql: `"${column}" < $${idx}`, nextIdx: idx + 1 };
+    case 'lte':
+      params.push(value);
+      return { sql: `"${column}" <= $${idx}`, nextIdx: idx + 1 };
+    case 'like':
+      params.push(value);
+      return { sql: `"${column}" LIKE $${idx}`, nextIdx: idx + 1 };
+    case 'ilike':
+      params.push(value);
+      return { sql: `"${column}" ILIKE $${idx}`, nextIdx: idx + 1 };
+    case 'is':
+      if (value === 'null') return { sql: `"${column}" IS NULL`, nextIdx: idx };
+      if (value === 'true') return { sql: `"${column}" IS TRUE`, nextIdx: idx };
+      if (value === 'false') return { sql: `"${column}" IS FALSE`, nextIdx: idx };
+      return null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Split a PostgREST-style filter string at top-level commas,
+ * respecting parentheses for and() / or() grouping.
+ */
+function splitTopLevel(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++;
+    else if (s[i] === ')') depth--;
+    else if (s[i] === ',' && depth === 0) {
+      parts.push(s.substring(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.substring(start));
+  return parts;
+}
+
+/**
+ * Parse a full PostgREST-style .or() filter string into SQL.
+ * Returns OR-joined clause + updated param index.
+ */
+function buildOrClause(filterStr: string, params: any[], startIdx: number): { clause: string; nextIdx: number } | null {
+  const atoms = splitTopLevel(filterStr);
+  const sqlParts: string[] = [];
+  let idx = startIdx;
+
+  for (const atom of atoms) {
+    const parsed = parseOrAtom(atom.trim(), params, idx);
+    if (!parsed) return null; // Invalid filter — skip entire .or()
+    sqlParts.push(parsed.sql);
+    idx = parsed.nextIdx;
+  }
+
+  if (sqlParts.length === 0) return null;
+  return { clause: `(${sqlParts.join(' OR ')})`, nextIdx: idx };
+}
+
 export async function restProxy(req: Request, res: Response) {
   const q: RestQuery = req.body;
 
   if (!q.table || !q.operation) {
-    return res.status(400).json({ error: 'Missing table or operation' });
+    return res.status(400).json({ error: 'Requisição inválida: tabela ou operação não informada.' });
   }
 
   if (!ALLOWED_TABLES.has(q.table)) {
-    return res.status(403).json({ error: `Table '${q.table}' is not accessible` });
+    return res.status(403).json({ error: `Acesso negado: a tabela '${q.table}' não está disponível.` });
   }
 
   const db = (req as any).db;
   if (!db?.query) {
-    return res.status(500).json({ error: 'Database context not available' });
+    return res.status(500).json({ error: 'Erro interno: conexão com o banco de dados indisponível.' });
   }
 
   try {
@@ -212,9 +326,22 @@ export async function restProxy(req: Request, res: Response) {
       case 'select': {
         const cols = q.columns && isSafeColumn(q.columns) ? q.columns : '*';
         const params: any[] = [];
-        const { clause: where } = buildFilterClause(q.filters || [], params, 1);
+        const { clause: where, nextIdx } = buildFilterClause(q.filters || [], params, 1);
 
-        let sql = `SELECT ${cols} FROM "${q.table}"${where}`;
+        // Append .or() filters — each becomes an AND-ed (... OR ...) group
+        let orExtra = '';
+        let paramIdx = nextIdx;
+        if (q.orFilters?.length) {
+          for (const orStr of q.orFilters) {
+            const parsed = buildOrClause(orStr, params, paramIdx);
+            if (parsed) {
+              orExtra += (where || orExtra ? ' AND ' : ' WHERE ') + parsed.clause;
+              paramIdx = parsed.nextIdx;
+            }
+          }
+        }
+
+        let sql = `SELECT ${cols} FROM "${q.table}"${where}${orExtra}`;
 
         if (q.order?.length) {
           const orderParts = q.order
@@ -230,14 +357,14 @@ export async function restProxy(req: Request, res: Response) {
 
         if (q.single) {
           if (result.rows.length === 0) {
-            return res.json({ data: null, error: { message: 'No rows found', code: 'PGRST116' } });
+            return res.json({ data: null, error: { message: 'Nenhum registro encontrado.', code: 'PGRST116' } });
           }
           return res.json({ data: result.rows[0], error: null });
         }
 
         if (q.count) {
           const countResult = await db.query(
-            `SELECT COUNT(*) as total FROM "${q.table}"${where}`,
+            `SELECT COUNT(*) as total FROM "${q.table}"${where}${orExtra}`,
             params
           );
           return res.json({ data: result.rows, error: null, count: parseInt(countResult.rows[0]?.total || '0') });
@@ -247,13 +374,13 @@ export async function restProxy(req: Request, res: Response) {
       }
 
       case 'insert': {
-        if (!q.data) return res.status(400).json({ error: 'Missing data for insert' });
+        if (!q.data) return res.status(400).json({ error: 'Dados obrigatórios não enviados para inserção.' });
 
         const rows = Array.isArray(q.data) ? q.data : [q.data];
-        if (rows.length === 0) return res.status(400).json({ error: 'Empty data' });
+        if (rows.length === 0) return res.status(400).json({ error: 'Nenhum registro para inserir.' });
 
         const columns = Object.keys(rows[0]).filter(isSafeIdentifier);
-        if (columns.length === 0) return res.status(400).json({ error: 'No valid columns' });
+        if (columns.length === 0) return res.status(400).json({ error: 'Nenhuma coluna válida para inserção.' });
 
         const params: any[] = [];
         const valueSets: string[] = [];
@@ -280,12 +407,12 @@ export async function restProxy(req: Request, res: Response) {
 
       case 'update': {
         if (!q.data || !q.filters?.length) {
-          return res.status(400).json({ error: 'Update requires data and at least one filter' });
+          return res.status(400).json({ error: 'Atualização requer dados e ao menos um filtro.' });
         }
 
         const data = Array.isArray(q.data) ? q.data[0] : q.data;
         const columns = Object.keys(data).filter(isSafeIdentifier);
-        if (columns.length === 0) return res.status(400).json({ error: 'No valid columns for update' });
+        if (columns.length === 0) return res.status(400).json({ error: 'Nenhuma coluna válida para atualização.' });
 
         const params: any[] = [];
         let idx = 1;
@@ -304,16 +431,16 @@ export async function restProxy(req: Request, res: Response) {
       }
 
       case 'upsert': {
-        if (!q.data) return res.status(400).json({ error: 'Missing data for upsert' });
+        if (!q.data) return res.status(400).json({ error: 'Dados obrigatórios não enviados.' });
 
         const rows = Array.isArray(q.data) ? q.data : [q.data];
         const columns = Object.keys(rows[0]).filter(isSafeIdentifier);
-        if (columns.length === 0) return res.status(400).json({ error: 'No valid columns' });
+        if (columns.length === 0) return res.status(400).json({ error: 'Nenhuma coluna válida.' });
 
         // Validate onConflict — supports single or comma-separated column names
         const conflictCols = parseOnConflict(q.onConflict || 'id');
         if (!conflictCols || conflictCols.length === 0) {
-          return res.status(400).json({ error: 'Invalid onConflict column(s)' });
+          return res.status(400).json({ error: 'Coluna de conflito (onConflict) inválida.' });
         }
 
         const params: any[] = [];
@@ -350,7 +477,7 @@ export async function restProxy(req: Request, res: Response) {
 
       case 'delete': {
         if (!q.filters?.length) {
-          return res.status(400).json({ error: 'Delete requires at least one filter' });
+          return res.status(400).json({ error: 'Exclusão requer ao menos um filtro de segurança.' });
         }
 
         const params: any[] = [];
@@ -362,17 +489,26 @@ export async function restProxy(req: Request, res: Response) {
       }
 
       default:
-        return res.status(400).json({ error: `Unknown operation: ${q.operation}` });
+        return res.status(400).json({ error: `Operação desconhecida: ${q.operation}` });
     }
   } catch (err: any) {
     console.error(`[rest-proxy] ${q.operation} on ${q.table}:`, err.message);
-    // Don't leak internal PostgreSQL error details to the client
-    const safeMessage = err.code?.startsWith?.('23')
-      ? `Database constraint violation (${err.code})`
-      : err.code?.startsWith?.('42')
-      ? 'Invalid query syntax or missing object'
-      : 'Internal server error';
-    return res.status(500).json({ error: safeMessage, code: err.code || 'INTERNAL' });
+    // Mensagens seguras em português — não vazar detalhes internos do PostgreSQL
+    let safeMessage: string;
+    const code = err.code || '';
+    if (code === '23505') safeMessage = 'Registro duplicado: já existe um registro com esses dados.';
+    else if (code === '23503') safeMessage = 'Não é possível completar: registro referenciado não existe.';
+    else if (code === '23502') safeMessage = 'Campo obrigatório não preenchido.';
+    else if (code === '23514') safeMessage = 'Valor informado fora do intervalo permitido.';
+    else if (code.startsWith('23')) safeMessage = 'Violação de regra do banco de dados.';
+    else if (code === '42P01') safeMessage = 'Recurso não encontrado no sistema.';
+    else if (code === '42703') safeMessage = 'Campo solicitado não existe nesta tabela.';
+    else if (code.startsWith('42')) safeMessage = 'Erro na consulta ao banco de dados.';
+    else if (code === '42501' || code === '42000') safeMessage = 'Sem permissão para esta operação.';
+    else if (code === '08006' || code === '08003') safeMessage = 'Conexão com o banco de dados perdida. Tente novamente.';
+    else if (code === '57014') safeMessage = 'A consulta excedeu o tempo limite. Tente filtrar melhor.';
+    else safeMessage = 'Erro interno do servidor. Tente novamente ou contate o suporte.';
+    return res.status(500).json({ error: safeMessage, code: code || 'INTERNAL' });
   }
 }
 
@@ -384,12 +520,12 @@ export async function rpcProxy(req: Request, res: Response) {
   const params = req.body || {};
 
   if (!name || !isSafeIdentifier(name)) {
-    return res.status(400).json({ error: 'Invalid function name' });
+    return res.status(400).json({ error: 'Nome de função inválido.' });
   }
 
   const db = (req as any).db;
   if (!db?.query) {
-    return res.status(500).json({ error: 'Database context not available' });
+    return res.status(500).json({ error: 'Erro interno: conexão com o banco de dados indisponível.' });
   }
 
   try {
@@ -413,7 +549,23 @@ export async function rpcProxy(req: Request, res: Response) {
     return res.json({ data: result.rows, error: null });
   } catch (err: any) {
     console.error(`[rpc-proxy] ${name}:`, err.message);
-    return res.status(500).json({ error: err.message || 'RPC failed', code: err.code });
+    // Erros do PostgreSQL P0001 são RAISE EXCEPTION das nossas funções — mensagem já é em PT
+    const msg = err.message || '';
+    const code = err.code || '';
+    let safeMessage: string;
+    if (code === 'P0001') {
+      // Erro de aplicação (nossas funções) — mensagem já é em português
+      safeMessage = msg;
+    } else if (code === '42883') {
+      safeMessage = `Função '${name}' não encontrada ou parâmetros incompatíveis.`;
+    } else if (code.startsWith('23')) {
+      safeMessage = 'Violação de regra do banco de dados.';
+    } else if (code.startsWith('42')) {
+      safeMessage = 'Erro na consulta ao banco de dados.';
+    } else {
+      safeMessage = 'Erro interno ao executar operação. Tente novamente.';
+    }
+    return res.status(code === 'P0001' ? 400 : 500).json({ error: safeMessage, code: code || 'INTERNAL' });
   }
 }
 
@@ -425,7 +577,7 @@ export async function storageProxy(req: Request, res: Response) {
   const { operation, path: rawPath, contentType } = req.body;
 
   if (!bucket || !rawPath || typeof rawPath !== 'string') {
-    return res.status(400).json({ error: 'Missing bucket or path' });
+    return res.status(400).json({ error: 'Parâmetros obrigatórios não informados (bucket/path).' });
   }
 
   // Path traversal protection
@@ -433,12 +585,12 @@ export async function storageProxy(req: Request, res: Response) {
   // eslint-disable-next-line no-control-regex
   const controlCharRegex = new RegExp('[\\u0000-\\u001f]');
   if (normalizedPath.includes('..') || normalizedPath.startsWith('/') || controlCharRegex.test(normalizedPath)) {
-    return res.status(400).json({ error: 'Invalid file path' });
+    return res.status(400).json({ error: 'Caminho de arquivo inválido.' });
   }
 
   // Validate bucket name (only alphanumeric and hyphens)
   if (!/^[a-z0-9-]+$/.test(bucket)) {
-    return res.status(400).json({ error: 'Invalid bucket name' });
+    return res.status(400).json({ error: 'Nome de bucket inválido.' });
   }
 
   try {
@@ -473,10 +625,10 @@ export async function storageProxy(req: Request, res: Response) {
         return res.json({ data: { deleted: true }, error: null });
       }
       default:
-        return res.status(400).json({ error: `Unknown storage operation: ${operation}` });
+        return res.status(400).json({ error: `Operação de armazenamento desconhecida: ${operation}` });
     }
   } catch (err: any) {
     console.error(`[storage-proxy] ${bucket}/${normalizedPath}:`, err.message);
-    return res.status(500).json({ error: 'Storage operation failed' });
+    return res.status(500).json({ error: 'Erro ao acessar armazenamento de arquivos.' });
   }
 }

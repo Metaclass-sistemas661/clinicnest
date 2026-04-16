@@ -1,12 +1,14 @@
 import express from 'express';
 import helmet from 'helmet';
+import compression from 'compression';
 import * as Sentry from '@sentry/node';
 import { corsMiddleware } from './shared/cors';
 import { authMiddleware } from './shared/auth';
-import { dbMiddleware, adminQuery } from './shared/db';
+import { dbMiddleware, adminQuery, pool } from './shared/db';
 import { errorHandler } from './shared/errorHandler';
 import { setCorrelationId } from './shared/logging';
 import { checkRateLimit } from './shared/rateLimit';
+import { requestLogger } from './shared/requestLogger';
 import crypto from 'crypto';
 
 // --- Route imports (65 functions) ---
@@ -122,6 +124,7 @@ if (process.env.SENTRY_DSN) {
 
 // Global middleware
 app.use(helmet());
+app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(corsMiddleware);
 
@@ -133,6 +136,21 @@ app.use((req, _res, next) => {
     : crypto.randomUUID();
   (req as any).correlationId = correlationId;
   setCorrelationId(correlationId);
+  next();
+});
+
+// Structured request logging (method, status, duration, userId)
+app.use(requestLogger);
+
+// Request timeout — 55s (Cloud Run default is 60s)
+app.use((req, res, next) => {
+  const timeout = req.path.startsWith('/api/ai-') ? 120_000 : 55_000;
+  req.setTimeout(timeout);
+  res.setTimeout(timeout, () => {
+    if (!res.headersSent) {
+      res.status(504).json({ error: 'A requisição excedeu o tempo limite. Tente novamente.' });
+    }
+  });
   next();
 });
 
@@ -148,8 +166,40 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Health check (no auth)
-app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'clinicnest-api' }));
+// Health check (no auth) — readiness probe with DB ping
+app.get('/health', async (_req, res) => {
+  if (isShuttingDown) {
+    return res.status(503).json({ status: 'shutting_down', service: 'clinicnest-api' });
+  }
+
+  const checks: Record<string, string> = {};
+  let healthy = true;
+
+  // DB connectivity
+  try {
+    const t0 = Date.now();
+    await pool.query('SELECT 1');
+    checks.db = `ok (${Date.now() - t0}ms)`;
+  } catch {
+    checks.db = 'unreachable';
+    healthy = false;
+  }
+
+  // Pool stats
+  const poolStats = {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+  };
+
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? 'ok' : 'degraded',
+    service: 'clinicnest-api',
+    checks,
+    pool: poolStats,
+    uptime: Math.floor(process.uptime()),
+  });
+});
 
 // Public endpoints (no auth required)
 app.post('/api/submit-contact-message', submitContactMessage);
@@ -331,16 +381,101 @@ async function bootstrap() {
       $fn$
     `);
 
+    // ── stock_movements: ensure out_reason_type column exists ──
+    await adminQuery(`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS out_reason_type TEXT`);
+
+    // ── patients: ensure all expected columns exist ──
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS date_of_birth DATE`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS marital_status TEXT`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS street TEXT`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS street_number TEXT`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS complement TEXT`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS neighborhood TEXT`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance_plan_id UUID`);
+    await adminQuery(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance_card_number TEXT`);
+
+    // ── triage_records: ensure updated_at column exists ──
+    await adminQuery(`ALTER TABLE triage_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now()`);
+
+    // ── upsert_client_v2: corrigir p_client_id → p_patient_id, clients → patients ──
+    await adminQuery(`DROP FUNCTION IF EXISTS public.upsert_client_v2 CASCADE`);
+    await adminQuery(`
+      CREATE OR REPLACE FUNCTION public.upsert_client_v2(
+        p_name text, p_phone text DEFAULT NULL, p_email text DEFAULT NULL, p_notes text DEFAULT NULL,
+        p_patient_id uuid DEFAULT NULL, p_cpf text DEFAULT NULL, p_date_of_birth date DEFAULT NULL,
+        p_marital_status text DEFAULT NULL, p_zip_code text DEFAULT NULL, p_street text DEFAULT NULL,
+        p_street_number text DEFAULT NULL, p_complement text DEFAULT NULL, p_neighborhood text DEFAULT NULL,
+        p_city text DEFAULT NULL, p_state text DEFAULT NULL, p_allergies text DEFAULT NULL
+      ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $fn$
+      DECLARE
+        v_user_id uuid := NULLIF(current_setting('app.current_user_id', true), '')::uuid;
+        v_profile public.profiles%rowtype;
+        v_id uuid; v_access_code text; v_action text;
+      BEGIN
+        IF v_user_id IS NULL THEN RAISE EXCEPTION 'Usuário não autenticado.' USING ERRCODE = 'P0001'; END IF;
+        SELECT * INTO v_profile FROM public.profiles WHERE user_id = v_user_id LIMIT 1;
+        IF NOT FOUND THEN RAISE EXCEPTION 'Perfil do usuário não encontrado.' USING ERRCODE = 'P0001'; END IF;
+        IF p_name IS NULL OR btrim(p_name) = '' THEN RAISE EXCEPTION 'O nome do paciente é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_patient_id IS NULL THEN
+          v_action := 'patient_created';
+          INSERT INTO public.patients(tenant_id,name,phone,email,notes,cpf,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,allergies)
+          VALUES(v_profile.tenant_id,p_name,NULLIF(p_phone,''),NULLIF(p_email,''),NULLIF(p_notes,''),NULLIF(btrim(p_cpf),''),p_date_of_birth,NULLIF(btrim(p_marital_status),''),NULLIF(btrim(p_zip_code),''),NULLIF(btrim(p_street),''),NULLIF(btrim(p_street_number),''),NULLIF(btrim(p_complement),''),NULLIF(btrim(p_neighborhood),''),NULLIF(btrim(p_city),''),NULLIF(btrim(p_state),''),NULLIF(btrim(p_allergies),''))
+          RETURNING id, access_code INTO v_id, v_access_code;
+        ELSE
+          v_action := 'patient_updated';
+          UPDATE public.patients SET name=p_name,phone=NULLIF(p_phone,''),email=NULLIF(p_email,''),notes=NULLIF(p_notes,''),cpf=NULLIF(btrim(p_cpf),''),date_of_birth=p_date_of_birth,marital_status=NULLIF(btrim(p_marital_status),''),zip_code=NULLIF(btrim(p_zip_code),''),street=NULLIF(btrim(p_street),''),street_number=NULLIF(btrim(p_street_number),''),complement=NULLIF(btrim(p_complement),''),neighborhood=NULLIF(btrim(p_neighborhood),''),city=NULLIF(btrim(p_city),''),state=NULLIF(btrim(p_state),''),allergies=NULLIF(btrim(p_allergies),''),updated_at=now()
+          WHERE id=p_patient_id AND tenant_id=v_profile.tenant_id
+          RETURNING id, access_code INTO v_id, v_access_code;
+          IF NOT FOUND THEN RAISE EXCEPTION 'Paciente não encontrado ou sem permissão.' USING ERRCODE = 'P0001'; END IF;
+        END IF;
+        RETURN jsonb_build_object('success',true,'patient_id',v_id,'access_code',v_access_code);
+      END; $fn$
+    `);
+
     console.log('[bootstrap] Database bootstrap completed');
   } catch (err: any) {
     console.error('[bootstrap] Database bootstrap failed:', err.message);
   }
 }
 
+// ─── Graceful Shutdown ──────────────────────────────────────────────
+let isShuttingDown = false;
+
 bootstrap().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`ClinicNest API running on port ${PORT}`);
   });
+
+  // Cloud Run sends SIGTERM before stopping
+  const shutdown = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    console.log(`[shutdown] ${signal} received — draining connections…`);
+
+    // Stop accepting new connections
+    server.close(async () => {
+      console.log('[shutdown] HTTP server closed');
+      try {
+        const { pool } = await import('./shared/db');
+        await pool.end();
+        console.log('[shutdown] DB pool drained');
+      } catch (e: any) {
+        console.error('[shutdown] DB pool drain error:', e.message);
+      }
+      process.exit(0);
+    });
+
+    // Force kill after 25s (Cloud Run gives 30s)
+    setTimeout(() => {
+      console.error('[shutdown] Forced exit after timeout');
+      process.exit(1);
+    }, 25_000).unref();
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 });
 
+// Expose shutdown state for health check
+export { isShuttingDown };
 export default app;

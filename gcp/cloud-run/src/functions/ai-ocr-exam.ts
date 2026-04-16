@@ -132,7 +132,7 @@ export async function aiOcrExam(req: Request, res: Response) {
 
         const rl = await checkAiRateLimit(user.id, "ai-ocr", "generation");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded. Try again later." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         const { data: profile } = await db.from("profiles")
@@ -239,6 +239,6 @@ export async function aiOcrExam(req: Request, res: Response) {
 
   } catch (err: any) {
     console.error(`[ai-ocr-exam] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }

@@ -50,7 +50,7 @@ export async function aiExplainPatient(req: Request, res: Response) {
       try {
         const authHeader = (req.headers['authorization'] as string);
         if (!authHeader) {
-          return res.status(401).json({ error: "Missing authorization header" });
+          return res.status(401).json({ error: "Token de autenticação ausente." });
         }
 
                 const authRes = (await authAdmin.getUser((authHeader || '').replace('Bearer ', '')) as any);
@@ -61,12 +61,12 @@ export async function aiExplainPatient(req: Request, res: Response) {
 
                 const user = authRes.data?.user;
         if (authError || !user) {
-          return res.status(401).json({ error: "Unauthorized" });
+          return res.status(401).json({ error: "Não autorizado." });
         }
 
         const rl = await checkAiRateLimit(user.id, "ai-explain-patient", "interaction");
         if (!rl.allowed) {
-          return res.status(429).json({ error: "Rate limit exceeded." });
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         const { data: profile } = await db.from("profiles")
@@ -75,7 +75,7 @@ export async function aiExplainPatient(req: Request, res: Response) {
           .single();
 
         if (!profile) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
         const { data: userRole } = await db.from("user_roles")
@@ -87,10 +87,10 @@ export async function aiExplainPatient(req: Request, res: Response) {
         const clinicalRoles = ["medico", "dentista", "enfermeiro", "tec_enfermagem", "fisioterapeuta", "nutricionista", "psicologo", "fonoaudiologo", "esteticista", "admin"];
         const isAdmin = userRole?.role === "admin";
         if (!isAdmin && !clinicalRoles.includes(profile.professional_type ?? "")) {
-          return res.status(403).json({ error: "Access denied" });
+          return res.status(403).json({ error: "Acesso negado." });
         }
 
-        const aiAccess = await checkAiAccess(profile.tenant_id, user.id, "copilot");
+        const aiAccess = await checkAiAccess(user.id, profile.tenant_id, "copilot");
         if (!aiAccess.allowed) {
           return res.status(403).json({ error: aiAccess.reason });
         }
@@ -98,7 +98,7 @@ export async function aiExplainPatient(req: Request, res: Response) {
         const body: ExplainRequest = req.body;
 
         if (!body.medical_text?.trim()) {
-          return res.status(400).json({ error: "medical_text is required" });
+          return res.status(400).json({ error: "Texto médico é obrigatório." });
         }
 
         const contextLabels: Record<string, string> = {
@@ -127,12 +127,12 @@ export async function aiExplainPatient(req: Request, res: Response) {
 
         return new Response(JSON.stringify(parsed), {});
       } catch (err: any) {
-        const message = err instanceof Error ? err.message : "Internal server error";
+        const message = err instanceof Error ? err.message : "Erro interno do servidor.";
         return res.status(500).json({ error: message });
       }
   } catch (err: any) {
     console.error(`[ai-explain-patient] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 }
 
