@@ -7,6 +7,7 @@ import { checkRateLimit } from '../shared/rateLimit';
 import { createLogger } from '../shared/logging';
 import { createDbClient } from '../shared/db-builder';
 import { createAuthAdmin } from '../shared/auth-admin';
+import * as firebaseAdmin from 'firebase-admin';
 const log = createLogger("VERIFY-EMAIL-CODE");
 
 const MAX_ATTEMPTS = 5;
@@ -117,6 +118,71 @@ export async function verifyEmailCode(req: Request, res: Response) {
         if (updateError) {
           log("Erro ao confirmar email do usuário", { error: updateError.message });
           return res.status(500).json({ error: "Código verificado, mas houve erro ao ativar a conta. Contate o suporte." });
+        }
+
+        // ── Provisionar tenant/profile/roles/subscription (substitui trigger handle_new_user) ──
+        try {
+          const firebaseUser = await firebaseAdmin.auth().getUser(record.user_id);
+          const claims = firebaseUser.customClaims || {};
+          const fullName = claims.full_name || firebaseUser.displayName || '';
+          const clinicName = claims.clinic_name || fullName + ' Clinic';
+          const phone = claims.phone || firebaseUser.phoneNumber || '';
+          const userEmail = firebaseUser.email || email;
+
+          // Check if profile already exists (idempotent)
+          const existing = await adminQuery(
+            'SELECT id FROM profiles WHERE user_id = $1 LIMIT 1',
+            [record.user_id]
+          );
+
+          if (existing.rows.length === 0) {
+            // Create tenant
+            const tenantResult = await adminQuery(
+              `INSERT INTO tenants (name, email, phone)
+               VALUES ($1, $2, $3)
+               RETURNING id`,
+              [clinicName, userEmail, phone]
+            );
+            const tenantId = tenantResult.rows[0].id;
+
+            // Create profile
+            await adminQuery(
+              `INSERT INTO profiles (user_id, tenant_id, full_name, email, phone, professional_type, council_type, council_number, council_state)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+              [
+                record.user_id,
+                tenantId,
+                fullName,
+                userEmail,
+                phone,
+                claims.professional_type || null,
+                claims.council_type || null,
+                claims.council_number || null,
+                claims.council_state || null,
+              ]
+            );
+
+            // Create user_roles (admin for the tenant owner)
+            await adminQuery(
+              `INSERT INTO user_roles (user_id, tenant_id, role)
+               VALUES ($1, $2, 'admin')`,
+              [record.user_id, tenantId]
+            );
+
+            // Create subscription (trial)
+            await adminQuery(
+              `INSERT INTO subscriptions (tenant_id, status, plan, trial_start, trial_end)
+               VALUES ($1, 'trialing', 'trial', now(), now() + INTERVAL '5 days')`,
+              [tenantId]
+            );
+
+            log("Provisionamento completo", { userId: record.user_id, tenantId });
+          } else {
+            log("Profile já existe, pular provisionamento", { userId: record.user_id });
+          }
+        } catch (provErr: any) {
+          log("Erro no provisionamento (prosseguindo)", { error: provErr.message });
+          // Don't fail the verification — profile can be created later
         }
 
         // Limpar código usado

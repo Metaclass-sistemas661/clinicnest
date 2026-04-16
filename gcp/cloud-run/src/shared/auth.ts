@@ -55,16 +55,21 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const decoded = await admin.auth().verifyIdToken(token);
     
     // Load tenant_id and role from profiles table
-    const result = await adminQuery(
-      `SELECT p.tenant_id, ur.role, p.professional_type
-       FROM profiles p
-       LEFT JOIN user_roles ur ON ur.user_id = p.user_id AND ur.tenant_id = p.tenant_id
-       WHERE p.user_id = $1
-       LIMIT 1`,
-      [decoded.uid]
-    );
-    
-    const profile = result.rows[0];
+    let profile: any = null;
+    try {
+      const result = await adminQuery(
+        `SELECT p.tenant_id, ur.role, p.professional_type
+         FROM profiles p
+         LEFT JOIN user_roles ur ON ur.user_id = p.user_id AND ur.tenant_id = p.tenant_id
+         WHERE p.user_id = $1
+         LIMIT 1`,
+        [decoded.uid]
+      );
+      profile = result.rows[0] || null;
+    } catch (dbErr: any) {
+      // DB error (e.g. UUID cast failure) — don't mask as 401
+      process.stderr.write(`[authMiddleware] DB error loading profile: ${dbErr.message}\n`);
+    }
     
     (req as any).user = {
       uid: decoded.uid,

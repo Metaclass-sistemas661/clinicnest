@@ -5,6 +5,7 @@
  * Provides the same method signatures used by the migrated functions.
  */
 import * as admin from 'firebase-admin';
+import { randomUUID } from 'crypto';
 
 // Ensure Firebase Admin is initialized (auth.ts already initializes it,
 // but this is a safe guard in case this module loads first)
@@ -57,7 +58,10 @@ interface GenerateLinkParams {
 async function createUser(params: CreateUserParams): Promise<AuthResult<{ user: admin.auth.UserRecord }>> {
   try {
     const auth = getAuth();
+    // Generate UUID for Firebase UID — ensures compatibility with PostgreSQL UUID columns
+    const uid = randomUUID();
     const userRecord = await auth.createUser({
+      uid,
       email: params.email,
       password: params.password,
       emailVerified: params.email_confirm ?? false,

@@ -3,7 +3,7 @@ import helmet from 'helmet';
 import * as Sentry from '@sentry/node';
 import { corsMiddleware } from './shared/cors';
 import { authMiddleware } from './shared/auth';
-import { dbMiddleware } from './shared/db';
+import { dbMiddleware, adminQuery } from './shared/db';
 import { errorHandler } from './shared/errorHandler';
 import { setCorrelationId } from './shared/logging';
 import { checkRateLimit } from './shared/rateLimit';
@@ -252,8 +252,51 @@ app.post('/api/storage/:bucket', storageProxy);
 // Error handler
 app.use(errorHandler);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`ClinicNest API running on port ${PORT}`);
+// ─── Database bootstrap (idempotent) ─────────────────────────────────
+async function bootstrap() {
+  try {
+    // Ensure email_verification_codes table exists
+    await adminQuery(`
+      CREATE TABLE IF NOT EXISTS public.email_verification_codes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        attempts INTEGER DEFAULT 0,
+        verified BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+
+    // Ensure get_my_context function exists (no-arg version using session variable)
+    await adminQuery(`DROP FUNCTION IF EXISTS public.get_my_context() CASCADE`);
+    await adminQuery(`
+      CREATE OR REPLACE FUNCTION public.get_my_context()
+      RETURNS json
+      LANGUAGE sql
+      STABLE
+      SECURITY DEFINER
+      AS $$
+        SELECT json_build_object(
+          'profile', (SELECT row_to_json(p.*) FROM profiles p WHERE p.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid),
+          'role', (SELECT row_to_json(ur.*) FROM user_roles ur WHERE ur.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid LIMIT 1),
+          'tenant', (SELECT row_to_json(t.*) FROM tenants t WHERE t.id = (SELECT tenant_id FROM profiles WHERE user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid)),
+          'permissions', json_build_object()
+        );
+      $$
+    `);
+
+    console.log('[bootstrap] Database bootstrap completed');
+  } catch (err: any) {
+    console.error('[bootstrap] Database bootstrap failed:', err.message);
+  }
+}
+
+bootstrap().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`ClinicNest API running on port ${PORT}`);
+  });
 });
 
 export default app;
