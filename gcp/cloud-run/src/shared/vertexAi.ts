@@ -4,7 +4,7 @@ import { completeText, chatCompletion } from '../shared/vertexAi';
  * Replaces: _shared/vertex-ai-client.ts
  */
 
-const GCP_REGION = process.env.GCP_REGION || 'us-central1';
+const GCP_REGION = process.env.VERTEX_AI_REGION || 'us-central1';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
 interface VertexResponse {
