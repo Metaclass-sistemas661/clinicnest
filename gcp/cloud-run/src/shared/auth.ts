@@ -13,11 +13,18 @@ import { adminQuery } from './db';
 if (!admin.apps.length) {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (serviceAccountKey) {
-    const serviceAccount = JSON.parse(serviceAccountKey);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+    try {
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      process.stderr.write(`[auth] Firebase Admin initialized with SA key for project: ${serviceAccount.project_id}\n`);
+    } catch (parseErr: any) {
+      process.stderr.write(`[auth] FATAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${parseErr.message}\n`);
+      admin.initializeApp();
+    }
   } else {
+    process.stderr.write('[auth] WARNING: No FIREBASE_SERVICE_ACCOUNT_KEY, using default credentials\n');
     admin.initializeApp();
   }
 }
@@ -69,10 +76,11 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     
     next();
   } catch (error: any) {
+    process.stderr.write(`[authMiddleware] FAIL: code=${error.code} msg=${error.message}\n`);
     if (error.code === 'auth/id-token-expired') {
       return res.status(401).json({ error: 'Token expired' });
     }
-    return res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid token', detail: error.code || error.message });
   }
 }
 
