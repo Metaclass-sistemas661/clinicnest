@@ -71,6 +71,47 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       process.stderr.write(`[authMiddleware] DB error loading profile: ${dbErr.message}\n`);
     }
     
+    // Auto-provision: if Firebase user is verified but has no profile, create one
+    if (!profile && decoded.email_verified) {
+      try {
+        const firebaseUser = await admin.auth().getUser(decoded.uid);
+        const claims = firebaseUser.customClaims || {};
+        const fullName = claims.full_name || firebaseUser.displayName || decoded.email || '';
+        const clinicName = claims.clinic_name || fullName;
+        const phone = claims.phone || firebaseUser.phoneNumber || '';
+        const userEmail = decoded.email || '';
+
+        const tenantResult = await adminQuery(
+          `INSERT INTO tenants (name, email, phone) VALUES ($1, $2, $3) RETURNING id`,
+          [clinicName, userEmail, phone]
+        );
+        const tenantId = tenantResult.rows[0].id;
+
+        await adminQuery(
+          `INSERT INTO profiles (user_id, tenant_id, full_name, email, phone, professional_type, council_type, council_number, council_state)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [decoded.uid, tenantId, fullName, userEmail, phone,
+           claims.professional_type || null, claims.council_type || null,
+           claims.council_number || null, claims.council_state || null]
+        );
+
+        await adminQuery(
+          `INSERT INTO user_roles (user_id, tenant_id, role) VALUES ($1, $2, 'admin')`,
+          [decoded.uid, tenantId]
+        );
+
+        await adminQuery(
+          `INSERT INTO subscriptions (tenant_id, status, plan) VALUES ($1, 'trialing', 'trial')`,
+          [tenantId]
+        );
+
+        process.stderr.write(`[authMiddleware] Auto-provisioned profile for ${decoded.uid}\n`);
+        profile = { tenant_id: tenantId, role: 'admin', professional_type: claims.professional_type || null };
+      } catch (provErr: any) {
+        process.stderr.write(`[authMiddleware] Auto-provision failed: ${provErr.message}\n`);
+      }
+    }
+    
     (req as any).user = {
       uid: decoded.uid,
       email: decoded.email || '',
