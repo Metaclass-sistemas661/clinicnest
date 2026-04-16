@@ -51,8 +51,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const result = await adminQuery(
       `SELECT p.tenant_id, ur.role, p.professional_type
        FROM profiles p
-       LEFT JOIN user_roles ur ON ur.user_id = p.uid AND ur.tenant_id = p.tenant_id
-       WHERE p.id = $1
+       LEFT JOIN user_roles ur ON ur.user_id = p.user_id AND ur.tenant_id = p.tenant_id
+       WHERE p.user_id = $1
        LIMIT 1`,
       [decoded.uid]
     );
