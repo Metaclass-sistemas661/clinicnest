@@ -164,8 +164,7 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   // Ignorar requests de API (sempre buscar da rede)
-  if (event.request.url.includes('/api/') || 
-      event.request.url.includes('supabase.co')) {
+  if (event.request.url.includes('/api/')) {
     return;
   }
 
