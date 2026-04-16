@@ -238,6 +238,7 @@ class QueryBuilder<T = any> {
   is(column: string, value: null | boolean): this { this._filters.push({ column, op: 'is', value }); return this; }
   contains(column: string, value: any): this { this._filters.push({ column, op: 'contains', value }); return this; }
   overlaps(column: string, value: any): this { this._filters.push({ column, op: 'overlaps', value }); return this; }
+  not(column: string, op: string, value: any): this { this._filters.push({ column, op: `not_${op}` as any, value }); return this; }
 
   // ─── Modifiers ───────────────────────────────────────────────
 

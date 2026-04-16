@@ -7,7 +7,7 @@ import { Request, Response } from 'express';
 
 interface QueryFilter {
   column: string;
-  op: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'is' | 'contains' | 'overlaps';
+  op: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'is' | 'not_is' | 'not_in' | 'contains' | 'overlaps';
   value: any;
 }
 
@@ -149,6 +149,30 @@ function buildFilterClause(filters: QueryFilter[], params: any[], startIdx: numb
           clauses.push(`"${f.column}" IS NULL`);
         } else {
           clauses.push(`"${f.column}" IS NOT NULL`);
+        }
+        break;
+      case 'not_is':
+        if (f.value === null) {
+          clauses.push(`"${f.column}" IS NOT NULL`);
+        } else {
+          clauses.push(`"${f.column}" IS NULL`);
+        }
+        break;
+      case 'not_in':
+        // Supabase .not("col", "in", '("val1","val2")') passes a string like '("val1","val2")'
+        if (typeof f.value === 'string') {
+          // Parse Supabase-style tuple string: '("val1","val2")'
+          const inner = f.value.replace(/^\(/, '').replace(/\)$/, '');
+          const vals = inner.split(',').map((v: string) => v.replace(/^"|"$/g, '').trim());
+          if (vals.length > 0) {
+            const placeholders = vals.map(() => `$${idx++}`);
+            clauses.push(`"${f.column}" NOT IN (${placeholders.join(',')})`);
+            params.push(...vals);
+          }
+        } else if (Array.isArray(f.value) && f.value.length > 0) {
+          const placeholders = f.value.map(() => `$${idx++}`);
+          clauses.push(`"${f.column}" NOT IN (${placeholders.join(',')})`);
+          params.push(...f.value);
         }
         break;
       case 'contains':

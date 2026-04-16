@@ -136,10 +136,10 @@ export async function verifyEmailCode(req: Request, res: Response) {
           );
 
           if (existing.rows.length === 0) {
-            // Create tenant
+            // Create tenant (enabled_modules = NULL means all modules enabled during trial)
             const tenantResult = await adminQuery(
-              `INSERT INTO tenants (name, email, phone)
-               VALUES ($1, $2, $3)
+              `INSERT INTO tenants (name, email, phone, enabled_modules)
+               VALUES ($1, $2, $3, NULL)
                RETURNING id`,
               [clinicName, userEmail, phone]
             );
@@ -172,7 +172,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
             // Create subscription (trial)
             await adminQuery(
               `INSERT INTO subscriptions (tenant_id, status, plan, trial_start, trial_end)
-               VALUES ($1, 'trialing', 'trial', now(), now() + INTERVAL '5 days')`,
+               VALUES ($1, 'trialing', 'trial', now(), now() + INTERVAL '7 days')`,
               [tenantId]
             );
 

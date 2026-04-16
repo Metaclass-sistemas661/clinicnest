@@ -82,7 +82,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
         const userEmail = decoded.email || '';
 
         const tenantResult = await adminQuery(
-          `INSERT INTO tenants (name, email, phone) VALUES ($1, $2, $3) RETURNING id`,
+          `INSERT INTO tenants (name, email, phone, enabled_modules) VALUES ($1, $2, $3, NULL) RETURNING id`,
           [clinicName, userEmail, phone]
         );
         const tenantId = tenantResult.rows[0].id;
@@ -101,7 +101,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
         );
 
         await adminQuery(
-          `INSERT INTO subscriptions (tenant_id, status, plan) VALUES ($1, 'trialing', 'trial')`,
+          `INSERT INTO subscriptions (tenant_id, status, plan, trial_start, trial_end) VALUES ($1, 'trialing', 'trial', now(), now() + INTERVAL '7 days')`,
           [tenantId]
         );
 

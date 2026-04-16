@@ -67,8 +67,12 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
         if (error) {
           console.warn('Failed to load tenant overrides:', error);
           setOverrides({ features: [], limits: [] });
-        } else if (data) {
-          setOverrides(data as TenantOverrides);
+        } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const d = data as Record<string, unknown>;
+          setOverrides({
+            features: Array.isArray(d.features) ? d.features as FeatureOverride[] : [],
+            limits: Array.isArray(d.limits) ? d.limits as LimitOverride[] : [],
+          });
         }
       } catch (err) {
         console.warn('Error loading tenant overrides:', err);
@@ -106,6 +110,7 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
 
   // Verificar se um override de feature está ativo (não expirado)
   const getActiveFeatureOverride = useCallback((feature: FeatureKey): FeatureOverride | null => {
+    if (!Array.isArray(overrides.features)) return null;
     const override = overrides.features.find(o => o.feature_key === feature);
     if (!override) return null;
     
@@ -119,6 +124,7 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
 
   // Verificar se um override de limite está ativo (não expirado)
   const getActiveLimitOverride = useCallback((limit: LimitKey): LimitOverride | null => {
+    if (!Array.isArray(overrides.limits)) return null;
     const override = overrides.limits.find(o => o.limit_key === limit);
     if (!override) return null;
     
