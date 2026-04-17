@@ -1,0 +1,27 @@
+-- Table: clients
+CREATE TABLE IF NOT EXISTS clients (
+  id UUID,
+  tenant_id UUID,
+  name TEXT,
+  phone TEXT,
+  email TEXT,
+  cpf TEXT,
+  rg TEXT,
+  birth_date DATE,
+  gender TEXT,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  notes TEXT,
+  blood_type TEXT,
+  allergies TEXT,
+  chronic_conditions TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  marketing_opt_out BOOLEAN,
+  photo_url TEXT,
+  access_code TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);

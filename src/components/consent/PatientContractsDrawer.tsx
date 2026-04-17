@@ -63,6 +63,9 @@ export function PatientContractsDrawer({
   const [consents, setConsents] = useState<ConsentWithTemplate[]>([]);
   const [templates, setTemplates] = useState<ConsentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
 
   // Realtime: recarrega quando um consent é selado
   useConsentRealtime({
@@ -75,6 +78,7 @@ export function PatientContractsDrawer({
   const fetchData = useCallback(async () => {
     if (!patientId || !tenantId) return;
     setIsLoading(true);
+    setFetchError(null);
     try {
       const [consentsRes, templatesRes] = await Promise.all([
         (api as any)
@@ -90,7 +94,16 @@ export function PatientContractsDrawer({
           .order("sort_order"),
       ]);
 
-      if (consentsRes.error) throw consentsRes.error;
+      if (consentsRes.error) {
+        // Tabela indisponível (403) ou erro de rede — diferenciar para UX
+        const code = consentsRes.error.code;
+        if (code === '403') {
+          logger.warn("[PatientContractsDrawer] patient_consents table not available (403) — may require redeployment");
+          setFetchError("O módulo de termos e contratos está temporariamente indisponível. Tente novamente em alguns minutos.");
+          return;
+        }
+        throw consentsRes.error;
+      }
       if (templatesRes.error) throw templatesRes.error;
 
       const tMap = new Map<string, ConsentTemplate>();
@@ -104,13 +117,22 @@ export function PatientContractsDrawer({
 
       setConsents(enriched);
       setTemplates((templatesRes.data ?? []) as unknown as ConsentTemplate[]);
-    } catch (err) {
+      setRetryCount(0);
+    } catch (err: any) {
       logger.error("[PatientContractsDrawer] fetch error", err);
+      const isRetryable = err?.code === 'NETWORK' || err?.code === 'TIMEOUT' || err?.code === '502' || err?.code === '503' || err?.code === '504';
+      if (isRetryable && retryCount < MAX_RETRIES) {
+        setRetryCount((c) => c + 1);
+        const delay = 1000 * Math.pow(2, retryCount);
+        setTimeout(() => fetchData(), delay);
+        return;
+      }
+      setFetchError(err?.message || "Erro ao carregar termos do paciente");
       toast.error("Erro ao carregar termos do paciente");
     } finally {
       setIsLoading(false);
     }
-  }, [patientId, tenantId]);
+  }, [patientId, tenantId, retryCount]);
 
   useEffect(() => {
     if (open) fetchData();
@@ -212,6 +234,14 @@ export function PatientContractsDrawer({
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-6 w-32 mt-4" />
             <Skeleton className="h-16 w-full" />
+          </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
+            <AlertCircle className="h-10 w-10 text-destructive" />
+            <p className="text-sm text-muted-foreground">{fetchError}</p>
+            <Button size="sm" variant="outline" onClick={() => { setRetryCount(0); fetchData(); }}>
+              Tentar novamente
+            </Button>
           </div>
         ) : (
           <div className="space-y-5">

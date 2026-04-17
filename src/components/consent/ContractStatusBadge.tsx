@@ -33,6 +33,11 @@ export function ContractStatusBadge({ patientId, tenantId }: ContractStatusBadge
 
         if (cancelled) return;
 
+        if (consentsRes.error?.code === '403' || templatesRes.error?.code === '403') {
+          if (!cancelled) setStatus("none");
+          return;
+        }
+
         const signedIds = new Set(
           ((consentsRes.data ?? []) as any[]).map((c: any) => c.template_id as string),
         );

@@ -66,7 +66,13 @@ export function PatientConsentsViewer({ patientId, patientName, tenantId }: Pati
           .order("created_at"),
       ]);
 
-      if (consentsRes.error) throw consentsRes.error;
+      if (consentsRes.error) {
+        if (consentsRes.error.code === '403') {
+          logger.warn("[PatientConsentsViewer] patient_consents table not available (403)");
+          return;
+        }
+        throw consentsRes.error;
+      }
       if (templatesRes.error) throw templatesRes.error;
 
       const tMap = new Map<string, ConsentTemplate>();

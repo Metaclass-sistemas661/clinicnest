@@ -399,6 +399,87 @@ async function bootstrap() {
     // ── triage_records: ensure updated_at column exists ──
     await adminQuery(`ALTER TABLE triage_records ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now()`);
 
+    // ── patient_consents: ensure table + all columns exist ──
+    await adminQuery(`
+      CREATE TABLE IF NOT EXISTS public.patient_consents (
+        id UUID DEFAULT gen_random_uuid() NOT NULL,
+        tenant_id UUID NOT NULL,
+        patient_id UUID NOT NULL,
+        template_id UUID,
+        patient_user_id UUID,
+        title TEXT NOT NULL DEFAULT '',
+        content TEXT,
+        status TEXT DEFAULT 'pending'::text,
+        signed_at TIMESTAMPTZ,
+        signature_method TEXT,
+        signature_url TEXT,
+        manual_signature_path TEXT,
+        facial_photo_path TEXT,
+        photo_url TEXT,
+        sealed_pdf_path TEXT,
+        sealed_pdf_url TEXT,
+        sealed_pdf_hash TEXT,
+        sealed_at TIMESTAMPTZ,
+        template_snapshot_html TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        consent_hash TEXT,
+        created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+        PRIMARY KEY (id)
+      )
+    `);
+    // Patch columns that may be missing on existing tables
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS patient_user_id UUID`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS signature_method TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS manual_signature_path TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS facial_photo_path TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS sealed_pdf_path TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS sealed_pdf_hash TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS sealed_at TIMESTAMPTZ`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS template_snapshot_html TEXT`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT ''`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`);
+    // Indexes
+    await adminQuery(`CREATE INDEX IF NOT EXISTS idx_patient_consents_tenant ON public.patient_consents USING btree (tenant_id)`);
+    await adminQuery(`CREATE INDEX IF NOT EXISTS idx_patient_consents_patient ON public.patient_consents USING btree (patient_id)`);
+    // RLS
+    await adminQuery(`ALTER TABLE public.patient_consents ENABLE ROW LEVEL SECURITY`);
+    await adminQuery(`
+      DO $$ BEGIN
+        CREATE POLICY patient_consents_tenant_isolation ON public.patient_consents
+          USING (tenant_id = (NULLIF(current_setting('app.jwt_claims', true), '')::json->>'tenant_id')::uuid);
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$
+    `);
+    await adminQuery(`
+      DO $$ BEGIN
+        CREATE POLICY patient_consents_insert_policy ON public.patient_consents
+          FOR INSERT WITH CHECK (
+            tenant_id = (NULLIF(current_setting('app.jwt_claims', true), '')::json->>'tenant_id')::uuid
+          );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$
+    `);
+    await adminQuery(`
+      DO $$ BEGIN
+        CREATE POLICY patient_consents_update_policy ON public.patient_consents
+          FOR UPDATE USING (
+            tenant_id = (NULLIF(current_setting('app.jwt_claims', true), '')::json->>'tenant_id')::uuid
+          );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$
+    `);
+    await adminQuery(`
+      DO $$ BEGIN
+        CREATE POLICY patient_consents_delete_policy ON public.patient_consents
+          FOR DELETE USING (
+            tenant_id = (NULLIF(current_setting('app.jwt_claims', true), '')::json->>'tenant_id')::uuid
+          );
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$
+    `);
+
     // ── upsert_client_v2: corrigir p_client_id → p_patient_id, clients → patients ──
     await adminQuery(`DROP FUNCTION IF EXISTS public.upsert_client_v2 CASCADE`);
     await adminQuery(`

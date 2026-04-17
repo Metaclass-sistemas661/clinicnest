@@ -166,11 +166,25 @@ export interface PatientConsent {
   patient_id: string;
   template_id: string;
   patient_user_id: string;
+  title: string;
+  content: string | null;
+  status: string;
   signed_at: string;
+  signature_method: string | null;
+  signature_url: string | null;
+  manual_signature_path: string | null;
+  facial_photo_path: string | null;
+  photo_url: string | null;
+  sealed_pdf_path: string | null;
+  sealed_pdf_url: string | null;
+  sealed_pdf_hash: string | null;
+  sealed_at: string | null;
+  template_snapshot_html: string | null;
   ip_address: string | null;
   user_agent: string | null;
-  facial_photo_path: string | null;
-  template_snapshot_html: string | null;
+  consent_hash: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Procedure {
