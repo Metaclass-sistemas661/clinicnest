@@ -11,6 +11,7 @@ import { setCorrelationId } from './shared/logging';
 import { checkRateLimit } from './shared/rateLimit';
 import { requestLogger } from './shared/requestLogger';
 import crypto from 'crypto';
+import { EXPECTED_SCHEMA } from './expected-schema';
 
 // --- Route imports (65 functions) ---
 // AI
@@ -200,6 +201,85 @@ app.get('/health', async (_req, res) => {
     pool: poolStats,
     uptime: Math.floor(process.uptime()),
   });
+});
+
+// ─── Schema Audit Endpoint (internal only, outside /api to bypass authMiddleware) ───
+// Compares expected tables/columns from migration definitions against live DB.
+// Protected by CRON_SECRET to prevent unauthorized access.
+app.get('/internal/schema-audit', async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  const provided = req.headers['x-secret-key'] || req.headers['authorization']?.replace('Bearer ', '');
+  if (!secret || provided !== secret) {
+    return res.status(403).json({ error: 'Acesso não autorizado.' });
+  }
+
+  try {
+    // Get all tables from DB
+    const { rows: dbTables } = await pool.query(`
+      SELECT table_name FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+    const dbTableSet = new Set(dbTables.map((r: any) => r.table_name));
+
+    // Get all columns from DB
+    const { rows: dbColumns } = await pool.query(`
+      SELECT table_name, column_name FROM information_schema.columns
+      WHERE table_schema = 'public' ORDER BY table_name, ordinal_position
+    `);
+    const dbColMap: Record<string, Set<string>> = {};
+    for (const col of dbColumns) {
+      if (!dbColMap[col.table_name]) dbColMap[col.table_name] = new Set();
+      dbColMap[col.table_name].add(col.column_name);
+    }
+
+    // Get RLS status
+    const { rows: rlsRows } = await pool.query(`
+      SELECT c.relname, c.relrowsecurity
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r'
+    `);
+    const rlsMap: Record<string, boolean> = {};
+    for (const r of rlsRows) rlsMap[r.relname] = r.relrowsecurity;
+
+    // Expected tables/columns from migrations (hardcoded from parsed migration files)
+    const expected: Record<string, string[]> = EXPECTED_SCHEMA;
+
+    const issues: any[] = [];
+    for (const [table, cols] of Object.entries(expected)) {
+      if (!dbTableSet.has(table)) {
+        issues.push({ severity: 'CRITICAL', table, issue: 'TABLE MISSING FROM DB' });
+        continue;
+      }
+      const dbCols = dbColMap[table] || new Set();
+      for (const col of cols) {
+        if (!dbCols.has(col)) {
+          issues.push({ severity: 'HIGH', table, issue: `COLUMN MISSING: ${col}` });
+        }
+      }
+    }
+
+    // Tables in DB but no migration
+    const expectedSet = new Set(Object.keys(expected));
+    for (const t of dbTableSet) {
+      if (!expectedSet.has(t)) {
+        issues.push({ severity: 'INFO', table: t, issue: 'TABLE IN DB BUT NO MIGRATION' });
+      }
+    }
+
+    const critical = issues.filter((i: any) => i.severity === 'CRITICAL');
+    const high = issues.filter((i: any) => i.severity === 'HIGH');
+
+    res.json({
+      total_migration_tables: Object.keys(expected).length,
+      total_db_tables: dbTableSet.size,
+      critical_count: critical.length,
+      high_count: high.length,
+      issues,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Public endpoints (no auth required)
@@ -424,6 +504,7 @@ async function bootstrap() {
         ip_address TEXT,
         user_agent TEXT,
         consent_hash TEXT,
+        document_hash TEXT,
         created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
         PRIMARY KEY (id)
@@ -440,6 +521,7 @@ async function bootstrap() {
     await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS template_snapshot_html TEXT`);
     await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT ''`);
     await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`);
+    await adminQuery(`ALTER TABLE patient_consents ADD COLUMN IF NOT EXISTS document_hash TEXT`);
     // Indexes
     await adminQuery(`CREATE INDEX IF NOT EXISTS idx_patient_consents_tenant ON public.patient_consents USING btree (tenant_id)`);
     await adminQuery(`CREATE INDEX IF NOT EXISTS idx_patient_consents_patient ON public.patient_consents USING btree (patient_id)`);
@@ -514,6 +596,85 @@ async function bootstrap() {
         RETURN jsonb_build_object('success',true,'patient_id',v_id,'access_code',v_access_code);
       END; $fn$
     `);
+
+    // Ensure services table exists (04_clinical)
+    try {
+      await adminQuery(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'commission_type') THEN
+            CREATE TYPE public.commission_type AS ENUM ('percentage', 'fixed');
+          END IF;
+        END $$
+      `);
+      // Drop conflicting view if one exists with the same name
+      const { rows: svcRel } = await pool.query(`SELECT relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'services'`);
+      if (svcRel.length > 0 && svcRel[0].relkind === 'v') {
+        console.log('[bootstrap] Dropping conflicting VIEW "services" to create TABLE');
+        await adminQuery(`DROP VIEW IF EXISTS public.services CASCADE`);
+      }
+      await adminQuery(`
+        CREATE TABLE IF NOT EXISTS public.services (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          duration_minutes INTEGER DEFAULT 30,
+          price NUMERIC(10,2) DEFAULT 0,
+          cost NUMERIC(10,2) DEFAULT 0,
+          commission_type public.commission_type DEFAULT 'percentage',
+          commission_value NUMERIC(10,2) DEFAULT 0,
+          category TEXT,
+          tuss_code TEXT,
+          is_active BOOLEAN DEFAULT true,
+          requires_authorization BOOLEAN DEFAULT false,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+      `);
+      await adminQuery(`ALTER TABLE public.services ENABLE ROW LEVEL SECURITY`);
+      await adminQuery(`
+        DO $$ BEGIN
+          CREATE POLICY services_tenant_isolation ON public.services
+            USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$
+      `);
+      console.log('[bootstrap] services table ensured');
+    } catch (svcErr: any) {
+      console.error('[bootstrap] services table error:', svcErr.message);
+    }
+
+    // Ensure rnds_incoming_statistics table exists (13_integrations)
+    try {
+      const { rows: rndsRel } = await pool.query(`SELECT relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'rnds_incoming_statistics'`);
+      if (rndsRel.length > 0 && rndsRel[0].relkind === 'v') {
+        console.log('[bootstrap] Dropping conflicting VIEW "rnds_incoming_statistics" to create TABLE');
+        await adminQuery(`DROP VIEW IF EXISTS public.rnds_incoming_statistics CASCADE`);
+      }
+      await adminQuery(`
+        CREATE TABLE IF NOT EXISTS public.rnds_incoming_statistics (
+          tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+          total_received BIGINT DEFAULT 0,
+          pending_count BIGINT DEFAULT 0,
+          accepted_count BIGINT DEFAULT 0,
+          rejected_count BIGINT DEFAULT 0,
+          merged_count BIGINT DEFAULT 0,
+          error_count BIGINT DEFAULT 0,
+          last_received_at TIMESTAMPTZ
+        )
+      `);
+      await adminQuery(`ALTER TABLE public.rnds_incoming_statistics ENABLE ROW LEVEL SECURITY`);
+      await adminQuery(`
+        DO $$ BEGIN
+          CREATE POLICY rnds_incoming_statistics_tenant_isolation ON public.rnds_incoming_statistics
+            USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$
+      `);
+      console.log('[bootstrap] rnds_incoming_statistics table ensured');
+    } catch (rndsErr: any) {
+      console.error('[bootstrap] rnds_incoming_statistics table error:', rndsErr.message);
+    }
 
     console.log('[bootstrap] Database bootstrap completed');
   } catch (err: any) {

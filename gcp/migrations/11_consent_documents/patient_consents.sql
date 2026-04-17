@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS public.patient_consents (
   ip_address TEXT,
   user_agent TEXT,
   consent_hash TEXT,
+  document_hash TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   PRIMARY KEY (id)

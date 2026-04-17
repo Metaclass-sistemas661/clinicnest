@@ -183,6 +183,7 @@ export interface PatientConsent {
   ip_address: string | null;
   user_agent: string | null;
   consent_hash: string | null;
+  document_hash: string | null;
   created_at: string;
   updated_at: string;
 }
