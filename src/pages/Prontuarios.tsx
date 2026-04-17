@@ -300,15 +300,15 @@ export default function Prontuarios() {
     try {
       const { data, error } = await api.from("medical_records")
         .select("*, patient:patients(name), profiles(full_name)")
-        .eq("tenant_id", profile.tenant_id).order("record_date", { ascending: false });
+        .eq("tenant_id", profile.tenant_id).order("created_at", { ascending: false });
       if (error) throw error;
       setRecords((data || []).map((r: any) => ({
         id: r.id, patient_id: r.patient_id, client_name: r.patient?.name ?? "—",
-        appointment_date: r.record_date, professional_name: r.profiles?.full_name ?? "—",
-        chief_complaint: r.chief_complaint ?? "", anamnesis: r.anamnesis ?? "",
-        physical_exam: r.physical_exam ?? "", diagnosis: r.diagnosis ?? "",
-        cid_code: r.cid_code ?? "", treatment_plan: r.treatment_plan ?? "",
-        prescriptions: r.prescriptions ?? "", notes: r.notes ?? "", created_at: r.created_at,
+        appointment_date: r.created_at, professional_name: r.profiles?.full_name ?? "—",
+        chief_complaint: r.subjective ?? "", anamnesis: r.subjective ?? "",
+        physical_exam: r.objective ?? "", diagnosis: r.assessment ?? "",
+        cid_code: Array.isArray(r.cid_codes) ? r.cid_codes.join(", ") : "", treatment_plan: r.plan ?? "",
+        prescriptions: "", notes: r.notes ?? "", created_at: r.created_at,
         blood_pressure_systolic: r.blood_pressure_systolic,
         blood_pressure_diastolic: r.blood_pressure_diastolic,
         heart_rate: r.heart_rate, respiratory_rate: r.respiratory_rate,

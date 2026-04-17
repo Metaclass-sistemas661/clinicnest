@@ -63,7 +63,7 @@ export function PatientConsentsViewer({ patientId, patientName, tenantId }: Pati
           .select("*")
           .eq("tenant_id", tenantId)
           .eq("is_active", true)
-          .order("sort_order"),
+          .order("created_at"),
       ]);
 
       if (consentsRes.error) throw consentsRes.error;

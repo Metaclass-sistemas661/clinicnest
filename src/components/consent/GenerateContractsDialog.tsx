@@ -61,7 +61,6 @@ export function GenerateContractsDialog({ open, onOpenChange, patient, onGenerat
         .select("*")
         .eq("tenant_id", patient.tenant_id)
         .eq("is_active", true)
-        .order("sort_order")
         .order("created_at");
       if (error) throw error;
       setTemplates((data as unknown as ConsentTemplate[]) ?? []);

@@ -47,6 +47,7 @@ const ALLOWED_TABLES = new Set([
   'dental_anamnesis', 'dental_prescriptions', 'dental_images',
   'aesthetic_sessions', 'aesthetic_protocols', 'aesthetic_areas',
   'consent_templates', 'consent_signatures', 'consent_signing_links',
+  'patient_consents', 'clinical_evolutions',
   'products', 'stock_movements', 'suppliers', 'supplier_orders', 'supplier_order_items',
   'chat_channels', 'chat_messages', 'chat_participants',
   'campaigns', 'campaign_recipients',
@@ -74,6 +75,160 @@ const ALLOWED_TABLES = new Set([
 function isSafeColumn(col: string): boolean {
   return /^[\w\s,.*()":]+$/.test(col) && col.length <= 2000;
 }
+
+// ─── PostgREST-style relation parser ──────────────────────────────
+// Parses select strings like "*, patient:patients(name), profiles(full_name)"
+// into flat columns + join descriptors. Supports up to 2 levels of nesting.
+
+interface FlatJoin {
+  pathAlias: string;     // dotted alias for result nesting: "patient" or "appointments.patients"
+  table: string;         // actual table name
+  columns: string[];     // columns to select from this join
+  sqlAlias: string;      // SQL table alias
+  parentSqlAlias: string; // SQL alias of parent table (or main table name)
+  fkColumn: string;      // FK column in parent
+  pkColumn: string;      // PK column in joined table
+}
+
+interface ParsedSelect {
+  flatCols: string;
+  joins: FlatJoin[];
+}
+
+function parseSelectWithJoins(raw: string, mainTable: string): ParsedSelect {
+  const joins: FlatJoin[] = [];
+  const flat: string[] = [];
+
+  const parts = splitTopLevelSelect(raw);
+
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    const joinMatch = trimmed.match(/^(?:(\w+):)?(\w+)\((.+)\)$/s);
+    if (joinMatch) {
+      const alias = joinMatch[1] || joinMatch[2];
+      const table = joinMatch[2];
+      if (!isSafeIdentifier(table) || !isSafeIdentifier(alias)) continue;
+      if (!ALLOWED_TABLES.has(table)) continue;
+
+      const fkInfo = FK_OVERRIDES[mainTable]?.[table] || FK_OVERRIDES['*']?.[table];
+      if (!fkInfo) continue;
+
+      const sqlAlias = `_j_${alias}`;
+      const innerParts = splitTopLevelSelect(joinMatch[3]);
+      const safeCols: string[] = [];
+
+      for (const ip of innerParts) {
+        const t = ip.trim();
+        if (!t) continue;
+
+        // Check for nested joins: alias:table(cols) or table(cols)
+        const nestedMatch = t.match(/^(?:(\w+):)?(\w+)\((.+)\)$/s);
+        if (nestedMatch) {
+          const nAlias = nestedMatch[1] || nestedMatch[2];
+          const nTable = nestedMatch[2];
+          if (!isSafeIdentifier(nTable) || !isSafeIdentifier(nAlias)) continue;
+          if (!ALLOWED_TABLES.has(nTable)) continue;
+
+          const nFkInfo = FK_OVERRIDES[table]?.[nTable] || FK_OVERRIDES['*']?.[nTable];
+          if (!nFkInfo) continue;
+
+          const nSqlAlias = `_j_${alias}_${nAlias}`;
+          const nInnerParts = nestedMatch[3].split(',').map(s => s.trim());
+          const nSafeCols: string[] = [];
+          for (const nc of nInnerParts) {
+            const colName = nc.replace(/^"/, '').replace(/"$/, '');
+            if (isSafeIdentifier(colName)) nSafeCols.push(colName);
+          }
+          if (nSafeCols.length > 0) {
+            joins.push({
+              pathAlias: `${alias}.${nAlias}`,
+              table: nTable,
+              columns: nSafeCols,
+              sqlAlias: nSqlAlias,
+              parentSqlAlias: sqlAlias,
+              fkColumn: nFkInfo.fk,
+              pkColumn: nFkInfo.pk,
+            });
+          }
+        } else {
+          const colName = t.replace(/^"/, '').replace(/"$/, '');
+          if (isSafeIdentifier(colName)) safeCols.push(colName);
+        }
+      }
+
+      // Add the parent join (even if no direct columns, nested joins need it)
+      if (safeCols.length > 0 || joins.some(j => j.parentSqlAlias === sqlAlias)) {
+        joins.unshift({
+          pathAlias: alias,
+          table,
+          columns: safeCols,
+          sqlAlias,
+          parentSqlAlias: `"${mainTable}"`,
+          fkColumn: fkInfo.fk,
+          pkColumn: fkInfo.pk,
+        });
+      }
+    } else {
+      flat.push(trimmed);
+    }
+  }
+
+  return {
+    flatCols: flat.length > 0 ? flat.join(', ') : '*',
+    joins,
+  };
+}
+
+function splitTopLevelSelect(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++;
+    else if (s[i] === ')') depth--;
+    else if (s[i] === ',' && depth === 0) {
+      parts.push(s.substring(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(s.substring(start));
+  return parts;
+}
+
+/**
+ * Resolve FK column: given main table and joined table, find the FK column
+ * using convention (e.g., patients → patient_id) and a manual override map.
+ */
+const FK_OVERRIDES: Record<string, Record<string, { fk: string; pk: string }>> = {
+  // table -> joined_table -> { fk column in main table, pk column in joined table }
+  // profiles is special: FK is professional_id or user_id depending on context
+  '*': {
+    profiles: { fk: 'professional_id', pk: 'id' },
+    patients: { fk: 'patient_id', pk: 'id' },
+    procedures: { fk: 'procedure_id', pk: 'id' },
+    specialties: { fk: 'specialty_id', pk: 'id' },
+    appointments: { fk: 'appointment_id', pk: 'id' },
+    tenants: { fk: 'tenant_id', pk: 'id' },
+    insurance_plans: { fk: 'insurance_plan_id', pk: 'id' },
+    clinic_rooms: { fk: 'room_id', pk: 'id' },
+    consent_templates: { fk: 'template_id', pk: 'id' },
+  },
+  // Per-table overrides
+  appointments: {
+    patients: { fk: 'patient_id', pk: 'id' },
+    profiles: { fk: 'professional_id', pk: 'id' },
+    procedures: { fk: 'procedure_id', pk: 'id' },
+    specialties: { fk: 'specialty_id', pk: 'id' },
+  },
+  referrals: {
+    profiles: { fk: 'from_professional_id', pk: 'id' },
+  },
+  financial_transactions: {
+    appointments: { fk: 'appointment_id', pk: 'id' },
+  },
+};
 
 function isSafeIdentifier(name: string): boolean {
   return /^[a-z_][a-z0-9_]*$/.test(name) && name.length <= 128;
@@ -324,7 +479,8 @@ export async function restProxy(req: Request, res: Response) {
   try {
     switch (q.operation) {
       case 'select': {
-        const cols = q.columns && isSafeColumn(q.columns) ? q.columns : '*';
+        const rawCols = q.columns && isSafeColumn(q.columns) ? q.columns : '*';
+        const { flatCols, joins } = parseSelectWithJoins(rawCols, q.table);
         const params: any[] = [];
         const { clause: where, nextIdx } = buildFilterClause(q.filters || [], params, 1);
 
@@ -341,12 +497,43 @@ export async function restProxy(req: Request, res: Response) {
           }
         }
 
-        let sql = `SELECT ${cols} FROM "${q.table}"${where}${orExtra}`;
+        // Build SELECT columns (prefix main table columns when joins exist)
+        let selectExpr: string;
+        let joinClause = '';
+
+        if (joins.length > 0) {
+          // Main table columns
+          if (flatCols === '*') {
+            selectExpr = `"${q.table}".*`;
+          } else {
+            selectExpr = flatCols.split(',').map(c => {
+              const t = c.trim();
+              return t === '*' ? `"${q.table}".*` : t;
+            }).join(', ');
+          }
+
+          // Join columns + LEFT JOIN clauses using FlatJoin descriptors
+          for (const j of joins) {
+            const parentRef = j.parentSqlAlias.startsWith('"')
+              ? j.parentSqlAlias // already quoted main table
+              : `"${j.parentSqlAlias}"`; // sql alias
+
+            joinClause += ` LEFT JOIN "${j.table}" "${j.sqlAlias}" ON "${j.sqlAlias}"."${j.pkColumn}" = ${parentRef}."${j.fkColumn}"`;
+
+            for (const col of j.columns) {
+              selectExpr += `, "${j.sqlAlias}"."${col}" AS "${j.pathAlias}.${col}"`;
+            }
+          }
+        } else {
+          selectExpr = flatCols;
+        }
+
+        let sql = `SELECT ${selectExpr} FROM "${q.table}"${joinClause}${where}${orExtra}`;
 
         if (q.order?.length) {
           const orderParts = q.order
             .filter(o => isSafeIdentifier(o.column))
-            .map(o => `"${o.column}" ${o.ascending ? 'ASC' : 'DESC'}`);
+            .map(o => `"${q.table}"."${o.column}" ${o.ascending ? 'ASC' : 'DESC'}`);
           if (orderParts.length) sql += ` ORDER BY ${orderParts.join(', ')}`;
         }
 
@@ -355,22 +542,59 @@ export async function restProxy(req: Request, res: Response) {
 
         const result = await db.query(sql, params);
 
+        // Post-process: nest joined columns into sub-objects (supports multi-level nesting)
+        const rows = joins.length > 0
+          ? result.rows.map((row: any) => {
+              const out: any = {};
+              for (const [key, val] of Object.entries(row)) {
+                const dotIdx = key.indexOf('.');
+                if (dotIdx > 0) {
+                  // key is like "patient.name" or "appointments.patients.name"
+                  const segments = key.split('.');
+                  let target = out;
+                  for (let i = 0; i < segments.length - 1; i++) {
+                    if (!target[segments[i]]) target[segments[i]] = {};
+                    target = target[segments[i]];
+                  }
+                  target[segments[segments.length - 1]] = val;
+                } else {
+                  out[key] = val;
+                }
+              }
+              // If all join columns are null, set the sub-object to null
+              for (const j of joins) {
+                const segments = j.pathAlias.split('.');
+                let target = out;
+                for (let i = 0; i < segments.length - 1; i++) {
+                  if (!target[segments[i]]) break;
+                  target = target[segments[i]];
+                }
+                const lastSeg = segments[segments.length - 1];
+                if (target[lastSeg] && typeof target[lastSeg] === 'object' &&
+                    Object.values(target[lastSeg]).every(v => v === null)) {
+                  target[lastSeg] = null;
+                }
+              }
+              return out;
+            })
+          : result.rows;
+
         if (q.single) {
-          if (result.rows.length === 0) {
+          if (rows.length === 0) {
             return res.json({ data: null, error: { message: 'Nenhum registro encontrado.', code: 'PGRST116' } });
           }
-          return res.json({ data: result.rows[0], error: null });
+          return res.json({ data: rows[0], error: null });
         }
 
         if (q.count) {
           const countResult = await db.query(
-            `SELECT COUNT(*) as total FROM "${q.table}"${where}${orExtra}`,
+            `SELECT COUNT(*) as total FROM "${q.table}"${joinClause}${where}${orExtra}`,
             params
           );
-          return res.json({ data: result.rows, error: null, count: parseInt(countResult.rows[0]?.total || '0') });
+          return res.json({ data: rows, error: null, count: parseInt(countResult.rows[0]?.total || '0') });
         }
 
-        return res.json({ data: result.rows, error: null });
+        return res.json({ data: rows, error: null });
       }
 
       case 'insert': {

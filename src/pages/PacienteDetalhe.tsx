@@ -122,17 +122,18 @@ export default function PacienteDetalhe() {
         fetchPatientSpendingAllTime(profile.tenant_id),
         getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
         api.from("patient_packages")
-          .select("id, procedure_id, total_sessions, remaining_sessions, status, purchased_at, expires_at, procedure:procedures(name)")
+          .select("id, name, total_sessions, used_sessions, status, created_at, expires_at")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("purchased_at", { ascending: false }),
+          .order("created_at", { ascending: false }),
         api.from("client_marketing_preferences")
-          .select("marketing_opt_out")
-          .eq("tenant_id", profile.tenant_id).eq("client_id", patientId)
+          .select("email_opt_in, sms_opt_in, whatsapp_opt_in, push_opt_in")
+          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .maybeSingle(),
       ]);
 
       if (mktPrefRes.data) {
-        setMarketingOptOut(mktPrefRes.data.marketing_opt_out ?? false);
+        const mp = mktPrefRes.data as any;
+        setMarketingOptOut(!(mp.email_opt_in ?? true));
       }
 
       const spending = spendingData.find((s) => s.patient_id === patientId);
@@ -143,11 +144,11 @@ export default function PacienteDetalhe() {
 
       if (!packagesRes.error) {
         setDetailPackages((packagesRes.data || []).map((p: any) => ({
-          id: String(p.id), procedure_id: String(p.procedure_id),
-          service_name: String(p?.procedure?.name ?? "Procedimento"),
+          id: String(p.id), procedure_id: "",
+          service_name: String(p?.name ?? "Pacote"),
           total_sessions: Number(p.total_sessions ?? 0),
-          remaining_sessions: Number(p.remaining_sessions ?? 0),
-          status: String(p.status ?? ""), purchased_at: String(p.purchased_at ?? ""),
+          remaining_sessions: Math.max(0, Number(p.total_sessions ?? 0) - Number(p.used_sessions ?? 0)),
+          status: String(p.status ?? ""), purchased_at: String(p.created_at ?? ""),
           expires_at: p.expires_at ? String(p.expires_at) : null,
         })));
       }
@@ -155,39 +156,39 @@ export default function PacienteDetalhe() {
       // Clinical history
       const clinDocs: typeof clinicalHistory = [];
       const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
-        api.from("prescriptions").select("id, issued_at, medications, prescription_type")
+        api.from("prescriptions").select("id, created_at, medications, is_controlled")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("issued_at", { ascending: false }).limit(20),
-        api.from("medical_certificates").select("id, issued_at, certificate_type, content")
+          .order("created_at", { ascending: false }).limit(20),
+        api.from("medical_certificates").select("id, created_at, certificate_type, content")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("issued_at", { ascending: false }).limit(20),
-        api.from("exam_results").select("id, created_at, exam_name, status")
+          .order("created_at", { ascending: false }).limit(20),
+        api.from("exam_results").select("id, created_at, exam_type, status")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
         api.from("referrals").select("id, created_at, reason, status, specialties(name)")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
           .order("created_at", { ascending: false }).limit(20),
-        api.from("medical_records").select("id, record_date, chief_complaint, diagnosis, cid_code")
+        api.from("medical_records").select("id, created_at, subjective, assessment, cid_codes")
           .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("record_date", { ascending: false }).limit(20),
+          .order("created_at", { ascending: false }).limit(20),
       ]);
 
       (mrRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "prontuario", title: d.chief_complaint || "Prontuário",
-        subtitle: [d.diagnosis, d.cid_code].filter(Boolean).join(" — "), date: d.record_date,
+        id: d.id, type: "prontuario", title: d.subjective || "Prontuário",
+        subtitle: [d.assessment, Array.isArray(d.cid_codes) ? d.cid_codes.join(", ") : ""].filter(Boolean).join(" — "), date: d.created_at,
       }));
       (recRes.data || []).forEach((d: any) => clinDocs.push({
         id: d.id, type: "receita",
-        title: d.prescription_type === "simples" ? "Receita Simples" : d.prescription_type === "especial_b" ? "Receita Especial B" : "Receita Especial A",
-        subtitle: (d.medications || "").substring(0, 60), date: d.issued_at,
+        title: d.is_controlled ? "Receita Controlada" : "Receita Simples",
+        subtitle: (d.medications || "").substring(0, 60), date: d.created_at,
       }));
       (certRes.data || []).forEach((d: any) => clinDocs.push({
         id: d.id, type: "atestado",
         title: d.certificate_type === "atestado" ? "Atestado Médico" : d.certificate_type === "declaracao_comparecimento" ? "Declaração" : d.certificate_type === "laudo" ? "Laudo Médico" : "Relatório Médico",
-        subtitle: (d.content || "").substring(0, 60), date: d.issued_at,
+        subtitle: (d.content || "").substring(0, 60), date: d.created_at,
       }));
       (examRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "laudo", title: d.exam_name, subtitle: d.status, date: d.created_at,
+        id: d.id, type: "laudo", title: d.exam_type || "Exame", subtitle: d.status, date: d.created_at,
       }));
       (refRes.data || []).forEach((d: any) => clinDocs.push({
         id: d.id, type: "encaminhamento",
@@ -216,9 +217,12 @@ export default function PacienteDetalhe() {
       const { error } = await api.from("client_marketing_preferences")
         .upsert({
           tenant_id: profile.tenant_id,
-          client_id: id,
-          marketing_opt_out: checked,
-        }, { onConflict: "tenant_id,client_id" });
+          patient_id: id,
+          email_opt_in: !checked,
+          sms_opt_in: !checked,
+          whatsapp_opt_in: !checked,
+          push_opt_in: !checked,
+        }, { onConflict: "tenant_id,patient_id" });
       if (error) throw error;
       setMarketingOptOut(checked);
       toast.success(checked ? "Opt-out de marketing ativado" : "Opt-out de marketing desativado");
