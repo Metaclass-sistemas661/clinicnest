@@ -309,7 +309,7 @@ export default function PatientLogin() {
               <Input
                 id="patient-identifier"
                 type="text"
-                placeholder="PAC-XXXXXX ou 000.000.000-00"
+                placeholder="CLN-XXXXXXXXX ou 000.000.000-00"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="off"
