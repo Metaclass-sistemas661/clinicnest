@@ -246,99 +246,98 @@ function parseOnConflict(raw: string): string[] | null {
   return parts;
 }
 
-function buildFilterClause(filters: QueryFilter[], params: any[], startIdx: number): { clause: string; nextIdx: number } {
+function buildFilterClause(filters: QueryFilter[], params: any[], startIdx: number, tablePrefix?: string): { clause: string; nextIdx: number } {
   const clauses: string[] = [];
   let idx = startIdx;
+  const colRef = (col: string) => tablePrefix ? `${tablePrefix}."${col}"` : `"${col}"`;
 
   for (const f of filters) {
     if (!isSafeIdentifier(f.column)) continue;
 
     switch (f.op) {
       case 'eq':
-        clauses.push(`"${f.column}" = $${idx}`);
+        clauses.push(`${colRef(f.column)} = $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'neq':
-        clauses.push(`"${f.column}" != $${idx}`);
+        clauses.push(`${colRef(f.column)} != $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'gt':
-        clauses.push(`"${f.column}" > $${idx}`);
+        clauses.push(`${colRef(f.column)} > $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'gte':
-        clauses.push(`"${f.column}" >= $${idx}`);
+        clauses.push(`${colRef(f.column)} >= $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'lt':
-        clauses.push(`"${f.column}" < $${idx}`);
+        clauses.push(`${colRef(f.column)} < $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'lte':
-        clauses.push(`"${f.column}" <= $${idx}`);
+        clauses.push(`${colRef(f.column)} <= $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'like':
-        clauses.push(`"${f.column}" LIKE $${idx}`);
+        clauses.push(`${colRef(f.column)} LIKE $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'ilike':
-        clauses.push(`"${f.column}" ILIKE $${idx}`);
+        clauses.push(`${colRef(f.column)} ILIKE $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'in':
         if (Array.isArray(f.value) && f.value.length > 0) {
           const placeholders = f.value.map(() => `$${idx++}`);
-          clauses.push(`"${f.column}" IN (${placeholders.join(',')})`);
+          clauses.push(`${colRef(f.column)} IN (${placeholders.join(',')})`);
           params.push(...f.value);
         }
         break;
       case 'is':
         if (f.value === null) {
-          clauses.push(`"${f.column}" IS NULL`);
+          clauses.push(`${colRef(f.column)} IS NULL`);
         } else {
-          clauses.push(`"${f.column}" IS NOT NULL`);
+          clauses.push(`${colRef(f.column)} IS NOT NULL`);
         }
         break;
       case 'not_is':
         if (f.value === null) {
-          clauses.push(`"${f.column}" IS NOT NULL`);
+          clauses.push(`${colRef(f.column)} IS NOT NULL`);
         } else {
-          clauses.push(`"${f.column}" IS NULL`);
+          clauses.push(`${colRef(f.column)} IS NULL`);
         }
         break;
       case 'not_in':
-        // Supabase .not("col", "in", '("val1","val2")') passes a string like '("val1","val2")'
         if (typeof f.value === 'string') {
-          // Parse Supabase-style tuple string: '("val1","val2")'
           const inner = f.value.replace(/^\(/, '').replace(/\)$/, '');
           const vals = inner.split(',').map((v: string) => v.replace(/^"|"$/g, '').trim());
           if (vals.length > 0) {
             const placeholders = vals.map(() => `$${idx++}`);
-            clauses.push(`"${f.column}" NOT IN (${placeholders.join(',')})`);
+            clauses.push(`${colRef(f.column)} NOT IN (${placeholders.join(',')})`);
             params.push(...vals);
           }
         } else if (Array.isArray(f.value) && f.value.length > 0) {
           const placeholders = f.value.map(() => `$${idx++}`);
-          clauses.push(`"${f.column}" NOT IN (${placeholders.join(',')})`);
+          clauses.push(`${colRef(f.column)} NOT IN (${placeholders.join(',')})`);
           params.push(...f.value);
         }
         break;
       case 'contains':
-        clauses.push(`"${f.column}" @> $${idx}`);
+        clauses.push(`${colRef(f.column)} @> $${idx}`);
         params.push(f.value);
         idx++;
         break;
       case 'overlaps':
-        clauses.push(`"${f.column}" && $${idx}`);
+        clauses.push(`${colRef(f.column)} && $${idx}`);
         params.push(f.value);
         idx++;
         break;
@@ -352,7 +351,9 @@ function buildFilterClause(filters: QueryFilter[], params: any[], startIdx: numb
  * Parse a single PostgREST-style filter expression like "column.op.value"
  * Returns SQL fragment + params, or null if invalid.
  */
-function parseOrAtom(expr: string, params: any[], idx: number): { sql: string; nextIdx: number } | null {
+function parseOrAtom(expr: string, params: any[], idx: number, tablePrefix?: string): { sql: string; nextIdx: number } | null {
+  const colRef = (col: string) => tablePrefix ? `${tablePrefix}."${col}"` : `"${col}"`;
+
   // Handle and(...) grouping
   const andMatch = expr.match(/^and\((.+)\)$/);
   if (andMatch) {
@@ -360,7 +361,7 @@ function parseOrAtom(expr: string, params: any[], idx: number): { sql: string; n
     const parts: string[] = [];
     let curIdx = idx;
     for (const part of inner) {
-      const parsed = parseOrAtom(part.trim(), params, curIdx);
+      const parsed = parseOrAtom(part.trim(), params, curIdx, tablePrefix);
       if (!parsed) return null;
       parts.push(parsed.sql);
       curIdx = parsed.nextIdx;
@@ -388,32 +389,32 @@ function parseOrAtom(expr: string, params: any[], idx: number): { sql: string; n
   switch (op) {
     case 'eq':
       params.push(value);
-      return { sql: `"${column}" = $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} = $${idx}`, nextIdx: idx + 1 };
     case 'neq':
       params.push(value);
-      return { sql: `"${column}" != $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} != $${idx}`, nextIdx: idx + 1 };
     case 'gt':
       params.push(value);
-      return { sql: `"${column}" > $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} > $${idx}`, nextIdx: idx + 1 };
     case 'gte':
       params.push(value);
-      return { sql: `"${column}" >= $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} >= $${idx}`, nextIdx: idx + 1 };
     case 'lt':
       params.push(value);
-      return { sql: `"${column}" < $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} < $${idx}`, nextIdx: idx + 1 };
     case 'lte':
       params.push(value);
-      return { sql: `"${column}" <= $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} <= $${idx}`, nextIdx: idx + 1 };
     case 'like':
       params.push(value);
-      return { sql: `"${column}" LIKE $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} LIKE $${idx}`, nextIdx: idx + 1 };
     case 'ilike':
       params.push(value);
-      return { sql: `"${column}" ILIKE $${idx}`, nextIdx: idx + 1 };
+      return { sql: `${colRef(column)} ILIKE $${idx}`, nextIdx: idx + 1 };
     case 'is':
-      if (value === 'null') return { sql: `"${column}" IS NULL`, nextIdx: idx };
-      if (value === 'true') return { sql: `"${column}" IS TRUE`, nextIdx: idx };
-      if (value === 'false') return { sql: `"${column}" IS FALSE`, nextIdx: idx };
+      if (value === 'null') return { sql: `${colRef(column)} IS NULL`, nextIdx: idx };
+      if (value === 'true') return { sql: `${colRef(column)} IS TRUE`, nextIdx: idx };
+      if (value === 'false') return { sql: `${colRef(column)} IS FALSE`, nextIdx: idx };
       return null;
     default:
       return null;
@@ -444,13 +445,13 @@ function splitTopLevel(s: string): string[] {
  * Parse a full PostgREST-style .or() filter string into SQL.
  * Returns OR-joined clause + updated param index.
  */
-function buildOrClause(filterStr: string, params: any[], startIdx: number): { clause: string; nextIdx: number } | null {
+function buildOrClause(filterStr: string, params: any[], startIdx: number, tablePrefix?: string): { clause: string; nextIdx: number } | null {
   const atoms = splitTopLevel(filterStr);
   const sqlParts: string[] = [];
   let idx = startIdx;
 
   for (const atom of atoms) {
-    const parsed = parseOrAtom(atom.trim(), params, idx);
+    const parsed = parseOrAtom(atom.trim(), params, idx, tablePrefix);
     if (!parsed) return null; // Invalid filter — skip entire .or()
     sqlParts.push(parsed.sql);
     idx = parsed.nextIdx;
@@ -481,15 +482,19 @@ export async function restProxy(req: Request, res: Response) {
       case 'select': {
         const rawCols = q.columns && isSafeColumn(q.columns) ? q.columns : '*';
         const { flatCols, joins } = parseSelectWithJoins(rawCols, q.table);
+        const hasJoins = joins.length > 0;
+
+        // When joins exist, qualify all column refs with main table to prevent ambiguity
+        const tblPrefix = hasJoins ? `"${q.table}"` : undefined;
         const params: any[] = [];
-        const { clause: where, nextIdx } = buildFilterClause(q.filters || [], params, 1);
+        const { clause: where, nextIdx } = buildFilterClause(q.filters || [], params, 1, tblPrefix);
 
         // Append .or() filters — each becomes an AND-ed (... OR ...) group
         let orExtra = '';
         let paramIdx = nextIdx;
         if (q.orFilters?.length) {
           for (const orStr of q.orFilters) {
-            const parsed = buildOrClause(orStr, params, paramIdx);
+            const parsed = buildOrClause(orStr, params, paramIdx, tblPrefix);
             if (parsed) {
               orExtra += (where || orExtra ? ' AND ' : ' WHERE ') + parsed.clause;
               paramIdx = parsed.nextIdx;
@@ -501,14 +506,16 @@ export async function restProxy(req: Request, res: Response) {
         let selectExpr: string;
         let joinClause = '';
 
-        if (joins.length > 0) {
-          // Main table columns
+        if (hasJoins) {
+          // Qualify all flat columns with main table to prevent ambiguous column refs
           if (flatCols === '*') {
             selectExpr = `"${q.table}".*`;
           } else {
             selectExpr = flatCols.split(',').map(c => {
               const t = c.trim();
-              return t === '*' ? `"${q.table}".*` : t;
+              if (t === '*') return `"${q.table}".*`;
+              if (isSafeIdentifier(t)) return `"${q.table}"."${t}"`;
+              return t; // pass through complex expressions as-is
             }).join(', ');
           }
 
@@ -539,6 +546,10 @@ export async function restProxy(req: Request, res: Response) {
 
         if (q.limit) sql += ` LIMIT ${Math.min(Math.max(0, Math.floor(q.limit)), 5000)}`;
         if (q.offset) sql += ` OFFSET ${Math.max(0, Math.floor(q.offset))}`;
+
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[rest-proxy] SQL:', sql, '| params:', params);
+        }
 
         const result = await db.query(sql, params);
 
@@ -587,10 +598,11 @@ export async function restProxy(req: Request, res: Response) {
         }
 
         if (q.count) {
-          const countResult = await db.query(
-            `SELECT COUNT(*) as total FROM "${q.table}"${joinClause}${where}${orExtra}`,
-            params
-          );
+          // Use count on main table only (subquery) to avoid inflation from LEFT JOINs
+          const countSql = hasJoins
+            ? `SELECT COUNT(*) as total FROM "${q.table}"${where}${orExtra}`
+            : `SELECT COUNT(*) as total FROM "${q.table}"${where}${orExtra}`;
+          const countResult = await db.query(countSql, params);
           return res.json({ data: rows, error: null, count: parseInt(countResult.rows[0]?.total || '0') });
         }
 
@@ -716,8 +728,11 @@ export async function restProxy(req: Request, res: Response) {
         return res.status(400).json({ error: `Operação desconhecida: ${q.operation}` });
     }
   } catch (err: any) {
-    console.error(`[rest-proxy] ${q.operation} on ${q.table}:`, err.message);
-    // Mensagens seguras em português — não vazar detalhes internos do PostgreSQL
+    // Structured error logging for production debugging (never sent to client)
+    const errCode = err.code || '';
+    console.error(`[rest-proxy] ${q.operation} on ${q.table}: code=${errCode} msg=${err.message}`,
+      q.operation === 'select' ? `| columns=${q.columns || '*'} filters=${JSON.stringify(q.filters?.map(f => `${f.column}.${f.op}`) || [])}` : '');
+
     let safeMessage: string;
     const code = err.code || '';
     if (code === '23505') safeMessage = 'Registro duplicado: já existe um registro com esses dados.';
