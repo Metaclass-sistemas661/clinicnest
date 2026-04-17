@@ -615,6 +615,12 @@ async function bootstrap() {
         IF p_cpf IS NULL OR btrim(p_cpf) = '' THEN RAISE EXCEPTION 'O CPF é obrigatório.' USING ERRCODE = 'P0001'; END IF;
         IF p_phone IS NULL OR btrim(p_phone) = '' THEN RAISE EXCEPTION 'O telefone é obrigatório.' USING ERRCODE = 'P0001'; END IF;
         IF p_date_of_birth IS NULL THEN RAISE EXCEPTION 'A data de nascimento é obrigatória.' USING ERRCODE = 'P0001'; END IF;
+        IF p_zip_code IS NULL OR btrim(p_zip_code) = '' THEN RAISE EXCEPTION 'O CEP é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_street IS NULL OR btrim(p_street) = '' THEN RAISE EXCEPTION 'O logradouro é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_street_number IS NULL OR btrim(p_street_number) = '' THEN RAISE EXCEPTION 'O número é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_neighborhood IS NULL OR btrim(p_neighborhood) = '' THEN RAISE EXCEPTION 'O bairro é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_city IS NULL OR btrim(p_city) = '' THEN RAISE EXCEPTION 'A cidade é obrigatória.' USING ERRCODE = 'P0001'; END IF;
+        IF p_state IS NULL OR btrim(p_state) = '' THEN RAISE EXCEPTION 'O estado é obrigatório.' USING ERRCODE = 'P0001'; END IF;
 
         -- Clean CPF (only digits)
         v_cpf_clean := regexp_replace(btrim(p_cpf), '[^0-9]', '', 'g');

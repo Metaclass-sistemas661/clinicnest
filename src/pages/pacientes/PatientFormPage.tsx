@@ -275,7 +275,7 @@ export default function PatientFormPage() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-2">
-                    <Label>CEP</Label>
+                    <Label>CEP <span className="text-destructive">*</span></Label>
                     <div className="relative">
                       <Input
                         value={formData.zip_code}
@@ -283,40 +283,48 @@ export default function PatientFormPage() {
                         onBlur={handleCepBlur}
                         placeholder="00000-000"
                         maxLength={9}
+                        required
+                        className={fieldErrors.zip_code ? "border-destructive" : ""}
                       />
                       {isFetchingCep && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
                     </div>
+                    {fieldErrors.zip_code && <p className="text-xs text-destructive">{fieldErrors.zip_code}</p>}
                   </div>
                   <div className="space-y-2 sm:col-span-1 lg:col-span-2">
-                    <Label>Logradouro</Label>
-                    <Input value={formData.street} onChange={(e) => setFormData({ ...formData, street: e.target.value })} placeholder="Rua, Avenida, Travessa..." />
+                    <Label>Logradouro <span className="text-destructive">*</span></Label>
+                    <Input value={formData.street} onChange={(e) => setFormData({ ...formData, street: e.target.value })} placeholder="Rua, Avenida, Travessa..." required className={fieldErrors.street ? "border-destructive" : ""} />
+                    {fieldErrors.street && <p className="text-xs text-destructive">{fieldErrors.street}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Número</Label>
-                    <Input value={formData.street_number} onChange={(e) => setFormData({ ...formData, street_number: e.target.value })} placeholder="Nº" />
+                    <Label>Número <span className="text-destructive">*</span></Label>
+                    <Input value={formData.street_number} onChange={(e) => setFormData({ ...formData, street_number: e.target.value })} placeholder="Nº" required className={fieldErrors.street_number ? "border-destructive" : ""} />
+                    {fieldErrors.street_number && <p className="text-xs text-destructive">{fieldErrors.street_number}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Complemento</Label>
                     <Input value={formData.complement} onChange={(e) => setFormData({ ...formData, complement: e.target.value })} placeholder="Apto, Bloco, Sala..." />
                   </div>
                   <div className="space-y-2">
-                    <Label>Bairro</Label>
-                    <Input value={formData.neighborhood} onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })} placeholder="Bairro" />
+                    <Label>Bairro <span className="text-destructive">*</span></Label>
+                    <Input value={formData.neighborhood} onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })} placeholder="Bairro" required className={fieldErrors.neighborhood ? "border-destructive" : ""} />
+                    {fieldErrors.neighborhood && <p className="text-xs text-destructive">{fieldErrors.neighborhood}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Cidade</Label>
-                    <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="Cidade" />
+                    <Label>Cidade <span className="text-destructive">*</span></Label>
+                    <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="Cidade" required className={fieldErrors.city ? "border-destructive" : ""} />
+                    {fieldErrors.city && <p className="text-xs text-destructive">{fieldErrors.city}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Estado</Label>
+                    <Label>Estado <span className="text-destructive">*</span></Label>
                     <Select value={formData.state || undefined} onValueChange={(v) => setFormData({ ...formData, state: v })}>
-                      <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                      <SelectTrigger className={fieldErrors.state ? "border-destructive" : ""}><SelectValue placeholder="UF" /></SelectTrigger>
                       <SelectContent>
                         {BRAZILIAN_STATES.map((uf) => (
                           <SelectItem key={uf} value={uf}>{uf}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {fieldErrors.state && <p className="text-xs text-destructive">{fieldErrors.state}</p>}
                   </div>
                 </div>
               </div>
