@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "@/lib/logger";
 import type { Patient } from "@/types/database";
 import {
-  formatCpf, formatCep, patientFormSchema,
+  formatCpf, formatCep, formatPhone, patientFormSchema,
   emptyFormData, patientToFormData, BRAZILIAN_STATES, MARITAL_STATUS_OPTIONS,
   type PatientFormData,
 } from "./helpers";
@@ -32,6 +32,7 @@ export default function PatientFormPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFetchingCep, setIsFetchingCep] = useState(false);
   const [isLoadingPatient, setIsLoadingPatient] = useState(isEditing);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Success state
   const [savedAccessCode, setSavedAccessCode] = useState<string | null>(null);
@@ -100,9 +101,17 @@ export default function PatientFormPage() {
       email: formData.email || "",
     });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message ?? "Verifique os dados");
+      const errors: Record<string, string> = {};
+      for (const err of parsed.error.errors) {
+        const field = err.path[0] as string;
+        if (!errors[field]) errors[field] = err.message;
+      }
+      setFieldErrors(errors);
+      const firstMsg = parsed.error.errors[0]?.message ?? "Verifique os dados";
+      toast.error(firstMsg);
       return;
     }
+    setFieldErrors({});
 
     setIsSaving(true);
     try {
@@ -126,7 +135,17 @@ export default function PatientFormPage() {
       });
 
       if (error) {
-        toastRpcError(toast, error as any, isEditing ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
+        const errMsg = String((error as any)?.message ?? "");
+        const errDetail = String((error as any)?.details ?? "");
+        if (errMsg.includes("CPF") || errDetail === "DUPLICATE_CPF") {
+          setFieldErrors({ cpf: errMsg.includes("já existe") ? "CPF já cadastrado para outro paciente" : errMsg });
+          toast.error(errMsg || "Já existe um paciente cadastrado com este CPF.");
+        } else if (errMsg.includes("telefone") || errDetail === "DUPLICATE_PHONE") {
+          setFieldErrors({ phone: errMsg.includes("já existe") ? "Telefone já cadastrado para outro paciente" : errMsg });
+          toast.error(errMsg || "Já existe um paciente cadastrado com este telefone.");
+        } else {
+          toastRpcError(toast, error as any, isEditing ? "Erro ao atualizar paciente" : "Erro ao cadastrar paciente");
+        }
         return;
       }
 
@@ -212,23 +231,28 @@ export default function PatientFormPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                     <Label>Nome <span className="text-destructive">*</span></Label>
-                    <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required />
+                    <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Nome completo" required className={fieldErrors.name ? "border-destructive" : ""} />
+                    {fieldErrors.name && <p className="text-xs text-destructive">{fieldErrors.name}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>CPF</Label>
-                    <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })} placeholder="000.000.000-00" maxLength={14} />
+                    <Label>CPF <span className="text-destructive">*</span></Label>
+                    <Input value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })} placeholder="000.000.000-00" maxLength={14} required className={fieldErrors.cpf ? "border-destructive" : ""} />
+                    {fieldErrors.cpf && <p className="text-xs text-destructive">{fieldErrors.cpf}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                    <Label>Telefone <span className="text-destructive">*</span></Label>
+                    <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })} placeholder="(11) 99999-9999" maxLength={15} required className={fieldErrors.phone ? "border-destructive" : ""} />
+                    {fieldErrors.phone && <p className="text-xs text-destructive">{fieldErrors.phone}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
-                    <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" />
+                    <Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" className={fieldErrors.email ? "border-destructive" : ""} />
+                    {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label>Data de Nascimento</Label>
-                    <Input type="date" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
+                    <Label>Data de Nascimento <span className="text-destructive">*</span></Label>
+                    <Input type="date" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} required className={fieldErrors.date_of_birth ? "border-destructive" : ""} />
+                    {fieldErrors.date_of_birth && <p className="text-xs text-destructive">{fieldErrors.date_of_birth}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Estado Civil</Label>

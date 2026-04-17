@@ -562,7 +562,29 @@ async function bootstrap() {
       END $$
     `);
 
-    // ── upsert_client_v2: corrigir p_client_id → p_patient_id, clients → patients ──
+    // ── UNIQUE constraints for CPF and phone (per tenant) ──
+    await adminQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'uq_patients_tenant_cpf'
+        ) THEN
+          CREATE UNIQUE INDEX uq_patients_tenant_cpf ON public.patients (tenant_id, cpf)
+            WHERE cpf IS NOT NULL AND btrim(cpf) <> '';
+        END IF;
+      END $$
+    `);
+    await adminQuery(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'uq_patients_tenant_phone'
+        ) THEN
+          CREATE UNIQUE INDEX uq_patients_tenant_phone ON public.patients (tenant_id, phone)
+            WHERE phone IS NOT NULL AND btrim(phone) <> '';
+        END IF;
+      END $$
+    `);
+
+    // ── upsert_client_v2: enterprise validation (required fields, CPF digits, duplicate check) ──
     await adminQuery(`DROP FUNCTION IF EXISTS public.upsert_client_v2 CASCADE`);
     await adminQuery(`
       CREATE OR REPLACE FUNCTION public.upsert_client_v2(
@@ -576,19 +598,84 @@ async function bootstrap() {
         v_user_id uuid := NULLIF(current_setting('app.current_user_id', true), '')::uuid;
         v_profile public.profiles%rowtype;
         v_id uuid; v_access_code text; v_action text;
+        v_cpf_clean text; v_phone_clean text;
+        v_existing_id uuid;
+        v_sum integer; v_remainder integer; v_d1 integer; v_d2 integer;
+        v_weights1 integer[] := ARRAY[10,9,8,7,6,5,4,3,2];
+        v_weights2 integer[] := ARRAY[11,10,9,8,7,6,5,4,3,2];
+        i integer;
       BEGIN
+        -- Auth
         IF v_user_id IS NULL THEN RAISE EXCEPTION 'Usuário não autenticado.' USING ERRCODE = 'P0001'; END IF;
         SELECT * INTO v_profile FROM public.profiles WHERE user_id = v_user_id LIMIT 1;
         IF NOT FOUND THEN RAISE EXCEPTION 'Perfil do usuário não encontrado.' USING ERRCODE = 'P0001'; END IF;
+
+        -- Required fields validation
         IF p_name IS NULL OR btrim(p_name) = '' THEN RAISE EXCEPTION 'O nome do paciente é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_cpf IS NULL OR btrim(p_cpf) = '' THEN RAISE EXCEPTION 'O CPF é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_phone IS NULL OR btrim(p_phone) = '' THEN RAISE EXCEPTION 'O telefone é obrigatório.' USING ERRCODE = 'P0001'; END IF;
+        IF p_date_of_birth IS NULL THEN RAISE EXCEPTION 'A data de nascimento é obrigatória.' USING ERRCODE = 'P0001'; END IF;
+
+        -- Clean CPF (only digits)
+        v_cpf_clean := regexp_replace(btrim(p_cpf), '[^0-9]', '', 'g');
+        IF length(v_cpf_clean) <> 11 THEN RAISE EXCEPTION 'CPF deve conter 11 dígitos.' USING ERRCODE = 'P0001'; END IF;
+
+        -- Reject all-same-digit CPFs (000.000.000-00, 111.111.111-11, etc.)
+        IF v_cpf_clean ~ '^(.)\\1{10}$' THEN RAISE EXCEPTION 'CPF inválido.' USING ERRCODE = 'P0001'; END IF;
+
+        -- Validate CPF check digits (Brazilian algorithm)
+        v_sum := 0;
+        FOR i IN 1..9 LOOP
+          v_sum := v_sum + (substr(v_cpf_clean, i, 1)::integer * v_weights1[i]);
+        END LOOP;
+        v_remainder := (v_sum * 10) % 11;
+        IF v_remainder = 10 THEN v_remainder := 0; END IF;
+        v_d1 := v_remainder;
+        IF substr(v_cpf_clean, 10, 1)::integer <> v_d1 THEN RAISE EXCEPTION 'CPF inválido (dígito verificador incorreto).' USING ERRCODE = 'P0001'; END IF;
+
+        v_sum := 0;
+        FOR i IN 1..10 LOOP
+          v_sum := v_sum + (substr(v_cpf_clean, i, 1)::integer * v_weights2[i]);
+        END LOOP;
+        v_remainder := (v_sum * 10) % 11;
+        IF v_remainder = 10 THEN v_remainder := 0; END IF;
+        v_d2 := v_remainder;
+        IF substr(v_cpf_clean, 11, 1)::integer <> v_d2 THEN RAISE EXCEPTION 'CPF inválido (dígito verificador incorreto).' USING ERRCODE = 'P0001'; END IF;
+
+        -- Normalize phone (only digits)
+        v_phone_clean := regexp_replace(btrim(p_phone), '[^0-9]', '', 'g');
+        IF length(v_phone_clean) < 10 OR length(v_phone_clean) > 11 THEN
+          RAISE EXCEPTION 'Telefone deve conter 10 ou 11 dígitos (com DDD).' USING ERRCODE = 'P0001';
+        END IF;
+
+        -- Duplicate CPF check (same tenant, different patient)
+        SELECT id INTO v_existing_id FROM public.patients
+        WHERE tenant_id = v_profile.tenant_id
+          AND regexp_replace(cpf, '[^0-9]', '', 'g') = v_cpf_clean
+          AND (p_patient_id IS NULL OR id <> p_patient_id)
+        LIMIT 1;
+        IF v_existing_id IS NOT NULL THEN
+          RAISE EXCEPTION 'Já existe um paciente cadastrado com este CPF.' USING ERRCODE = '23505', DETAIL = 'DUPLICATE_CPF';
+        END IF;
+
+        -- Duplicate phone check (same tenant, different patient)
+        SELECT id INTO v_existing_id FROM public.patients
+        WHERE tenant_id = v_profile.tenant_id
+          AND regexp_replace(phone, '[^0-9]', '', 'g') = v_phone_clean
+          AND (p_patient_id IS NULL OR id <> p_patient_id)
+        LIMIT 1;
+        IF v_existing_id IS NOT NULL THEN
+          RAISE EXCEPTION 'Já existe um paciente cadastrado com este telefone.' USING ERRCODE = '23505', DETAIL = 'DUPLICATE_PHONE';
+        END IF;
+
         IF p_patient_id IS NULL THEN
           v_action := 'patient_created';
           INSERT INTO public.patients(tenant_id,name,phone,email,notes,cpf,date_of_birth,marital_status,zip_code,street,street_number,complement,neighborhood,city,state,allergies)
-          VALUES(v_profile.tenant_id,p_name,NULLIF(p_phone,''),NULLIF(p_email,''),NULLIF(p_notes,''),NULLIF(btrim(p_cpf),''),p_date_of_birth,NULLIF(btrim(p_marital_status),''),NULLIF(btrim(p_zip_code),''),NULLIF(btrim(p_street),''),NULLIF(btrim(p_street_number),''),NULLIF(btrim(p_complement),''),NULLIF(btrim(p_neighborhood),''),NULLIF(btrim(p_city),''),NULLIF(btrim(p_state),''),NULLIF(btrim(p_allergies),''))
+          VALUES(v_profile.tenant_id,p_name,v_phone_clean,NULLIF(p_email,''),NULLIF(p_notes,''),v_cpf_clean,p_date_of_birth,NULLIF(btrim(p_marital_status),''),NULLIF(btrim(p_zip_code),''),NULLIF(btrim(p_street),''),NULLIF(btrim(p_street_number),''),NULLIF(btrim(p_complement),''),NULLIF(btrim(p_neighborhood),''),NULLIF(btrim(p_city),''),NULLIF(btrim(p_state),''),NULLIF(btrim(p_allergies),''))
           RETURNING id, access_code INTO v_id, v_access_code;
         ELSE
           v_action := 'patient_updated';
-          UPDATE public.patients SET name=p_name,phone=NULLIF(p_phone,''),email=NULLIF(p_email,''),notes=NULLIF(p_notes,''),cpf=NULLIF(btrim(p_cpf),''),date_of_birth=p_date_of_birth,marital_status=NULLIF(btrim(p_marital_status),''),zip_code=NULLIF(btrim(p_zip_code),''),street=NULLIF(btrim(p_street),''),street_number=NULLIF(btrim(p_street_number),''),complement=NULLIF(btrim(p_complement),''),neighborhood=NULLIF(btrim(p_neighborhood),''),city=NULLIF(btrim(p_city),''),state=NULLIF(btrim(p_state),''),allergies=NULLIF(btrim(p_allergies),''),updated_at=now()
+          UPDATE public.patients SET name=p_name,phone=v_phone_clean,email=NULLIF(p_email,''),notes=NULLIF(p_notes,''),cpf=v_cpf_clean,date_of_birth=p_date_of_birth,marital_status=NULLIF(btrim(p_marital_status),''),zip_code=NULLIF(btrim(p_zip_code),''),street=NULLIF(btrim(p_street),''),street_number=NULLIF(btrim(p_street_number),''),complement=NULLIF(btrim(p_complement),''),neighborhood=NULLIF(btrim(p_neighborhood),''),city=NULLIF(btrim(p_city),''),state=NULLIF(btrim(p_state),''),allergies=NULLIF(btrim(p_allergies),''),updated_at=now()
           WHERE id=p_patient_id AND tenant_id=v_profile.tenant_id
           RETURNING id, access_code INTO v_id, v_access_code;
           IF NOT FOUND THEN RAISE EXCEPTION 'Paciente não encontrado ou sem permissão.' USING ERRCODE = 'P0001'; END IF;
