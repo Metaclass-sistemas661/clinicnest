@@ -1549,13 +1549,13 @@ CREATE TABLE IF NOT EXISTS consent_templates (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL,
   title TEXT NOT NULL,
-  content TEXT NOT NULL,
+  content TEXT DEFAULT '',
   category TEXT,
   is_active BOOLEAN DEFAULT true,
   requires_photo BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  slug TEXT,
+  slug TEXT NOT NULL DEFAULT '',
   body_html TEXT DEFAULT '',
   is_required BOOLEAN DEFAULT true,
   sort_order INTEGER DEFAULT 0,
@@ -1563,8 +1563,12 @@ CREATE TABLE IF NOT EXISTS consent_templates (
   pdf_storage_path TEXT,
   pdf_original_filename TEXT,
   pdf_file_size INTEGER,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  CONSTRAINT uq_consent_templates_tenant_slug UNIQUE (tenant_id, slug)
 );
+
+CREATE INDEX IF NOT EXISTS idx_consent_templates_tenant_id ON consent_templates(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_consent_templates_tenant_active_sort ON consent_templates(tenant_id, is_active, sort_order);
 
 -- FK: consent_templates_tenant_id_fkey
 -- ALTER TABLE consent_templates ADD CONSTRAINT consent_templates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);

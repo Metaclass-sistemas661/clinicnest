@@ -146,8 +146,11 @@ export interface ConsentTemplate {
   title: string;
   slug: string;
   body_html: string;
+  content: string;
+  category: string | null;
   is_required: boolean;
   is_active: boolean;
+  requires_photo: boolean;
   sort_order: number;
   template_type: "html" | "pdf";
   pdf_storage_path: string | null;
