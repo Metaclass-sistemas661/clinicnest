@@ -154,7 +154,7 @@ export default function ResetPassword() {
               Digite sua nova senha abaixo
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} data-allow-enter-submit>
             <CardContent className="space-y-5 pt-4">
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">Nova Senha</Label>

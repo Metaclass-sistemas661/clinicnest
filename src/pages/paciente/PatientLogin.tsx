@@ -301,7 +301,7 @@ export default function PatientLogin() {
             </p>
           </div>
 
-          <form onSubmit={handleIdentify} className="space-y-5">
+          <form onSubmit={handleIdentify} className="space-y-5" data-allow-enter-submit>
             <div className="space-y-2">
               <Label htmlFor="patient-identifier" className="text-sm font-medium text-gray-700">
                 Código de acesso ou CPF
@@ -372,7 +372,7 @@ export default function PatientLogin() {
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-5" data-allow-enter-submit>
             <div className="space-y-2">
               <Label htmlFor="patient-login-email" className="text-sm font-medium text-gray-700">
                 E-mail
@@ -480,7 +480,7 @@ export default function PatientLogin() {
             </p>
           </div>
 
-          <form onSubmit={handleCreatePassword} className="space-y-4">
+          <form onSubmit={handleCreatePassword} className="space-y-4" data-allow-enter-submit>
             <div className="space-y-2">
               <Label htmlFor="patient-email" className="text-sm font-medium text-gray-700">
                 E-mail

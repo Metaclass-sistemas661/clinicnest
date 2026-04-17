@@ -82,7 +82,7 @@ export default function ForgotPassword() {
             </CardDescription>
           </CardHeader>
           {!isSent ? (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} data-allow-enter-submit>
               <CardContent className="space-y-5 pt-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">Email</Label>

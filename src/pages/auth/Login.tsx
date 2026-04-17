@@ -205,7 +205,7 @@ export default function Login() {
           </div>
 
           {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" data-allow-enter-submit>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                 E-mail

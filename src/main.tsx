@@ -3,6 +3,24 @@ import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
 
+// ── Enterprise: Prevent accidental form submission via Enter key ────
+// Inputs inside <form> elements will NOT submit on Enter (prevents data-entry accidents).
+// Auth/login forms opt-in with data-allow-enter-submit attribute.
+// Textareas, submit buttons, and non-form inputs are unaffected.
+document.addEventListener("keydown", (e) => {
+  if (
+    e.key === "Enter" &&
+    !e.ctrlKey && !e.metaKey &&
+    e.target instanceof HTMLInputElement &&
+    e.target.type !== "submit"
+  ) {
+    const form = e.target.closest("form");
+    if (form && !form.hasAttribute("data-allow-enter-submit")) {
+      e.preventDefault();
+    }
+  }
+});
+
 const buildInfo = {
   commit: __BUILD_COMMIT__,
   ref: __BUILD_REF__,
