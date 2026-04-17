@@ -27,7 +27,7 @@ BEGIN
 
 
 
-    SELECT EXISTS(SELECT 1 FROM public.clients WHERE access_code = v_code) INTO v_exists;
+    SELECT EXISTS(SELECT 1 FROM public.patients WHERE access_code = v_code) INTO v_exists;
 
 
 

@@ -48,3 +48,9 @@ CREATE INDEX idx_clients_email ON public.patients USING btree (email);
 CREATE INDEX idx_clients_name ON public.patients USING btree (tenant_id, name);
 
 CREATE INDEX idx_clients_tenant_id ON public.patients USING btree (tenant_id);
+
+-- Trigger: auto-generate access_code on INSERT
+CREATE TRIGGER tr_generate_patient_access_code
+  BEFORE INSERT ON public.patients
+  FOR EACH ROW
+  EXECUTE FUNCTION public.generate_client_access_code();
