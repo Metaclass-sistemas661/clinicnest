@@ -1555,6 +1555,14 @@ CREATE TABLE IF NOT EXISTS consent_templates (
   requires_photo BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  slug TEXT,
+  body_html TEXT DEFAULT '',
+  is_required BOOLEAN DEFAULT true,
+  sort_order INTEGER DEFAULT 0,
+  template_type TEXT DEFAULT 'html',
+  pdf_storage_path TEXT,
+  pdf_original_filename TEXT,
+  pdf_file_size INTEGER,
   PRIMARY KEY (id)
 );
 
