@@ -1,0 +1,5 @@
+const SALES_NUMBER =
+  import.meta.env.VITE_WHATSAPP_SALES_NUMBER || "5500000000000";
+
+export const WHATSAPP_SALES_URL = `https://wa.me/${SALES_NUMBER}`;
+export const WHATSAPP_SALES_NUMBER = SALES_NUMBER;

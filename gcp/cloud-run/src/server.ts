@@ -63,8 +63,9 @@ import { notifyPatientMessage } from './functions/notify-patient-message';
 import { runCampaign } from './functions/run-campaign';
 import { smsSender } from './functions/sms-sender';
 
-// WhatsApp
-import { evolutionProxy } from './functions/evolution-proxy';
+// WhatsApp (Meta Cloud API)
+import { metaWhatsappManager } from './functions/meta-whatsapp-manager';
+import { whatsappEmbeddedSignup } from './functions/whatsapp-embedded-signup';
 import { whatsappChatbot } from './functions/whatsapp-chatbot';
 import { whatsappSalesChatbot } from './functions/whatsapp-sales-chatbot';
 import { whatsappSender } from './functions/whatsapp-sender';
@@ -298,7 +299,9 @@ app.post('/api/webhooks/asaas-pix', asaasPix);
 app.post('/api/webhooks/nfse', nfseWebhookHandler);
 app.post('/api/webhooks/hl7-receiver', hl7Receiver);
 app.post('/api/webhooks/rnds-receive-bundle', rndsReceiveBundle);
+app.get('/api/webhooks/whatsapp-chatbot', whatsappChatbot);
 app.post('/api/webhooks/whatsapp-chatbot', whatsappChatbot);
+app.get('/api/webhooks/whatsapp-sales-chatbot', whatsappSalesChatbot);
 app.post('/api/webhooks/whatsapp-sales-chatbot', whatsappSalesChatbot);
 
 // Internal/Cron endpoints (verified by CRON_SECRET or AUTOMATION_WORKER_KEY)
@@ -354,8 +357,9 @@ app.post('/api/notify-patient-events', notifyPatientEvents);
 app.post('/api/notify-patient-message', notifyPatientMessage);
 app.post('/api/sms-sender', smsSender);
 
-// WhatsApp
-app.post('/api/evolution-proxy', evolutionProxy);
+// WhatsApp (Meta Cloud API)
+app.post('/api/meta-whatsapp-manager', metaWhatsappManager);
+app.post('/api/whatsapp-embedded-signup', whatsappEmbeddedSignup);
 app.post('/api/whatsapp-sender', whatsappSender);
 
 // Clinical / Patient

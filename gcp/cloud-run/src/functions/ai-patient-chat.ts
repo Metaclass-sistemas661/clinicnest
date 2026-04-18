@@ -180,6 +180,8 @@ export async function aiPatientChat(req: Request, res: Response) {
               tokens_used: totalInputTokens + totalOutputTokens,
             });
 
+            await logAiUsage(tenantId, user.id, "patient_chat").catch(() => {});
+
             return res.status(200).json({
                 conversation_id: conversationId,
                 message: finalText,

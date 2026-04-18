@@ -45,9 +45,9 @@ export async function automationWorker(req: Request, res: Response) {
       id: string;
       name: string | null;
       email: string | null;
-      whatsapp_api_url: string | null;
-      whatsapp_api_key: string | null;
-      whatsapp_instance: string | null;
+      whatsapp_phone_number_id: string | null;
+      whatsapp_access_token: string | null;
+      whatsapp_business_account_id: string | null;
       sms_provider: string | null;
       sms_api_key: string | null;
       sms_sender: string | null;
@@ -136,22 +136,32 @@ export async function automationWorker(req: Request, res: Response) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     }
 
-    // ─── WhatsApp via Evolution API ────────────────────────────────────────────────
+    // ─── WhatsApp via Meta Cloud API ────────────────────────────────────────────────
 
     async function sendWhatsapp(
       settings: TenantSettings,
       phone: string,
       message: string): Promise<{ ok: boolean; details?: string }> {
-      const apiUrl = (settings.whatsapp_api_url ?? "").trim();
-      const apiKey = (settings.whatsapp_api_key ?? "").trim();
-      const instance = (settings.whatsapp_instance ?? "").trim();
-      if (!apiUrl || !apiKey || !instance) return { ok: false, details: "missing_whatsapp_settings" };
+      const phoneNumberId = (settings.whatsapp_phone_number_id ?? "").trim();
+      const accessToken = (settings.whatsapp_access_token ?? "").trim();
+      if (!phoneNumberId || !accessToken) return { ok: false, details: "missing_whatsapp_settings" };
 
-      const endpoint = `${apiUrl.replace(/\/$/, "")}/message/sendText/${encodeURIComponent(instance)}`;
+      const META_API_VERSION = "v21.0";
+      const url = `https://graph.facebook.com/${META_API_VERSION}/${phoneNumberId}/messages`;
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch(url, {
           method: "POST",
-          body: JSON.stringify({ number: phone, text: message }),
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: phone,
+            type: "text",
+            text: { preview_url: false, body: message },
+          }),
         });
         const text = await res.text();
         return res.ok ? { ok: true } : { ok: false, details: text.slice(0, 500) };
@@ -394,7 +404,7 @@ export async function automationWorker(req: Request, res: Response) {
 
       for (const [tenantId, tenantRules] of byTenant) {
         const { data: tenant } = (await db.from("tenants")
-          .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+          .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender")
           .eq("id", tenantId)
           .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -523,7 +533,7 @@ export async function automationWorker(req: Request, res: Response) {
 
       for (const [tenantId, tenantRules] of byTenant) {
         const { data: tenant } = (await db.from("tenants")
-          .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+          .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender")
           .eq("id", tenantId)
           .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
         if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -603,7 +613,7 @@ export async function automationWorker(req: Request, res: Response) {
 
       for (const [tenantId, tenantRules] of byTenant) {
         const { data: tenant } = (await db.from("tenants")
-          .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+          .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender")
           .eq("id", tenantId)
           .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -731,7 +741,7 @@ export async function automationWorker(req: Request, res: Response) {
 
       for (const [tenantId, tenantRules] of byTenant) {
         const { data: tenant } = (await db.from("tenants")
-          .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+          .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender")
           .eq("id", tenantId)
           .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
         if (!tenant) { totals.skipped += tenantRules.length; continue; }
@@ -870,7 +880,7 @@ export async function automationWorker(req: Request, res: Response) {
 
         // Get tenant settings
         const { data: tenant } = (await db.from("tenants")
-          .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender")
+          .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender")
           .eq("id", notif.tenant_id)
           .maybeSingle()) as unknown as SelectResult<TenantSettings | null>;
 
@@ -944,7 +954,7 @@ export async function automationWorker(req: Request, res: Response) {
 
       // Fetch tenants with smart confirmation enabled
       const { data: tenants, error: tErr } = (await db.from("tenants")
-        .select("id, name, email, whatsapp_api_url, whatsapp_api_key, whatsapp_instance, sms_provider, sms_api_key, sms_sender, smart_confirmation_enabled, smart_confirmation_4h_channel, smart_confirmation_1h_channel, smart_confirmation_autorelease_minutes")
+        .select("id, name, email, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id, sms_provider, sms_api_key, sms_sender, smart_confirmation_enabled, smart_confirmation_4h_channel, smart_confirmation_1h_channel, smart_confirmation_autorelease_minutes")
         .eq("smart_confirmation_enabled", true)) as unknown as SelectResult<TenantSettings[] | null>;
 
       if (tErr || !tenants?.length) return result;

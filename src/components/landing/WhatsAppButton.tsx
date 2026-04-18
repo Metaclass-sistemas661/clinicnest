@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { WHATSAPP_SALES_URL } from "@/lib/whatsapp-url";
 
-// Número de vendas do ClinicNest (com DDI 55, sem +)
-// Configure via VITE_WHATSAPP_SALES_NUMBER no .env
-const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_SALES_NUMBER || "5500000000000";
 const WHATSAPP_TEXT = encodeURIComponent(
   "Olá! Vim pelo site do ClinicNest e gostaria de saber mais sobre o sistema. 😊"
 );
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_TEXT}`;
+const WHATSAPP_URL = `${WHATSAPP_SALES_URL}?text=${WHATSAPP_TEXT}`;
 
 export function WhatsAppButton() {
   const [show, setShow] = useState(false);

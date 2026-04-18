@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { adminQuery, userQuery } from '../shared/db';
 import { completeText, chatCompletion } from '../shared/vertexAi';
 import { checkAiRateLimit } from '../shared/rateLimit';
+import { checkAiAccess, logAiUsage } from '../shared/planGating';
 import { createDbClient } from '../shared/db-builder';
 import { createAuthAdmin } from '../shared/auth-admin';
 /**
@@ -182,6 +183,8 @@ export async function aiCancelPrediction(req: Request, res: Response) {
         } catch {
           parsed = { probability: 0, risk_level: "baixo", risk_factors: [], preventive_actions: [], raw: result.text };
         }
+
+        await logAiUsage(profile.tenant_id, user.id, "cancel_prediction").catch(() => {});
 
         return res.json(parsed);
       } catch (err: any) {

@@ -4,6 +4,7 @@
 import { Request, Response } from 'express';
 import { adminQuery, userQuery } from '../shared/db';
 import { checkAiAccess, logAiUsage } from '../shared/planGating';
+import { checkAiRateLimit } from '../shared/rateLimit';
 import { completeText, chatCompletion } from '../shared/vertexAi';
 import { createDbClient } from '../shared/db-builder';
 import { createAuthAdmin } from '../shared/auth-admin';
@@ -114,6 +115,11 @@ export async function aiRevenueIntelligence(req: Request, res: Response) {
         const accessCheck = await checkAiAccess(user.id, tenantId, "weekly_summary");
         if (!accessCheck.allowed) {
           return res.status(403).json({ error: accessCheck.reason });
+        }
+
+        const rl = await checkAiRateLimit(user.id, "ai-revenue-intelligence", "generation");
+        if (!rl.allowed) {
+          return res.status(429).json({ error: "Limite de requisições excedido. Tente novamente em instantes." });
         }
 
         // Gather data: last 3 months

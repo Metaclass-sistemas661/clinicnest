@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LandingChatWidget } from "./LandingChatWidget";
 import { WhatsAppButton } from "./WhatsAppButton";
+import { WHATSAPP_SALES_URL } from "@/lib/whatsapp-url";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -399,7 +400,7 @@ export function Footer() {
                 </li>
                 <li>
                   <a
-                    href="https://wa.me/5511999999999"
+                    href={WHATSAPP_SALES_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="transition-colors hover:text-foreground"

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LandingLayout } from "@/components/landing/LandingLayout";
+import { WHATSAPP_SALES_URL } from "@/lib/whatsapp-url";
 import {
   Calendar,
   Clock,
@@ -357,7 +358,7 @@ export default function AgendarDemonstracaoPage() {
                   <h3 className="font-semibold mb-4">Prefere falar diretamente?</h3>
                   <div className="space-y-3">
                     <a
-                      href="https://wa.me/5511999999999"
+                      href={WHATSAPP_SALES_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -365,7 +366,7 @@ export default function AgendarDemonstracaoPage() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
                         <Phone className="h-4 w-4 text-green-600" />
                       </div>
-                      <span>WhatsApp: (11) 99999-9999</span>
+                      <span>Fale conosco no WhatsApp</span>
                     </a>
                     <a
                       href="mailto:comercial@clinicnest.com.br"

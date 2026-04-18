@@ -1364,215 +1364,274 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
   );
 }
 
-// ─── Tab: WhatsApp Evolution API ──────────────────────────────────────────────
+// ─── Tab: WhatsApp (Meta Cloud API — Official) ──────────────────────────────
 
-type WhatsAppConnectionState = "not_configured" | "connecting" | "qr_ready" | "connected" | "disconnected";
+// Meta App ID for Facebook SDK (Embedded Signup)
+const META_FB_APP_ID = "147900355051780";
+const META_FB_CONFIG_ID = "930489586557648";
+const META_GRAPH_API_VERSION = "v21.0";
+
+type WhatsAppConnectionState = "not_configured" | "connected" | "invalid_token";
+
+// Declare FB SDK global type
+declare global {
+  interface Window {
+    fbAsyncInit?: () => void;
+    FB?: {
+      init: (params: { appId: string; autoLogAppEvents: boolean; xfbml: boolean; version: string }) => void;
+      login: (callback: (response: { authResponse?: { code?: string } }) => void, options: Record<string, any>) => void;
+    };
+  }
+}
 
 function TabWhatsApp({ tenantId }: { tenantId: string }) {
   const [connectionState, setConnectionState] = useState<WhatsAppConnectionState>("not_configured");
-  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null);
-  const [instanceName, setInstanceName] = useState("");
-  const [connectedPhone, setConnectedPhone] = useState("");
+  const [verifiedName, setVerifiedName] = useState("");
+  const [displayPhone, setDisplayPhone] = useState("");
+  const [qualityRating, setQualityRating] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isActioning, setIsActioning] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testPhone, setTestPhone] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [apiUrl, setApiUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [instance, setInstance] = useState("");
-  const [showKey, setShowKey] = useState(false);
+  const [phoneNumberId, setPhoneNumberId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [businessAccountId, setBusinessAccountId] = useState("");
+  const [showToken, setShowToken] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const qrPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showManualConfig, setShowManualConfig] = useState(false);
+  const [isEmbeddedSignupLoading, setIsEmbeddedSignupLoading] = useState(false);
+  const fbSdkLoaded = useRef(false);
 
-  const getAuthHeaders = async () => {
-    const { data, error } = await api.auth.getSession();
-    if (error) throw error;
-    const token = data.session?.access_token;
-    if (!token) throw new Error("Sessão ausente. Faça login novamente.");
-    return { Authorization: `Bearer ${token}` };
-  };
+  // ─── Facebook SDK loading ────────────────────────────────────────────
+  useEffect(() => {
+    if (fbSdkLoaded.current) return;
+    fbSdkLoaded.current = true;
 
-  const callProxy = async (action: string) => {
-    const headers = await getAuthHeaders();
-    const { data, error } = await api.functions.invoke("evolution-proxy", {
-      headers,
-      body: { action, tenant_id: tenantId },
+    window.fbAsyncInit = function () {
+      window.FB?.init({
+        appId: META_FB_APP_ID,
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: META_GRAPH_API_VERSION,
+      });
+    };
+
+    // Load SDK script if not already present
+    if (!document.getElementById("facebook-jssdk")) {
+      const script = document.createElement("script");
+      script.id = "facebook-jssdk";
+      script.src = "https://connect.facebook.net/en_US/sdk.js";
+      script.async = true;
+      script.defer = true;
+      script.crossOrigin = "anonymous";
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  // ─── Session event listener for Embedded Signup ──────────────────────
+  const embeddedSignupDataRef = useRef<{ phone_number_id?: string; waba_id?: string }>({});
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (typeof event.origin === 'string' && !event.origin.endsWith('facebook.com')) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          if (data.event === 'FINISH' || data.event === 'FINISH_ONLY_WABA') {
+            embeddedSignupDataRef.current = {
+              phone_number_id: data.data?.phone_number_id,
+              waba_id: data.data?.waba_id,
+            };
+            logger.info("[WhatsApp] Embedded Signup session data", data.data);
+          } else if (data.event === 'CANCEL') {
+            logger.info("[WhatsApp] Embedded Signup cancelled", data.data);
+          }
+        }
+      } catch {
+        // Non-JSON message, ignore
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const callManager = async (action: string, extra?: Record<string, string>) => {
+    const { data, error } = await api.functions.invoke("meta-whatsapp-manager", {
+      body: { action, ...extra },
     });
     if (error) throw new Error(error.message || "Erro ao comunicar com servidor");
     return data;
   };
 
-  // Load initial state
+  // Load initial state from Meta Cloud API
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: tenant } = await (api as any)
-          .from("tenants")
-          .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
-          .eq("id", tenantId)
-          .maybeSingle();
-
-        if (tenant) {
-          setApiUrl(tenant.whatsapp_api_url ?? "");
-          setApiKey(tenant.whatsapp_api_key ?? "");
-          setInstance(tenant.whatsapp_instance ?? "");
-        }
-
-        // Try to get status from Evolution proxy
-        try {
-          const status = await callProxy("get-status");
-          if (status?.state === "open" || status?.instance?.state === "open") {
-            setConnectionState("connected");
-            setInstanceName(status.instanceName || tenant?.whatsapp_instance || "");
-            setConnectedPhone(status?.instance?.phoneNumber || "");
-          } else if (status?.state === "connecting" || status?.instance?.state === "connecting") {
-            setConnectionState("connecting");
-            setInstanceName(status.instanceName || "");
-          } else if (tenant?.whatsapp_instance) {
-            setConnectionState("disconnected");
-            setInstanceName(tenant.whatsapp_instance);
-          } else {
-            setConnectionState("not_configured");
-          }
-        } catch {
-          // Proxy not available — use manual config check
-          if (tenant?.whatsapp_api_url && tenant?.whatsapp_api_key) {
-            setConnectionState("connected");
-            setInstanceName(tenant.whatsapp_instance || "");
-          }
+        const status = await callManager("get-status");
+        if (status?.state === "connected") {
+          setConnectionState("connected");
+          setVerifiedName(status.verifiedName || "");
+          setDisplayPhone(status.displayPhoneNumber || "");
+          setQualityRating(status.qualityRating || "");
+          setWebhookUrl(status.webhookUrl || "");
+          setVerifyToken(status.verifyToken || "");
+          setPhoneNumberId(status.phoneNumberId || "");
+          setBusinessAccountId(status.businessAccountId || "");
+        } else if (status?.state === "invalid_token") {
+          setConnectionState("invalid_token");
+          setPhoneNumberId(status.phoneNumberId || "");
+        } else {
+          setConnectionState("not_configured");
         }
       } catch {
-        /* column may not exist yet */
+        setConnectionState("not_configured");
       } finally {
         setIsLoading(false);
       }
     };
     load();
-    return () => {
-      if (qrPollRef.current) clearInterval(qrPollRef.current);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  const handleConnect = async () => {
-    setIsActioning(true);
-    try {
-      const result = await callProxy("create-instance");
-      setInstanceName(result.instanceName || "");
-
-      // Check if QR code is in the response
-      const qr = result?.qrcode?.base64 || result?.base64 || null;
-      if (qr) {
-        setQrCodeBase64(qr);
-        setConnectionState("qr_ready");
-        startQrPolling();
-      } else if (result?.instance?.state === "open") {
-        setConnectionState("connected");
-        toast.success("WhatsApp já conectado!");
-      } else {
-        // Try to get QR code separately
-        const qrResult = await callProxy("get-qrcode");
-        const qrBase64 = qrResult?.qrcode?.base64 || qrResult?.base64 || null;
-        if (qrBase64) {
-          setQrCodeBase64(qrBase64);
-          setConnectionState("qr_ready");
-          startQrPolling();
-        } else {
-          setConnectionState("connecting");
-          toast.info("Instância criada. Aguardando QR Code...");
-          startQrPolling();
-        }
-      }
-    } catch (err) {
-      logger.error("[WhatsApp] connect error", err);
-      toast.error("Erro ao conectar WhatsApp", { description: normalizeError(err, "Não foi possível iniciar a conexão.") });
-    } finally {
-      setIsActioning(false);
+  // ─── Embedded Signup handler ─────────────────────────────────────────
+  const handleEmbeddedSignup = () => {
+    if (!window.FB) {
+      toast.error("Facebook SDK não carregado", { description: "Recarregue a página e tente novamente." });
+      return;
     }
-  };
 
-  const startQrPolling = () => {
-    if (qrPollRef.current) clearInterval(qrPollRef.current);
-    let attempts = 0;
-    qrPollRef.current = setInterval(async () => {
-      attempts++;
-      if (attempts > 60) {
-        // 2 minutes timeout
-        if (qrPollRef.current) clearInterval(qrPollRef.current);
-        setConnectionState("disconnected");
-        toast.error("Tempo esgotado. Tente novamente.");
-        return;
-      }
-      try {
-        const status = await callProxy("get-status");
-        if (status?.state === "open" || status?.instance?.state === "open") {
-          if (qrPollRef.current) clearInterval(qrPollRef.current);
-          setConnectionState("connected");
-          setConnectedPhone(status?.instance?.phoneNumber || "");
-          setQrCodeBase64(null);
-          toast.success("WhatsApp conectado com sucesso! ✅");
+    if (!META_FB_CONFIG_ID) {
+      toast.error("Config ID não definido", {
+        description: "O administrador precisa configurar o META_FB_CONFIG_ID. Veja a documentação.",
+      });
+      return;
+    }
 
-          // Reload tenant data
-          const { data: tenant } = await (api as any)
-            .from("tenants")
-            .select("whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
-            .eq("id", tenantId)
-            .maybeSingle();
-          if (tenant) {
-            setApiUrl(tenant.whatsapp_api_url ?? "");
-            setApiKey(tenant.whatsapp_api_key ?? "");
-            setInstance(tenant.whatsapp_instance ?? "");
-          }
+    setIsEmbeddedSignupLoading(true);
+    embeddedSignupDataRef.current = {};
+
+    const fbLoginCallback = async (response: { authResponse?: { code?: string } }) => {
+      if (response.authResponse?.code) {
+        const code = response.authResponse.code;
+
+        // Wait a brief moment for session message event to fire
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const sessionData = embeddedSignupDataRef.current;
+        if (!sessionData.phone_number_id || !sessionData.waba_id) {
+          toast.error("Dados incompletos do Embedded Signup", {
+            description: "O flow foi concluído mas não recebemos o Phone Number ID ou WABA ID. Tente novamente.",
+          });
+          setIsEmbeddedSignupLoading(false);
           return;
         }
 
-        // Refresh QR code if still connecting
-        if (attempts % 5 === 0) {
-          const qrResult = await callProxy("get-qrcode");
-          const qr = qrResult?.qrcode?.base64 || qrResult?.base64 || null;
-          if (qr) {
-            setQrCodeBase64(qr);
-            setConnectionState("qr_ready");
+        try {
+          // Send code + IDs to our backend for server-side token exchange
+          const { data, error } = await api.functions.invoke("whatsapp-embedded-signup", {
+            body: {
+              action: "exchange-token",
+              code,
+              phone_number_id: sessionData.phone_number_id,
+              waba_id: sessionData.waba_id,
+            },
+          });
+
+          if (error || !data?.ok) {
+            toast.error("Erro ao finalizar configuração", {
+              description: data?.error || error?.message || "Falha ao trocar código por token.",
+            });
+            setIsEmbeddedSignupLoading(false);
+            return;
           }
+
+          // Success!
+          setConnectionState("connected");
+          setVerifiedName(data.phoneInfo?.verified_name || "");
+          setDisplayPhone(data.phoneInfo?.display_phone_number || "");
+          setQualityRating(data.phoneInfo?.quality_rating || "");
+          setWebhookUrl(data.webhookUrl || "");
+          setVerifyToken(data.verifyToken || "");
+          setPhoneNumberId(sessionData.phone_number_id);
+          setBusinessAccountId(sessionData.waba_id);
+
+          toast.success("WhatsApp Business conectado com sucesso! 🎉", {
+            description: "Sua clínica está pronta para enviar e receber mensagens.",
+          });
+        } catch (err) {
+          logger.error("[WhatsApp] Embedded Signup backend error", err);
+          toast.error("Erro ao conectar WhatsApp", {
+            description: normalizeError(err, "Falha na comunicação com o servidor."),
+          });
         }
-      } catch {
-        // ignore polling errors
+      } else {
+        toast.info("Cadastro cancelado", { description: "Você pode tentar novamente a qualquer momento." });
       }
-    }, 2000);
+      setIsEmbeddedSignupLoading(false);
+    };
+
+    window.FB.login(fbLoginCallback, {
+      config_id: META_FB_CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: {
+        setup: {},
+      },
+    });
+  };
+
+  // ─── Manual config handler ───────────────────────────────────────────
+  const handleSaveConfig = async () => {
+    if (!phoneNumberId.trim() || !accessToken.trim()) {
+      toast.error("Phone Number ID e Access Token são obrigatórios");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await callManager("save-config", {
+        phone_number_id: phoneNumberId.trim(),
+        access_token: accessToken.trim(),
+        business_account_id: businessAccountId.trim(),
+      });
+      if (!result?.ok) {
+        toast.error("Erro ao salvar configuração", { description: result?.error || "Verifique suas credenciais." });
+        return;
+      }
+      setConnectionState("connected");
+      setVerifiedName(result.phoneInfo?.verified_name || "");
+      setDisplayPhone(result.phoneInfo?.display_phone_number || "");
+      setQualityRating(result.phoneInfo?.quality_rating || "");
+      setWebhookUrl(result.webhookUrl || "");
+      setVerifyToken(result.verifyToken || "");
+      setAccessToken("");
+      toast.success("WhatsApp Business configurado com sucesso! ✅");
+    } catch (err) {
+      logger.error("[WhatsApp] save config error", err);
+      toast.error("Erro ao salvar configuração", { description: normalizeError(err, "Verifique suas credenciais Meta.") });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDisconnect = async () => {
     setIsActioning(true);
     try {
-      await callProxy("disconnect");
-      setConnectionState("disconnected");
-      setQrCodeBase64(null);
-      setConnectedPhone("");
-      if (qrPollRef.current) clearInterval(qrPollRef.current);
+      await callManager("disconnect");
+      setConnectionState("not_configured");
+      setVerifiedName("");
+      setDisplayPhone("");
+      setQualityRating("");
+      setPhoneNumberId("");
+      setAccessToken("");
+      setBusinessAccountId("");
+      setWebhookUrl("");
+      setVerifyToken("");
       toast.success("WhatsApp desconectado.");
     } catch (err) {
       logger.error("[WhatsApp] disconnect error", err);
-      toast.error("Erro ao desconectar WhatsApp", { description: normalizeError(err, "Não foi possível desconectar.") });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsActioning(true);
-    try {
-      await callProxy("delete-instance");
-      setConnectionState("not_configured");
-      setQrCodeBase64(null);
-      setInstanceName("");
-      setConnectedPhone("");
-      setApiUrl(""); setApiKey(""); setInstance("");
-      if (qrPollRef.current) clearInterval(qrPollRef.current);
-      toast.success("Integração WhatsApp removida.");
-    } catch (err) {
-      logger.error("[WhatsApp] delete error", err);
-      toast.error("Erro ao remover integração WhatsApp", { description: normalizeError(err, "Não foi possível remover a integração.") });
+      toast.error("Erro ao desconectar", { description: normalizeError(err, "Não foi possível desconectar.") });
     } finally {
       setIsActioning(false);
     }
@@ -1585,13 +1644,10 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     }
     setIsTesting(true);
     try {
-      const headers = await getAuthHeaders();
       const { data, error } = await api.functions.invoke("whatsapp-sender", {
-        headers,
         body: {
           phone: testPhone.trim(),
           message: "✅ Teste de conexão WhatsApp — ClinicNest funcionando!",
-          tenant_id: tenantId,
         },
       });
       if (error) {
@@ -1599,7 +1655,7 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
         return;
       }
       if (!data?.success) {
-        toast.error("Falha ao testar conexão", { description: normalizeError(data?.error, "O WhatsApp não retornou sucesso.") });
+        toast.error("Falha ao testar", { description: normalizeError(data?.error, "O WhatsApp não retornou sucesso.") });
         return;
       }
       toast.success("Mensagem de teste enviada com sucesso!");
@@ -1611,41 +1667,23 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     }
   };
 
-  const handleSaveManual = async () => {
-    setIsSaving(true);
-    try {
-      const { error } = await (api as any)
-        .from("tenants")
-        .update({
-          whatsapp_api_url: apiUrl.trim() || null,
-          whatsapp_api_key: apiKey.trim() || null,
-          whatsapp_instance: instance.trim() || null,
-        })
-        .eq("id", tenantId);
-      if (error) throw error;
-      setConnectionState(apiUrl && apiKey ? "connected" : "not_configured");
-      toast.success("Configurações salvas!");
-    } catch (e) {
-      logger.error("[WhatsApp] manual save error", e);
-      toast.error("Erro ao salvar configurações WhatsApp", { description: normalizeError(e, "Não foi possível salvar as configurações.") });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   if (isLoading) {
     return <div className="flex justify-center py-12"><Spinner className="text-muted-foreground" /></div>;
   }
 
   const stateConfig = {
     not_configured: { label: "Não configurado", color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", dot: "bg-gray-400" },
-    connecting: { label: "Conectando...", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400", dot: "bg-yellow-500 animate-pulse" },
-    qr_ready: { label: "Escaneie o QR Code", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400", dot: "bg-blue-500 animate-pulse" },
     connected: { label: "Conectado", color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400", dot: "bg-green-500" },
-    disconnected: { label: "Desconectado", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400", dot: "bg-red-500" },
+    invalid_token: { label: "Token inválido", color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400", dot: "bg-red-500" },
   };
 
   const currentStateConfig = stateConfig[connectionState];
+
+  const qualityBadge = qualityRating ? {
+    GREEN: { label: "Alta", className: "bg-green-100 text-green-700" },
+    YELLOW: { label: "Média", className: "bg-yellow-100 text-yellow-700" },
+    RED: { label: "Baixa", className: "bg-red-100 text-red-700" },
+  }[qualityRating] || null : null;
 
   return (
     <div className="space-y-6">
@@ -1657,256 +1695,237 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
               <Smartphone className="h-7 w-7 text-green-600" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-foreground">WhatsApp Business</p>
+              <p className="font-semibold text-foreground">WhatsApp Business (API Oficial Meta)</p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {connectionState === "connected"
-                  ? `Conectado${connectedPhone ? ` — ${connectedPhone}` : ""}`
-                  : connectionState === "qr_ready"
-                  ? "Escaneie o QR Code no celular"
-                  : "Conecte seu WhatsApp para enviar notificações automáticas"}
+                  ? `${verifiedName || "Conectado"}${displayPhone ? ` — ${displayPhone}` : ""}`
+                  : connectionState === "invalid_token"
+                  ? "Token inválido ou expirado. Reconfigure suas credenciais."
+                  : "Configure sua conta WhatsApp Business Platform da Meta"}
               </p>
             </div>
-            <Badge className={cn("gap-1.5 text-xs font-medium px-2.5 py-1", currentStateConfig.color)}>
-              <span className={cn("h-2 w-2 rounded-full", currentStateConfig.dot)} />
-              {currentStateConfig.label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {qualityBadge && (
+                <Badge className={cn("text-xs", qualityBadge.className)}>
+                  Qualidade: {qualityBadge.label}
+                </Badge>
+              )}
+              <Badge className={cn("gap-1.5 text-xs font-medium px-2.5 py-1", currentStateConfig.color)}>
+                <span className={cn("h-2 w-2 rounded-full", currentStateConfig.dot)} />
+                {currentStateConfig.label}
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* QR Code / Connect Card */}
-      <Card>
-        <CardContent className="pt-6 pb-5">
-          {connectionState === "not_configured" || connectionState === "disconnected" ? (
-            <div className="text-center py-8 space-y-4">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50 dark:bg-green-950/40">
-                <Smartphone className="h-10 w-10 text-green-600" />
+      {/* Configuration Card — Embedded Signup (Primary) + Manual (Fallback) */}
+      {(connectionState === "not_configured" || connectionState === "invalid_token") && (
+        <>
+          {/* Embedded Signup — 1-click onboarding */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="h-4 w-4 text-green-600" /> Conectar WhatsApp com 1 clique
+              </CardTitle>
+              <CardDescription>
+                Conecte sua conta WhatsApp Business automaticamente via Meta.
+                Não é necessário copiar tokens ou IDs manualmente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 space-y-3">
+                <p className="text-xs font-semibold text-green-700 dark:text-green-300">Como funciona</p>
+                <ol className="text-xs text-green-600 dark:text-green-400 space-y-1.5 list-decimal list-inside">
+                  <li>Clique no botão abaixo para abrir o assistente da Meta</li>
+                  <li>Faça login com sua conta do Facebook/Meta Business</li>
+                  <li>Selecione ou crie sua Conta WhatsApp Business</li>
+                  <li>Escolha e verifique seu número de telefone comercial</li>
+                  <li>Pronto! A conexão será estabelecida automaticamente</li>
+                </ol>
               </div>
-              <div>
-                <h3 className="font-semibold text-lg">Conectar WhatsApp</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                  Clique no botão abaixo para gerar um QR Code. Depois, escaneie com o WhatsApp do celular da clínica.
-                </p>
-              </div>
+
               <Button
-                size="lg"
-                className="gap-2 bg-green-600 hover:bg-green-700"
-                onClick={handleConnect}
-                disabled={isActioning}
+                onClick={handleEmbeddedSignup}
+                disabled={isEmbeddedSignupLoading}
+                className="gap-2 w-full h-12 text-base font-semibold"
+                style={{ backgroundColor: "#1877F2", color: "#fff" }}
               >
-                {isActioning ? (
-                  <Spinner size="sm" />
+                {isEmbeddedSignupLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <Wifi className="h-5 w-5" />
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
                 )}
-                {connectionState === "disconnected" ? "Reconectar WhatsApp" : "Conectar WhatsApp"}
+                Conectar WhatsApp Business
               </Button>
-              {connectionState === "disconnected" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive gap-1.5"
-                  onClick={handleDelete}
-                  disabled={isActioning}
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Remover integração
-                </Button>
-              )}
-            </div>
-          ) : connectionState === "qr_ready" || connectionState === "connecting" ? (
-            <div className="text-center py-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg">Escaneie o QR Code</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Abra o WhatsApp no celular → Configurações → Dispositivos conectados → Conectar dispositivo
-                </p>
+            </CardContent>
+          </Card>
+
+          {/* Manual Configuration — Fallback */}
+          <Card>
+            <CardHeader className="pb-3 cursor-pointer" onClick={() => setShowManualConfig(!showManualConfig)}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                    <Lock className="h-3.5 w-3.5" /> Configuração manual (avançado)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    Para quem já tem um token permanente do Meta Developer Console
+                  </CardDescription>
+                </div>
+                {showManualConfig ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </div>
-              {qrCodeBase64 ? (
-                <div className="inline-block p-4 bg-white rounded-2xl shadow-lg border">
-                  <img
-                    src={qrCodeBase64.startsWith("data:") ? qrCodeBase64 : `data:image/png;base64,${qrCodeBase64}`}
-                    alt="QR Code WhatsApp"
-                    className="w-64 h-64"
+            </CardHeader>
+            {showManualConfig && (
+              <CardContent className="space-y-4 pt-0">
+                <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4 space-y-2">
+                  <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Como obter as credenciais</p>
+                  <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1 list-decimal list-inside">
+                    <li>Acesse <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="underline">Meta for Developers</a> e crie um App do tipo Business</li>
+                    <li>Adicione o produto "WhatsApp" ao seu App</li>
+                    <li>Em API Setup, copie o <strong>Phone Number ID</strong> e gere um <strong>Permanent Access Token</strong></li>
+                    <li>O <strong>Business Account ID</strong> está na URL da página do WhatsApp Manager</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="whatsapp-phone-number-id">Phone Number ID *</Label>
+                  <Input
+                    id="whatsapp-phone-number-id"
+                    value={phoneNumberId}
+                    onChange={(e) => setPhoneNumberId(e.target.value)}
+                    placeholder="Ex.: 106540352242922"
+                    className="font-mono text-sm"
                   />
                 </div>
-              ) : (
-                <div className="inline-flex items-center justify-center w-64 h-64 bg-muted rounded-2xl">
-                  <Spinner size="lg" className="text-muted-foreground" />
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="whatsapp-access-token">Access Token (permanente) *</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="whatsapp-access-token"
+                      type={showToken ? "text" : "password"}
+                      value={accessToken}
+                      onChange={(e) => setAccessToken(e.target.value)}
+                      placeholder="EAAJBx..."
+                      className="font-mono text-xs"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowToken(!showToken)}>
+                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use um System User token com permissão <code className="px-1 bg-muted rounded">whatsapp_business_messaging</code>
+                  </p>
                 </div>
-              )}
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Aguardando leitura do QR Code...</span>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="whatsapp-business-account-id">Business Account ID</Label>
+                  <Input
+                    id="whatsapp-business-account-id"
+                    value={businessAccountId}
+                    onChange={(e) => setBusinessAccountId(e.target.value)}
+                    placeholder="Ex.: 102938475102938"
+                    className="font-mono text-sm"
+                  />
+                </div>
+
+                <Button onClick={handleSaveConfig} disabled={isSaving} className="gap-2 bg-green-600 hover:bg-green-700">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  Salvar e Verificar
+                </Button>
+              </CardContent>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* Connected Card */}
+      {connectionState === "connected" && (
+        <Card>
+          <CardContent className="pt-6 pb-5 space-y-5">
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-800 dark:text-green-300">WhatsApp Business API conectado e ativo</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                  {verifiedName && `${verifiedName} · `}{displayPhone || phoneNumberId}{" · "}API Oficial Meta
+                </p>
+              </div>
+            </div>
+
+            {/* Webhook config info */}
+            {webhookUrl && (
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+                <p className="text-xs font-semibold">Configuração do Webhook (automática via Embedded Signup)</p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">{webhookUrl}</code>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada!"); }}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {verifyToken && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Verify Token:</span>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">{verifyToken}</code>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(verifyToken); toast.success("Token copiado!"); }}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Os webhooks foram inscritos automaticamente na WABA do cliente. As mensagens recebidas no número acima serão processadas pelo chatbot do ClinicNest.
+                </p>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Test connection */}
+            <div className="space-y-1.5">
+              <Label>Testar conexão</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  placeholder="Ex.: 5511999999999"
+                  inputMode="numeric"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleTest}
+                  disabled={isTesting}
+                >
+                  {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Testar
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                O QR Code expira em 2 minutos. Se não funcionar, clique em "Gerar novo QR Code".
+                Envia uma mensagem de teste para o número informado.
               </p>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-end">
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5"
-                onClick={handleConnect}
+                className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
+                onClick={handleDisconnect}
                 disabled={isActioning}
               >
-                <RefreshCw className="h-3.5 w-3.5" /> Gerar novo QR Code
+                {isActioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Remover integração
               </Button>
             </div>
-          ) : connectionState === "connected" ? (
-            <div className="space-y-5">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-green-800 dark:text-green-300">WhatsApp conectado e ativo</p>
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                    {connectedPhone ? `Número: ${connectedPhone}` : `Instância: ${instanceName}`}
-                    {" · "}Mensagens automáticas habilitadas
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Test connection */}
-              <div className="space-y-1.5">
-                <Label>Testar conexão</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                    placeholder="Ex.: 5511999999999"
-                    inputMode="numeric"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={handleTest}
-                    disabled={isTesting}
-                  >
-                    {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    Testar
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Envia uma mensagem de teste para o número informado.
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5"
-                  onClick={handleDisconnect}
-                  disabled={isActioning}
-                >
-                  {isActioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                  Desconectar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/5 gap-1.5"
-                  onClick={handleDelete}
-                  disabled={isActioning}
-                >
-                  <Trash2 className="h-4 w-4" /> Remover integração
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {/* Advanced / Manual Config */}
-      <Card>
-        <CardHeader className="pb-3 cursor-pointer" onClick={() => setShowAdvanced(!showAdvanced)}>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Lock className="h-4 w-4" /> Configuração avançada
-            {showAdvanced ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Configure manualmente se você tem sua própria instância Evolution API
-          </CardDescription>
-        </CardHeader>
-        {showAdvanced && (
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="whatsapp-api-url">Evolution API URL</Label>
-              <Input
-                id="whatsapp-api-url"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="https://sua-evolution-api.exemplo"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="whatsapp-api-key">API Key</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="whatsapp-api-key"
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Chave da API"
-                  className="font-mono text-xs"
-                />
-                <Button variant="outline" size="icon" onClick={() => setShowKey(!showKey)}>
-                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="whatsapp-instance">Nome da Instância</Label>
-              <Input
-                id="whatsapp-instance"
-                value={instance}
-                onChange={(e) => setInstance(e.target.value)}
-                placeholder="Nome da instância"
-              />
-            </div>
-            <Button onClick={handleSaveManual} disabled={isSaving} className="gap-2">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Salvar configurações
-            </Button>
           </CardContent>
-        )}
-      </Card>
-
-      {/* How it works */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <BookOpen className="h-4 w-4" /> Como funciona
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              { icon: Send, title: "Mensagens automáticas", desc: "Lembretes de agendamento, confirmações e notificações enviadas automaticamente" },
-              { icon: CheckCircle2, title: "Confirmação de consulta", desc: "Pacientes podem confirmar presença respondendo a mensagem" },
-              { icon: Clock, title: "Lembretes programados", desc: "Envio automático 24h e 2h antes do horário agendado" },
-            ].map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="rounded-xl border bg-muted/30 p-3 space-y-1.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
-                  <Icon className="h-4 w-4 text-green-600" />
-                </div>
-                <p className="text-xs font-semibold">{title}</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30 p-4 space-y-2">
-            <p className="text-xs font-semibold text-green-700 dark:text-green-300">Passo a passo</p>
-            <ol className="text-xs text-green-600 dark:text-green-400 space-y-1 list-decimal list-inside">
-              <li>Clique em <strong>Conectar WhatsApp</strong></li>
-              <li>Escaneie o QR Code com o WhatsApp do celular da clínica</li>
-              <li>Pronto! Mensagens automáticas já estão ativas.</li>
-            </ol>
-          </div>
-        </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
@@ -1990,7 +2009,7 @@ export default function Integracoes({ embedded = false }: { embedded?: boolean }
     {
       icon: Send,
       title: "WhatsApp",
-      description: "Envie mensagens automáticas via Evolution API",
+      description: "Envie mensagens automáticas via WhatsApp Business API (Meta)",
       status: "not_configured" as const,
       tab: "whatsapp",
       color: "bg-green-50 dark:bg-green-950/40 text-green-600",

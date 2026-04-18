@@ -1,1320 +1,1352 @@
 /**
- * whatsapp-chatbot — Cloud Run handler */
+ * whatsapp-chatbot — Cloud Run handler (Enterprise)
+ *
+ * Patient-facing chatbot for WhatsApp using Meta Cloud API.
+ * Features: session timeout, message dedup, cancel/reschedule, N+1 fix.
+ *
+ * Webhook:
+ *   GET  /api/webhooks/whatsapp-chatbot → Meta verification
+ *   POST /api/webhooks/whatsapp-chatbot → Incoming messages
+ */
 
-import { Request, Response } from 'express';
-import { adminQuery, userQuery } from '../shared/db';
-import { createLogger } from '../shared/logging';
-import { createDbClient } from '../shared/db-builder';
-export async function whatsappChatbot(req: Request, res: Response) {
-  try {
-    const db = createDbClient();
-    /**
-     * WhatsApp Chatbot — Chatbot profissional para clínicas via Evolution API.
-     *
-     * Recebe webhooks da Evolution API (instância da clínica).
-     * Máquina de estados: IDLE→MENU→BOOKING_SERVICE→PROFESSIONAL→DATE→TIME→CONFIRM
-     * Armazena conversas em chatbot_conversations / chatbot_messages / chatbot_settings.
-     *
-     * Correções aplicadas:
-     *   - clients → patients (tabela renomeada)
-     *   - services → procedures (tabela renomeada)
-     *   - professional_services → professional_procedures (tabela renomeada)
-     *   - appointments: client_id → patient_id, service_id → procedure_id, start_time → scheduled_at
-     *   - Auto-criação de chatbot_settings com defaults
-     *   - Idempotência (dedup de message_id)
-     *   - Fallback de buttons/list para texto quando não suportado
-     *   - Tratamento de mensagens de mídia
-     *   - Recuperação de erros por estado
-     */
+import { Request, Response } from "express";
+import { createLogger } from "../shared/logging";
+import { createDbClient } from "../shared/db-builder";
+import {
+  sendMetaWhatsAppMessage,
+  sendMetaWhatsAppButtons,
+  sendMetaWhatsAppList,
+  markMessageAsRead,
+} from "./whatsapp-sender";
 
-    const log = createLogger("WHATSAPP-CHATBOT");
+const log = createLogger("WHATSAPP-CHATBOT");
+const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
+const SESSION_TIMEOUT_MIN = 30;
+const processedMessages = new Set<string>();
+const DEDUP_MAX = 5000;
 
-    // ─── Tipos ────────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────
 
-    type SelectResult<T> = { data: T; error?: unknown };
+type TenantConfig = {
+  id: string;
+  name: string;
+  whatsapp_phone_number_id: string;
+  whatsapp_access_token: string;
+  whatsapp_business_account_id: string;
+};
 
-    interface TenantConfig {
-      id: string;
-      name: string;
-      phone: string | null;
-      address: string | null;
-      whatsapp_api_url: string | null;
-      whatsapp_api_key: string | null;
-      whatsapp_instance: string | null;
+type ChatbotSettings = {
+  is_active: boolean;
+  welcome_message: string;
+  menu_message: string;
+  outside_hours_message: string;
+  business_hours_start: string;
+  business_hours_end: string;
+  business_days: number[];
+  auto_confirm_booking: boolean;
+  max_future_days: number;
+  transfer_to_human_message?: string;
+};
+
+type ConversationState = {
+  id: string;
+  tenant_id: string;
+  phone: string;
+  state: string;
+  context: Record<string, unknown>;
+  updated_at: string;
+};
+
+type SelectResult<T> = { data: T; error: unknown };
+
+// ─── States ─────────────────────────────────────────────────────────────
+
+const STATE = {
+  IDLE: "IDLE",
+  MENU: "MENU",
+  BOOKING_SPECIALTY: "BOOKING_SPECIALTY",
+  BOOKING_PROFESSIONAL: "BOOKING_PROFESSIONAL",
+  BOOKING_DATE: "BOOKING_DATE",
+  BOOKING_TIME: "BOOKING_TIME",
+  BOOKING_CONFIRM: "BOOKING_CONFIRM",
+  RESCHEDULE_LIST: "RESCHEDULE_LIST",
+  RESCHEDULE_DATE: "RESCHEDULE_DATE",
+  RESCHEDULE_TIME: "RESCHEDULE_TIME",
+  RESCHEDULE_CONFIRM: "RESCHEDULE_CONFIRM",
+  CANCEL_LIST: "CANCEL_LIST",
+  CANCEL_CONFIRM: "CANCEL_CONFIRM",
+  QUEUE_CHECK: "QUEUE_CHECK",
+  AWAITING_HUMAN: "AWAITING_HUMAN",
+};
+
+// ─── DB helpers ─────────────────────────────────────────────────────────
+
+function db() {
+  return createDbClient();
+}
+
+async function resolveTenantByPhoneNumberId(
+  phoneNumberId: string,
+): Promise<TenantConfig | null> {
+  const { data } = (await db()
+    .from("tenants")
+    .select(
+      "id, name, whatsapp_phone_number_id, whatsapp_access_token, whatsapp_business_account_id",
+    )
+    .eq("whatsapp_phone_number_id", phoneNumberId)
+    .maybeSingle()) as unknown as SelectResult<TenantConfig | null>;
+  return data;
+}
+
+async function getSettings(
+  tenantId: string,
+): Promise<ChatbotSettings | null> {
+  const { data } = (await db()
+    .from("chatbot_settings")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
+  return data;
+}
+
+async function getConversation(
+  tenantId: string,
+  phone: string,
+): Promise<ConversationState | null> {
+  const { data } = (await db()
+    .from("chatbot_conversations")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<ConversationState | null>;
+  return data;
+}
+
+async function upsertConversation(
+  tenantId: string,
+  phone: string,
+  state: string,
+  context: Record<string, unknown>,
+) {
+  await db()
+    .from("chatbot_conversations")
+    .upsert(
+      {
+        tenant_id: tenantId,
+        phone,
+        state,
+        context,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id,phone" },
+    );
+}
+
+async function logMessage(
+  tenantId: string,
+  phone: string,
+  direction: "inbound" | "outbound",
+  text: string,
+) {
+  await db()
+    .from("chatbot_messages")
+    .insert({
+      tenant_id: tenantId,
+      phone,
+      direction,
+      message: text,
+      created_at: new Date().toISOString(),
+    });
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────
+
+function isWithinBusinessHours(
+  settings: ChatbotSettings,
+  tzOffset = -3,
+): boolean {
+  const now = new Date();
+  const local = new Date(now.getTime() + tzOffset * 60 * 60_000);
+  const dow = local.getUTCDay();
+
+  if (settings.business_days && settings.business_days.length > 0) {
+    if (!settings.business_days.includes(dow)) return false;
+  } else {
+    if (dow === 0) return false;
+  }
+
+  const hhmm = local.getUTCHours() * 100 + local.getUTCMinutes();
+  const [sH, sM] = (settings.business_hours_start || "08:00")
+    .split(":")
+    .map(Number);
+  const [eH, eM] = (settings.business_hours_end || "18:00")
+    .split(":")
+    .map(Number);
+  return hhmm >= sH * 100 + sM && hhmm <= eH * 100 + eM;
+}
+
+function isSessionExpired(conv: ConversationState | null): boolean {
+  if (!conv) return true;
+  const mins =
+    (Date.now() - new Date(conv.updated_at).getTime()) / 60_000;
+  return mins > SESSION_TIMEOUT_MIN;
+}
+
+// ─── Send wrappers ──────────────────────────────────────────────────────
+
+async function send(
+  config: TenantConfig,
+  to: string,
+  text: string,
+) {
+  await sendMetaWhatsAppMessage(
+    config.whatsapp_phone_number_id,
+    config.whatsapp_access_token,
+    to,
+    text,
+  );
+  await logMessage(config.id, to, "outbound", text);
+}
+
+async function sendButtons(
+  config: TenantConfig,
+  to: string,
+  bodyText: string,
+  buttons: Array<{ id: string; title: string }>,
+  headerText?: string,
+) {
+  await sendMetaWhatsAppButtons(
+    config.whatsapp_phone_number_id,
+    config.whatsapp_access_token,
+    to,
+    bodyText,
+    buttons,
+    headerText,
+  );
+  await logMessage(config.id, to, "outbound", bodyText);
+}
+
+async function sendList(
+  config: TenantConfig,
+  to: string,
+  headerText: string,
+  bodyText: string,
+  buttonText: string,
+  sections: Array<{
+    title: string;
+    rows: Array<{ id: string; title: string; description?: string }>;
+  }>,
+) {
+  await sendMetaWhatsAppList(
+    config.whatsapp_phone_number_id,
+    config.whatsapp_access_token,
+    to,
+    headerText,
+    bodyText,
+    buttonText,
+    sections,
+  );
+  await logMessage(config.id, to, "outbound", bodyText);
+}
+
+// ─── State handlers ─────────────────────────────────────────────────────
+
+async function handleIdle(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  _text: string,
+) {
+  const welcome =
+    settings.welcome_message ||
+    `Ol\u00e1! \uD83D\uDC4B Bem-vindo(a) \u00e0 *${config.name}*.`;
+  await send(config, phone, welcome);
+  await showMainMenu(config, settings, phone);
+  await upsertConversation(config.id, phone, STATE.MENU, {});
+}
+
+async function showMainMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  const menuText = settings.menu_message || "Como posso ajud\u00e1-lo(a)?";
+  await sendButtons(config, phone, menuText, [
+    { id: "menu_agendar", title: "\uD83D\uDCC5 Agendar consulta" },
+    { id: "menu_consultas", title: "\uD83D\uDCCB Minhas consultas" },
+    { id: "menu_atendente", title: "\uD83D\uDC64 Falar c/ atendente" },
+  ]);
+}
+
+async function handleMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+) {
+  const choice = buttonId || text.toLowerCase().trim();
+
+  if (
+    choice === "menu_agendar" ||
+    choice.includes("agendar") ||
+    choice === "1"
+  ) {
+    return startBooking(config, phone, settings);
+  }
+  if (
+    choice === "menu_consultas" ||
+    choice.includes("consulta") ||
+    choice === "2"
+  ) {
+    return showAppointments(config, settings, phone);
+  }
+  if (
+    choice === "menu_atendente" ||
+    choice.includes("atendente") ||
+    choice.includes("humano") ||
+    choice === "3"
+  ) {
+    return transferToHuman(config, settings, phone);
+  }
+
+  await send(
+    config,
+    phone,
+    "Desculpe, n\u00e3o entendi. Por favor, selecione uma das op\u00e7\u00f5es:",
+  );
+  await showMainMenu(config, settings, phone);
+}
+
+// ─── Booking flow ───────────────────────────────────────────────────────
+
+async function startBooking(
+  config: TenantConfig,
+  phone: string,
+  settings?: ChatbotSettings,
+) {
+  const { data: specialties } = (await db()
+    .from("professionals")
+    .select("specialty")
+    .eq("tenant_id", config.id)
+    .eq("is_active", true)) as unknown as SelectResult<
+    Array<{ specialty: string }> | null
+  >;
+
+  const unique = [
+    ...new Set(
+      (specialties || []).map((s) => s.specialty).filter(Boolean),
+    ),
+  ];
+
+  if (unique.length === 0) {
+    await send(
+      config,
+      phone,
+      "No momento n\u00e3o h\u00e1 especialidades dispon\u00edveis para agendamento.",
+    );
+    const s = settings || ((await getSettings(config.id)) as ChatbotSettings);
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, s, phone);
+  }
+
+  const sections = [
+    {
+      title: "Especialidades",
+      rows: unique.map((s, i) => ({
+        id: `spec_${i}`,
+        title: s.slice(0, 24),
+      })),
+    },
+  ];
+
+  await sendList(
+    config,
+    phone,
+    "Agendamento",
+    "Selecione a especialidade desejada:",
+    "Ver especialidades",
+    sections,
+  );
+  await upsertConversation(config.id, phone, STATE.BOOKING_SPECIALTY, {
+    specialties: unique,
+  });
+}
+
+async function handleBookingSpecialty(
+  config: TenantConfig,
+  phone: string,
+  text: string,
+  listRowId: string | null,
+  ctx: Record<string, unknown>,
+) {
+  const specialties = (ctx.specialties as string[]) || [];
+  let selected: string | null = null;
+
+  if (listRowId && listRowId.startsWith("spec_")) {
+    const idx = parseInt(listRowId.replace("spec_", ""), 10);
+    selected = specialties[idx] ?? null;
+  } else {
+    const num = parseInt(text, 10);
+    if (num >= 1 && num <= specialties.length) {
+      selected = specialties[num - 1];
+    } else {
+      selected =
+        specialties.find((s) =>
+          s.toLowerCase().includes(text.toLowerCase()),
+        ) ?? null;
     }
+  }
 
-    interface ChatbotSettings {
-      is_active: boolean;
-      welcome_message: string;
-      menu_message: string;
-      outside_hours_message: string;
-      business_hours_start: string;
-      business_hours_end: string;
-      business_days: number[];
-      auto_confirm_booking: boolean;
-      max_future_days: number;
+  if (!selected) {
+    await send(
+      config,
+      phone,
+      "Especialidade n\u00e3o reconhecida. Tente novamente ou digite *menu*.",
+    );
+    return;
+  }
+
+  const { data: professionals } = (await db()
+    .from("professionals")
+    .select("id, full_name")
+    .eq("tenant_id", config.id)
+    .eq("specialty", selected)
+    .eq("is_active", true)) as unknown as SelectResult<
+    Array<{ id: string; full_name: string }> | null
+  >;
+
+  if (!professionals || professionals.length === 0) {
+    await send(
+      config,
+      phone,
+      "N\u00e3o h\u00e1 profissionais dispon\u00edveis nesta especialidade.",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return;
+  }
+
+  if (professionals.length === 1) {
+    const s = await getSettings(config.id);
+    return showAvailableDates(
+      config,
+      phone,
+      selected,
+      professionals[0].id,
+      professionals[0].full_name,
+      s?.max_future_days,
+      s?.business_days,
+    );
+  }
+
+  const sections = [
+    {
+      title: "Profissionais",
+      rows: professionals.map((p) => ({
+        id: `prof_${p.id}`,
+        title: p.full_name.slice(0, 24),
+      })),
+    },
+  ];
+
+  await sendList(
+    config,
+    phone,
+    selected,
+    "Selecione o profissional:",
+    "Ver profissionais",
+    sections,
+  );
+  await upsertConversation(config.id, phone, STATE.BOOKING_PROFESSIONAL, {
+    specialty: selected,
+    professionals,
+  });
+}
+
+async function handleBookingProfessional(
+  config: TenantConfig,
+  phone: string,
+  text: string,
+  listRowId: string | null,
+  ctx: Record<string, unknown>,
+) {
+  const professionals =
+    (ctx.professionals as Array<{ id: string; full_name: string }>) || [];
+  let selected: { id: string; full_name: string } | null = null;
+
+  if (listRowId && listRowId.startsWith("prof_")) {
+    const profId = listRowId.replace("prof_", "");
+    selected = professionals.find((p) => p.id === profId) ?? null;
+  } else {
+    const num = parseInt(text, 10);
+    if (num >= 1 && num <= professionals.length) {
+      selected = professionals[num - 1];
+    } else {
+      selected =
+        professionals.find((p) =>
+          p.full_name.toLowerCase().includes(text.toLowerCase()),
+        ) ?? null;
     }
+  }
 
-    interface Conversation {
-      id: string;
-      tenant_id: string;
-      phone: string;
-      client_id: string | null;
-      state: string;
-      context: Record<string, unknown>;
-      last_message_at: string;
+  if (!selected) {
+    await send(config, phone, "Profissional n\u00e3o reconhecido. Tente novamente.");
+    return;
+  }
+
+  const s = await getSettings(config.id);
+  return showAvailableDates(
+    config,
+    phone,
+    ctx.specialty as string,
+    selected.id,
+    selected.full_name,
+    s?.max_future_days,
+    s?.business_days,
+  );
+}
+
+async function showAvailableDates(
+  config: TenantConfig,
+  phone: string,
+  specialty: string,
+  professionalId: string,
+  professionalName: string,
+  maxDays?: number,
+  businessDays?: number[],
+) {
+  const lookAhead = maxDays || 14;
+  const now = new Date();
+  const startDate = new Date(now.getTime() + 86_400_000);
+  const endDate = new Date(now.getTime() + lookAhead * 86_400_000);
+  const startStr = startDate.toISOString().split("T")[0];
+  const endStr = endDate.toISOString().split("T")[0];
+
+  // Single query for all dates (N+1 fix)
+  const { data: availableSlots } = (await db()
+    .from("appointment_slots")
+    .select("date")
+    .eq("tenant_id", config.id)
+    .eq("professional_id", professionalId)
+    .eq("is_available", true)
+    .gte("date", startStr)
+    .lte("date", endStr)) as unknown as SelectResult<
+    Array<{ date: string }> | null
+  >;
+
+  const skipDays = new Set(
+    businessDays && businessDays.length > 0
+      ? [0, 1, 2, 3, 4, 5, 6].filter((d) => !businessDays.includes(d))
+      : [0],
+  );
+
+  const dates = [
+    ...new Set((availableSlots || []).map((s) => s.date)),
+  ]
+    .filter((d) => {
+      const dow = new Date(d + "T12:00:00Z").getUTCDay();
+      return !skipDays.has(dow);
+    })
+    .sort()
+    .slice(0, 10);
+
+  if (dates.length === 0) {
+    await send(
+      config,
+      phone,
+      `Infelizmente n\u00e3o h\u00e1 hor\u00e1rios dispon\u00edveis com *${professionalName}* nos pr\u00f3ximos dias.`,
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return;
+  }
+
+  const formatDate = (d: string) => {
+    const [y, m, day] = d.split("-");
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(day));
+    const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b"];
+    return `${weekdays[date.getDay()]} ${day}/${m}`;
+  };
+
+  const sections = [
+    {
+      title: "Datas dispon\u00edveis",
+      rows: dates.map((d) => ({
+        id: `date_${d}`,
+        title: formatDate(d),
+      })),
+    },
+  ];
+
+  await sendList(
+    config,
+    phone,
+    `Agenda - ${professionalName}`,
+    "Selecione a data desejada:",
+    "Ver datas",
+    sections,
+  );
+
+  await upsertConversation(config.id, phone, STATE.BOOKING_DATE, {
+    specialty,
+    professional_id: professionalId,
+    professional_name: professionalName,
+    available_dates: dates,
+  });
+}
+
+async function handleBookingDate(
+  config: TenantConfig,
+  phone: string,
+  text: string,
+  listRowId: string | null,
+  ctx: Record<string, unknown>,
+) {
+  const dates = (ctx.available_dates as string[]) || [];
+  let selectedDate: string | null = null;
+
+  if (listRowId && listRowId.startsWith("date_")) {
+    selectedDate = listRowId.replace("date_", "");
+  } else {
+    const num = parseInt(text, 10);
+    if (num >= 1 && num <= dates.length) {
+      selectedDate = dates[num - 1];
     }
+  }
 
-    interface ProcedureRow {
-      id: string;
-      name: string;
-      duration_minutes: number;
-      price: number | null;
+  if (!selectedDate || !dates.includes(selectedDate)) {
+    await send(
+      config,
+      phone,
+      "Data n\u00e3o reconhecida. Por favor, selecione uma das datas na lista.",
+    );
+    return;
+  }
+
+  const { data: slots } = (await db()
+    .from("appointment_slots")
+    .select("id, start_time")
+    .eq("tenant_id", config.id)
+    .eq("professional_id", ctx.professional_id as string)
+    .eq("date", selectedDate)
+    .eq("is_available", true)
+    .order("start_time", {
+      ascending: true,
+    })) as unknown as SelectResult<
+    Array<{ id: string; start_time: string }> | null
+  >;
+
+  if (!slots || slots.length === 0) {
+    await send(
+      config,
+      phone,
+      "Desculpe, os hor\u00e1rios para esta data j\u00e1 foram preenchidos. Escolha outra data.",
+    );
+    return;
+  }
+
+  const sections = [
+    {
+      title: "Hor\u00e1rios",
+      rows: slots.map((s) => ({
+        id: `slot_${s.id}`,
+        title: s.start_time.slice(0, 5),
+      })),
+    },
+  ];
+
+  await sendList(
+    config,
+    phone,
+    `Hor\u00e1rios - ${selectedDate.split("-").reverse().join("/")}`,
+    `Profissional: *${ctx.professional_name}*\nSelecione o hor\u00e1rio:`,
+    "Ver hor\u00e1rios",
+    sections,
+  );
+
+  await upsertConversation(config.id, phone, STATE.BOOKING_TIME, {
+    ...ctx,
+    selected_date: selectedDate,
+    available_slots: slots,
+  });
+}
+
+async function handleBookingTime(
+  config: TenantConfig,
+  phone: string,
+  text: string,
+  listRowId: string | null,
+  ctx: Record<string, unknown>,
+) {
+  const slots =
+    (ctx.available_slots as Array<{ id: string; start_time: string }>) || [];
+  let selectedSlot: { id: string; start_time: string } | null = null;
+
+  if (listRowId && listRowId.startsWith("slot_")) {
+    const slotId = listRowId.replace("slot_", "");
+    selectedSlot = slots.find((s) => s.id === slotId) ?? null;
+  } else {
+    const num = parseInt(text, 10);
+    if (num >= 1 && num <= slots.length) {
+      selectedSlot = slots[num - 1];
+    } else {
+      selectedSlot =
+        slots.find((s) => s.start_time.startsWith(text.trim())) ?? null;
     }
+  }
 
-    interface ProfessionalRow {
+  if (!selectedSlot) {
+    await send(
+      config,
+      phone,
+      "Hor\u00e1rio n\u00e3o reconhecido. Selecione um hor\u00e1rio da lista.",
+    );
+    return;
+  }
+
+  const dateFormatted = (ctx.selected_date as string)
+    .split("-")
+    .reverse()
+    .join("/");
+
+  await sendButtons(
+    config,
+    phone,
+    `*Confirmar agendamento:*\n\n\uD83D\uDCC5 Data: ${dateFormatted}\n\u23F0 Hor\u00e1rio: ${selectedSlot.start_time.slice(0, 5)}\n\uD83D\uDC68\u200D\u2695\uFE0F Profissional: ${ctx.professional_name}\n\uD83C\uDFE5 Especialidade: ${ctx.specialty}`,
+    [
+      { id: "confirm_yes", title: "\u2705 Confirmar" },
+      { id: "confirm_no", title: "\u274C Cancelar" },
+    ],
+  );
+
+  await upsertConversation(config.id, phone, STATE.BOOKING_CONFIRM, {
+    ...ctx,
+    selected_slot_id: selectedSlot.id,
+    selected_time: selectedSlot.start_time,
+  });
+}
+
+async function handleBookingConfirm(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+) {
+  const conv = await getConversation(config.id, phone);
+  const ctx = conv?.context || {};
+  const choice = buttonId || text.toLowerCase().trim();
+
+  if (
+    choice === "confirm_no" ||
+    choice.includes("cancelar") ||
+    choice.includes("n\u00e3o")
+  ) {
+    await send(config, phone, "Agendamento cancelado. Voltando ao menu.");
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  if (
+    choice !== "confirm_yes" &&
+    !choice.includes("sim") &&
+    !choice.includes("confirm")
+  ) {
+    await send(config, phone, "Responda *Confirmar* ou *Cancelar*.");
+    return;
+  }
+
+  // Find or create patient
+  let { data: patient } = (await db()
+    .from("patients")
+    .select("id, full_name")
+    .eq("tenant_id", config.id)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<{
+    id: string;
+    full_name: string;
+  } | null>;
+
+  if (!patient) {
+    const suffix = phone.slice(-4);
+    const { data: newPatient } = (await db()
+      .from("patients")
+      .insert({
+        tenant_id: config.id,
+        phone,
+        full_name: `Paciente WA *${suffix}`,
+        source: "whatsapp_chatbot",
+      })
+      .select("id, full_name")
+      .single()) as unknown as SelectResult<{
       id: string;
       full_name: string;
-    }
-
-    interface IncomingWebhook {
-      tenant_id: string;
-      phone: string;
-      message: string;
-      message_id?: string;
-      message_type?: string;
-      button_payload?: string;
-      list_reply_id?: string;
-    }
-
-    // ─── Constantes de estado ────────────────────────────────────────────────────
-
-    const STATE = {
-      IDLE: "idle",
-      MENU: "menu",
-      BOOKING_SERVICE: "booking_service",
-      BOOKING_PROFESSIONAL: "booking_professional",
-      BOOKING_DATE: "booking_date",
-      BOOKING_TIME: "booking_time",
-      BOOKING_CONFIRM: "booking_confirm",
-      CANCEL_SELECT: "cancel_select",
-      CANCEL_CONFIRM: "cancel_confirm",
-      VIEW_APPOINTMENTS: "view_appointments",
-      TALK_TO_HUMAN: "talk_to_human",
-      WAITING_HUMAN: "waiting_human",
-    } as const;
-
-    // ─── Idempotency — prevent duplicate webhook processing ──────────────────────
-
-    const recentMessageIds = new Map<string, number>();
-    const DEDUP_TTL_MS = 60_000;
-
-    function isDuplicateMessage(messageId: string | undefined): boolean {
-      if (!messageId) return false;
-      const now = Date.now();
-      if (recentMessageIds.size > 500) {
-        for (const [id, ts] of recentMessageIds) {
-          if (now - ts > DEDUP_TTL_MS) recentMessageIds.delete(id);
-        }
-      }
-      if (recentMessageIds.has(messageId)) return true;
-      recentMessageIds.set(messageId, now);
-      return false;
-    }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-    function normalizePhone(raw: string): string {
-      let cleaned = raw.replace(/\D/g, "");
-      if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
-      if (!cleaned.startsWith("55") && cleaned.length <= 11) {
-        cleaned = "55" + cleaned;
-      }
-      return cleaned;
-    }
-
-    function formatDateBR(iso: string): string {
-      const d = new Date(iso);
-      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    }
-
-    function formatTimeBR(iso: string): string {
-      const d = new Date(iso);
-      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    }
-
-    function isWithinBusinessHours(settings: ChatbotSettings): boolean {
-      const now = new Date();
-      const day = now.getDay();
-      if (!settings.business_days.includes(day)) return false;
-
-      const [startH, startM] = settings.business_hours_start.split(":").map(Number);
-      const [endH, endM] = settings.business_hours_end.split(":").map(Number);
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      const startMinutes = startH * 60 + startM;
-      const endMinutes = endH * 60 + endM;
-
-      return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
-    }
-
-    function generateSlots(durationMinutes: number, settings: ChatbotSettings): string[] {
-      const slots: string[] = [];
-      const [startH, startM] = settings.business_hours_start.split(":").map(Number);
-      const [endH, endM] = settings.business_hours_end.split(":").map(Number);
-      const start = startH * 60 + startM;
-      const end = endH * 60 + endM;
-      for (let m = start; m + durationMinutes <= end; m += 30) {
-        const h = Math.floor(m / 60);
-        const min = m % 60;
-        slots.push(`${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
-      }
-      return slots;
-    }
-
-    // ─── Enviar mensagem via Evolution API ────────────────────────────────────────
-
-    async function sendWhatsAppMessage(
-      tenant: TenantConfig,
-      phone: string,
-      message: string): Promise<boolean> {
-      const apiUrl = (tenant.whatsapp_api_url ?? "").trim();
-      const apiKey = (tenant.whatsapp_api_key ?? "").trim();
-      const instance = (tenant.whatsapp_instance ?? "").trim();
-      if (!apiUrl || !apiKey || !instance) {
-        log("sendMessage: missing config", { tenantId: tenant.id });
-        return false;
-      }
-
-      const endpoint = `${apiUrl.replace(/\/$/, "")}/message/sendText/${encodeURIComponent(instance)}`;
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: JSON.stringify({ number: phone, text: message }),
-        });
-        if (!res.ok) {
-          log("sendMessage failed", { status: res.status });
-        }
-        return res.ok;
-      } catch (err: any) {
-        log("sendMessage error", { error: String(err) });
-        return false;
-      }
-    }
-
-    async function sendWhatsAppButtons(
-      tenant: TenantConfig,
-      phone: string,
-      title: string,
-      message: string,
-      buttons: Array<{ id: string; text: string }>): Promise<boolean> {
-      const apiUrl = (tenant.whatsapp_api_url ?? "").trim();
-      const apiKey = (tenant.whatsapp_api_key ?? "").trim();
-      const instance = (tenant.whatsapp_instance ?? "").trim();
-      if (!apiUrl || !apiKey || !instance) return false;
-
-      const endpoint = `${apiUrl.replace(/\/$/, "")}/message/sendButtons/${encodeURIComponent(instance)}`;
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: JSON.stringify({
-            number: phone,
-            title,
-            description: message,
-            buttons: buttons.slice(0, 3).map((b: any) => ({
-              type: "reply",
-              buttonId: b.id,
-              buttonText: { displayText: b.text },
-            })),
-          }),
-        });
-        if (!res.ok) {
-          // Buttons may not be supported; fall back to text
-          const textFallback = `${title}\n${message}\n\n` +
-            buttons.map((b, i) => `*${i + 1}* - ${b.text}`).join("\n");
-          return sendWhatsAppMessage(tenant, phone, textFallback);
-        }
-        return true;
-      } catch {
-        const textFallback = `${title}\n${message}\n\n` +
-          buttons.map((b, i) => `*${i + 1}* - ${b.text}`).join("\n");
-        return sendWhatsAppMessage(tenant, phone, textFallback);
-      }
-    }
-
-    async function sendWhatsAppList(
-      tenant: TenantConfig,
-      phone: string,
-      title: string,
-      description: string,
-      buttonText: string,
-      sections: Array<{
-        title: string;
-        rows: Array<{ title: string; rowId: string; description?: string }>;
-      }>): Promise<boolean> {
-      const apiUrl = (tenant.whatsapp_api_url ?? "").trim();
-      const apiKey = (tenant.whatsapp_api_key ?? "").trim();
-      const instance = (tenant.whatsapp_instance ?? "").trim();
-      if (!apiUrl || !apiKey || !instance) return false;
-
-      const endpoint = `${apiUrl.replace(/\/$/, "")}/message/sendList/${encodeURIComponent(instance)}`;
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: JSON.stringify({ number: phone, title, description, buttonText, sections }),
-        });
-        if (!res.ok) {
-          // Fall back to numbered text
-          const allRows = sections.flatMap((s: any) => s.rows);
-          const textFallback = `${title}\n${description}\n\n` +
-            allRows.map((r, i) => `*${i + 1}* - ${r.title}${r.description ? ` (${r.description})` : ""}`).join("\n");
-          return sendWhatsAppMessage(tenant, phone, textFallback);
-        }
-        return true;
-      } catch {
-        const allRows = sections.flatMap((s: any) => s.rows);
-        const textFallback = `${title}\n${description}\n\n` +
-          allRows.map((r, i) => `*${i + 1}* - ${r.title}${r.description ? ` (${r.description})` : ""}`).join("\n");
-        return sendWhatsAppMessage(tenant, phone, textFallback);
-      }
-    }
-
-    // ─── Estado do Chatbot ──────────────────────────────────────────────────────
-
-    async function getOrCreateConversation(tenantId: string,
-      phone: string): Promise<Conversation> {
-      const { data: existing } = (await db.from("chatbot_conversations")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .eq("phone", phone)
-        .maybeSingle()) as unknown as SelectResult<Conversation | null>;
-
-      if (existing) {
-        await db.from("chatbot_conversations")
-          .update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-          .eq("id", existing.id);
-        return existing;
-      }
-
-      // Try to find matching patient (tabela renomeada: clients → patients)
-      const { data: patient } = (await db.from("patients")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .or(`phone.eq.${phone},phone.eq.${phone.replace(/^55/, "")}`)
-        .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
-
-      const { data: newConv } = (await db.from("chatbot_conversations")
-        .insert({
-          tenant_id: tenantId,
-          phone,
-          client_id: patient?.id ?? null,
-          state: STATE.IDLE,
-          context: {},
-        })
-        .select("*")
-        .single()) as unknown as SelectResult<Conversation>;
-
-      return newConv;
-    }
-
-    async function updateConversation(convId: string,
-      state: string,
-      context: Record<string, unknown>): Promise<void> {
-      await db.from("chatbot_conversations")
-        .update({ state, context, updated_at: new Date().toISOString() })
-        .eq("id", convId);
-    }
-
-    async function logMessage(convId: string,
-      tenantId: string,
-      direction: "inbound" | "outbound",
-      content: string,
-      messageType = "text"): Promise<void> {
-      await db.from("chatbot_messages").insert({
-        conversation_id: convId,
-        tenant_id: tenantId,
-        direction,
-        message_type: messageType,
-        content,
-      });
-    }
-
-    // ─── Auto-create chatbot settings ───────────────────────────────────────────
-
-    async function getOrCreateSettings(tenantId: string,
-      tenantName: string): Promise<ChatbotSettings | null> {
-      const { data: settings } = (await db.from("chatbot_settings")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
-
-      if (settings) return settings;
-
-      // Auto-create with sensible defaults
-      const clinicName = tenantName || "nossa clínica";
-      const defaults = {
-        tenant_id: tenantId,
-        is_active: true,
-        welcome_message: `Olá! 👋 Bem-vindo(a) à *${clinicName}*. Como posso ajudá-lo(a)?`,
-        menu_message: "Escolha uma opção:",
-        outside_hours_message: `Nosso horário de atendimento é de segunda a sexta, das 8h às 18h.\nDeixe sua mensagem que retornaremos assim que possível. 😊`,
-        business_hours_start: "08:00",
-        business_hours_end: "18:00",
-        business_days: [1, 2, 3, 4, 5],
-        auto_confirm_booking: false,
-        max_future_days: 30,
-      };
-
-      const { data: created } = (await db.from("chatbot_settings")
-        .insert(defaults)
-        .select("*")
-        .single()) as unknown as SelectResult<ChatbotSettings | null>;
-
-      if (created) {
-        log("Auto-created chatbot_settings", { tenantId });
-        return created;
-      }
-
-      // Race condition fallback
-      const { data: retry } = (await db.from("chatbot_settings")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .maybeSingle()) as unknown as SelectResult<ChatbotSettings | null>;
-
-      return retry;
-    }
-
-    // ─── Handlers por estado ────────────────────────────────────────────────────
-
-    async function handleIdle(conv: Conversation,
-      tenant: TenantConfig,
-      settings: ChatbotSettings,
-      _message: string): Promise<void> {
-      const clientName = conv.client_id
-        ? await getClientName(conv.client_id)
-        : null;
-
-      const greeting = clientName
-        ? settings.welcome_message.replace("{{nome}}", clientName)
-        : settings.welcome_message.replace(/\s*{{nome}}\s*/g, "");
-
-      await sendWhatsAppMessage(tenant, conv.phone, greeting);
-      await logMessage(conv.id, conv.tenant_id, "outbound", greeting);
-
-      await sendWhatsAppButtons(tenant, conv.phone, "📋 Menu Principal", settings.menu_message, [
-        { id: "btn_agendar", text: "📅 Agendar" },
-        { id: "btn_consultas", text: "📋 Minhas Consultas" },
-        { id: "btn_falar", text: "💬 Falar c/ Atendente" },
-      ]);
-
-      await logMessage(conv.id, conv.tenant_id, "outbound", "[MENU]", "interactive");
-      await updateConversation(conv.id, STATE.MENU, {});
-    }
-
-    async function handleMenu(conv: Conversation,
-      tenant: TenantConfig,
-      settings: ChatbotSettings,
-      message: string,
-      buttonPayload?: string): Promise<void> {
-      const input = (buttonPayload ?? message).toLowerCase().trim();
-
-      if (input === "btn_agendar" || input.includes("agendar") || input === "1") {
-        await startBookingFlow(conv, tenant, settings);
-      } else if (input === "btn_consultas" || input.includes("consulta") || input === "2") {
-        await showAppointments(conv, tenant);
-      } else if (input === "btn_falar" || input.includes("falar") || input.includes("atendente") || input === "3") {
-        await transferToHuman(conv, tenant);
-      } else if (input.includes("cancelar")) {
-        await startCancelFlow(conv, tenant);
-      } else {
-        await sendWhatsAppMessage(tenant, conv.phone, "Desculpe, não entendi. Por favor, escolha uma das opções do menu:");
-        await sendWhatsAppButtons(tenant, conv.phone, "📋 Menu Principal", "Escolha uma opção:", [
-          { id: "btn_agendar", text: "📅 Agendar" },
-          { id: "btn_consultas", text: "📋 Minhas Consultas" },
-          { id: "btn_falar", text: "💬 Falar c/ Atendente" },
-        ]);
-      }
-    }
-
-    // ─── Fluxo de Agendamento ────────────────────────────────────────────────────
-
-    async function startBookingFlow(conv: Conversation,
-      tenant: TenantConfig,
-      _settings: ChatbotSettings): Promise<void> {
-      // Tabela renomeada: services → procedures
-      const { data: procedures } = (await db.from("procedures")
-        .select("id, name, duration_minutes, price")
-        .eq("tenant_id", conv.tenant_id)
-        .eq("is_active", true)
-        .order("name")
-        .limit(10)) as unknown as SelectResult<ProcedureRow[] | null>;
-
-      if (!procedures?.length) {
-        await sendWhatsAppMessage(tenant, conv.phone, "No momento não temos procedimentos disponíveis para agendamento online. Por favor, entre em contato diretamente com a clínica.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const sections = [{
-        title: "Procedimentos Disponíveis",
-        rows: procedures.map((s: any) => ({
-          title: s.name.slice(0, 24),
-          rowId: `svc_${s.id}`,
-          description: s.price ? `R$ ${Number(s.price).toFixed(2)} • ${s.duration_minutes}min` : `${s.duration_minutes}min`,
-        })),
-      }];
-
-      await sendWhatsAppList(tenant, conv.phone, "📅 Agendamento", "Selecione o procedimento desejado:", "Ver Procedimentos", sections);
-      await logMessage(conv.id, conv.tenant_id, "outbound", `[LIST] ${procedures.length} procedimentos`, "interactive");
-      await updateConversation(conv.id, STATE.BOOKING_SERVICE, {
-        services: procedures.map((s: any) => ({ id: s.id, name: s.name, duration: s.duration_minutes })),
-      });
-    }
-
-    async function handleBookingService(conv: Conversation,
-      tenant: TenantConfig,
-      _settings: ChatbotSettings,
-      message: string,
-      listReplyId?: string): Promise<void> {
-      const input = listReplyId ?? message;
-
-      let serviceId: string | null = null;
-      if (input.startsWith("svc_")) {
-        serviceId = input.replace("svc_", "");
-      } else {
-        const services = (conv.context.services as Array<{ id: string; name: string; duration: number }>) ?? [];
-        const idx = parseInt(input) - 1;
-        if (idx >= 0 && idx < services.length) {
-          serviceId = services[idx].id;
-        } else {
-          const match = services.find((s: any) => s.name.toLowerCase().includes(input.toLowerCase()));
-          serviceId = match?.id ?? null;
-        }
-      }
-
-      if (!serviceId) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não encontrei esse procedimento. Por favor, selecione da lista ou digite o número.");
-        return;
-      }
-
-      const services = (conv.context.services as Array<{ id: string; name: string; duration: number }>) ?? [];
-      const selectedService = services.find((s: any) => s.id === serviceId);
-
-      // Tabela renomeada: professional_services → professional_procedures, service_id → procedure_id
-      const { data: profs } = (await db.from("professional_procedures")
-        .select("professional_id, profiles!inner(id, full_name)")
-        .eq("procedure_id", serviceId)
-        .eq("tenant_id", conv.tenant_id)
-        .limit(10)) as unknown as SelectResult<Array<{ professional_id: string; profiles: { id: string; full_name: string } }> | null>;
-
-      if (!profs?.length) {
-        // Fallback: buscar qualquer profissional ativo
-        const { data: anyProfs } = (await db.from("profiles")
-          .select("id, full_name")
-          .eq("tenant_id", conv.tenant_id)
-          .eq("role", "professional")
-          .limit(10)) as unknown as SelectResult<ProfessionalRow[] | null>;
-
-        if (!anyProfs?.length) {
-          await sendWhatsAppMessage(tenant, conv.phone, "No momento não há profissionais disponíveis. Tente novamente mais tarde.");
-          await updateConversation(conv.id, STATE.MENU, {});
-          return;
-        }
-
-        const sections = [{
-          title: "Profissionais",
-          rows: anyProfs.map((p: any) => ({
-            title: p.full_name.slice(0, 24),
-            rowId: `prof_${p.id}`,
-          })),
-        }];
-
-        await sendWhatsAppList(tenant, conv.phone, "👨‍⚕️ Profissional", "Selecione o profissional:", "Ver Profissionais", sections);
-        await logMessage(conv.id, conv.tenant_id, "outbound", `[LIST] ${anyProfs.length} profissionais`, "interactive");
-        await updateConversation(conv.id, STATE.BOOKING_PROFESSIONAL, {
-          ...conv.context,
-          selected_service_id: serviceId,
-          selected_service_name: selectedService?.name ?? "",
-          selected_service_duration: selectedService?.duration ?? 30,
-          professionals: anyProfs.map((p: any) => ({ id: p.id, name: p.full_name })),
-        });
-        return;
-      }
-
-      const profList = profs.map((p: any) => ({ id: p.profiles.id, name: p.profiles.full_name }));
-      const sections = [{
-        title: "Profissionais",
-        rows: profList.map((p: any) => ({
-          title: p.name.slice(0, 24),
-          rowId: `prof_${p.id}`,
-        })),
-      }];
-
-      await sendWhatsAppList(tenant, conv.phone, "👨‍⚕️ Profissional", "Selecione o profissional:", "Ver Profissionais", sections);
-      await updateConversation(conv.id, STATE.BOOKING_PROFESSIONAL, {
-        ...conv.context,
-        selected_service_id: serviceId,
-        selected_service_name: selectedService?.name ?? "",
-        selected_service_duration: selectedService?.duration ?? 30,
-        professionals: profList,
-      });
-    }
-
-    async function handleBookingProfessional(conv: Conversation,
-      tenant: TenantConfig,
-      settings: ChatbotSettings,
-      message: string,
-      listReplyId?: string): Promise<void> {
-      const input = listReplyId ?? message;
-      let profId: string | null = null;
-
-      if (input.startsWith("prof_")) {
-        profId = input.replace("prof_", "");
-      } else {
-        const profs = (conv.context.professionals as Array<{ id: string; name: string }>) ?? [];
-        const idx = parseInt(input) - 1;
-        if (idx >= 0 && idx < profs.length) {
-          profId = profs[idx].id;
-        } else {
-          const match = profs.find((p: any) => p.name.toLowerCase().includes(input.toLowerCase()));
-          profId = match?.id ?? null;
-        }
-      }
-
-      if (!profId) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não encontrei esse profissional. Por favor, selecione da lista.");
-        return;
-      }
-
-      const profs = (conv.context.professionals as Array<{ id: string; name: string }>) ?? [];
-      const selectedProf = profs.find((p: any) => p.id === profId);
-
-      const today = new Date();
-      const dates: Array<{ label: string; value: string }> = [];
-      for (let i = 1; i <= Math.min(settings.max_future_days, 7); i++) {
-        const d = new Date(today.getTime() + i * 86_400_000);
-        const dayOfWeek = d.getDay();
-        if (settings.business_days.includes(dayOfWeek)) {
-          const dateStr = d.toISOString().split("T")[0];
-          const label = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
-          dates.push({ label, value: dateStr });
-        }
-      }
-
-      if (!dates.length) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não há datas disponíveis nos próximos dias. Por favor, entre em contato diretamente.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const sections = [{
-        title: "Datas Disponíveis",
-        rows: dates.map((d: any) => ({ title: d.label, rowId: `date_${d.value}` })),
-      }];
-
-      await sendWhatsAppList(tenant, conv.phone, "📆 Data", "Selecione a data desejada:", "Ver Datas", sections);
-      await updateConversation(conv.id, STATE.BOOKING_DATE, {
-        ...conv.context,
-        selected_professional_id: profId,
-        selected_professional_name: selectedProf?.name ?? "",
-        available_dates: dates,
-      });
-    }
-
-    async function handleBookingDate(conv: Conversation,
-      tenant: TenantConfig,
-      settings: ChatbotSettings,
-      message: string,
-      listReplyId?: string): Promise<void> {
-      const input = listReplyId ?? message;
-      let dateStr: string | null = null;
-
-      if (input.startsWith("date_")) {
-        dateStr = input.replace("date_", "");
-      } else {
-        const dates = (conv.context.available_dates as Array<{ label: string; value: string }>) ?? [];
-        const idx = parseInt(input) - 1;
-        if (idx >= 0 && idx < dates.length) {
-          dateStr = dates[idx].value;
-        }
-      }
-
-      if (!dateStr) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não entendi a data. Por favor, selecione da lista.");
-        return;
-      }
-
-      // appointments usa scheduled_at + duration_minutes (NÃO start_time/end_time)
-      const dayStart = `${dateStr}T00:00:00`;
-      const dayEnd = `${dateStr}T23:59:59`;
-      const profId = conv.context.selected_professional_id as string;
-      const duration = (conv.context.selected_service_duration as number) ?? 30;
-
-      const { data: busyAppts } = (await db.from("appointments")
-        .select("scheduled_at, duration_minutes")
-        .eq("tenant_id", conv.tenant_id)
-        .eq("professional_id", profId)
-        .gte("scheduled_at", dayStart)
-        .lte("scheduled_at", dayEnd)
-        .neq("status", "cancelled")) as unknown as SelectResult<Array<{
-          scheduled_at: string;
-          duration_minutes: number;
-        }> | null>;
-
-      const busyMinutes = new Set<number>();
-      for (const appt of busyAppts ?? []) {
-        const start = new Date(appt.scheduled_at);
-        const apptDuration = appt.duration_minutes || 30;
-        const startMin = start.getHours() * 60 + start.getMinutes();
-        for (let m = 0; m < apptDuration; m += 30) {
-          busyMinutes.add(startMin + m);
-        }
-      }
-
-      const allSlots = generateSlots(duration, settings);
-      const availableSlots = allSlots.filter((slot: any) => {
-        const [h, m] = slot.split(":").map(Number);
-        const slotMinute = h * 60 + m;
-        for (let dm = 0; dm < duration; dm += 30) {
-          if (busyMinutes.has(slotMinute + dm)) return false;
-        }
-        return true;
-      });
-
-      if (!availableSlots.length) {
-        await sendWhatsAppMessage(tenant, conv.phone, `Infelizmente não há horários disponíveis em ${formatDateBR(dateStr + "T12:00:00")}. Deseja escolher outra data?`);
-        await sendWhatsAppButtons(tenant, conv.phone, "📅 Outra Data", "O que deseja fazer?", [
-          { id: "btn_outra_data", text: "📅 Outra Data" },
-          { id: "btn_menu", text: "🏠 Menu" },
-        ]);
-        return;
-      }
-
-      const sections = [{
-        title: "Horários Disponíveis",
-        rows: availableSlots.slice(0, 10).map((slot: any) => ({ title: slot, rowId: `time_${slot}` })),
-      }];
-
-      await sendWhatsAppList(tenant, conv.phone, "🕐 Horário", `Horários para ${formatDateBR(dateStr + "T12:00:00")}:`, "Ver Horários", sections);
-      await updateConversation(conv.id, STATE.BOOKING_TIME, {
-        ...conv.context,
-        selected_date: dateStr,
-        available_slots: availableSlots,
-      });
-    }
-
-    async function handleBookingTime(conv: Conversation,
-      tenant: TenantConfig,
-      message: string,
-      listReplyId?: string): Promise<void> {
-      const input = listReplyId ?? message;
-      let timeStr: string | null = null;
-
-      if (input.startsWith("time_")) {
-        timeStr = input.replace("time_", "");
-      } else {
-        const match = input.match(/(\d{1,2}):(\d{2})/);
-        if (match) {
-          timeStr = `${match[1].padStart(2, "0")}:${match[2]}`;
-        }
-      }
-
-      const availableSlots = (conv.context.available_slots as string[]) ?? [];
-      if (!timeStr || !availableSlots.includes(timeStr)) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Horário inválido. Por favor, selecione da lista.");
-        return;
-      }
-
-      const dateStr = conv.context.selected_date as string;
-      const serviceName = conv.context.selected_service_name as string;
-      const profName = conv.context.selected_professional_name as string;
-
-      const summary = `📋 *Resumo do Agendamento*\n\n` +
-        `📌 Procedimento: ${serviceName}\n` +
-        `👨‍⚕️ Profissional: ${profName}\n` +
-        `📅 Data: ${formatDateBR(dateStr + "T12:00:00")}\n` +
-        `🕐 Horário: ${timeStr}\n` +
-        `📍 Local: ${tenant.name}${tenant.address ? ` - ${tenant.address}` : ""}\n\n` +
-        `Confirma o agendamento?`;
-
-      await sendWhatsAppMessage(tenant, conv.phone, summary);
-      await sendWhatsAppButtons(tenant, conv.phone, "✅ Confirmar", "Deseja confirmar?", [
-        { id: "btn_confirmar", text: "✅ Confirmar" },
-        { id: "btn_cancelar_booking", text: "❌ Cancelar" },
-      ]);
-
-      await updateConversation(conv.id, STATE.BOOKING_CONFIRM, {
-        ...conv.context,
-        selected_time: timeStr,
-      });
-    }
-
-    async function handleBookingConfirm(conv: Conversation,
-      tenant: TenantConfig,
-      settings: ChatbotSettings,
-      message: string,
-      buttonPayload?: string): Promise<void> {
-      const input = (buttonPayload ?? message).toLowerCase().trim();
-
-      if (input === "btn_cancelar_booking" || input.includes("cancelar") || input.includes("não") || input === "nao") {
-        await sendWhatsAppMessage(tenant, conv.phone, "Agendamento cancelado. Voltando ao menu principal.");
-        await updateConversation(conv.id, STATE.IDLE, {});
-        return;
-      }
-
-      if (input !== "btn_confirmar" && !input.includes("sim") && !input.includes("confirmar") && input !== "s") {
-        await sendWhatsAppMessage(tenant, conv.phone, "Por favor, responda *Sim* para confirmar ou *Não* para cancelar.");
-        return;
-      }
-
-      // appointments usa: patient_id, procedure_id, scheduled_at, duration_minutes
-      const dateStr = conv.context.selected_date as string;
-      const timeStr = conv.context.selected_time as string;
-      const serviceId = conv.context.selected_service_id as string;
-      const profId = conv.context.selected_professional_id as string;
-      const duration = (conv.context.selected_service_duration as number) ?? 30;
-
-      const scheduledAt = new Date(`${dateStr}T${timeStr}:00`);
-      const status = settings.auto_confirm_booking ? "confirmed" : "pending";
-
-      const insertPayload: Record<string, unknown> = {
-        tenant_id: conv.tenant_id,
-        procedure_id: serviceId,     // was service_id
-        professional_id: profId,
-        scheduled_at: scheduledAt.toISOString(),
-        duration_minutes: duration,
-        status,
-        source: "whatsapp_chatbot",
-        notes: "Agendado via chatbot WhatsApp",
-      };
-
-      if (conv.client_id) {
-        insertPayload.patient_id = conv.client_id;  // was client_id
-      }
-
-      const { data: appt, error: apptErr } = await db.from("appointments")
-        .insert(insertPayload)
-        .select("id")
-        .single();
-
-      if (apptErr) {
-        log("Booking error", { error: String(apptErr) });
-        await sendWhatsAppMessage(tenant, conv.phone, "Desculpe, ocorreu um erro ao realizar o agendamento. Por favor, tente novamente ou entre em contato diretamente com a clínica.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const confirmMsg = `✅ *Agendamento ${status === "confirmed" ? "Confirmado" : "Realizado"}!*\n\n` +
-        `📌 ${conv.context.selected_service_name}\n` +
-        `👨‍⚕️ ${conv.context.selected_professional_name}\n` +
-        `📅 ${formatDateBR(scheduledAt.toISOString())} às ${timeStr}\n\n` +
-        (status === "pending" ? "⚠️ Seu agendamento será confirmado pela clínica em breve.\n\n" : "") +
-        `📍 ${tenant.name}\n` +
-        (tenant.address ? `📍 ${tenant.address}\n` : "") +
-        `\nObrigado por agendar conosco! 🙏`;
-
-      await sendWhatsAppMessage(tenant, conv.phone, confirmMsg);
-      await logMessage(conv.id, conv.tenant_id, "outbound",
-        `[BOOKING] Appointment ${(appt as { id: string }).id} created`, "system");
-      await updateConversation(conv.id, STATE.IDLE, {});
-    }
-
-    // ─── Fluxo de Consultas ─────────────────────────────────────────────────────
-
-    async function showAppointments(conv: Conversation,
-      tenant: TenantConfig): Promise<void> {
-      if (!conv.client_id) {
-        await sendWhatsAppMessage(tenant, conv.phone,
-          "Não encontramos um cadastro associado a este número. Para ver seus agendamentos, entre em contato com a clínica.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const now = new Date().toISOString();
-      // appointments: patient_id (was client_id), procedure_id (was service_id), scheduled_at (not start_time)
-      const { data: appts } = (await db.from("appointments")
-        .select("id, scheduled_at, duration_minutes, status, procedure_id, professional_id")
-        .eq("tenant_id", conv.tenant_id)
-        .eq("patient_id", conv.client_id)
-        .gte("scheduled_at", now)
-        .neq("status", "cancelled")
-        .order("scheduled_at")
-        .limit(5)) as unknown as SelectResult<Array<{
-          id: string; scheduled_at: string; duration_minutes: number;
-          status: string; procedure_id: string; professional_id: string;
-        }> | null>;
-
-      if (!appts?.length) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Você não tem consultas agendadas. Deseja agendar uma?");
-        await sendWhatsAppButtons(tenant, conv.phone, "📅 Agendar", "O que deseja fazer?", [
-          { id: "btn_agendar", text: "📅 Agendar" },
-          { id: "btn_menu", text: "🏠 Menu" },
-        ]);
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const procIds = [...new Set(appts.map((a: any) => a.procedure_id).filter(Boolean))];
-      const profIds = [...new Set(appts.map((a: any) => a.professional_id).filter(Boolean))];
-
-      const [procsRes, profsRes] = await Promise.all([
-        procIds.length
-          ? (db.from("procedures").select("id, name").in("id", procIds) as unknown as SelectResult<ProcedureRow[] | null>)
-          : { data: [] as ProcedureRow[] },
-        profIds.length
-          ? (db.from("profiles").select("id, full_name").in("id", profIds) as unknown as SelectResult<ProfessionalRow[] | null>)
-          : { data: [] as ProfessionalRow[] },
-      ]);
-
-      const procMap = new Map((procsRes.data ?? []).map((s: any) => [s.id, s.name]));
-      const profMap = new Map((profsRes.data ?? []).map((p: any) => [p.id, p.full_name]));
-
-      let msg = "📋 *Seus Agendamentos*\n\n";
-      for (const appt of appts) {
-        const procName = procMap.get(appt.procedure_id) ?? "Consulta";
-        const profName = profMap.get(appt.professional_id) ?? "";
-        const statusEmoji = appt.status === "confirmed" ? "✅" : "⏳";
-        msg += `${statusEmoji} *${procName}*\n`;
-        msg += `   📅 ${formatDateBR(appt.scheduled_at)} às ${formatTimeBR(appt.scheduled_at)}\n`;
-        if (profName) msg += `   👨‍⚕️ ${profName}\n`;
-        msg += "\n";
-      }
-
-      await sendWhatsAppMessage(tenant, conv.phone, msg);
-      await sendWhatsAppButtons(tenant, conv.phone, "📋 Opções", "O que deseja fazer?", [
-        { id: "btn_cancelar_consulta", text: "❌ Cancelar Consulta" },
-        { id: "btn_agendar", text: "📅 Novo Agendamento" },
-        { id: "btn_menu", text: "🏠 Menu" },
-      ]);
-
-      await updateConversation(conv.id, STATE.VIEW_APPOINTMENTS, {
-        appointments: appts.map((a: any) => ({
-          id: a.id,
-          date: a.scheduled_at,
-          service: procMap.get(a.procedure_id) ?? "Consulta",
-        })),
-      });
-    }
-
-    // ─── Fluxo de Cancelamento ──────────────────────────────────────────────────
-
-    async function startCancelFlow(conv: Conversation,
-      tenant: TenantConfig): Promise<void> {
-      if (!conv.client_id) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não encontramos um cadastro associado a este número.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const now = new Date().toISOString();
-      const { data: appts } = (await db.from("appointments")
-        .select("id, scheduled_at, status, procedure_id")
-        .eq("tenant_id", conv.tenant_id)
-        .eq("patient_id", conv.client_id)
-        .gte("scheduled_at", now)
-        .neq("status", "cancelled")
-        .order("scheduled_at")
-        .limit(5)) as unknown as SelectResult<Array<{
-          id: string; scheduled_at: string; status: string; procedure_id: string;
-        }> | null>;
-
-      if (!appts?.length) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Você não tem consultas para cancelar.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      const procIds = [...new Set(appts.map((a: any) => a.procedure_id).filter(Boolean))];
-      const { data: procs } = procIds.length
-        ? (await db.from("procedures").select("id, name").in("id", procIds) as unknown as SelectResult<ProcedureRow[] | null>)
-        : { data: [] as ProcedureRow[] };
-      const procMap = new Map((procs ?? []).map((s: any) => [s.id, s.name]));
-
-      const sections = [{
-        title: "Suas Consultas",
-        rows: appts.map((a: any) => ({
-          title: `${procMap.get(a.procedure_id) ?? "Consulta"} - ${formatDateBR(a.scheduled_at)}`,
-          rowId: `cancel_${a.id}`,
-          description: formatTimeBR(a.scheduled_at),
-        })),
-      }];
-
-      await sendWhatsAppList(tenant, conv.phone, "❌ Cancelar", "Selecione a consulta a cancelar:", "Ver Consultas", sections);
-      await updateConversation(conv.id, STATE.CANCEL_SELECT, {
-        cancel_appointments: appts.map((a: any) => ({
-          id: a.id,
-          service: procMap.get(a.procedure_id) ?? "Consulta",
-          date: a.scheduled_at,
-        })),
-      });
-    }
-
-    async function handleCancelSelect(conv: Conversation,
-      tenant: TenantConfig,
-      message: string,
-      listReplyId?: string): Promise<void> {
-      const input = listReplyId ?? message;
-      let apptId: string | null = null;
-      if (input.startsWith("cancel_")) apptId = input.replace("cancel_", "");
-
-      if (!apptId) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Não entendi. Selecione a consulta da lista.");
-        return;
-      }
-
-      const appts = (conv.context.cancel_appointments as Array<{ id: string; service: string; date: string }>) ?? [];
-      const selected = appts.find((a: any) => a.id === apptId);
-
-      if (!selected) {
-        await sendWhatsAppMessage(tenant, conv.phone, "Consulta não encontrada.");
-        await updateConversation(conv.id, STATE.MENU, {});
-        return;
-      }
-
-      await sendWhatsAppMessage(tenant, conv.phone,
-        `Deseja realmente cancelar?\n\n📌 ${selected.service}\n📅 ${formatDateBR(selected.date)} às ${formatTimeBR(selected.date)}`);
-      await sendWhatsAppButtons(tenant, conv.phone, "⚠️ Confirmar", "Confirmar cancelamento?", [
-        { id: "btn_confirm_cancel", text: "❌ Sim, Cancelar" },
-        { id: "btn_keep", text: "✅ Manter" },
-      ]);
-
-      await updateConversation(conv.id, STATE.CANCEL_CONFIRM, {
-        ...conv.context,
-        cancel_appointment_id: apptId,
-      });
-    }
-
-    async function handleCancelConfirm(conv: Conversation,
-      tenant: TenantConfig,
-      message: string,
-      buttonPayload?: string): Promise<void> {
-      const input = (buttonPayload ?? message).toLowerCase().trim();
-
-      if (input === "btn_keep" || input.includes("manter") || input.includes("não") || input === "nao") {
-        await sendWhatsAppMessage(tenant, conv.phone, "Ok, sua consulta foi mantida! ✅");
-        await updateConversation(conv.id, STATE.IDLE, {});
-        return;
-      }
-
-      if (input === "btn_confirm_cancel" || input.includes("sim") || input.includes("cancelar") || input === "s") {
-        const apptId = conv.context.cancel_appointment_id as string;
-        const { error } = await db.from("appointments")
-          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-          .eq("id", apptId)
-          .eq("tenant_id", conv.tenant_id);
-
-        if (error) {
-          await sendWhatsAppMessage(tenant, conv.phone, "Erro ao cancelar. Entre em contato com a clínica.");
-        } else {
-          await sendWhatsAppMessage(tenant, conv.phone, "✅ Consulta cancelada com sucesso.\n\nSe desejar reagendar, é só acessar o menu!");
-          await logMessage(conv.id, conv.tenant_id, "outbound",
-            `[CANCEL] Appointment ${apptId} cancelled`, "system");
-        }
-        await updateConversation(conv.id, STATE.IDLE, {});
-      } else {
-        await sendWhatsAppMessage(tenant, conv.phone, "Por favor, responda *Sim* para cancelar ou *Não* para manter.");
-      }
-    }
-
-    // ─── Transferir para Humano ─────────────────────────────────────────────────
-
-    async function transferToHuman(conv: Conversation,
-      tenant: TenantConfig): Promise<void> {
-      await sendWhatsAppMessage(tenant, conv.phone,
-        "Certo! Estou transferindo para um atendente. Por favor, aguarde.\n\n" +
-        "💡 Dica: você pode digitar *menu* a qualquer momento para voltar ao menu automático.");
-      await logMessage(conv.id, conv.tenant_id, "outbound", "[TRANSFER] Transferred to human", "system");
-      await updateConversation(conv.id, STATE.WAITING_HUMAN, {});
-    }
-
-    // ─── Helpers de Dados ───────────────────────────────────────────────────────
-
-    async function getClientName(clientId: string): Promise<string | null> {
-      // Tabela renomeada: clients → patients
-      const { data } = (await db.from("patients")
-        .select("name")
-        .eq("id", clientId)
-        .maybeSingle()) as unknown as SelectResult<{ name: string | null } | null>;
-      return data?.name ?? null;
-    }
-
-    // ─── Router Principal ────────────────────────────────────────────────────────
-
-    async function processMessage(payload: IncomingWebhook): Promise<{ handled: boolean; state: string }> {
-      const { tenant_id: tenantId, phone } = payload;
-      const normalizedPhone = normalizePhone(phone);
-
-      // Get tenant config
-      const { data: tenant } = (await db.from("tenants")
-        .select("id, name, phone, address, whatsapp_api_url, whatsapp_api_key, whatsapp_instance")
-        .eq("id", tenantId)
-        .maybeSingle()) as unknown as SelectResult<TenantConfig | null>;
-
-      if (!tenant) return { handled: false, state: "tenant_not_found" };
-
-      // Get or auto-create chatbot settings
-      const settings = await getOrCreateSettings(tenantId, tenant.name);
-      if (!settings?.is_active) return { handled: false, state: "inactive" };
-
-      // Get or create conversation
-      const conv = await getOrCreateConversation(tenantId, normalizedPhone);
-
-      // Log inbound message
-      await logMessage(conv.id, tenantId, "inbound", payload.message);
-
-      // Check for global commands
-      const msgLower = payload.message.toLowerCase().trim();
-      if (msgLower === "menu" || msgLower === "inicio" || msgLower === "início" || msgLower === "#") {
-        await updateConversation(conv.id, STATE.IDLE, {});
-        conv.state = STATE.IDLE;
-      }
-
-      // Check business hours
-      if (!isWithinBusinessHours(settings) && conv.state === STATE.IDLE) {
-        await sendWhatsAppMessage(tenant, normalizedPhone, settings.outside_hours_message);
-        await logMessage(conv.id, tenantId, "outbound", settings.outside_hours_message);
-        return { handled: true, state: "outside_hours" };
-      }
-
-      // Reset if conversation is stale (> 30 min)
-      const lastMsg = new Date(conv.last_message_at).getTime();
-      const now = Date.now();
-      if (now - lastMsg > 30 * 60 * 1000 && conv.state !== STATE.WAITING_HUMAN) {
-        conv.state = STATE.IDLE;
-        conv.context = {};
-      }
-
-      // Route by state with error recovery
-      try {
-        switch (conv.state) {
-          case STATE.IDLE:
-            await handleIdle(conv, tenant, settings, payload.message);
-            break;
-
-          case STATE.MENU:
-          case STATE.VIEW_APPOINTMENTS:
-            await handleMenu(conv, tenant, settings, payload.message, payload.button_payload);
-            break;
-
-          case STATE.BOOKING_SERVICE:
-            await handleBookingService(conv, tenant, settings, payload.message, payload.list_reply_id);
-            break;
-
-          case STATE.BOOKING_PROFESSIONAL:
-            await handleBookingProfessional(conv, tenant, settings, payload.message, payload.list_reply_id);
-            break;
-
-          case STATE.BOOKING_DATE:
-            await handleBookingDate(conv, tenant, settings, payload.message, payload.list_reply_id);
-            break;
-
-          case STATE.BOOKING_TIME:
-            await handleBookingTime(conv, tenant, payload.message, payload.list_reply_id);
-            break;
-
-          case STATE.BOOKING_CONFIRM:
-            await handleBookingConfirm(conv, tenant, settings, payload.message, payload.button_payload);
-            break;
-
-          case STATE.CANCEL_SELECT:
-            await handleCancelSelect(conv, tenant, payload.message, payload.list_reply_id);
-            break;
-
-          case STATE.CANCEL_CONFIRM:
-            await handleCancelConfirm(conv, tenant, payload.message, payload.button_payload);
-            break;
-
-          case STATE.WAITING_HUMAN:
-            if (msgLower === "bot" || msgLower === "robô" || msgLower === "robo" || msgLower === "menu") {
-              await updateConversation(conv.id, STATE.IDLE, {});
-              await handleIdle(conv, tenant, settings, payload.message);
-            }
-            return { handled: true, state: STATE.WAITING_HUMAN };
-
-          default:
-            await updateConversation(conv.id, STATE.IDLE, {});
-            await handleIdle(conv, tenant, settings, payload.message);
-        }
-      } catch (err: any) {
-        log("State handler error", { state: conv.state, error: String(err) });
-        await updateConversation(conv.id, STATE.IDLE, {});
-        await sendWhatsAppMessage(tenant, normalizedPhone,
-          "Desculpe, tive um problema temporário. 😅 Digite *menu* para recomeçar.");
-        return { handled: false, state: "error" };
-      }
-
-      return { handled: true, state: conv.state };
-    }
-
-    // ─── Serve ───────────────────────────────────────────────────────────────────
-      // CORS handled by middleware
-
-      if (req.method === "OPTIONS") return res.status(204).end();
-
-      // Webhook verification (for Meta Cloud API)
-      if (req.method === "GET") {
-        const url = new URL(req.url);
-        const mode = url.searchParams.get("hub.mode");
-        const token = url.searchParams.get("hub.verify_token");
-        const challenge = url.searchParams.get("hub.challenge");
-        const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ?? "";
-
-        if (mode === "subscribe" && token === verifyToken) {
-          return new Response(challenge, { status: 200,  });
-        }
-        return new Response("Forbidden", { status: 403,  });
-      }
-
-      if (req.method !== "POST") {
-        return res.status(405).json({ error: "Método não permitido" });
-      }
-      try {
-        const body = req.body;
-
-        // ── Handle Evolution API webhook format ──
-        if (body.event === "messages.upsert" && body.data) {
-          const tenantId = body.instance?.instanceName
-            ? await resolveTenantByInstance(body.instance.instanceName)
-            : null;
-
-          if (!tenantId) {
-            log("Unknown instance", { instance: body.instance?.instanceName });
-            return res.status(200).json({ ok: true, skipped: "unknown_instance" });
-          }
-
-          const msg = body.data.message;
-          const key = body.data.key;
-
-          // Ignore own messages
-          if (key?.fromMe) {
-            return res.status(200).json({ ok: true, skipped: "from_me" });
-          }
-
-          // Ignore group messages and status broadcasts
-          if (key?.remoteJid?.includes("@g.us") || key?.remoteJid === "status@broadcast") {
-            return res.status(200).json({ ok: true, skipped: "group_or_status" });
-          }
-
-          // Idempotency check
-          if (isDuplicateMessage(key?.id)) {
-            return res.status(200).json({ ok: true, skipped: "duplicate" });
-          }
-
-          const phone = key?.remoteJid?.replace("@s.whatsapp.net", "") ?? "";
-          const text = msg?.conversation ?? msg?.extendedTextMessage?.text ?? "";
-          const buttonPayload = msg?.buttonsResponseMessage?.selectedButtonId
-            ?? msg?.templateButtonReplyMessage?.selectedId ?? undefined;
-          const listReplyId = msg?.listResponseMessage?.singleSelectReply?.selectedRowId ?? undefined;
-
-          // Handle media messages gracefully
-          const messageType = body.data.messageType ?? "";
-          const isMediaMessage = [
-            "imageMessage", "audioMessage", "videoMessage",
-            "stickerMessage", "documentMessage", "documentWithCaptionMessage",
-          ].includes(messageType);
-
-          if (!phone || (!text && !buttonPayload && !listReplyId && !isMediaMessage)) {
-            return res.status(200).json({ ok: true, skipped: "no_content" });
-          }
-
-          // For media without text, provide a friendly message
-          const messageText = text || buttonPayload || listReplyId || (
-            isMediaMessage ? "[mídia recebida - por favor envie uma mensagem de texto]" : ""
-          );
-
-          if (!messageText) {
-            return res.status(200).json({ ok: true, skipped: "empty" });
-          }
-
-          const result = await processMessage({
-            tenant_id: tenantId,
-            phone,
-            message: messageText,
-            message_id: key?.id,
-            message_type: buttonPayload ? "button" : listReplyId ? "list_reply" : isMediaMessage ? "media" : "text",
-            button_payload: buttonPayload,
-            list_reply_id: listReplyId,
-          });
-
-          return res.status(200).json({ ok: true, ...result });
-        }
-
-        // ── Handle non-message Evolution events (CONNECTION_UPDATE, etc.) ──
-        if (body.event && body.event !== "messages.upsert") {
-          log("Non-message event", { event: body.event });
-          return res.status(200).json({ ok: true, skipped: "non_message_event" });
-        }
-
-        // ── Handle Meta Cloud API webhook format ──
-        if (body.object === "whatsapp_business_account" && body.entry) {
-          for (const entry of body.entry) {
-            for (const change of entry.changes ?? []) {
-              const messages = change.value?.messages ?? [];
-              for (const cloudMsg of messages) {
-                const phone = cloudMsg.from;
-                const text = cloudMsg.text?.body ?? cloudMsg.button?.text
-                  ?? cloudMsg.interactive?.button_reply?.title
-                  ?? cloudMsg.interactive?.list_reply?.title ?? "";
-                const buttonPayload = cloudMsg.button?.payload
-                  ?? cloudMsg.interactive?.button_reply?.id ?? undefined;
-                const listReplyId = cloudMsg.interactive?.list_reply?.id ?? undefined;
-                const phoneNumberId = change.value?.metadata?.phone_number_id;
-
-                const tenantId = phoneNumberId
-                  ? await resolveTenantByPhoneNumberId(phoneNumberId)
-                  : null;
-
-                if (!tenantId || !phone) continue;
-                if (isDuplicateMessage(cloudMsg.id)) continue;
-
-                await processMessage({
-                  tenant_id: tenantId,
-                  phone,
-                  message: text || "[mídia recebida]",
-                  message_id: cloudMsg.id,
-                  message_type: cloudMsg.type,
-                  button_payload: buttonPayload,
-                  list_reply_id: listReplyId,
-                });
-              }
-            }
-          }
-
-          return res.status(200).json({ ok: true });
-        }
-
-        // ── Handle direct API call format (internal) ──
-        if (body.tenant_id && body.phone && body.message) {
-          const result = await processMessage(body as IncomingWebhook);
-          return res.status(200).json({ ok: true, ...result });
-        }
-
-        log("Unrecognized format", { keys: Object.keys(body).slice(0, 10) });
-        return res.status(200).json({ ok: true, skipped: "unrecognized_format" });
-      } catch (error: any) {
-        log("Exception", { error: error instanceof Error ? error.message : String(error) });
-        return res.status(500).json({ error: "Erro interno" });
-      }
-
-    // ─── Resolvers de Tenant ────────────────────────────────────────────────────
-
-    async function resolveTenantByInstance(instanceName: string): Promise<string | null> {
-      const { data } = (await db.from("tenants")
-        .select("id")
-        .eq("whatsapp_instance", instanceName)
-        .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
-      return data?.id ?? null;
-    }
-
-    async function resolveTenantByPhoneNumberId(phoneNumberId: string): Promise<string | null> {
-      const { data } = (await db.from("tenants")
-        .select("id")
-        .eq("whatsapp_instance", phoneNumberId)
-        .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
-      return data?.id ?? null;
-    }
-
-  } catch (err: any) {
-    console.error(`[whatsapp-chatbot] Error:`, err.message || err);
-    return res.status(500).json({ error: 'Internal server error' });
+    }>;
+    patient = newPatient;
   }
+
+  if (!patient) {
+    await send(
+      config,
+      phone,
+      "Desculpe, ocorreu um erro. Por favor, tente novamente.",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return;
+  }
+
+  const status = settings.auto_confirm_booking ? "confirmed" : "pending";
+  const { error } = await db()
+    .from("appointments")
+    .insert({
+      tenant_id: config.id,
+      patient_id: patient.id,
+      professional_id: ctx.professional_id,
+      date: ctx.selected_date,
+      start_time: ctx.selected_time,
+      status,
+      source: "whatsapp_chatbot",
+      notes: "Agendado via WhatsApp chatbot",
+    });
+
+  if (error) {
+    log("Booking error", { error });
+    await send(
+      config,
+      phone,
+      "Desculpe, ocorreu um erro ao agendar. O hor\u00e1rio pode j\u00e1 ter sido preenchido.",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  if (ctx.selected_slot_id) {
+    await db()
+      .from("appointment_slots")
+      .update({ is_available: false })
+      .eq("id", ctx.selected_slot_id);
+  }
+
+  const dateF = (ctx.selected_date as string).split("-").reverse().join("/");
+  const statusText = settings.auto_confirm_booking
+    ? "\u2705 *Consulta confirmada!*"
+    : "\u23F3 *Consulta solicitada!* Aguarde a confirma\u00e7\u00e3o da cl\u00ednica.";
+
+  await send(
+    config,
+    phone,
+    `${statusText}\n\n\uD83D\uDCC5 ${dateF} \u00e0s ${(ctx.selected_time as string).slice(0, 5)}\n\uD83D\uDC68\u200D\u2695\uFE0F ${ctx.professional_name}\n\nCaso precise cancelar ou remarcar, entre em contato conosco.`,
+  );
+  await upsertConversation(config.id, phone, STATE.IDLE, {});
+}
+
+// ─── Appointments listing ───────────────────────────────────────────────
+
+async function showAppointments(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  const { data: patient } = (await db()
+    .from("patients")
+    .select("id")
+    .eq("tenant_id", config.id)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
+
+  if (!patient) {
+    await send(
+      config,
+      phone,
+      "N\u00e3o encontramos consultas agendadas para este n\u00famero.",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: appointments } = (await db()
+    .from("appointments")
+    .select("id, date, start_time, status, professionals(full_name)")
+    .eq("tenant_id", config.id)
+    .eq("patient_id", patient.id)
+    .gte("date", today)
+    .in("status", ["confirmed", "pending"])
+    .order("date", { ascending: true })
+    .limit(5)) as unknown as SelectResult<
+    Array<{
+      id: string;
+      date: string;
+      start_time: string;
+      status: string;
+      professionals: { full_name: string } | null;
+    }> | null
+  >;
+
+  if (!appointments || appointments.length === 0) {
+    await send(
+      config,
+      phone,
+      "Voc\u00ea n\u00e3o tem consultas futuras agendadas.",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return;
+  }
+
+  let msg = "*Suas pr\u00f3ximas consultas:*\n\n";
+  appointments.forEach((a, i) => {
+    const dateF = a.date.split("-").reverse().join("/");
+    const profName = a.professionals?.full_name || "A definir";
+    const emoji = a.status === "confirmed" ? "\u2705" : "\u23F3";
+    msg += `${i + 1}. ${emoji} ${dateF} \u00e0s ${a.start_time.slice(0, 5)} - ${profName}\n`;
+  });
+
+  await send(config, phone, msg);
+
+  await sendButtons(config, phone, "O que deseja fazer?", [
+    { id: "apt_remarcar", title: "\uD83D\uDD04 Remarcar" },
+    { id: "apt_cancelar", title: "\u274C Cancelar consulta" },
+    { id: "apt_voltar", title: "\u25C0\uFE0F Voltar ao menu" },
+  ]);
+
+  await upsertConversation(config.id, phone, STATE.RESCHEDULE_LIST, {
+    appointments: appointments.map((a) => ({
+      id: a.id,
+      date: a.date,
+      start_time: a.start_time,
+    })),
+  });
+}
+
+// ─── Cancel & Reschedule ────────────────────────────────────────────────
+
+async function handleRescheduleList(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+) {
+  const choice = buttonId || text.toLowerCase().trim();
+
+  if (
+    choice === "apt_voltar" ||
+    choice.includes("voltar") ||
+    choice.includes("menu")
+  ) {
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const conv = await getConversation(config.id, phone);
+  const ctx = conv?.context || {};
+  const apts =
+    (ctx.appointments as Array<{
+      id: string;
+      date: string;
+      start_time: string;
+    }>) || [];
+
+  if (choice === "apt_cancelar" || choice.includes("cancelar")) {
+    if (apts.length === 0) {
+      await send(
+        config,
+        phone,
+        "N\u00e3o encontrei consultas para cancelar.",
+      );
+      await upsertConversation(config.id, phone, STATE.MENU, {});
+      return showMainMenu(config, settings, phone);
+    }
+    if (apts.length === 1) {
+      await db()
+        .from("appointments")
+        .update({
+          status: "cancelled_by_patient",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", apts[0].id);
+      const dateF = apts[0].date.split("-").reverse().join("/");
+      await send(
+        config,
+        phone,
+        `\u2705 Consulta de ${dateF} \u00e0s ${apts[0].start_time.slice(0, 5)} cancelada com sucesso.`,
+      );
+      await upsertConversation(config.id, phone, STATE.MENU, {});
+      return showMainMenu(config, settings, phone);
+    }
+    await send(
+      config,
+      phone,
+      "Qual consulta deseja cancelar? Responda com o n\u00famero (ex: 1, 2...)",
+    );
+    await upsertConversation(config.id, phone, STATE.CANCEL_CONFIRM, ctx);
+    return;
+  }
+
+  if (choice === "apt_remarcar" || choice.includes("remarcar")) {
+    if (apts.length === 0) {
+      await send(
+        config,
+        phone,
+        "N\u00e3o encontrei consultas para remarcar.",
+      );
+      await upsertConversation(config.id, phone, STATE.MENU, {});
+      return showMainMenu(config, settings, phone);
+    }
+    if (apts.length === 1) {
+      await db()
+        .from("appointments")
+        .update({
+          status: "cancelled_by_patient",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", apts[0].id);
+      const dateF = apts[0].date.split("-").reverse().join("/");
+      await send(
+        config,
+        phone,
+        `\uD83D\uDD04 Consulta de ${dateF} cancelada. Vamos agendar uma nova!`,
+      );
+      return startBooking(config, phone, settings);
+    }
+    await send(
+      config,
+      phone,
+      "Qual consulta deseja remarcar? Responda com o n\u00famero (ex: 1, 2...)",
+    );
+    await upsertConversation(config.id, phone, STATE.RESCHEDULE_CONFIRM, {
+      ...ctx,
+      action: "reschedule",
+    });
+    return;
+  }
+
+  await send(config, phone, "Op\u00e7\u00e3o n\u00e3o reconhecida.");
+  await upsertConversation(config.id, phone, STATE.MENU, {});
+  return showMainMenu(config, settings, phone);
+}
+
+// ─── Transfer to human ──────────────────────────────────────────────────
+
+async function transferToHuman(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  const msg =
+    settings.transfer_to_human_message ||
+    "Estamos transferindo voc\u00ea para um atendente. Aguarde, por favor. \uD83D\uDE4F";
+  await send(config, phone, msg);
+  await upsertConversation(config.id, phone, STATE.AWAITING_HUMAN, {});
+
+  await db()
+    .from("notifications")
+    .insert({
+      tenant_id: config.id,
+      type: "whatsapp_transfer",
+      title: "Paciente solicitou atendente",
+      message: `Paciente (${phone}) solicitou falar com atendente via WhatsApp.`,
+      is_read: false,
+    });
+}
+
+// ─── Message router ─────────────────────────────────────────────────────
+
+async function processMessage(
+  config: TenantConfig,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+  listRowId: string | null,
+) {
+  const settings = await getSettings(config.id);
+  if (!settings || !settings.is_active) {
+    log("Chatbot disabled for tenant", { tenantId: config.id });
+    return;
+  }
+
+  await logMessage(config.id, phone, "inbound", text);
+
+  const lower = text.toLowerCase().trim();
+  if (
+    lower === "menu" ||
+    lower === "voltar" ||
+    lower === "inicio" ||
+    lower === "in\u00edcio"
+  ) {
+    await upsertConversation(config.id, phone, STATE.IDLE, {});
+    return handleIdle(config, settings, phone, text);
+  }
+
+  if (!isWithinBusinessHours(settings) && lower !== "menu") {
+    const conv = await getConversation(config.id, phone);
+    if (!conv || conv.state === STATE.IDLE) {
+      await send(config, phone, settings.outside_hours_message);
+      await upsertConversation(config.id, phone, STATE.IDLE, {});
+      return;
+    }
+  }
+
+  const conv = await getConversation(config.id, phone);
+
+  if (
+    conv &&
+    conv.state !== STATE.IDLE &&
+    conv.state !== STATE.AWAITING_HUMAN &&
+    isSessionExpired(conv)
+  ) {
+    log("Session expired, resetting", { phone, state: conv.state });
+    await upsertConversation(config.id, phone, STATE.IDLE, {});
+    return handleIdle(config, settings, phone, text);
+  }
+
+  const currentState = conv?.state || STATE.IDLE;
+  const ctx = conv?.context || {};
+
+  switch (currentState) {
+    case STATE.IDLE:
+      return handleIdle(config, settings, phone, text);
+
+    case STATE.MENU:
+      return handleMenu(config, settings, phone, text, buttonId);
+
+    case STATE.BOOKING_SPECIALTY:
+      return handleBookingSpecialty(config, phone, text, listRowId, ctx);
+
+    case STATE.BOOKING_PROFESSIONAL:
+      return handleBookingProfessional(
+        config,
+        phone,
+        text,
+        listRowId,
+        ctx,
+      );
+
+    case STATE.BOOKING_DATE:
+      return handleBookingDate(config, phone, text, listRowId, ctx);
+
+    case STATE.BOOKING_TIME:
+      return handleBookingTime(config, phone, text, listRowId, ctx);
+
+    case STATE.BOOKING_CONFIRM:
+      return handleBookingConfirm(config, settings, phone, text, buttonId);
+
+    case STATE.RESCHEDULE_LIST:
+      return handleRescheduleList(
+        config,
+        settings,
+        phone,
+        text,
+        buttonId,
+      );
+
+    case STATE.RESCHEDULE_CONFIRM: {
+      const apts =
+        (ctx.appointments as Array<{
+          id: string;
+          date: string;
+          start_time: string;
+        }>) || [];
+      const num = parseInt(text, 10);
+      if (num >= 1 && num <= apts.length) {
+        const apt = apts[num - 1];
+        await db()
+          .from("appointments")
+          .update({
+            status: "cancelled_by_patient",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", apt.id);
+        const dateF = apt.date.split("-").reverse().join("/");
+        await send(
+          config,
+          phone,
+          `\uD83D\uDD04 Consulta de ${dateF} cancelada. Vamos agendar uma nova!`,
+        );
+        return startBooking(config, phone, settings);
+      }
+      await send(
+        config,
+        phone,
+        "N\u00famero inv\u00e1lido. Opera\u00e7\u00e3o cancelada.",
+      );
+      await upsertConversation(config.id, phone, STATE.MENU, {});
+      return showMainMenu(config, settings, phone);
+    }
+
+    case STATE.CANCEL_CONFIRM: {
+      const apts =
+        (ctx.appointments as Array<{
+          id: string;
+          date: string;
+          start_time: string;
+        }>) || [];
+      const num = parseInt(text, 10);
+      if (num >= 1 && num <= apts.length) {
+        const apt = apts[num - 1];
+        await db()
+          .from("appointments")
+          .update({
+            status: "cancelled_by_patient",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", apt.id);
+        const dateF = apt.date.split("-").reverse().join("/");
+        await send(
+          config,
+          phone,
+          `\u2705 Consulta de ${dateF} \u00e0s ${apt.start_time.slice(0, 5)} cancelada com sucesso.`,
+        );
+      } else {
+        await send(
+          config,
+          phone,
+          "N\u00famero inv\u00e1lido. Opera\u00e7\u00e3o cancelada.",
+        );
+      }
+      await upsertConversation(config.id, phone, STATE.MENU, {});
+      return showMainMenu(config, settings, phone);
+    }
+
+    case STATE.AWAITING_HUMAN:
+      await send(
+        config,
+        phone,
+        "Seu atendimento est\u00e1 na fila. Um atendente responder\u00e1 em breve. \uD83D\uDE4F",
+      );
+      return;
+
+    default:
+      await upsertConversation(config.id, phone, STATE.IDLE, {});
+      return handleIdle(config, settings, phone, text);
+  }
+}
+
+// ─── Webhook Handlers ───────────────────────────────────────────────────
+
+function handleVerification(req: Request, res: Response) {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    log("Webhook verified");
+    return res.status(200).send(challenge);
+  }
+
+  log("Webhook verification failed", { mode, token });
+  return res.status(403).send("Forbidden");
+}
+
+function extractMessageFromWebhook(body: any): {
+  phoneNumberId: string;
+  from: string;
+  text: string;
+  messageId: string;
+  buttonId: string | null;
+  listRowId: string | null;
+} | null {
+  try {
+    if (body?.object !== "whatsapp_business_account") return null;
+
+    const entry = body.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const value = changes?.value;
+    const metadata = value?.metadata;
+    const phoneNumberId = metadata?.phone_number_id;
+    const messages = value?.messages;
+
+    if (!messages || messages.length === 0) return null;
+
+    const msg = messages[0];
+    const from = msg.from;
+    const messageId = msg.id;
+    let text = "";
+    let buttonId: string | null = null;
+    let listRowId: string | null = null;
+
+    switch (msg.type) {
+      case "text":
+        text = msg.text?.body || "";
+        break;
+      case "interactive":
+        if (msg.interactive?.type === "button_reply") {
+          buttonId = msg.interactive.button_reply.id;
+          text = msg.interactive.button_reply.title || "";
+        } else if (msg.interactive?.type === "list_reply") {
+          listRowId = msg.interactive.list_reply.id;
+          text = msg.interactive.list_reply.title || "";
+        }
+        break;
+      case "button":
+        text = msg.button?.text || msg.button?.payload || "";
+        buttonId = msg.button?.payload || null;
+        break;
+      default:
+        text = "[m\u00eddia n\u00e3o suportada]";
+    }
+
+    if (!phoneNumberId || !from) return null;
+
+    return { phoneNumberId, from, text, messageId, buttonId, listRowId };
+  } catch (err) {
+    log("extractMessageFromWebhook error", { error: String(err) });
+    return null;
+  }
+}
+
+async function handleIncoming(req: Request, res: Response) {
+  res.status(200).json({ status: "ok" });
+
+  try {
+    const extracted = extractMessageFromWebhook(req.body);
+    if (!extracted) return;
+
+    const { phoneNumberId, from, text, messageId, buttonId, listRowId } =
+      extracted;
+
+    // Deduplication
+    if (processedMessages.has(messageId)) {
+      log("Duplicate message skipped", { messageId });
+      return;
+    }
+    processedMessages.add(messageId);
+    if (processedMessages.size > DEDUP_MAX) {
+      processedMessages.clear();
+    }
+
+    log("Incoming message", {
+      phoneNumberId,
+      from,
+      text: text.slice(0, 50),
+    });
+
+    const config = await resolveTenantByPhoneNumberId(phoneNumberId);
+    if (!config) {
+      log("No tenant found for phone_number_id", { phoneNumberId });
+      return;
+    }
+
+    markMessageAsRead(
+      config.whatsapp_phone_number_id,
+      config.whatsapp_access_token,
+      messageId,
+    ).catch(() => {});
+
+    await processMessage(config, from, text, buttonId, listRowId);
+  } catch (err) {
+    log("handleIncoming error", { error: String(err) });
+  }
+}
+
+// ─── Main export ────────────────────────────────────────────────────────
+
+export async function whatsappChatbot(req: Request, res: Response) {
+  if (req.method === "GET") {
+    return handleVerification(req, res);
+  }
+  if (req.method === "POST") {
+    return handleIncoming(req, res);
+  }
+  return res.status(405).json({ error: "Method not allowed" });
 }

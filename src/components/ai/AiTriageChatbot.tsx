@@ -168,7 +168,7 @@ export function AiTriageChatbot({ onComplete, className }: AiTriageChatbotProps)
                 Olá! Sou a Nest, assistente de triagem virtual.
               </p>
               <p className="text-sm text-muted-foreground mt-1.5 max-w-xs">
-                Descreva seus sintomas e vou ajudar a identificar a especialidade mais adequada.
+                Diga qual sintoma está sentindo. Ex: "dor de cabeça", "dor nas costas", "febre há 2 dias"
               </p>
             </div>
           ) : (

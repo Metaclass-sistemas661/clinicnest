@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { HelpCircle, ChevronDown, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WHATSAPP_SALES_URL } from "@/lib/whatsapp-url";
 import { ScrollReveal } from "./ScrollReveal";
 
 const faqs = [
@@ -215,7 +216,7 @@ export function FAQSection() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="https://wa.me/5511999999999"
+                href={WHATSAPP_SALES_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-white text-teal-700 font-semibold hover:bg-teal-50 transition-colors"
