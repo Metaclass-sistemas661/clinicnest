@@ -794,7 +794,13 @@ export async function rpcProxy(req: Request, res: Response) {
       return res.json({ data: null, error: null });
     }
     if (result.rows.length === 1) {
-      return res.json({ data: result.rows[0], error: null });
+      const row = result.rows[0];
+      const keys = Object.keys(row);
+      // Unwrap scalar JSONB returns: SELECT * FROM fn() → { fn: {...} } → unwrap to {...}
+      if (keys.length === 1 && keys[0] === name) {
+        return res.json({ data: row[name], error: null });
+      }
+      return res.json({ data: row, error: null });
     }
     return res.json({ data: result.rows, error: null });
   } catch (err: any) {

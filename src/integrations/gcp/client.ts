@@ -639,7 +639,11 @@ export const api = {
   },
 
   async rpc<T = any>(name: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
-    return apiPost<T>(`/api/rpc/${name}`, params || {});
+    const publicRpcs = new Set([
+      'validate_patient_access',
+    ]);
+    const requireAuth = !publicRpcs.has(name);
+    return apiPost<T>(`/api/rpc/${name}`, params || {}, requireAuth);
   },
 
   functions: new FunctionsClient(),
