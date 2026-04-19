@@ -48,9 +48,14 @@ function verifyWebhookSignature(rawBody: Buffer | string, signature: string | un
 
 // ─── Input Sanitization ─────────────────────────────────────────────────────
 function sanitizeInput(text: string): string {
-  return text
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
-    .slice(0, 4096) // WhatsApp max message length
+  return Array.from(text)
+    .filter(ch => {
+      const code = ch.codePointAt(0) ?? 0;
+      // Allow: tab(9), newline(10), carriage return(13), printable ASCII(32-126), Latin/Unicode(160+)
+      return code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126) || code >= 160;
+    })
+    .join("")
+    .slice(0, 4096)
     .trim();
 }
 
