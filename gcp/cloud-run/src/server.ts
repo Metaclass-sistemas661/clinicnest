@@ -350,7 +350,11 @@ app.post('/api/activate-patient-account', activatePatientAccount);
 app.post('/api/jwt-probe', jwtProbe);
 
 // Public RPC: patient portal identification (no auth, SECURITY DEFINER in DB)
-app.post('/api/rpc/validate_patient_access', dbMiddleware, rpcProxy);
+// rpcProxy reads req.params.name — inject it since this is a fixed route (no :name param)
+app.post('/api/rpc/validate_patient_access', dbMiddleware, (req, _res, next) => {
+  req.params.name = 'validate_patient_access';
+  next();
+}, rpcProxy);
 
 // Webhook endpoints (verified by token, not JWT)
 app.post('/api/webhooks/payment', paymentWebhookHandler);
