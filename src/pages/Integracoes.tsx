@@ -1367,7 +1367,7 @@ function TabMaquininha({ tenantId }: { tenantId: string }) {
 // ─── Tab: WhatsApp (Meta Cloud API — Official) ──────────────────────────────
 
 // Meta App ID for Facebook SDK (Embedded Signup)
-const META_FB_APP_ID = "147900355051780";
+const META_FB_APP_ID = "1479003550517805";
 const META_FB_CONFIG_ID = "930489586557648";
 const META_GRAPH_API_VERSION = "v21.0";
 
@@ -1512,64 +1512,67 @@ function TabWhatsApp({ tenantId }: { tenantId: string }) {
     setIsEmbeddedSignupLoading(true);
     embeddedSignupDataRef.current = {};
 
-    const fbLoginCallback = async (response: { authResponse?: { code?: string } }) => {
-      if (response.authResponse?.code) {
-        const code = response.authResponse.code;
+    // Process the token exchange asynchronously (separated from FB.login callback)
+    const processSignupResponse = async (code: string) => {
+      // Wait a brief moment for session message event to fire
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Wait a brief moment for session message event to fire
-        await new Promise(resolve => setTimeout(resolve, 500));
+      const sessionData = embeddedSignupDataRef.current;
+      if (!sessionData.phone_number_id || !sessionData.waba_id) {
+        toast.error("Dados incompletos do Embedded Signup", {
+          description: "O flow foi concluído mas não recebemos o Phone Number ID ou WABA ID. Tente novamente.",
+        });
+        setIsEmbeddedSignupLoading(false);
+        return;
+      }
 
-        const sessionData = embeddedSignupDataRef.current;
-        if (!sessionData.phone_number_id || !sessionData.waba_id) {
-          toast.error("Dados incompletos do Embedded Signup", {
-            description: "O flow foi concluído mas não recebemos o Phone Number ID ou WABA ID. Tente novamente.",
+      try {
+        const { data, error } = await api.functions.invoke("whatsapp-embedded-signup", {
+          body: {
+            action: "exchange-token",
+            code,
+            phone_number_id: sessionData.phone_number_id,
+            waba_id: sessionData.waba_id,
+          },
+        });
+
+        if (error || !data?.ok) {
+          toast.error("Erro ao finalizar configuração", {
+            description: data?.error || error?.message || "Falha ao trocar código por token.",
           });
           setIsEmbeddedSignupLoading(false);
           return;
         }
 
-        try {
-          // Send code + IDs to our backend for server-side token exchange
-          const { data, error } = await api.functions.invoke("whatsapp-embedded-signup", {
-            body: {
-              action: "exchange-token",
-              code,
-              phone_number_id: sessionData.phone_number_id,
-              waba_id: sessionData.waba_id,
-            },
-          });
+        setConnectionState("connected");
+        setVerifiedName(data.phoneInfo?.verified_name || "");
+        setDisplayPhone(data.phoneInfo?.display_phone_number || "");
+        setQualityRating(data.phoneInfo?.quality_rating || "");
+        setWebhookUrl(data.webhookUrl || "");
+        setVerifyToken(data.verifyToken || "");
+        setPhoneNumberId(sessionData.phone_number_id);
+        setBusinessAccountId(sessionData.waba_id);
 
-          if (error || !data?.ok) {
-            toast.error("Erro ao finalizar configuração", {
-              description: data?.error || error?.message || "Falha ao trocar código por token.",
-            });
-            setIsEmbeddedSignupLoading(false);
-            return;
-          }
-
-          // Success!
-          setConnectionState("connected");
-          setVerifiedName(data.phoneInfo?.verified_name || "");
-          setDisplayPhone(data.phoneInfo?.display_phone_number || "");
-          setQualityRating(data.phoneInfo?.quality_rating || "");
-          setWebhookUrl(data.webhookUrl || "");
-          setVerifyToken(data.verifyToken || "");
-          setPhoneNumberId(sessionData.phone_number_id);
-          setBusinessAccountId(sessionData.waba_id);
-
-          toast.success("WhatsApp Business conectado com sucesso! 🎉", {
-            description: "Sua clínica está pronta para enviar e receber mensagens.",
-          });
-        } catch (err) {
-          logger.error("[WhatsApp] Embedded Signup backend error", err);
-          toast.error("Erro ao conectar WhatsApp", {
-            description: normalizeError(err, "Falha na comunicação com o servidor."),
-          });
-        }
-      } else {
-        toast.info("Cadastro cancelado", { description: "Você pode tentar novamente a qualquer momento." });
+        toast.success("WhatsApp Business conectado com sucesso! 🎉", {
+          description: "Sua clínica está pronta para enviar e receber mensagens.",
+        });
+      } catch (err) {
+        logger.error("[WhatsApp] Embedded Signup backend error", err);
+        toast.error("Erro ao conectar WhatsApp", {
+          description: normalizeError(err, "Falha na comunicação com o servidor."),
+        });
       }
       setIsEmbeddedSignupLoading(false);
+    };
+
+    // FB.login requires a synchronous callback — async functions crash the SDK
+    const fbLoginCallback = (response: { authResponse?: { code?: string } }) => {
+      if (response.authResponse?.code) {
+        processSignupResponse(response.authResponse.code);
+      } else {
+        toast.info("Cadastro cancelado", { description: "Você pode tentar novamente a qualquer momento." });
+        setIsEmbeddedSignupLoading(false);
+      }
     };
 
     window.FB.login(fbLoginCallback, {
