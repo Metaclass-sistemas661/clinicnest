@@ -145,7 +145,7 @@ begin
 
     select
 
-      p.paid_at as event_at,
+      p.created_at as event_at,
 
       'payment'::text as kind,
 
@@ -175,9 +175,7 @@ begin
 
     where o.patient_id = p_client_id
 
-      and p.status = 'paid'
-
-      and p.paid_at is not null
+      and p.status = 'confirmed'
 
   )
 

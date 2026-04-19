@@ -11,7 +11,7 @@ import {
 import {
   Users, Plus, Phone, Mail, Pencil, Package, KeyRound,
   ShieldCheck, FileSignature, AlertTriangle, MessageCircle,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Eye,
 } from "lucide-react";
 import { ContractStatusBadge } from "@/components/consent/ContractStatusBadge";
 import type { Patient } from "@/types/database";
@@ -151,6 +151,7 @@ export function PatientTable({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Código</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Email</TableHead>
@@ -162,19 +163,26 @@ export function PatientTable({
                   {paginatedPatients.map((patient) => (
                     <TableRow
                       key={patient.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/pacientes/${patient.id}`)}
+                      className="group hover:bg-muted/50"
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          {patient.name}
+                          <button
+                            type="button"
+                            className="text-left font-medium hover:text-primary hover:underline transition-colors"
+                            onClick={() => navigate(`/pacientes/${patient.id}`)}
+                          >
+                            {patient.name}
+                          </button>
                           {patient.allergies && (
                             <Badge variant="outline" className="status-error text-[11px] gap-1 shrink-0" title={`Alergias: ${patient.allergies}`}>
                               <AlertTriangle className="h-3 w-3" />Alergia
                             </Badge>
                           )}
-                          {tenantId && <ContractStatusBadge patientId={patient.id} tenantId={tenantId} />}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {tenantId && <ContractStatusBadge patientId={patient.id} tenantId={tenantId} />}
                       </TableCell>
                       <TableCell>
                         {patient.access_code ? (
@@ -185,7 +193,10 @@ export function PatientTable({
                       <TableCell>{patient.email ? <div className="flex items-center gap-1 text-muted-foreground"><Mail className="h-4 w-4" />{patient.email}</div> : <span className="text-muted-foreground">—</span>}</TableCell>
                       <TableCell className="max-w-xs truncate text-muted-foreground">{patient.notes || "—"}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1" role="toolbar" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1" role="toolbar">
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`/pacientes/${patient.id}`)} title="Ver Ficha">
+                            <Eye className="h-4 w-4 text-primary" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => onOpenDrawer(patient)} title="Ver Termos e Contratos">
                             <ShieldCheck className="h-4 w-4 text-primary" />
                           </Button>

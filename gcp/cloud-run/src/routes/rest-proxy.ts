@@ -728,26 +728,37 @@ export async function restProxy(req: Request, res: Response) {
         return res.status(400).json({ error: `Operação desconhecida: ${q.operation}` });
     }
   } catch (err: any) {
-    // Structured error logging for production debugging (never sent to client)
-    const errCode = err.code || '';
-    console.error(`[rest-proxy] ${q.operation} on ${q.table}: code=${errCode} msg=${err.message}`,
-      q.operation === 'select' ? `| columns=${q.columns || '*'} filters=${JSON.stringify(q.filters?.map(f => `${f.column}.${f.op}`) || [])}` : '');
+    const code = err.code || '';
+    const context = { table: q.table, operation: q.operation, pgCode: code };
+
+    // Structured JSON logging for GCP Cloud Logging
+    console.error(JSON.stringify({
+      severity: 'ERROR',
+      message: `[rest-proxy] ${q.operation} on ${q.table}: ${err.message}`,
+      pgCode: code,
+      table: q.table,
+      operation: q.operation,
+      ...(q.operation === 'select' ? {
+        columns: q.columns || '*',
+        filters: q.filters?.map(f => `${f.column}.${f.op}`) || [],
+      } : {}),
+    }));
 
     let safeMessage: string;
-    const code = err.code || '';
     if (code === '23505') safeMessage = 'Registro duplicado: já existe um registro com esses dados.';
     else if (code === '23503') safeMessage = 'Não é possível completar: registro referenciado não existe.';
     else if (code === '23502') safeMessage = 'Campo obrigatório não preenchido.';
     else if (code === '23514') safeMessage = 'Valor informado fora do intervalo permitido.';
     else if (code.startsWith('23')) safeMessage = 'Violação de regra do banco de dados.';
-    else if (code === '42P01') safeMessage = 'Recurso não encontrado no sistema.';
-    else if (code === '42703') safeMessage = 'Campo solicitado não existe nesta tabela.';
-    else if (code.startsWith('42')) safeMessage = 'Erro na consulta ao banco de dados.';
     else if (code === '42501' || code === '42000') safeMessage = 'Sem permissão para esta operação.';
+    else if (code === '42P01') safeMessage = `Recurso '${q.table}' não encontrado no sistema.`;
+    else if (code === '42703') safeMessage = `Campo solicitado não existe na tabela '${q.table}'.`;
+    else if (code === '42883') safeMessage = 'Função não encontrada ou parâmetros incompatíveis.';
+    else if (code.startsWith('42')) safeMessage = `Erro na consulta ao banco de dados (${q.table}).`;
     else if (code === '08006' || code === '08003') safeMessage = 'Conexão com o banco de dados perdida. Tente novamente.';
     else if (code === '57014') safeMessage = 'A consulta excedeu o tempo limite. Tente filtrar melhor.';
     else safeMessage = 'Erro interno do servidor. Tente novamente ou contate o suporte.';
-    return res.status(500).json({ error: safeMessage, code: code || 'INTERNAL' });
+    return res.status(500).json({ error: safeMessage, code: code || 'INTERNAL', ...context });
   }
 }
 
@@ -787,24 +798,33 @@ export async function rpcProxy(req: Request, res: Response) {
     }
     return res.json({ data: result.rows, error: null });
   } catch (err: any) {
-    console.error(`[rpc-proxy] ${name}:`, err.message);
-    // Erros do PostgreSQL P0001 são RAISE EXCEPTION das nossas funções — mensagem já é em PT
     const msg = err.message || '';
     const code = err.code || '';
+
+    // Structured JSON logging for GCP Cloud Logging
+    console.error(JSON.stringify({
+      severity: 'ERROR',
+      message: `[rpc-proxy] ${name}: ${msg}`,
+      pgCode: code,
+      rpcFunction: name,
+      params: Object.keys(params),
+    }));
+
     let safeMessage: string;
     if (code === 'P0001') {
-      // Erro de aplicação (nossas funções) — mensagem já é em português
       safeMessage = msg;
     } else if (code === '42883') {
       safeMessage = `Função '${name}' não encontrada ou parâmetros incompatíveis.`;
+    } else if (code === '42501' || code === '42000') {
+      safeMessage = 'Sem permissão para esta operação.';
     } else if (code.startsWith('23')) {
       safeMessage = 'Violação de regra do banco de dados.';
     } else if (code.startsWith('42')) {
-      safeMessage = 'Erro na consulta ao banco de dados.';
+      safeMessage = `Erro na consulta ao banco de dados (função ${name}).`;
     } else {
       safeMessage = 'Erro interno ao executar operação. Tente novamente.';
     }
-    return res.status(code === 'P0001' ? 400 : 500).json({ error: safeMessage, code: code || 'INTERNAL' });
+    return res.status(code === 'P0001' ? 400 : 500).json({ error: safeMessage, code: code || 'INTERNAL', rpcFunction: name, pgCode: code });
   }
 }
 

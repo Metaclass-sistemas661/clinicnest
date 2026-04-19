@@ -207,6 +207,59 @@ app.get('/health', async (_req, res) => {
   });
 });
 
+// ─── DB Tables Diagnostic (no auth — protected by CRON_SECRET) ─────────────
+// Tests that every table used by PacienteDetalhe actually exists and is queryable.
+app.get('/health/db-tables', async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  const provided = req.headers['x-secret-key'] || req.query['key'];
+  if (!secret || provided !== secret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const tables = [
+    'patients', 'patient_packages', 'client_marketing_preferences',
+    'financial_transactions', 'prescriptions', 'medical_certificates',
+    'exam_results', 'referrals', 'medical_records', 'clinical_evolutions',
+    'appointments', 'procedures', 'specialties', 'profiles',
+    'consent_templates', 'patient_consents',
+    'orders', 'payments', 'payment_methods', 'clients',
+  ];
+
+  const results: Record<string, any> = {};
+  for (const table of tables) {
+    try {
+      const r = await pool.query(`SELECT COUNT(*) as n FROM "${table}" LIMIT 1`);
+      results[table] = { status: 'ok', count: parseInt(r.rows[0]?.n || '0') };
+    } catch (err: any) {
+      results[table] = { status: 'error', code: err.code, message: err.message };
+    }
+  }
+
+  // Test RPC functions
+  const rpcs = ['get_client_timeline_v1', 'raise_app_error', 'is_tenant_admin', 'generate_client_access_code'];
+  const rpcResults: Record<string, any> = {};
+  for (const fn of rpcs) {
+    try {
+      await pool.query(`SELECT * FROM pg_proc WHERE proname = $1`, [fn]);
+      const r = await pool.query(`SELECT COUNT(*) as n FROM pg_proc WHERE proname = $1`, [fn]);
+      rpcResults[fn] = { exists: parseInt(r.rows[0]?.n || '0') > 0 };
+    } catch (err: any) {
+      rpcResults[fn] = { exists: false, error: err.message };
+    }
+  }
+
+  // Test referrals columns
+  let referralsColumns: string[] = [];
+  try {
+    const cols = await pool.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'referrals' ORDER BY ordinal_position`
+    );
+    referralsColumns = cols.rows.map((r: any) => r.column_name);
+  } catch { /* ignore */ }
+
+  res.json({ tables: results, rpcs: rpcResults, referrals_columns: referralsColumns });
+});
+
 // ─── Schema Audit Endpoint (internal only, outside /api to bypass authMiddleware) ───
 // Compares expected tables/columns from migration definitions against live DB.
 // Protected by CRON_SECRET to prevent unauthorized access.
@@ -570,26 +623,12 @@ async function bootstrap() {
     `);
 
     // ── UNIQUE constraints for CPF and phone (per tenant) ──
-    await adminQuery(`
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'uq_patients_tenant_cpf'
-        ) THEN
-          CREATE UNIQUE INDEX uq_patients_tenant_cpf ON public.patients (tenant_id, cpf)
-            WHERE cpf IS NOT NULL AND btrim(cpf) <> '';
-        END IF;
-      END $$
-    `);
-    await adminQuery(`
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'uq_patients_tenant_phone'
-        ) THEN
-          CREATE UNIQUE INDEX uq_patients_tenant_phone ON public.patients (tenant_id, phone)
-            WHERE phone IS NOT NULL AND btrim(phone) <> '';
-        END IF;
-      END $$
-    `);
+    try {
+      await adminQuery(`CREATE UNIQUE INDEX IF NOT EXISTS uq_patients_tenant_cpf ON public.patients (tenant_id, cpf) WHERE cpf IS NOT NULL AND btrim(cpf) <> ''`);
+      await adminQuery(`CREATE UNIQUE INDEX IF NOT EXISTS uq_patients_tenant_phone ON public.patients (tenant_id, phone) WHERE phone IS NOT NULL AND btrim(phone) <> ''`);
+    } catch (ixErr: any) {
+      console.warn('[bootstrap] unique index creation skipped:', ixErr.message);
+    }
 
     // ── upsert_client_v2: enterprise validation (required fields, CPF digits, duplicate check) ──
     await adminQuery(`DROP FUNCTION IF EXISTS public.upsert_client_v2 CASCADE`);
@@ -774,6 +813,115 @@ async function bootstrap() {
       console.log('[bootstrap] rnds_incoming_statistics table ensured');
     } catch (rndsErr: any) {
       console.error('[bootstrap] rnds_incoming_statistics table error:', rndsErr.message);
+    }
+
+    // ── Fix get_client_timeline_v1: remove references to non-existent 'clients' table,
+    //    fix payments.paid_at → payments.created_at, fix orders.total_amount → orders.total ──
+    try {
+      await adminQuery(`
+        CREATE OR REPLACE FUNCTION public.get_client_timeline_v1(p_client_id uuid, p_limit integer DEFAULT 50)
+         RETURNS TABLE(event_at timestamp with time zone, kind text, title text, body text, meta jsonb)
+         LANGUAGE plpgsql
+         SECURITY DEFINER
+         SET search_path TO 'public'
+        AS $fn$
+        declare
+          v_user_id uuid := current_setting('app.current_user_id')::uuid;
+          v_profile public.profiles%rowtype;
+          v_is_admin boolean := false;
+          v_limit integer;
+        begin
+          if v_user_id is null then
+            raise exception 'Usuário não autenticado' using errcode = 'P0001';
+          end if;
+
+          select * into v_profile
+          from public.profiles p
+          where p.user_id = v_user_id
+          limit 1;
+
+          if not found then
+            raise exception 'Perfil não encontrado' using errcode = 'P0001';
+          end if;
+
+          -- Check patient belongs to same tenant
+          if not exists (
+            select 1 from public.patients pt where pt.id = p_client_id and pt.tenant_id = v_profile.tenant_id
+          ) then
+            raise exception 'Paciente não encontrado' using errcode = 'P0001';
+          end if;
+
+          v_limit := greatest(1, least(coalesce(p_limit, 50), 200));
+
+          return query
+          with apt as (
+            select
+              a.scheduled_at as event_at,
+              'appointment'::text as kind,
+              coalesce(pr.name, 'Agendamento') as title,
+              coalesce('Status: ' || a.status::text, '') as body,
+              jsonb_build_object(
+                'appointment_id', a.id,
+                'status', a.status,
+                'procedure_id', a.procedure_id,
+                'professional_id', a.professional_id,
+                'price', a.price
+              ) as meta
+            from public.appointments a
+            left join public.procedures pr on pr.id = a.procedure_id
+            where a.tenant_id = v_profile.tenant_id
+              and a.patient_id = p_client_id
+          ),
+          ord as (
+            select
+              o.created_at as event_at,
+              'order'::text as kind,
+              'Comanda'::text as title,
+              coalesce('Status: ' || o.status::text, '') as body,
+              jsonb_build_object(
+                'order_id', o.id,
+                'appointment_id', o.appointment_id,
+                'total', o.total,
+                'status', o.status
+              ) as meta
+            from public.orders o
+            where o.tenant_id = v_profile.tenant_id
+              and o.patient_id = p_client_id
+          ),
+          pay as (
+            select
+              p.created_at as event_at,
+              'payment'::text as kind,
+              'Pagamento'::text as title,
+              coalesce(pm.name, 'Pagamento') || ' - ' || p.amount::text as body,
+              jsonb_build_object(
+                'payment_id', p.id,
+                'order_id', p.order_id,
+                'amount', p.amount,
+                'status', p.status,
+                'payment_method', pm.name
+              ) as meta
+            from public.payments p
+            left join public.payment_methods pm on pm.id = p.payment_method_id
+            join public.orders o on o.id = p.order_id and o.tenant_id = v_profile.tenant_id
+            where o.patient_id = p_client_id
+              and p.status = 'confirmed'
+          )
+          select * from (
+            select * from apt
+            union all
+            select * from ord
+            union all
+            select * from pay
+          ) x
+          order by event_at desc nulls last
+          limit v_limit;
+        end;
+        $fn$
+      `);
+      console.log('[bootstrap] get_client_timeline_v1 function updated');
+    } catch (tlErr: any) {
+      console.error('[bootstrap] get_client_timeline_v1 error:', tlErr.message);
     }
 
     console.log('[bootstrap] Database bootstrap completed');

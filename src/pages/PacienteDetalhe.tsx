@@ -104,110 +104,128 @@ export default function PacienteDetalhe() {
         .single();
       if (error) throw error;
       setClient(data as Client);
-      await loadExtras(id);
-    } catch (err) {
+      // Load extras independently — patient base data is already available
+      loadExtras(id);
+    } catch (err: any) {
+      const msg = err?.message || "";
       logger.error("Error fetching client:", err);
-      toast.error("Paciente não encontrado");
+      toast.error(msg.includes("banco de dados") || msg.includes("servidor") ? msg : "Paciente não encontrado");
       navigate("/clientes");
     } finally {
       setIsLoading(false);
     }
   };
 
+  /** Load each section independently — failures in one don't affect others */
   const loadExtras = async (patientId: string) => {
     if (!profile?.tenant_id) return;
+    const tenantId = profile.tenant_id;
     setIsLoadingExtras(true);
-    try {
-      const [spendingData, { data: timelineData, error: timelineError }, packagesRes, mktPrefRes] = await Promise.all([
-        fetchPatientSpendingAllTime(profile.tenant_id),
-        getClientTimelineV1({ p_client_id: patientId, p_limit: 50 }),
-        api.from("patient_packages")
-          .select("id, name, total_sessions, used_sessions, status, created_at, expires_at")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }),
-        api.from("client_marketing_preferences")
-          .select("email_opt_in, sms_opt_in, whatsapp_opt_in, push_opt_in")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .maybeSingle(),
-      ]);
 
-      if (mktPrefRes.data) {
-        const mp = mktPrefRes.data as any;
-        setMarketingOptOut(!(mp.email_opt_in ?? true));
+    // Each section is wrapped in its own try/catch (graceful degradation)
+    const safeLoad = async <T,>(label: string, fn: () => Promise<T>): Promise<T | null> => {
+      try { return await fn(); }
+      catch (err: any) {
+        const msg = err?.message || err?.error || JSON.stringify(err);
+        logger.error(`[PacienteDetalhe] ${label} falhou:`, msg, err?.code, err?.details);
+        return null;
       }
+    };
 
+    // ── Batch 1: Independent data sources (all in parallel) ──
+    const [spendingData, timelineResult, packagesRes, mktPrefRes] = await Promise.all([
+      safeLoad("spending", () => fetchPatientSpendingAllTime(tenantId)),
+      safeLoad("timeline", () => getClientTimelineV1({ p_client_id: patientId, p_limit: 50 })),
+      safeLoad("packages", () => api.from("patient_packages")
+        .select("id, name, total_sessions, used_sessions, status, created_at, expires_at")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false })),
+      safeLoad("marketing", () => api.from("client_marketing_preferences")
+        .select("email_opt_in, sms_opt_in, whatsapp_opt_in, push_opt_in")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .maybeSingle()),
+    ]);
+
+    if (mktPrefRes?.data) {
+      const mp = mktPrefRes.data as any;
+      setMarketingOptOut(!(mp.email_opt_in ?? true));
+    }
+
+    if (spendingData) {
       const spending = spendingData.find((s) => s.patient_id === patientId);
       setPatientSpending(spending || null);
+    }
 
+    if (timelineResult) {
+      const { data: timelineData, error: timelineError } = timelineResult;
       if (timelineError) toastRpcError(toast, timelineError as any, "Erro ao carregar histórico");
       else setDetailTimeline((timelineData || []) as ClientTimelineEventRow[]);
-
-      if (!packagesRes.error) {
-        setDetailPackages((packagesRes.data || []).map((p: any) => ({
-          id: String(p.id), procedure_id: "",
-          service_name: String(p?.name ?? "Pacote"),
-          total_sessions: Number(p.total_sessions ?? 0),
-          remaining_sessions: Math.max(0, Number(p.total_sessions ?? 0) - Number(p.used_sessions ?? 0)),
-          status: String(p.status ?? ""), purchased_at: String(p.created_at ?? ""),
-          expires_at: p.expires_at ? String(p.expires_at) : null,
-        })));
-      }
-
-      // Clinical history
-      const clinDocs: typeof clinicalHistory = [];
-      const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
-        api.from("prescriptions").select("id, created_at, medications, is_controlled")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }).limit(20),
-        api.from("medical_certificates").select("id, created_at, certificate_type, content")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }).limit(20),
-        api.from("exam_results").select("id, created_at, exam_type, status")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }).limit(20),
-        api.from("referrals").select("id, created_at, reason, status, specialties(name)")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }).limit(20),
-        api.from("medical_records").select("id, created_at, subjective, assessment, cid_codes")
-          .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-          .order("created_at", { ascending: false }).limit(20),
-      ]);
-
-      (mrRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "prontuario", title: d.subjective || "Prontuário",
-        subtitle: [d.assessment, Array.isArray(d.cid_codes) ? d.cid_codes.join(", ") : ""].filter(Boolean).join(" — "), date: d.created_at,
-      }));
-      (recRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "receita",
-        title: d.is_controlled ? "Receita Controlada" : "Receita Simples",
-        subtitle: (d.medications || "").substring(0, 60), date: d.created_at,
-      }));
-      (certRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "atestado",
-        title: d.certificate_type === "atestado" ? "Atestado Médico" : d.certificate_type === "declaracao_comparecimento" ? "Declaração" : d.certificate_type === "laudo" ? "Laudo Médico" : "Relatório Médico",
-        subtitle: (d.content || "").substring(0, 60), date: d.created_at,
-      }));
-      (examRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "laudo", title: d.exam_type || "Exame", subtitle: d.status, date: d.created_at,
-      }));
-      (refRes.data || []).forEach((d: any) => clinDocs.push({
-        id: d.id, type: "encaminhamento",
-        title: `Encaminhamento${d.specialties?.name ? ` — ${d.specialties.name}` : ""}`,
-        subtitle: (d.reason || "").substring(0, 60), date: d.created_at,
-      }));
-      clinDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setClinicalHistory(clinDocs);
-
-      const { data: evoData } = await (api as any).from("clinical_evolutions")
-        .select("*, patient:patients(name), profiles(full_name)")
-        .eq("tenant_id", profile.tenant_id).eq("patient_id", patientId)
-        .order("evolution_date", { ascending: false }).limit(50);
-      setClientEvolutions((evoData ?? []) as ClinicalEvolution[]);
-    } catch (err) {
-      logger.error("Error loading client extras:", err);
-    } finally {
-      setIsLoadingExtras(false);
     }
+
+    if (packagesRes && !packagesRes.error) {
+      setDetailPackages((packagesRes.data || []).map((p: any) => ({
+        id: String(p.id), procedure_id: "",
+        service_name: String(p?.name ?? "Pacote"),
+        total_sessions: Number(p.total_sessions ?? 0),
+        remaining_sessions: Math.max(0, Number(p.total_sessions ?? 0) - Number(p.used_sessions ?? 0)),
+        status: String(p.status ?? ""), purchased_at: String(p.created_at ?? ""),
+        expires_at: p.expires_at ? String(p.expires_at) : null,
+      })));
+    }
+
+    // ── Batch 2: Clinical history (all in parallel, isolated) ──
+    const [recRes, certRes, examRes, refRes, mrRes] = await Promise.all([
+      safeLoad("prescriptions", () => api.from("prescriptions").select("id, created_at, medications, is_controlled")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false }).limit(20)),
+      safeLoad("certificates", () => api.from("medical_certificates").select("id, created_at, certificate_type, content")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false }).limit(20)),
+      safeLoad("exams", () => api.from("exam_results").select("id, created_at, exam_type, status")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false }).limit(20)),
+      safeLoad("referrals", () => api.from("referrals").select("id, created_at, reason, status, to_specialty")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false }).limit(20)),
+      safeLoad("records", () => api.from("medical_records").select("id, created_at, subjective, assessment, cid_codes")
+        .eq("tenant_id", tenantId).eq("patient_id", patientId)
+        .order("created_at", { ascending: false }).limit(20)),
+    ]);
+
+    const clinDocs: typeof clinicalHistory = [];
+    (mrRes?.data || []).forEach((d: any) => clinDocs.push({
+      id: d.id, type: "prontuario", title: d.subjective || "Prontuário",
+      subtitle: [d.assessment, Array.isArray(d.cid_codes) ? d.cid_codes.join(", ") : ""].filter(Boolean).join(" — "), date: d.created_at,
+    }));
+    (recRes?.data || []).forEach((d: any) => clinDocs.push({
+      id: d.id, type: "receita",
+      title: d.is_controlled ? "Receita Controlada" : "Receita Simples",
+      subtitle: (d.medications || "").substring(0, 60), date: d.created_at,
+    }));
+    (certRes?.data || []).forEach((d: any) => clinDocs.push({
+      id: d.id, type: "atestado",
+      title: d.certificate_type === "atestado" ? "Atestado Médico" : d.certificate_type === "declaracao_comparecimento" ? "Declaração" : d.certificate_type === "laudo" ? "Laudo Médico" : "Relatório Médico",
+      subtitle: (d.content || "").substring(0, 60), date: d.created_at,
+    }));
+    (examRes?.data || []).forEach((d: any) => clinDocs.push({
+      id: d.id, type: "laudo", title: d.exam_type || "Exame", subtitle: d.status, date: d.created_at,
+    }));
+    (refRes?.data || []).forEach((d: any) => clinDocs.push({
+      id: d.id, type: "encaminhamento",
+      title: `Encaminhamento${d.to_specialty ? ` — ${d.to_specialty}` : ""}`,
+      subtitle: (d.reason || "").substring(0, 60), date: d.created_at,
+    }));
+    clinDocs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setClinicalHistory(clinDocs);
+
+    // ── Evolutions (isolated) ──
+    const evoRes = await safeLoad("evolutions", () => (api as any).from("clinical_evolutions")
+      .select("*, patient:patients(name), profiles(full_name)")
+      .eq("tenant_id", tenantId).eq("patient_id", patientId)
+      .order("evolution_date", { ascending: false }).limit(50));
+    setClientEvolutions((evoRes?.data ?? []) as ClinicalEvolution[]);
+
+    setIsLoadingExtras(false);
   };
 
   const handleToggleMarketingOptOut = async (checked: boolean) => {
@@ -289,6 +307,11 @@ export default function PacienteDetalhe() {
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                {(client as any).access_code && (
+                  <Badge variant="outline" className="font-mono text-xs tracking-wider">
+                    {(client as any).access_code}
+                  </Badge>
+                )}
                 {client.cpf && <span>CPF: {client.cpf}</span>}
                 {client.phone && (
                   <span className="flex items-center gap-1">
@@ -307,7 +330,7 @@ export default function PacienteDetalhe() {
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 shrink-0">
-              <Button variant="outline" onClick={() => navigate(`/clientes?edit=${client.id}`)}>
+              <Button variant="outline" onClick={() => navigate(`/pacientes/${client.id}/editar`)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </Button>

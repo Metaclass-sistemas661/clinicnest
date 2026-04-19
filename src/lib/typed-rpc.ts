@@ -437,7 +437,7 @@ export const createClientPackageV1 = createPatientPackageV1;
  * @returns Array de eventos ordenados por data desc
  */
 export async function getPatientTimelineV1(params: {
-  p_patient_id: string;
+  p_client_id: string;
   p_limit?: number;
 }): Promise<{ data: PatientTimelineEventRow[] | null; error: unknown }> {
   return rpc<PatientTimelineEventRow[]>("get_client_timeline_v1", params as Record<string, unknown>);

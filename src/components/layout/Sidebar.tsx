@@ -555,6 +555,7 @@ function SidebarContent({
     });
   }, []);
 
+  // Auto-open the category that contains the active route
   useEffect(() => {
     for (const category of navCategories) {
       const hasActive = category.items.some((item) => location.pathname === item.href);
@@ -569,18 +570,24 @@ function SidebarContent({
     }
   }, [location.pathname]);
 
+  // Scroll the active item into view after category expansion settles
   useEffect(() => {
     isRestoringScroll.current = true;
-    if (navRef.current) {
-      navRef.current.scrollTop = savedNavScroll;
-    }
-    // Restore again after CSS transitions settle (category expand/collapse)
-    const timer = setTimeout(() => {
-      if (navRef.current) {
+
+    const scrollToActive = () => {
+      if (!navRef.current) return;
+      const activeEl = navRef.current.querySelector<HTMLElement>('.seamless-tab-active');
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        // Fallback: restore numeric position
         navRef.current.scrollTop = savedNavScroll;
       }
       isRestoringScroll.current = false;
-    }, 350);
+    };
+
+    // Wait for category expand animation to finish before scrolling
+    const timer = setTimeout(scrollToActive, 380);
     return () => {
       clearTimeout(timer);
       isRestoringScroll.current = false;
