@@ -8,6 +8,7 @@
  */
 
 import { Request, Response } from "express";
+import { createHmac } from "crypto";
 import { chatCompletion } from "../shared/vertexAi";
 import {
   sendMetaWhatsAppMessage,
@@ -16,6 +17,7 @@ import {
   markMessageAsRead,
 } from "./whatsapp-sender";
 import { createDbClient } from "../shared/db-builder";
+import { checkRateLimit } from "../shared/rateLimit";
 
 const db = createDbClient();
 
@@ -24,10 +26,33 @@ const SALES_CHATBOT_SECRET = process.env.SALES_CHATBOT_SECRET || "";
 const WHATSAPP_WEBHOOK_VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
 const PHONE_ID = process.env.WHATSAPP_SALES_PHONE_NUMBER_ID || "";
 const ACCESS_TOKEN = process.env.WHATSAPP_SALES_ACCESS_TOKEN || "";
+const META_APP_SECRET = process.env.META_APP_SECRET || "";
 const SESSION_TIMEOUT_MIN = 120;
 const MAX_AI_HISTORY = 15;
 const TRIAL_URL = "https://clinicnest.metaclass.com.br/registro";
 const DEMO_URL = "https://clinicnest.metaclass.com.br/demonstracao";
+
+// ─── Message Deduplication ───────────────────────────────────────────────────
+const processedMessages = new Set<string>();
+const DEDUP_MAX = 5000;
+
+// ─── Webhook Signature Verification (HMAC-SHA256) ───────────────────────────
+function verifyWebhookSignature(rawBody: Buffer | string, signature: string | undefined): boolean {
+  if (!META_APP_SECRET) return true; // Skip if secret not configured
+  if (!signature) return false;
+  const expected = "sha256=" + createHmac("sha256", META_APP_SECRET)
+    .update(typeof rawBody === "string" ? rawBody : rawBody)
+    .digest("hex");
+  return signature === expected;
+}
+
+// ─── Input Sanitization ─────────────────────────────────────────────────────
+function sanitizeInput(text: string): string {
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
+    .slice(0, 4096) // WhatsApp max message length
+    .trim();
+}
 
 // ─── Clinic Types ────────────────────────────────────────────────────────────
 type ClinicType = "odonto" | "medica" | "estetica" | "multi" | "outro";
@@ -120,6 +145,7 @@ const PLANS: Plan[] = [
 
 // ─── States ──────────────────────────────────────────────────────────────────
 enum ST {
+  LGPD_CONSENT = "LGPD_CONSENT",
   WELCOME = "WELCOME",
   CLINIC_TYPE = "CLINIC_TYPE",
   MAIN_MENU = "MAIN_MENU",
@@ -247,19 +273,21 @@ async function getOrCreate(phone: string): Promise<Conv> {
   if (existing) {
     const diff = (Date.now() - new Date(existing.last_message_at).getTime()) / 60000;
     if (diff > SESSION_TIMEOUT_MIN) {
+      const prevCtx = existing.context || {};
+      const resetState = prevCtx.lgpdAccepted ? ST.WELCOME : ST.LGPD_CONSENT;
       await db.from("sales_chatbot_conversations").update({
-        context: { ...existing.context, interactionCount: 0 },
+        context: { ...prevCtx, interactionCount: 0, state: resetState },
         last_message_at: new Date().toISOString(),
         is_human_takeover: false, updated_at: new Date().toISOString(),
       }).eq("id", existing.id);
       await db.from("sales_chatbot_messages").delete().eq("conversation_id", existing.id);
-      return { ...existing, context: { ...existing.context, interactionCount: 0 }, last_message_at: new Date().toISOString(), is_human_takeover: false };
+      return { ...existing, context: { ...prevCtx, interactionCount: 0, state: resetState }, last_message_at: new Date().toISOString(), is_human_takeover: false };
     }
     await db.from("sales_chatbot_conversations").update({ last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", existing.id);
     return existing;
   }
   const { data: created, error } = await db.from("sales_chatbot_conversations")
-    .insert({ phone, context: { state: ST.WELCOME, interactionCount: 0 }, last_message_at: new Date().toISOString() })
+    .insert({ phone, context: { state: ST.LGPD_CONSENT, interactionCount: 0 }, last_message_at: new Date().toISOString() })
     .select("*").single();
   if (error || !created) throw new Error(`Create conv failed: ${error?.message}`);
   return created;
@@ -312,6 +340,33 @@ async function scheduleFollowUp(phone: string, days: number, reason: string): Pr
   const fups = ((lead.metadata as any)?.follow_ups || []) as Array<Record<string, unknown>>;
   fups.push({ scheduled_at: at.toISOString(), reason, status: "pending", created_at: new Date().toISOString() });
   await db.from("sales_leads").update({ metadata: { ...(lead.metadata || {}), follow_ups: fups }, updated_at: new Date().toISOString() }).eq("id", lead.id);
+}
+
+// ─── LGPD Consent ────────────────────────────────────────────────────────────
+const LGPD_TEXT = `Antes de continuarmos, precisamos do seu consentimento conforme a *Lei Geral de Proteção de Dados (LGPD – Lei 13.709/2018)*.\n\n📋 *Dados coletados:* nome, e-mail, telefone e informações sobre sua clínica.\n\n🎯 *Finalidade:* apresentar o ClinicNest, enviar informações comerciais e agendar demonstrações.\n\n🔒 *Seus direitos:* acesso, correção, exclusão e revogação a qualquer momento.\n\n📄 Política de privacidade: https://clinicnest.metaclass.com.br/privacidade`;
+
+async function sendLgpdConsent(to: string): Promise<void> {
+  await txt(to, `Olá! 👋 Bem-vindo ao *ClinicNest*!\n\n${LGPD_TEXT}`);
+  await btns(to, "Você concorda com o tratamento dos seus dados?", [
+    { id: "lgpd_accept", title: "✅ Aceito" },
+    { id: "lgpd_reject", title: "❌ Não aceito" },
+    { id: "lgpd_more", title: "ℹ️ Saber mais" },
+  ]);
+}
+
+async function recordSalesLgpdConsent(phone: string, accepted: boolean): Promise<void> {
+  await db.from("lgpd_consentimentos").insert({
+    tenant_id: "00000000-0000-0000-0000-000000000000",
+    titular_email: phone,
+    titular_nome: null,
+    finalidade: "whatsapp_sales_chatbot",
+    descricao: "Consentimento para coleta de dados via chatbot de vendas WhatsApp",
+    dados_coletados: ["nome", "email", "telefone", "tipo_clinica", "tamanho_clinica"],
+    consentido: accepted,
+    metodo: "whatsapp_button",
+    ip_address: null,
+    user_agent: "WhatsApp",
+  }).then(() => {}).catch((err: any) => console.error("[sales-chatbot] LGPD insert error:", err?.message));
 }
 
 // ─── Interactive message senders ─────────────────────────────────────────────
@@ -448,9 +503,43 @@ async function handleIncoming(phone: string, text: string, payload?: string, ref
   // ── State machine ──
   switch (st) {
 
+    // ── LGPD CONSENT (mandatory first step) ──
+    case ST.LGPD_CONSENT: {
+      const a = payload || input;
+      if (a === "lgpd_accept" || a === "aceito" || a === "sim" || a === "concordo") {
+        await recordSalesLgpdConsent(phone, true);
+        await setState(conv.id, ST.CLINIC_TYPE, { lgpdAccepted: true, lgpdAcceptedAt: new Date().toISOString() });
+        await sendWelcome(phone);
+        return;
+      }
+      if (a === "lgpd_reject" || a === "não" || a === "nao" || a === "recuso") {
+        await recordSalesLgpdConsent(phone, false);
+        await setState(conv.id, ST.ENDED, { lgpdAccepted: false });
+        await txt(phone, "Entendemos e respeitamos sua decisão. 🙏\n\nSem o consentimento, não podemos dar continuidade ao atendimento via WhatsApp.\n\nSe mudar de ideia, envie *oi* a qualquer momento.\n\nAcesse nosso site: https://clinicnest.metaclass.com.br");
+        return;
+      }
+      if (a === "lgpd_more" || a === "saber mais" || a === "info") {
+        await txt(phone, `*Sobre a LGPD e seus dados:*\n\n🔹 Coletamos apenas dados necessários para o atendimento\n🔹 Seus dados nunca são compartilhados com terceiros\n🔹 Você pode solicitar exclusão total a qualquer momento\n🔹 Usamos criptografia em trânsito e em repouso\n🔹 Nosso DPO (Encarregado): dpo@metaclass.com.br\n\n📄 Política completa: https://clinicnest.metaclass.com.br/privacidade`);
+        await btns(phone, "Deseja prosseguir?", [
+          { id: "lgpd_accept", title: "✅ Aceito" },
+          { id: "lgpd_reject", title: "❌ Não aceito" },
+        ]);
+        return;
+      }
+      // Didn't understand — re-send consent
+      await sendLgpdConsent(phone);
+      return;
+    }
+
     // ── WELCOME / ENDED ──
     case ST.WELCOME:
     case ST.ENDED: {
+      // If returning after previous rejection or session reset, require consent again
+      if (!ctx.lgpdAccepted) {
+        await setState(conv.id, ST.LGPD_CONSENT);
+        await sendLgpdConsent(phone);
+        return;
+      }
       await setState(conv.id, ST.CLINIC_TYPE);
       await sendWelcome(phone);
       return;
@@ -828,6 +917,13 @@ export async function whatsappSalesChatbot(req: Request, res: Response) {
   try {
     if (req.method === "GET") { handleVerify(req, res); return; }
 
+    // ── HMAC-SHA256 webhook signature verification ──
+    const sig = req.headers["x-hub-signature-256"] as string | undefined;
+    if (META_APP_SECRET && !verifyWebhookSignature((req as any).rawBody || JSON.stringify(req.body), sig)) {
+      console.error("[whatsapp-sales-chatbot] Invalid webhook signature");
+      res.status(401).json({ error: "Invalid signature" }); return;
+    }
+
     const body = req.body;
     const extracted = extractMeta(body);
 
@@ -836,7 +932,9 @@ export async function whatsappSalesChatbot(req: Request, res: Response) {
         const key = (req.headers["apikey"] as string) || (req.headers["x-api-key"] as string) || "";
         if (SALES_CHATBOT_SECRET && key !== SALES_CHATBOT_SECRET) { res.status(401).json({ error: "Unauthorized" }); return; }
         const phone = normalizePhone(body.phone);
-        await handleIncoming(phone, body.message);
+        const rl = await checkRateLimit(`sales-chatbot:${phone}`, 20, 60);
+        if (!rl.allowed) { res.status(429).json({ error: "Too many messages" }); return; }
+        await handleIncoming(phone, sanitizeInput(body.message));
         res.status(200).json({ ok: true }); return;
       }
       res.status(200).json({ ok: true, skipped: true }); return;
@@ -846,8 +944,18 @@ export async function whatsappSalesChatbot(req: Request, res: Response) {
     res.status(200).json({ status: "ok" });
 
     const { from, text, messageId, btnPayload, listPayload, referral } = extracted;
+
+    // ── Deduplication ──
+    if (processedMessages.has(messageId)) return;
+    processedMessages.add(messageId);
+    if (processedMessages.size > DEDUP_MAX) processedMessages.clear();
+
+    // ── Rate limiting ──
+    const rl = await checkRateLimit(`sales-chatbot:${from}`, 20, 60);
+    if (!rl.allowed) return;
+
     if (PHONE_ID && ACCESS_TOKEN) markMessageAsRead(PHONE_ID, ACCESS_TOKEN, messageId).catch(() => {});
-    await handleIncoming(from, text, btnPayload || listPayload, referral);
+    await handleIncoming(from, sanitizeInput(text), btnPayload || listPayload, referral);
   } catch (err: any) {
     console.error("[whatsapp-sales-chatbot] Error:", err.message || err);
     if (!res.headersSent) res.status(500).json({ error: "Internal server error" });

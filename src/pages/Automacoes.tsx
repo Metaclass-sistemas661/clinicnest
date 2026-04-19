@@ -28,7 +28,7 @@ import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
-import { Loader2, Plus, Zap } from "lucide-react";
+import { Loader2, Plus, Zap, Info } from "lucide-react";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useLimitCheck } from "@/hooks/useUsageStats";
 import { UsageIndicator } from "@/components/subscription/LimitGate";
@@ -380,6 +380,15 @@ export default function Automacoes() {
                   ))}
                 </SelectContent>
               </Select>
+              {form.channel === "whatsapp" && (
+                <div className="flex items-start gap-2 rounded-md bg-blue-50 dark:bg-blue-950/30 p-3 text-sm text-blue-800 dark:text-blue-300">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    Mensagens proativas WhatsApp utilizam <strong>Message Templates</strong> aprovados pela Meta.
+                    Os templates são criados automaticamente ao conectar o WhatsApp. A mensagem acima serve como fallback dentro da janela de 24h.
+                  </span>
+                </div>
+              )}
             </div>
           </FormDrawerSection>
 

@@ -10,8 +10,10 @@
  */
 
 import { Request, Response } from "express";
+import { createHmac } from "crypto";
 import { createLogger } from "../shared/logging";
 import { createDbClient } from "../shared/db-builder";
+import { checkRateLimit } from "../shared/rateLimit";
 import {
   sendMetaWhatsAppMessage,
   sendMetaWhatsAppButtons,
@@ -21,9 +23,28 @@ import {
 
 const log = createLogger("WHATSAPP-CHATBOT");
 const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
+const META_APP_SECRET = process.env.META_APP_SECRET || "";
 const SESSION_TIMEOUT_MIN = 30;
 const processedMessages = new Set<string>();
 const DEDUP_MAX = 5000;
+
+// ─── Webhook Signature Verification (HMAC-SHA256) ───────────────────────────
+function verifyWebhookSignature(rawBody: Buffer | string, signature: string | undefined): boolean {
+  if (!META_APP_SECRET) return true; // Skip if secret not configured
+  if (!signature) return false;
+  const expected = "sha256=" + createHmac("sha256", META_APP_SECRET)
+    .update(typeof rawBody === "string" ? rawBody : rawBody)
+    .digest("hex");
+  return signature === expected;
+}
+
+// ─── Input Sanitization ─────────────────────────────────────────────────────
+function sanitizeInput(text: string): string {
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars
+    .slice(0, 4096) // WhatsApp max message length
+    .trim();
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -62,6 +83,7 @@ type SelectResult<T> = { data: T; error: unknown };
 // ─── States ─────────────────────────────────────────────────────────────
 
 const STATE = {
+  LGPD_CONSENT: "LGPD_CONSENT",
   IDLE: "IDLE",
   MENU: "MENU",
   BOOKING_SPECIALTY: "BOOKING_SPECIALTY",
@@ -77,6 +99,13 @@ const STATE = {
   CANCEL_CONFIRM: "CANCEL_CONFIRM",
   QUEUE_CHECK: "QUEUE_CHECK",
   AWAITING_HUMAN: "AWAITING_HUMAN",
+  // ── Deep interaction states ──
+  MORE_OPTIONS: "MORE_OPTIONS",
+  REMINDERS_MENU: "REMINDERS_MENU",
+  PATIENT_PROFILE: "PATIENT_PROFILE",
+  PATIENT_NAME: "PATIENT_NAME",
+  OFFERS_MENU: "OFFERS_MENU",
+  FEEDBACK: "FEEDBACK",
 };
 
 // ─── DB helpers ─────────────────────────────────────────────────────────
@@ -249,6 +278,101 @@ async function sendList(
   await logMessage(config.id, to, "outbound", bodyText);
 }
 
+// ─── LGPD Consent ───────────────────────────────────────────────────────
+
+async function sendLgpdConsent(
+  config: TenantConfig,
+  phone: string,
+) {
+  await send(
+    config,
+    phone,
+    `Ol\u00e1! \uD83D\uDC4B Bem-vindo(a) \u00e0 *${config.name}*.\n\n` +
+    `Antes de continuarmos, precisamos do seu consentimento conforme a *LGPD (Lei 13.709/2018)*.\n\n` +
+    `\uD83D\uDCCB *Dados coletados:* nome, telefone e dados de agendamento.\n\n` +
+    `\uD83C\uDFAF *Finalidade:* agendamentos, lembretes, confirma\u00e7\u00f5es e atendimento via WhatsApp.\n\n` +
+    `\uD83D\uDD12 *Seus direitos:* acesso, corre\u00e7\u00e3o, exclus\u00e3o e revoga\u00e7\u00e3o a qualquer momento.`,
+  );
+  await sendButtons(config, phone, "Voc\u00ea concorda com o tratamento dos seus dados?", [
+    { id: "lgpd_accept", title: "\u2705 Aceito" },
+    { id: "lgpd_reject", title: "\u274C N\u00e3o aceito" },
+    { id: "lgpd_more", title: "\u2139\uFE0F Saber mais" },
+  ]);
+}
+
+async function recordPatientLgpdConsent(
+  tenantId: string,
+  phone: string,
+  accepted: boolean,
+) {
+  await db()
+    .from("lgpd_consentimentos")
+    .insert({
+      tenant_id: tenantId,
+      titular_email: phone,
+      titular_nome: null,
+      finalidade: "whatsapp_chatbot_paciente",
+      descricao: "Consentimento para coleta de dados via chatbot WhatsApp da cl\u00ednica",
+      dados_coletados: ["nome", "telefone", "agendamentos", "preferencias_notificacao"],
+      consentido: accepted,
+      metodo: "whatsapp_button",
+      ip_address: null,
+      user_agent: "WhatsApp",
+    })
+    .then(() => {})
+    .catch((err: unknown) => log("LGPD consent insert error", { error: String(err) }));
+}
+
+async function handleLgpdConsent(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+) {
+  const choice = buttonId || text.toLowerCase().trim();
+
+  if (choice === "lgpd_accept" || choice === "aceito" || choice === "sim" || choice === "concordo") {
+    await recordPatientLgpdConsent(config.id, phone, true);
+    await upsertConversation(config.id, phone, STATE.IDLE, { lgpdAccepted: true, lgpdAcceptedAt: new Date().toISOString() });
+    return handleIdle(config, settings, phone, text);
+  }
+
+  if (choice === "lgpd_reject" || choice.includes("n\u00e3o aceito") || choice === "recuso") {
+    await recordPatientLgpdConsent(config.id, phone, false);
+    await send(
+      config,
+      phone,
+      "Respeitamos sua decis\u00e3o. \uD83D\uDE4F\n\n" +
+      "Sem o consentimento, n\u00e3o podemos dar continuidade ao atendimento via WhatsApp.\n\n" +
+      "Se mudar de ideia, envie *oi* a qualquer momento.",
+    );
+    await upsertConversation(config.id, phone, STATE.LGPD_CONSENT, { lgpdAccepted: false });
+    return;
+  }
+
+  if (choice === "lgpd_more" || choice.includes("saber mais")) {
+    await send(
+      config,
+      phone,
+      `*Sobre a LGPD e seus dados:*\n\n` +
+      `\uD83D\uDD39 Coletamos apenas dados necess\u00e1rios para o atendimento\n` +
+      `\uD83D\uDD39 Seus dados nunca s\u00e3o compartilhados com terceiros\n` +
+      `\uD83D\uDD39 Voc\u00ea pode solicitar exclus\u00e3o total a qualquer momento\n` +
+      `\uD83D\uDD39 Usamos criptografia em tr\u00e2nsito e em repouso\n` +
+      `\uD83D\uDD39 Respons\u00e1vel (DPO): entre em contato com a cl\u00ednica`,
+    );
+    await sendButtons(config, phone, "Deseja prosseguir?", [
+      { id: "lgpd_accept", title: "\u2705 Aceito" },
+      { id: "lgpd_reject", title: "\u274C N\u00e3o aceito" },
+    ]);
+    return;
+  }
+
+  // Didn't understand — re-send consent
+  await sendLgpdConsent(config, phone);
+}
+
 // ─── State handlers ─────────────────────────────────────────────────────
 
 async function handleIdle(
@@ -274,7 +398,7 @@ async function showMainMenu(
   await sendButtons(config, phone, menuText, [
     { id: "menu_agendar", title: "\uD83D\uDCC5 Agendar consulta" },
     { id: "menu_consultas", title: "\uD83D\uDCCB Minhas consultas" },
-    { id: "menu_atendente", title: "\uD83D\uDC64 Falar c/ atendente" },
+    { id: "menu_mais", title: "\u2795 Mais op\u00e7\u00f5es" },
   ]);
 }
 
@@ -302,12 +426,21 @@ async function handleMenu(
     return showAppointments(config, settings, phone);
   }
   if (
-    choice === "menu_atendente" ||
-    choice.includes("atendente") ||
-    choice.includes("humano") ||
+    choice === "menu_mais" ||
+    choice.includes("mais") ||
     choice === "3"
   ) {
+    return showMoreOptions(config, settings, phone);
+  }
+  // Legacy shortcuts
+  if (
+    choice.includes("atendente") ||
+    choice.includes("humano")
+  ) {
     return transferToHuman(config, settings, phone);
+  }
+  if (choice.includes("lembrete") || choice.includes("notifica")) {
+    return showRemindersMenu(config, settings, phone);
   }
 
   await send(
@@ -1026,6 +1159,461 @@ async function handleRescheduleList(
   return showMainMenu(config, settings, phone);
 }
 
+// ─── More Options (expanded menu) ───────────────────────────────────────
+
+async function showMoreOptions(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  await sendList(
+    config,
+    phone,
+    "Mais Op\u00e7\u00f5es",
+    "Selecione o que deseja:",
+    "Ver op\u00e7\u00f5es",
+    [
+      {
+        title: "Servi\u00e7os",
+        rows: [
+          { id: "more_lembretes", title: "\uD83D\uDD14 Lembretes", description: "Configurar notifica\u00e7\u00f5es" },
+          { id: "more_ofertas", title: "\uD83C\uDF81 Ofertas", description: "Promo\u00e7\u00f5es e benef\u00edcios" },
+          { id: "more_perfil", title: "\uD83D\uDC64 Meu perfil", description: "Atualizar seus dados" },
+        ],
+      },
+      {
+        title: "Suporte",
+        rows: [
+          { id: "more_feedback", title: "\u2B50 Avaliar atendimento", description: "D\u00ea sua opini\u00e3o" },
+          { id: "more_atendente", title: "\uD83D\uDCAC Falar com atendente", description: "Atendimento humano" },
+          { id: "more_voltar", title: "\u25C0\uFE0F Voltar ao menu", description: "Menu principal" },
+        ],
+      },
+    ],
+  );
+  await upsertConversation(config.id, phone, STATE.MORE_OPTIONS, {});
+}
+
+async function handleMoreOptions(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  listRowId: string | null,
+) {
+  const choice = listRowId || text.toLowerCase().trim();
+
+  if (choice === "more_lembretes" || choice.includes("lembrete")) {
+    return showRemindersMenu(config, settings, phone);
+  }
+  if (choice === "more_ofertas" || choice.includes("oferta") || choice.includes("promo")) {
+    return showOffersMenu(config, settings, phone);
+  }
+  if (choice === "more_perfil" || choice.includes("perfil") || choice.includes("dados")) {
+    return showPatientProfile(config, settings, phone);
+  }
+  if (choice === "more_feedback" || choice.includes("avali") || choice.includes("feedback")) {
+    return startFeedback(config, settings, phone);
+  }
+  if (choice === "more_atendente" || choice.includes("atendente") || choice.includes("humano")) {
+    return transferToHuman(config, settings, phone);
+  }
+  if (choice === "more_voltar" || choice.includes("voltar") || choice.includes("menu")) {
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  await send(config, phone, "Op\u00e7\u00e3o n\u00e3o reconhecida.");
+  return showMoreOptions(config, settings, phone);
+}
+
+// ─── Reminders / Notification Preferences ───────────────────────────────
+
+async function showRemindersMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  // Fetch patient and their notification preferences
+  const { data: patient } = (await db()
+    .from("patients")
+    .select("id")
+    .eq("tenant_id", config.id)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
+
+  if (!patient) {
+    await send(config, phone, "Voc\u00ea ainda n\u00e3o tem cadastro. Ao agendar uma consulta, seu perfil ser\u00e1 criado automaticamente.");
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const { data: prefs } = (await db()
+    .from("patient_notification_preferences")
+    .select("id, whatsapp_enabled, opt_out_types")
+    .eq("client_id", patient.id)
+    .eq("tenant_id", config.id)
+    .maybeSingle()) as unknown as SelectResult<{
+    id: string;
+    whatsapp_enabled: boolean;
+    opt_out_types: string[];
+  } | null>;
+
+  const optOuts = new Set(prefs?.opt_out_types || []);
+  const reminder24h = !optOuts.has("reminder_24h");
+  const reminder2h = !optOuts.has("reminder_2h");
+  const confirmations = !optOuts.has("confirmations");
+  const offers = !optOuts.has("offers");
+  const birthday = !optOuts.has("birthday");
+
+  const statusIcon = (on: boolean) => on ? "\u2705" : "\u274C";
+
+  await send(
+    config,
+    phone,
+    `*\uD83D\uDD14 Suas notifica\u00e7\u00f5es WhatsApp:*\n\n` +
+    `1. ${statusIcon(reminder24h)} Lembrete 24h antes\n` +
+    `2. ${statusIcon(reminder2h)} Lembrete 2h antes\n` +
+    `3. ${statusIcon(confirmations)} Confirma\u00e7\u00e3o de agendamento\n` +
+    `4. ${statusIcon(offers)} Ofertas e promo\u00e7\u00f5es\n` +
+    `5. ${statusIcon(birthday)} Anivers\u00e1rio\n\n` +
+    `Responda com o *n\u00famero* para ativar/desativar, ou *voltar* para o menu.`,
+  );
+  await upsertConversation(config.id, phone, STATE.REMINDERS_MENU, {
+    patient_id: patient.id,
+    prefs_id: prefs?.id || null,
+    opt_outs: Array.from(optOuts),
+  });
+}
+
+async function handleRemindersMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+) {
+  const lower = text.toLowerCase().trim();
+
+  if (lower === "voltar" || lower === "menu" || lower === "0") {
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const conv = await getConversation(config.id, phone);
+  const patientId = conv?.context?.patient_id as string | undefined;
+  const prefsId = conv?.context?.prefs_id as string | undefined;
+  const optOuts = new Set((conv?.context?.opt_outs as string[]) || []);
+  const keys = ["reminder_24h", "reminder_2h", "confirmations", "offers", "birthday"];
+  const num = parseInt(lower, 10);
+
+  if (num >= 1 && num <= 5) {
+    const key = keys[num - 1];
+
+    // Toggle: if opted out, remove from set (enable); else add (disable)
+    if (optOuts.has(key)) {
+      optOuts.delete(key);
+    } else {
+      optOuts.add(key);
+    }
+
+    const newOptOuts = Array.from(optOuts);
+
+    // Save to database
+    if (prefsId) {
+      await db()
+        .from("patient_notification_preferences")
+        .update({ opt_out_types: newOptOuts, updated_at: new Date().toISOString() })
+        .eq("id", prefsId);
+    } else if (patientId) {
+      await db()
+        .from("patient_notification_preferences")
+        .insert({
+          client_id: patientId,
+          tenant_id: config.id,
+          whatsapp_enabled: true,
+          opt_out_types: newOptOuts,
+        });
+    }
+
+    const labels = ["Lembrete 24h", "Lembrete 2h", "Confirma\u00e7\u00e3o", "Ofertas", "Anivers\u00e1rio"];
+    const status = optOuts.has(key) ? "desativado \u274C" : "ativado \u2705";
+    await send(config, phone, `*${labels[num - 1]}* ${status}`);
+
+    // Show updated menu
+    return showRemindersMenu(config, settings, phone);
+  }
+
+  await send(config, phone, "Responda com um n\u00famero de 1 a 5, ou *voltar*.");
+}
+
+// ─── Patient Profile ────────────────────────────────────────────────────
+
+async function showPatientProfile(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  const { data: patient } = (await db()
+    .from("patients")
+    .select("id, full_name, email, phone, birth_date")
+    .eq("tenant_id", config.id)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<{
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    phone: string | null;
+    birth_date: string | null;
+  } | null>;
+
+  if (!patient) {
+    await send(config, phone, "Voc\u00ea ainda n\u00e3o tem cadastro. Ao agendar uma consulta, seu perfil ser\u00e1 criado automaticamente.");
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const birthStr = patient.birth_date
+    ? patient.birth_date.split("-").reverse().join("/")
+    : "N\u00e3o informado";
+
+  await send(
+    config,
+    phone,
+    `*\uD83D\uDC64 Seu Perfil:*\n\n` +
+    `\uD83D\uDCDD Nome: ${patient.full_name || "N\u00e3o informado"}\n` +
+    `\uD83D\uDCE7 E-mail: ${patient.email || "N\u00e3o informado"}\n` +
+    `\uD83D\uDCDE Telefone: ${patient.phone || phone}\n` +
+    `\uD83C\uDF82 Nascimento: ${birthStr}`,
+  );
+
+  await sendButtons(config, phone, "Deseja atualizar algum dado?", [
+    { id: "profile_nome", title: "\u270F\uFE0F Atualizar nome" },
+    { id: "profile_voltar", title: "\u25C0\uFE0F Voltar ao menu" },
+  ]);
+  await upsertConversation(config.id, phone, STATE.PATIENT_PROFILE, { patient_id: patient.id });
+}
+
+async function handlePatientProfile(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+  buttonId: string | null,
+) {
+  const choice = buttonId || text.toLowerCase().trim();
+
+  if (choice === "profile_nome" || choice.includes("nome")) {
+    await send(config, phone, "Digite seu nome completo:");
+    await upsertConversation(config.id, phone, STATE.PATIENT_NAME, 
+      { patient_id: (await getConversation(config.id, phone))?.context?.patient_id });
+    return;
+  }
+
+  await upsertConversation(config.id, phone, STATE.MENU, {});
+  return showMainMenu(config, settings, phone);
+}
+
+async function handlePatientName(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+) {
+  const name = text.trim();
+  if (name.length < 2 || name.length > 120) {
+    await send(config, phone, "Nome inv\u00e1lido. Digite seu nome completo:");
+    return;
+  }
+
+  const conv = await getConversation(config.id, phone);
+  const patientId = conv?.context?.patient_id as string | undefined;
+
+  if (patientId) {
+    await db()
+      .from("patients")
+      .update({ full_name: name, updated_at: new Date().toISOString() })
+      .eq("id", patientId);
+  }
+
+  await send(config, phone, `\u2705 Nome atualizado para *${name}*.`);
+  await upsertConversation(config.id, phone, STATE.MENU, {});
+  return showMainMenu(config, settings, phone);
+}
+
+// ─── Offers / Promotions ────────────────────────────────────────────────
+
+async function showOffersMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  // Fetch active campaigns for this tenant (status = 'sent' or 'scheduled')
+  const { data: campaigns } = (await db()
+    .from("campaigns")
+    .select("id, name, subject, scheduled_at")
+    .eq("tenant_id", config.id)
+    .in("status", ["sent", "scheduled"])
+    .order("scheduled_at", { ascending: false })
+    .limit(5)) as unknown as SelectResult<
+    Array<{
+      id: string;
+      name: string;
+      subject: string | null;
+      scheduled_at: string | null;
+    }> | null
+  >;
+
+  if (!campaigns || campaigns.length === 0) {
+    await send(
+      config,
+      phone,
+      "No momento n\u00e3o temos ofertas ativas. \uD83D\uDE0A\n\nAtive as *notifica\u00e7\u00f5es de ofertas* em Lembretes para ser avisado(a) quando houver promo\u00e7\u00f5es!",
+    );
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  let msg = "*\uD83C\uDF81 Ofertas e Novidades:*\n\n";
+  campaigns.forEach((c, i) => {
+    msg += `${i + 1}. *${c.name}*\n`;
+    if (c.subject) msg += `   ${c.subject.slice(0, 80)}\n`;
+    msg += "\n";
+  });
+
+  msg += "Responda com o *n\u00famero* da oferta para mais detalhes, ou *voltar* para o menu.";
+
+  await send(config, phone, msg);
+  await upsertConversation(config.id, phone, STATE.OFFERS_MENU, {
+    campaigns: campaigns.map((c) => ({ id: c.id, name: c.name })),
+  });
+}
+
+async function handleOffersMenu(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+) {
+  const lower = text.toLowerCase().trim();
+
+  if (lower === "voltar" || lower === "menu") {
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const conv = await getConversation(config.id, phone);
+  const campaigns = (conv?.context?.campaigns as Array<{ id: string; name: string }>) || [];
+  const num = parseInt(lower, 10);
+
+  if (num >= 1 && num <= campaigns.length) {
+    const campaign = campaigns[num - 1];
+
+    await send(
+      config,
+      phone,
+      `\u2705 Interesse registrado na oferta *${campaign.name}*!\n\nUm membro da nossa equipe entrar\u00e1 em contato com mais detalhes. \uD83D\uDE0A`,
+    );
+
+    // Notify clinic staff
+    await db().from("notifications").insert({
+      tenant_id: config.id,
+      type: "campaign_interest",
+      title: `Interesse na oferta: ${campaign.name}`,
+      message: `Paciente (${phone}) demonstrou interesse na campanha "${campaign.name}" via WhatsApp.`,
+      is_read: false,
+    }).then(() => {}).catch(() => {});
+
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  await send(config, phone, "N\u00famero n\u00e3o reconhecido. Tente novamente ou digite *voltar*.");
+}
+
+// ─── Feedback / NPS ─────────────────────────────────────────────────────
+
+async function startFeedback(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+) {
+  // Check for recent completed appointment
+  const { data: patient } = (await db()
+    .from("patients")
+    .select("id")
+    .eq("tenant_id", config.id)
+    .eq("phone", phone)
+    .maybeSingle()) as unknown as SelectResult<{ id: string } | null>;
+
+  if (!patient) {
+    await send(config, phone, "Voc\u00ea ainda n\u00e3o tem consultas registradas para avaliar.");
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  await send(
+    config,
+    phone,
+    "De 0 a 10, o quanto voc\u00ea recomendaria a *" + config.name + "* para um amigo ou familiar?\n\n" +
+    "Responda com um n\u00famero de *0* a *10*.",
+  );
+  await upsertConversation(config.id, phone, STATE.FEEDBACK, { patient_id: patient.id });
+}
+
+async function handleFeedback(
+  config: TenantConfig,
+  settings: ChatbotSettings,
+  phone: string,
+  text: string,
+) {
+  const lower = text.toLowerCase().trim();
+
+  if (lower === "voltar" || lower === "menu") {
+    await upsertConversation(config.id, phone, STATE.MENU, {});
+    return showMainMenu(config, settings, phone);
+  }
+
+  const score = parseInt(lower, 10);
+  if (isNaN(score) || score < 0 || score > 10) {
+    await send(config, phone, "Por favor, responda com um n\u00famero de *0* a *10*.");
+    return;
+  }
+
+  const conv = await getConversation(config.id, phone);
+  const patientId = conv?.context?.patient_id as string | undefined;
+
+  // Save NPS score
+  await db().from("nps_responses").insert({
+    tenant_id: config.id,
+    patient_id: patientId,
+    score,
+    source: "whatsapp_chatbot",
+    created_at: new Date().toISOString(),
+  }).then(() => {}).catch(() => {});
+
+  let response = "";
+  if (score >= 9) {
+    response = `\uD83C\uDF1F Obrigado pela nota *${score}*! Ficamos muito felizes com sua avalia\u00e7\u00e3o. Sua confian\u00e7a significa muito para n\u00f3s!`;
+  } else if (score >= 7) {
+    response = `\uD83D\uDE0A Obrigado pela nota *${score}*! Estamos sempre buscando melhorar. Se tiver sugest\u00f5es, fique \u00e0 vontade para compartilhar.`;
+  } else {
+    response = `\uD83D\uDE4F Obrigado pela sinceridade. Lamentamos que sua experi\u00eancia n\u00e3o tenha sido ideal. Um membro da nossa equipe entrar\u00e1 em contato para entender como podemos melhorar.`;
+
+    // Alert clinic for detractors
+    await db().from("notifications").insert({
+      tenant_id: config.id,
+      type: "nps_detractor",
+      title: `NPS Detrator: nota ${score}`,
+      message: `Paciente (${phone}) deu nota ${score} no NPS via WhatsApp. Aten\u00e7\u00e3o necess\u00e1ria.`,
+      is_read: false,
+    }).then(() => {}).catch(() => {});
+  }
+
+  await send(config, phone, response);
+  await upsertConversation(config.id, phone, STATE.MENU, {});
+  return showMainMenu(config, settings, phone);
+}
+
 // ─── Transfer to human ──────────────────────────────────────────────────
 
 async function transferToHuman(
@@ -1067,6 +1655,21 @@ async function processMessage(
 
   await logMessage(config.id, phone, "inbound", text);
 
+  const conv = await getConversation(config.id, phone);
+  const currentState = conv?.state || STATE.IDLE;
+  const ctx = conv?.context || {};
+
+  // ── LGPD gate: if consent not yet given, force consent flow ──
+  if (currentState === STATE.LGPD_CONSENT) {
+    return handleLgpdConsent(config, settings, phone, text, buttonId);
+  }
+
+  // Check if LGPD consent already given; if not, require it
+  if (!ctx.lgpdAccepted && currentState === STATE.IDLE) {
+    await upsertConversation(config.id, phone, STATE.LGPD_CONSENT, {});
+    return sendLgpdConsent(config, phone);
+  }
+
   const lower = text.toLowerCase().trim();
   if (
     lower === "menu" ||
@@ -1074,20 +1677,17 @@ async function processMessage(
     lower === "inicio" ||
     lower === "in\u00edcio"
   ) {
-    await upsertConversation(config.id, phone, STATE.IDLE, {});
+    await upsertConversation(config.id, phone, STATE.IDLE, ctx);
     return handleIdle(config, settings, phone, text);
   }
 
   if (!isWithinBusinessHours(settings) && lower !== "menu") {
-    const conv = await getConversation(config.id, phone);
     if (!conv || conv.state === STATE.IDLE) {
       await send(config, phone, settings.outside_hours_message);
-      await upsertConversation(config.id, phone, STATE.IDLE, {});
+      await upsertConversation(config.id, phone, STATE.IDLE, ctx);
       return;
     }
   }
-
-  const conv = await getConversation(config.id, phone);
 
   if (
     conv &&
@@ -1096,12 +1696,10 @@ async function processMessage(
     isSessionExpired(conv)
   ) {
     log("Session expired, resetting", { phone, state: conv.state });
-    await upsertConversation(config.id, phone, STATE.IDLE, {});
+    // Keep LGPD consent across sessions
+    await upsertConversation(config.id, phone, STATE.IDLE, { lgpdAccepted: ctx.lgpdAccepted, lgpdAcceptedAt: ctx.lgpdAcceptedAt });
     return handleIdle(config, settings, phone, text);
   }
-
-  const currentState = conv?.state || STATE.IDLE;
-  const ctx = conv?.context || {};
 
   switch (currentState) {
     case STATE.IDLE:
@@ -1216,6 +1814,24 @@ async function processMessage(
       );
       return;
 
+    case STATE.MORE_OPTIONS:
+      return handleMoreOptions(config, settings, phone, text, listRowId);
+
+    case STATE.REMINDERS_MENU:
+      return handleRemindersMenu(config, settings, phone, text);
+
+    case STATE.PATIENT_PROFILE:
+      return handlePatientProfile(config, settings, phone, text, buttonId);
+
+    case STATE.PATIENT_NAME:
+      return handlePatientName(config, settings, phone, text);
+
+    case STATE.OFFERS_MENU:
+      return handleOffersMenu(config, settings, phone, text);
+
+    case STATE.FEEDBACK:
+      return handleFeedback(config, settings, phone, text);
+
     default:
       await upsertConversation(config.id, phone, STATE.IDLE, {});
       return handleIdle(config, settings, phone, text);
@@ -1296,6 +1912,13 @@ function extractMessageFromWebhook(body: any): {
 }
 
 async function handleIncoming(req: Request, res: Response) {
+  // ── HMAC-SHA256 webhook signature verification ──
+  const sig = req.headers["x-hub-signature-256"] as string | undefined;
+  if (META_APP_SECRET && !verifyWebhookSignature((req as any).rawBody || JSON.stringify(req.body), sig)) {
+    log("Invalid webhook signature — rejecting");
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+
   res.status(200).json({ status: "ok" });
 
   try {
@@ -1313,6 +1936,13 @@ async function handleIncoming(req: Request, res: Response) {
     processedMessages.add(messageId);
     if (processedMessages.size > DEDUP_MAX) {
       processedMessages.clear();
+    }
+
+    // ── Rate limiting ──
+    const rl = await checkRateLimit(`patient-chatbot:${from}`, 20, 60);
+    if (!rl.allowed) {
+      log("Rate limit exceeded", { phone: from });
+      return;
     }
 
     log("Incoming message", {
@@ -1333,7 +1963,7 @@ async function handleIncoming(req: Request, res: Response) {
       messageId,
     ).catch(() => {});
 
-    await processMessage(config, from, text, buttonId, listRowId);
+    await processMessage(config, from, sanitizeInput(text), buttonId, listRowId);
   } catch (err) {
     log("handleIncoming error", { error: String(err) });
   }

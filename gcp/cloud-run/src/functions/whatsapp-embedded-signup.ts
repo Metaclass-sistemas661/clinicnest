@@ -13,6 +13,7 @@ import { Request, Response } from 'express';
 import { createLogger } from '../shared/logging';
 import { createDbClient } from '../shared/db-builder';
 import { createAuthAdmin } from '../shared/auth-admin';
+import { createTemplatesForWaba, getTemplateStatuses } from './whatsapp-templates';
 
 const log = createLogger("WHATSAPP-EMBEDDED-SIGNUP");
 const META_API_VERSION = "v21.0";
@@ -235,6 +236,16 @@ export async function whatsappEmbeddedSignup(req: Request, res: Response) {
           log("Chatbot settings auto-created", { tenantId });
         }
 
+        // Step 6: Create Meta Message Templates on the tenant's WABA
+        log("Provisioning message templates", { tenantId, waba_id });
+        const templateResult = await createTemplatesForWaba(waba_id, businessToken);
+        log("Template provisioning done", {
+          tenantId,
+          created: templateResult.created.length,
+          skipped: templateResult.skipped.length,
+          failed: templateResult.failed.length,
+        });
+
         const webhookUrl = `${process.env.CLOUD_RUN_URL || ''}/api/webhooks/whatsapp-chatbot`;
         const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "";
 
@@ -253,7 +264,54 @@ export async function whatsappEmbeddedSignup(req: Request, res: Response) {
           verifyToken,
           webhookSubscribed: webhookResult.ok,
           phoneRegistered: registerResult.ok,
+          templates: {
+            created: templateResult.created,
+            skipped: templateResult.skipped,
+            failed: templateResult.failed,
+          },
         });
+      }
+
+      case "get-template-status": {
+        // Returns the approval status of all system templates
+        const { data: tenant } = await db.from("tenants")
+          .select("whatsapp_business_account_id, whatsapp_access_token")
+          .eq("id", tenantId)
+          .maybeSingle();
+
+        const wabaIdVal = (tenant as any)?.whatsapp_business_account_id;
+        const tokenVal = (tenant as any)?.whatsapp_access_token;
+
+        if (!wabaIdVal || !tokenVal) {
+          return res.status(400).json({
+            ok: false,
+            error: "WhatsApp Business n\u00e3o configurado. Fa\u00e7a o Embedded Signup primeiro.",
+          });
+        }
+
+        const statuses = await getTemplateStatuses(wabaIdVal, tokenVal);
+        return res.status(200).json({ ok: true, templates: statuses });
+      }
+
+      case "provision-templates": {
+        // Re-create templates (idempotent) — useful if some failed during signup
+        const { data: tenant } = await db.from("tenants")
+          .select("whatsapp_business_account_id, whatsapp_access_token")
+          .eq("id", tenantId)
+          .maybeSingle();
+
+        const wId = (tenant as any)?.whatsapp_business_account_id;
+        const tknVal = (tenant as any)?.whatsapp_access_token;
+
+        if (!wId || !tknVal) {
+          return res.status(400).json({
+            ok: false,
+            error: "WhatsApp Business n\u00e3o configurado.",
+          });
+        }
+
+        const provResult = await createTemplatesForWaba(wId, tknVal);
+        return res.status(200).json({ ok: true, ...provResult });
       }
 
       default:

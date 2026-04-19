@@ -6,6 +6,8 @@ import { adminQuery, userQuery } from '../shared/db';
 import { sendEmail } from '../shared/email';
 import { createLogger } from '../shared/logging';
 import { createDbClient } from '../shared/db-builder';
+import { sendMetaWhatsAppTemplate } from './whatsapp-sender';
+import { buildTemplateComponents, TRIGGER_TEMPLATE_MAP } from './whatsapp-templates';
 export async function automationWorker(req: Request, res: Response) {
   try {
     const db = createDbClient();
@@ -136,8 +138,38 @@ export async function automationWorker(req: Request, res: Response) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     }
 
-    // ─── WhatsApp via Meta Cloud API ────────────────────────────────────────────────
+    // ─── WhatsApp via Meta Cloud API (Template-based for proactive) ──────────────
 
+    async function sendWhatsappTemplate(
+      settings: TenantSettings,
+      phone: string,
+      triggerType: string,
+      vars: Record<string, string>,
+    ): Promise<{ ok: boolean; details?: string }> {
+      const phoneNumberId = (settings.whatsapp_phone_number_id ?? "").trim();
+      const accessToken = (settings.whatsapp_access_token ?? "").trim();
+      if (!phoneNumberId || !accessToken) return { ok: false, details: "missing_whatsapp_settings" };
+
+      const templateData = buildTemplateComponents(triggerType, vars);
+      if (!templateData) {
+        return { ok: false, details: `no_template_mapping_for_${triggerType}` };
+      }
+
+      const result = await sendMetaWhatsAppTemplate(
+        phoneNumberId,
+        accessToken,
+        phone,
+        templateData.templateName,
+        "pt_BR",
+        templateData.components,
+      );
+
+      return result.ok
+        ? { ok: true }
+        : { ok: false, details: result.error || "template_send_failed" };
+    }
+
+    /** Fallback: send plain text (only works within 24h window) */
     async function sendWhatsapp(
       settings: TenantSettings,
       phone: string,
@@ -293,7 +325,8 @@ export async function automationWorker(req: Request, res: Response) {
       email: string,
       clientName: string,
       message: string,
-      resendKey: string): Promise<"sent" | "skipped" | "failed"> {
+      resendKey: string,
+      templateVars?: Record<string, string>): Promise<"sent" | "skipped" | "failed"> {
       // Idempotency: check if already dispatched for this period
       const { data: existing } = await db.from("automation_dispatch_logs")
         .select("id")
@@ -322,7 +355,13 @@ export async function automationWorker(req: Request, res: Response) {
           });
           return "skipped";
         }
-        result = await sendWhatsapp(tenant, normalized, message);
+        // Use Meta templates for proactive WhatsApp (required outside 24h window)
+        if (templateVars && TRIGGER_TEMPLATE_MAP[rule.trigger_type]) {
+          result = await sendWhatsappTemplate(tenant, normalized, rule.trigger_type, templateVars);
+        } else {
+          // Fallback to plain text (works only within 24h window)
+          result = await sendWhatsapp(tenant, normalized, message);
+        }
       } else if (rule.channel === "sms") {
         const normalized = normalizePhone(phone);
         if (!normalized) {
@@ -501,7 +540,7 @@ export async function automationWorker(req: Request, res: Response) {
             const r = await dispatch(rule, tenant,
               "appointment", appt.id, "once",
               client.phone ?? "", client.email ?? "", client.name ?? "",
-              message, resendKey);
+              message, resendKey, vars);
             if (r === "sent") totals.sent++;
             else if (r === "failed") totals.failed++;
             else totals.skipped++;
@@ -575,7 +614,7 @@ export async function automationWorker(req: Request, res: Response) {
             const r = await dispatch(rule, tenant,
               "client", client.id, period,
               client.phone ?? "", client.email ?? "", client.name ?? "",
-              message, resendKey);
+              message, resendKey, vars);
             if (r === "sent") totals.sent++;
             else if (r === "failed") totals.failed++;
             else totals.skipped++;
@@ -702,7 +741,7 @@ export async function automationWorker(req: Request, res: Response) {
             const r = await dispatch(rule, tenant,
               "client", returnItem.id, `return-${returnItem.id}`,
               client.phone ?? "", client.email ?? "", client.name ?? "",
-              message, resendKey);
+              message, resendKey, vars);
 
             if (r === "sent") {
               totals.sent++;
@@ -815,7 +854,7 @@ export async function automationWorker(req: Request, res: Response) {
               const r = await dispatch(rule, tenant,
                 "client", client.id, period,
                 client.phone ?? "", client.email ?? "", client.name ?? "",
-                message, resendKey);
+                message, resendKey, vars);
               if (r === "sent") totals.sent++;
               else if (r === "failed") totals.failed++;
               else totals.skipped++;
@@ -929,7 +968,7 @@ export async function automationWorker(req: Request, res: Response) {
           const r = await dispatch(rule, tenant,
             "client", notif.recipient_id, `notif-${notif.id}`,
             client.phone ?? "", client.email ?? "", client.name ?? "",
-            message, resendKey);
+            message, resendKey, vars);
           if (r === "sent") { totals.sent++; anySuccess = true; }
           else if (r === "failed") totals.failed++;
           else totals.skipped++;
@@ -999,18 +1038,26 @@ export async function automationWorker(req: Request, res: Response) {
             ? `${publicUrl}/confirmar/${appt.id}`
             : "";
 
-          const message = `Olá ${client.name?.split(" ")[0] ?? ""}! 🏥\n\nSua consulta é hoje às ${formatTimeBR(appt.scheduled_at ?? "")}${prof?.full_name ? ` com ${prof.full_name}` : ""}.\n\n✅ Confirme sua presença: ${confirmLink}\n\nSe não puder comparecer, avise para liberarmos a vaga.\n\n${tenant.name ?? "Sua Clínica"}`;
+          const templateVars: Record<string, string> = {
+            patient_name: client.name?.split(" ")[0] ?? "",
+            time: formatTimeBR(appt.scheduled_at ?? ""),
+            professional_name: prof?.full_name ?? "",
+            clinic_name: tenant.name ?? "Sua Cl\u00ednica",
+            confirm_link: confirmLink,
+          };
 
           let sent = false;
           if (channel4h === "whatsapp" && client.phone) {
-            const r = await sendWhatsapp(tenant, normalizePhone(client.phone), message);
+            const r = await sendWhatsappTemplate(tenant, normalizePhone(client.phone), "smart_confirm_4h", templateVars);
             sent = r.ok;
           } else if (channel4h === "sms" && client.phone) {
-            const r = await sendSms(tenant, normalizePhone(client.phone), message);
+            const smsMsg = `Ol\u00e1 ${templateVars.patient_name}! Sua consulta \u00e9 hoje \u00e0s ${templateVars.time}${templateVars.professional_name ? ` com ${templateVars.professional_name}` : ""}. Confirme: ${confirmLink} - ${templateVars.clinic_name}`;
+            const r = await sendSms(tenant, normalizePhone(client.phone), smsMsg);
             sent = r.ok;
           } else if (channel4h === "email" && client.email) {
-            const html = buildEmailHtml(message, tenant.name ?? "");
-            const r = await sendEmail(resendKey, client.email, client.name ?? "", `⏰ Confirme sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
+            const emailMsg = `Ol\u00e1 ${templateVars.patient_name}!\n\nSua consulta \u00e9 hoje \u00e0s ${templateVars.time}${templateVars.professional_name ? ` com ${templateVars.professional_name}` : ""}.\n\n\u2705 Confirme sua presen\u00e7a: ${confirmLink}\n\n${templateVars.clinic_name}`;
+            const html = buildEmailHtml(emailMsg, tenant.name ?? "");
+            const r = await sendEmail(resendKey, client.email, client.name ?? "", `\u23f0 Confirme sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
             sent = r.ok;
           }
 
@@ -1051,18 +1098,25 @@ export async function automationWorker(req: Request, res: Response) {
             ? `${publicUrl}/confirmar/${appt.id}`
             : "";
 
-          const message = `⚠️ Última chamada!\n\n${client.name?.split(" ")[0] ?? ""}, sua consulta é em 1 hora (${formatTimeBR(appt.scheduled_at ?? "")}).\n\nConfirme agora: ${confirmLink}\n\nSem confirmação, a vaga será liberada para outro paciente.\n\n${tenant.name ?? ""}`;
+          const tplVars1h: Record<string, string> = {
+            patient_name: client.name?.split(" ")[0] ?? "",
+            time: formatTimeBR(appt.scheduled_at ?? ""),
+            clinic_name: tenant.name ?? "",
+            confirm_link: confirmLink,
+          };
 
           let sent = false;
           if (channel1h === "sms" && client.phone) {
-            const r = await sendSms(tenant, normalizePhone(client.phone), message);
+            const smsMsg = `\u26a0\ufe0f ${tplVars1h.patient_name}, consulta em 1h (\u00e0s ${tplVars1h.time}). Confirme: ${confirmLink} - ${tplVars1h.clinic_name}`;
+            const r = await sendSms(tenant, normalizePhone(client.phone), smsMsg);
             sent = r.ok;
           } else if (channel1h === "whatsapp" && client.phone) {
-            const r = await sendWhatsapp(tenant, normalizePhone(client.phone), message);
+            const r = await sendWhatsappTemplate(tenant, normalizePhone(client.phone), "smart_confirm_1h", tplVars1h);
             sent = r.ok;
           } else if (channel1h === "email" && client.email) {
-            const html = buildEmailHtml(message, tenant.name ?? "");
-            const r = await sendEmail(resendKey, client.email, client.name ?? "", `⚠️ Confirme AGORA sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
+            const emailMsg = `\u26a0\ufe0f \u00daltima chamada!\n\n${tplVars1h.patient_name}, consulta em 1 hora (\u00e0s ${tplVars1h.time}).\n\nConfirme agora: ${confirmLink}\n\n${tplVars1h.clinic_name}`;
+            const html = buildEmailHtml(emailMsg, tenant.name ?? "");
+            const r = await sendEmail(resendKey, client.email, client.name ?? "", `\u26a0\ufe0f Confirme AGORA sua consulta - ${tenant.name ?? ""}`, html, tenant.name ?? "", tenant.email);
             sent = r.ok;
           }
 

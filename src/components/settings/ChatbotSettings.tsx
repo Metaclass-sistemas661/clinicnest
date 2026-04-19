@@ -13,12 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/integrations/gcp/client";
 import { toast } from "sonner";
 import { normalizeError } from "@/utils/errorMessages";
 import { logger } from "@/lib/logger";
-import { Loader2, Save, Bot, MessageSquare, Clock, Phone } from "lucide-react";
+import { Loader2, Save, Bot, MessageSquare, Clock, Phone, FileCheck, RefreshCw } from "lucide-react";
 
 interface ChatbotSettingsData {
   id?: string;
@@ -65,11 +66,50 @@ export default function ChatbotSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<ChatbotSettingsData>(DEFAULT_SETTINGS);
+  const [templateStatuses, setTemplateStatuses] = useState<Array<{ name: string; status: string }>>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
 
   useEffect(() => {
     if (!tenant?.id) return;
     void fetchSettings();
+    void fetchTemplateStatuses();
   }, [tenant?.id]);
+
+  const fetchTemplateStatuses = async () => {
+    if (!tenant?.id) return;
+    setIsLoadingTemplates(true);
+    try {
+      const res = await api.functions.invoke("whatsapp-embedded-signup", {
+        body: { action: "get-template-status", tenantId: tenant.id },
+      });
+      if (res.data?.templates) {
+        setTemplateStatuses(res.data.templates);
+      }
+    } catch (err) {
+      logger.warn("[ChatbotSettings] template status fetch failed", err);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  const reprovisionTemplates = async () => {
+    if (!tenant?.id) return;
+    setIsLoadingTemplates(true);
+    try {
+      const res = await api.functions.invoke("whatsapp-embedded-signup", {
+        body: { action: "provision-templates", tenantId: tenant.id },
+      });
+      if (res.data?.templates) {
+        toast.success(`Templates: ${res.data.templates.created} criados, ${res.data.templates.skipped} já existiam`);
+      }
+      await fetchTemplateStatuses();
+    } catch (err) {
+      logger.error("[ChatbotSettings] template provision error", err);
+      toast.error("Erro ao provisionar templates");
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
 
   const fetchSettings = async () => {
     if (!tenant?.id) return;
@@ -187,6 +227,68 @@ export default function ChatbotSettings() {
             />
           </div>
         </CardHeader>
+      </Card>
+
+      {/* Template Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500/10 text-teal-600">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <CardTitle>Templates WhatsApp (Meta)</CardTitle>
+              <CardDescription>
+                Templates de mensagens aprovados pela Meta para envio proativo (lembretes, confirmações, ofertas)
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchTemplateStatuses()}
+              disabled={isLoadingTemplates}
+            >
+              {isLoadingTemplates ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {templateStatuses.length > 0 ? (
+            <div className="space-y-2">
+              {templateStatuses.map((t) => (
+                <div key={t.name} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                  <span className="font-mono text-xs">{t.name}</span>
+                  <Badge
+                    variant={
+                      t.status === "APPROVED" ? "default" :
+                      t.status === "PENDING" ? "secondary" :
+                      t.status === "REJECTED" ? "destructive" : "outline"
+                    }
+                  >
+                    {t.status === "APPROVED" ? "Aprovado" :
+                     t.status === "PENDING" ? "Pendente" :
+                     t.status === "REJECTED" ? "Rejeitado" :
+                     t.status === "NOT_FOUND" ? "Não criado" : t.status}
+                  </Badge>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                onClick={() => void reprovisionTemplates()}
+                disabled={isLoadingTemplates}
+              >
+                {isLoadingTemplates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Recriar templates pendentes
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {isLoadingTemplates ? "Carregando..." : "Conecte o WhatsApp para visualizar os templates."}
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {/* Mensagens */}

@@ -33,6 +33,33 @@ type SelectResult<T> = { data: T; error: unknown };
 const META_API_VERSION = "v21.0";
 const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 
+// ─── Retry with exponential backoff ──────────────────────────────────────────
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+): Promise<globalThis.Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      // Don't retry client errors (4xx) except 429 (rate limit)
+      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
+        return res;
+      }
+      if (attempt === maxRetries) return res;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+      log("Retrying Meta API call", { attempt: attempt + 1, status: res.status, delay });
+      await new Promise(r => setTimeout(r, delay));
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+      log("Retrying after network error", { attempt: attempt + 1, error: String(err), delay });
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw new Error("fetchWithRetry: unreachable");
+}
+
 function normalizePhone(raw: string): string {
   let digits = raw.replace(/\D/g, "");
   if (digits.startsWith("0")) digits = digits.slice(1);
@@ -54,7 +81,7 @@ export async function sendMetaWhatsAppMessage(
   const url = `${META_API_BASE}/${phoneNumberId}/messages`;
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -111,7 +138,7 @@ export async function sendMetaWhatsAppTemplate(
   };
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -168,7 +195,7 @@ export async function sendMetaWhatsAppButtons(
   };
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -233,7 +260,7 @@ export async function sendMetaWhatsAppList(
   };
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -267,7 +294,7 @@ export async function markMessageAsRead(
 ): Promise<void> {
   const url = `${META_API_BASE}/${phoneNumberId}/messages`;
   try {
-    await fetch(url, {
+    await fetchWithRetry(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,

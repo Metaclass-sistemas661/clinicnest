@@ -128,7 +128,10 @@ if (process.env.SENTRY_DSN) {
 // Global middleware
 app.use(helmet());
 app.use(compression());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { (req as any).rawBody = buf; },
+}));
 app.use(corsMiddleware);
 
 // Request correlation ID + duration logging
